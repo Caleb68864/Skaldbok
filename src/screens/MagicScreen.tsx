@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
-import { useAppState } from '../context/AppStateContext';
 import { SpellCard } from '../components/fields/SpellCard';
 import { AbilityCard } from '../components/fields/AbilityCard';
 import { FilterBar } from '../components/fields/FilterBar';
@@ -11,14 +10,14 @@ import { Drawer } from '../components/primitives/Drawer';
 import type { Spell, HeroicAbility } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
+import { useIsEditMode } from '../utils/modeGuards';
 
 type SpellFilter = 'all' | 'can-cast';
 
 export default function MagicScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { settings } = useAppState();
-  const isEditMode = settings.mode === 'edit';
+  const isEditMode = useIsEditMode();
   const [spellFilter, setSpellFilter] = useState<SpellFilter>('all');
   const [spellDrawerOpen, setSpellDrawerOpen] = useState(false);
   const [editingSpell, setEditingSpell] = useState<Spell | null>(null);

@@ -14,6 +14,13 @@
   --font-size-lg: 1.25rem;
   --font-size-xl: 1.6rem;
   --touch-target-min: 44px;
+
+  /* Reference tab theme colors */
+  --ref-header-bg: #2f5b1f;
+  --ref-header-text: #ffffff;
+  --ref-table-header-bg: #9bc07b;
+  --ref-row-even: #ffffff;
+  --ref-row-odd: #e4eddc;
 }
 
 /* Dark theme (default) */
@@ -188,6 +195,50 @@ body {
   color: var(--color-primary);
   font-weight: bold;
   border-top: 2px solid var(--color-primary);
+}
+
+/* TopBar overflow menu */
+.topbar-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  z-index: 200;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.topbar-menu__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  min-height: var(--touch-target-min);
+  color: var(--color-text);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-divider);
+  white-space: nowrap;
+}
+
+.topbar-menu__item:last-child {
+  border-bottom: none;
+}
+
+.topbar-menu__item:hover {
+  background-color: var(--color-surface-alt);
+}
+
+.topbar-menu__item--active {
+  color: var(--color-primary);
+  font-weight: bold;
+  background-color: var(--color-surface-alt);
 }
 
 /* Field states */

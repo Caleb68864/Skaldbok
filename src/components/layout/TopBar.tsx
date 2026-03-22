@@ -1,3 +1,5 @@
+import { useState, useEffect, useRef } from 'react';
+import { NavLink } from 'react-router-dom';
 import { useAppState } from '../../context/AppStateContext';
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
@@ -6,8 +8,22 @@ export function TopBar() {
   const { settings, toggleMode } = useAppState();
   const { isFullscreen, toggleFullscreen, isSupported: fsSupported } = useFullscreen();
   const { isActive: wakeLockActive, toggleWakeLock, isSupported: wlSupported } = useWakeLock();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const isPlayMode = settings.mode === 'play';
+
+  // Close menu on click outside
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [menuOpen]);
 
   return (
     <header className="top-bar" style={{
@@ -56,6 +72,42 @@ export function TopBar() {
             {wakeLockActive ? '🔒' : '🔓'}
           </button>
         )}
+
+        {/* Hamburger menu */}
+        <div ref={menuRef} style={{ position: 'relative' }}>
+          <button
+            className="top-bar__btn"
+            onClick={() => setMenuOpen(o => !o)}
+            aria-label="Menu"
+            aria-expanded={menuOpen}
+            title="More options"
+          >
+            ☰
+          </button>
+
+          {menuOpen && (
+            <nav className="topbar-menu" aria-label="Navigation menu">
+              <NavLink
+                to="/reference"
+                className={({ isActive }) =>
+                  isActive ? 'topbar-menu__item topbar-menu__item--active' : 'topbar-menu__item'
+                }
+                onClick={() => setMenuOpen(false)}
+              >
+                📖 Reference
+              </NavLink>
+              <NavLink
+                to="/settings"
+                className={({ isActive }) =>
+                  isActive ? 'topbar-menu__item topbar-menu__item--active' : 'topbar-menu__item'
+                }
+                onClick={() => setMenuOpen(false)}
+              >
+                ⚙️ Settings
+              </NavLink>
+            </nav>
+          )}
+        </div>
       </div>
     </header>
   );

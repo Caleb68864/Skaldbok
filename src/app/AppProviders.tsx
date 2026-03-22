@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { ThemeProvider } from '../theme/ThemeProvider';
 import { AppStateProvider } from '../context/AppStateContext';
 import { ActiveCharacterProvider } from '../context/ActiveCharacterContext';
+import { ToastProvider } from '../context/ToastContext';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -14,7 +15,9 @@ export function AppProviders({ children }: AppProvidersProps) {
       <ThemeProvider>
         <AppStateProvider>
           <ActiveCharacterProvider>
-            {children}
+            <ToastProvider>
+              {children}
+            </ToastProvider>
           </ActiveCharacterProvider>
         </AppStateProvider>
       </ThemeProvider>
