@@ -13,25 +13,26 @@
 .toast {
   padding: 12px 20px;
   border-radius: var(--radius-md);
-  color: #fff;
-  box-shadow: var(--shadow-md);
+  color: var(--color-bg);
+  box-shadow: var(--shadow-medium);
   min-width: 200px;
   text-align: center;
-  font-size: var(--font-size-md);
+  font-size: var(--size-md);
+  font-family: var(--font-ui);
 }
 
 .success {
-  background-color: #2a6e3f;
+  background-color: var(--color-success);
 }
 
 .error {
-  background-color: #8b2020;
+  background-color: var(--color-danger);
 }
 
 .warning {
-  background-color: #b8860b;
+  background-color: var(--color-warning);
 }
 
 .info {
-  background-color: #2a4a6e;
+  background-color: var(--color-info);
 }

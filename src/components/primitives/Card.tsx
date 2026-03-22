@@ -12,7 +12,7 @@ export function Card({ children, style, onClick, ...props }: CardProps) {
         border: '1px solid var(--color-border)',
         borderRadius: 'var(--radius-md)',
         padding: 'var(--space-md)',
-        boxShadow: 'var(--shadow-sm)',
+        boxShadow: 'var(--shadow-soft)',
         cursor: onClick ? 'pointer' : 'default',
         ...style,
       }}

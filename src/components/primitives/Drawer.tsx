@@ -32,7 +32,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
           backgroundColor: 'var(--color-surface)',
           borderTopLeftRadius: 'var(--radius-lg)',
           borderTopRightRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-md)',
+          boxShadow: 'var(--shadow-deep)',
           zIndex: 201,
           maxHeight: '85vh',
           display: 'flex',
@@ -47,7 +47,7 @@ export function Drawer({ open, onClose, title, children }: DrawerProps) {
           borderBottom: '1px solid var(--color-border)',
           minHeight: 'var(--touch-target-min)',
         }}>
-          <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)' }}>{title}</h2>
+          <h2 style={{ fontSize: 'var(--size-xl)', fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}>{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close drawer"

@@ -35,7 +35,7 @@ export function Modal({ open, onClose, title, children, actions }: ModalProps) {
           transform: 'translate(-50%, -50%)',
           backgroundColor: 'var(--color-surface)',
           borderRadius: 'var(--radius-lg)',
-          boxShadow: 'var(--shadow-md)',
+          boxShadow: 'var(--shadow-deep)',
           zIndex: 301,
           width: 'min(90vw, 480px)',
           maxHeight: '80vh',
@@ -51,7 +51,7 @@ export function Modal({ open, onClose, title, children, actions }: ModalProps) {
           borderBottom: '1px solid var(--color-border)',
           minHeight: 'var(--touch-target-min)',
         }}>
-          <h2 id="modal-title" style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)' }}>{title}</h2>
+          <h2 id="modal-title" style={{ fontSize: 'var(--size-xl)', fontFamily: 'var(--font-display)', color: 'var(--color-text)' }}>{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close modal"

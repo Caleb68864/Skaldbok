@@ -1,99 +1,156 @@
-/* Base variables shared across all themes */
+/* ============================================================
+   Skaldmark — Design Token System
+   Single source of truth for all visual tokens.
+   ============================================================ */
+
+/* Shared tokens (theme-agnostic) */
 :root {
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 16px;
+  /* Font Families */
+  --font-display: 'Marcellus', Georgia, serif;
+  --font-ui: 'Source Sans 3', Arial, Helvetica, sans-serif;
+  --font-text: 'Source Serif 4', Georgia, serif;
+
+  /* Typography Scale */
+  --size-xs: 0.75rem;
+  --size-sm: 0.875rem;
+  --size-md: 1rem;
+  --size-lg: 1.125rem;
+  --size-xl: 1.25rem;
+  --size-2xl: 1.5rem;
+  --size-3xl: 1.875rem;
+
+  /* Font Weights */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Line Heights */
+  --lh-tight: 1.2;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+
+  /* Spacing Scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+
+  /* Legacy spacing aliases */
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 40px;
-  --font-family: system-ui, -apple-system, sans-serif;
-  --font-size-sm: 0.8rem;
-  --font-size-md: 1rem;
-  --font-size-lg: 1.25rem;
-  --font-size-xl: 1.6rem;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Shadows */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-medium: 0 6px 18px rgba(0, 0, 0, 0.16);
+  --shadow-deep: 0 10px 28px rgba(0, 0, 0, 0.22);
+  --shadow-inset-soft: inset 0 1px 2px rgba(0, 0, 0, 0.10);
+
+  /* Border Shorthand Tokens */
+  --border-thin: 1px solid var(--color-border);
+  --border-strong: 2px solid var(--color-border);
+
+  /* Touch Target */
   --touch-target-min: 44px;
 
-  /* Reference tab theme colors */
-  --ref-header-bg: #2f5b1f;
-  --ref-header-text: #ffffff;
-  --ref-table-header-bg: #9bc07b;
-  --ref-row-even: #ffffff;
-  --ref-row-odd: #e4eddc;
+  /* Legacy font-size aliases */
+  --font-size-sm: var(--size-sm);
+  --font-size-md: var(--size-md);
+  --font-size-lg: var(--size-lg);
+  --font-size-xl: var(--size-xl);
+
+  /* Legacy shadow aliases */
+  --shadow-sm: var(--shadow-soft);
+  --shadow-md: var(--shadow-medium);
+
+  /* Legacy font alias */
+  --font-family: var(--font-ui);
 }
 
-/* Dark theme (default) */
+/* ============================================================
+   Theme Palettes
+   ============================================================ */
+
+/* Dark theme — "Torchlight in the Barrow" */
 [data-theme="dark"] {
-  --color-bg: #0f0f1a;
-  --color-surface: #1a1a2e;
-  --color-surface-alt: #22223a;
-  --color-text: #e8e8f0;
-  --color-text-muted: #8888aa;
-  --color-text-inverse: #0f0f1a;
-  --color-primary: #c9a84c;
-  --color-primary-hover: #dbbf6a;
-  --color-primary-text: #0f0f1a;
-  --color-accent: #7b68ee;
-  --color-danger: #e05555;
-  --color-success: #55bb77;
-  --color-warning: #e0aa44;
-  --color-border: #333355;
-  --color-divider: #2a2a44;
+  --color-bg: #121613;
+  --color-surface: #1A211D;
+  --color-surface-alt: #222B26;
+  --color-text: #E9DFC7;
+  --color-text-muted: #B5A88E;
+  --color-accent: #2F877A;
+  --color-accent-alt: #73B6AA;
+  --color-danger: #D14935;
+  --color-border: #3E4B43;
+  --color-gold: #AA8240;
+  --color-success: #6E8C54;
+  --color-warning: #C07A35;
+  --color-info: #6A9CA4;
+
+  /* Mode indicators */
   --color-mode-play: #2a6e3f;
   --color-mode-edit: #3a4a9e;
-  --shadow-sm: 0 1px 4px rgba(0,0,0,0.5);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.6);
 }
 
-/* Parchment theme */
+/* Parchment theme — "The Adventurer's Ledger" */
 [data-theme="parchment"] {
-  --color-bg: #f5ead6;
-  --color-surface: #fffbf0;
-  --color-surface-alt: #ede0c8;
-  --color-text: #3b2b1a;
-  --color-text-muted: #7a6248;
-  --color-text-inverse: #fffbf0;
-  --color-primary: #8b4513;
-  --color-primary-hover: #a0522d;
-  --color-primary-text: #fffbf0;
-  --color-accent: #6b3a7d;
-  --color-danger: #c0392b;
-  --color-success: #2e7d32;
-  --color-warning: #b8860b;
-  --color-border: #c8a87a;
-  --color-divider: #d4b896;
+  --color-bg: #D9C59A;
+  --color-surface: #E8D8B2;
+  --color-surface-alt: #F1E4C8;
+  --color-text: #3A2B18;
+  --color-text-muted: #6B573C;
+  --color-accent: #2B756B;
+  --color-accent-alt: #184A46;
+  --color-danger: #A52F22;
+  --color-border: #8A7451;
+  --color-gold: #9C7934;
+  --color-success: #667C4A;
+  --color-warning: #AF6D2B;
+  --color-info: #52727A;
+
+  /* Mode indicators */
   --color-mode-play: #2e6930;
   --color-mode-edit: #2c4a8a;
-  --shadow-sm: 0 1px 4px rgba(0,0,0,0.15);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.2);
-  --font-family: Georgia, 'Times New Roman', serif;
 }
 
-/* Light theme */
+/* Light theme — "Camp Before the Hunt" */
 [data-theme="light"] {
-  --color-bg: #f5f5f5;
-  --color-surface: #ffffff;
-  --color-surface-alt: #eeeeee;
-  --color-text: #111111;
-  --color-text-muted: #666666;
-  --color-text-inverse: #ffffff;
-  --color-primary: #1565c0;
-  --color-primary-hover: #1976d2;
-  --color-primary-text: #ffffff;
-  --color-accent: #7b1fa2;
-  --color-danger: #c62828;
-  --color-success: #2e7d32;
-  --color-warning: #f57f17;
-  --color-border: #dddddd;
-  --color-divider: #e0e0e0;
+  --color-bg: #EEE6D2;
+  --color-surface: #F7F1E2;
+  --color-surface-alt: #EAE0C7;
+  --color-text: #2D241B;
+  --color-text-muted: #6C5B46;
+  --color-accent: #1F6E66;
+  --color-accent-alt: #154B47;
+  --color-danger: #B63828;
+  --color-border: #A69170;
+  --color-gold: #A98235;
+  --color-success: #5D7A49;
+  --color-warning: #B96A2A;
+  --color-info: #3E6C73;
+
+  /* Mode indicators */
   --color-mode-play: #2e7d32;
   --color-mode-edit: #1565c0;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
-  --shadow-md: 0 4px 10px rgba(0,0,0,0.15);
 }
 
-/* Global base styles */
+/* ============================================================
+   Global Base Styles
+   ============================================================ */
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -103,12 +160,163 @@
 body {
   background-color: var(--color-bg);
   color: var(--color-text);
-  font-family: var(--font-family);
-  font-size: var(--font-size-md);
+  font-family: var(--font-ui);
+  font-size: var(--size-md);
+  line-height: var(--lh-normal);
   min-height: 100vh;
 }
 
-/* App layout */
+/* Headings use display font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: var(--lh-tight);
+}
+
+h1 {
+  font-size: var(--size-3xl);
+  font-weight: var(--weight-bold);
+}
+
+h2 {
+  font-size: var(--size-2xl);
+  font-weight: var(--weight-bold);
+}
+
+h3 {
+  font-size: var(--size-xl);
+  font-weight: var(--weight-semibold);
+}
+
+h4 {
+  font-size: var(--size-lg);
+  font-weight: var(--weight-semibold);
+}
+
+h5 {
+  font-size: var(--size-md);
+  font-weight: var(--weight-semibold);
+}
+
+h6 {
+  font-size: var(--size-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* ============================================================
+   Form Elements Base Styling
+   ============================================================ */
+
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
+  font-size: var(--size-md);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: var(--shadow-inset-soft);
+  min-height: var(--touch-target-min);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+input.error,
+input[aria-invalid="true"],
+textarea.error,
+textarea[aria-invalid="true"],
+select.error,
+select[aria-invalid="true"] {
+  border-color: var(--color-danger);
+  box-shadow: var(--shadow-inset-soft), 0 0 0 1px var(--color-danger);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: var(--font-ui);
+}
+
+/* ============================================================
+   Links
+   ============================================================ */
+
+a {
+  color: var(--color-accent);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: var(--color-accent-alt);
+  text-decoration: underline;
+}
+
+/* ============================================================
+   Button Interaction States
+   ============================================================ */
+
+button {
+  transition: background-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+button:active:not(:disabled) {
+  filter: brightness(0.95);
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: none;
+}
+
+/* ============================================================
+   Focus-Visible Ring (keyboard accessibility)
+   ============================================================ */
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible),
+[tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================================
+   App Layout
+   ============================================================ */
+
 .app-layout {
   display: flex;
   flex-direction: column;
@@ -123,7 +331,10 @@ body {
   padding-bottom: calc(var(--touch-target-min) + var(--space-md));
 }
 
-/* TopBar */
+/* ============================================================
+   TopBar
+   ============================================================ */
+
 .top-bar {
   display: flex;
   align-items: center;
@@ -146,9 +357,10 @@ body {
 }
 
 .top-bar__title {
-  font-size: var(--font-size-lg);
+  font-size: var(--size-lg);
   font-weight: bold;
-  color: var(--color-primary);
+  color: var(--color-accent);
+  font-family: var(--font-display);
   flex-shrink: 0;
 }
 
@@ -170,7 +382,7 @@ body {
 }
 
 .top-bar__character:hover {
-  color: var(--color-primary);
+  color: var(--color-accent);
   text-decoration: underline;
 }
 
@@ -189,13 +401,17 @@ body {
   cursor: pointer;
   font-size: var(--font-size-sm);
   padding: 0 var(--space-sm);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .top-bar__btn:hover {
   background-color: var(--color-surface-alt);
 }
 
-/* BottomNav */
+/* ============================================================
+   BottomNav
+   ============================================================ */
+
 .bottom-nav {
   display: flex;
   background-color: var(--color-surface);
@@ -216,19 +432,28 @@ body {
   font-size: var(--font-size-sm);
   padding: var(--space-xs);
   border-right: 1px solid var(--color-border);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .bottom-nav__item:last-child {
   border-right: none;
 }
 
-.bottom-nav__item--active {
-  color: var(--color-primary);
-  font-weight: bold;
-  border-top: 2px solid var(--color-primary);
+.bottom-nav__item:hover {
+  background-color: var(--color-surface-alt);
+  color: var(--color-text);
 }
 
-/* TopBar overflow menu */
+.bottom-nav__item--active {
+  color: var(--color-accent);
+  font-weight: bold;
+  border-top: 2px solid var(--color-accent);
+}
+
+/* ============================================================
+   TopBar Overflow Menu
+   ============================================================ */
+
 .topbar-menu {
   position: absolute;
   top: calc(100% + 4px);
@@ -236,7 +461,7 @@ body {
   background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-medium);
   z-index: 200;
   min-width: 160px;
   display: flex;
@@ -254,8 +479,9 @@ body {
   text-decoration: none;
   font-size: var(--font-size-sm);
   cursor: pointer;
-  border-bottom: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-border);
   white-space: nowrap;
+  transition: background-color 0.15s ease;
 }
 
 .topbar-menu__item:last-child {
@@ -267,12 +493,15 @@ body {
 }
 
 .topbar-menu__item--active {
-  color: var(--color-primary);
+  color: var(--color-accent);
   font-weight: bold;
   background-color: var(--color-surface-alt);
 }
 
-/* Field states */
+/* ============================================================
+   Field States
+   ============================================================ */
+
 .field--locked {
   opacity: 0.6;
   cursor: default;

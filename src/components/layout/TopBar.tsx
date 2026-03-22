@@ -64,7 +64,7 @@ export function TopBar() {
           aria-label={`Switch to ${isPlayMode ? 'Edit' : 'Play'} mode`}
           style={{
             backgroundColor: isPlayMode ? 'var(--color-mode-play)' : 'var(--color-mode-edit)',
-            color: 'var(--color-text-inverse)',
+            color: 'var(--color-bg)',
             fontWeight: 'bold',
             border: 'none',
           }}
