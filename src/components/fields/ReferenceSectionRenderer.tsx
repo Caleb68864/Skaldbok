@@ -30,12 +30,12 @@ function ReferenceTable({ section }: ReferenceSectionRendererProps) {
               <th
                 key={col}
                 style={{
-                  backgroundColor: '#9bc07b',
-                  color: '#1b1b1b',
+                  backgroundColor: 'var(--color-surface-alt)',
+                  color: 'var(--color-text)',
                   fontWeight: 'bold',
                   padding: '6px 8px',
                   textAlign: 'left',
-                  borderBottom: '1px solid #7aaa5a',
+                  borderBottom: '1px solid var(--color-border)',
                   whiteSpace: 'nowrap',
                 }}
               >
@@ -48,16 +48,16 @@ function ReferenceTable({ section }: ReferenceSectionRendererProps) {
           {rows.map((row, rowIndex) => (
             <tr
               key={rowIndex}
-              style={{ backgroundColor: rowIndex % 2 === 0 ? '#ffffff' : '#e4eddc' }}
+              style={{ backgroundColor: rowIndex % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)' }}
             >
               {columns.map(col => (
                 <td
                   key={col}
                   style={{
                     padding: '5px 8px',
-                    color: '#1b1b1b',
+                    color: 'var(--color-text)',
                     verticalAlign: 'top',
-                    borderBottom: '1px solid #d0d8c8',
+                    borderBottom: '1px solid var(--color-border)',
                   }}
                 >
                   {row[col] ?? '-'}
@@ -94,7 +94,7 @@ function ReferenceKeyValueList({ section }: ReferenceSectionRendererProps) {
           style={{
             display: 'flex',
             padding: '5px 0',
-            borderBottom: index < items.length - 1 ? '1px solid var(--color-divider)' : 'none',
+            borderBottom: index < items.length - 1 ? '1px solid var(--color-border)' : 'none',
             fontSize: 'var(--font-size-sm)',
           }}
         >

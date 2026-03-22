@@ -33,7 +33,7 @@ export function SectionPanel({ title, children, collapsible = false, defaultOpen
         role={collapsible ? 'button' : undefined}
         aria-expanded={collapsible ? open : undefined}
       >
-        <h3 style={{ fontSize: 'var(--font-size-md)', color: 'var(--color-text)', fontWeight: 'bold' }}>{title}</h3>
+        <h3 style={{ fontSize: 'var(--size-md)', fontFamily: 'var(--font-display)', color: 'var(--color-text)', fontWeight: 'bold' }}>{title}</h3>
         {collapsible && (
           <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-lg)' }}>
             {open ? '▲' : '▼'}

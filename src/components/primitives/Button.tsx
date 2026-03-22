@@ -8,8 +8,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const variantStyles: Record<string, React.CSSProperties> = {
   primary: {
-    backgroundColor: 'var(--color-primary)',
-    color: 'var(--color-primary-text)',
+    backgroundColor: 'var(--color-accent)',
+    color: 'var(--color-bg)',
     border: 'none',
   },
   secondary: {
@@ -19,7 +19,7 @@ const variantStyles: Record<string, React.CSSProperties> = {
   },
   danger: {
     backgroundColor: 'var(--color-danger)',
-    color: 'var(--color-text-inverse)',
+    color: 'var(--color-bg)',
     border: 'none',
   },
 };
@@ -47,7 +47,7 @@ export function Button({
         borderRadius: 'var(--radius-sm)',
         cursor: disabled ? 'default' : 'pointer',
         opacity: disabled ? 0.6 : 1,
-        fontFamily: 'inherit',
+        fontFamily: 'var(--font-ui)',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
