@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppState } from '../../context/AppStateContext';
+import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
 
 export function TopBar() {
   const { settings, toggleMode } = useAppState();
+  const { character } = useActiveCharacter();
+  const navigate = useNavigate();
   const { isFullscreen, toggleFullscreen, isSupported: fsSupported } = useFullscreen();
   const { isActive: wakeLockActive, toggleWakeLock, isSupported: wlSupported } = useWakeLock();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -32,7 +35,28 @@ export function TopBar() {
         ? '3px solid var(--color-mode-play)'
         : '3px solid var(--color-mode-edit)',
     }}>
-      <span className="top-bar__title">Skaldbok</span>
+      <div className="top-bar__title-group">
+        <span
+          className="top-bar__title top-bar__title--link"
+          onClick={() => navigate('/library')}
+          role="button"
+          tabIndex={0}
+          title="Character Library"
+        >
+          Skaldbok
+        </span>
+        {character && (
+          <span
+            className="top-bar__character"
+            onClick={() => navigate('/library')}
+            role="button"
+            tabIndex={0}
+            title="Switch character"
+          >
+            {character.name || 'Unnamed'}
+          </span>
+        )}
+      </div>
       <div className="top-bar__actions">
         <button
           className="top-bar__btn"
