@@ -4,6 +4,7 @@ const PLAY_MODE_EDITABLE_PREFIXES = [
   'resources.hp.current',
   'resources.wp.current',
   'resources.deathRolls.current',
+  'resources.deathSuccesses.current',
   'conditions.',
   'weapons.',
   'armor.equipped',
@@ -24,4 +25,9 @@ export function useFieldEditable(fieldPath: string): boolean {
   const { settings } = useAppState();
   if (settings.mode === 'edit') return true;
   return isFieldEditableInPlayMode(fieldPath);
+}
+
+export function useIsEditMode(): boolean {
+  const { settings } = useAppState();
+  return settings.mode === 'edit';
 }

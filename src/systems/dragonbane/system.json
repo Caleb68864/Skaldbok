@@ -22,7 +22,8 @@
   "resources": [
     { "id": "hp",         "name": "Hit Points",  "derivedFrom": "con", "min": 0, "defaultMax": 10 },
     { "id": "wp",         "name": "Willpower Points", "derivedFrom": "wil", "min": 0, "defaultMax": 10 },
-    { "id": "deathRolls", "name": "Death Rolls", "min": 0, "defaultMax": 3 }
+    { "id": "deathRolls", "name": "Death Rolls", "min": 0, "defaultMax": 3 },
+    { "id": "deathSuccesses", "name": "Death Successes", "min": 0, "defaultMax": 3 }
   ],
   "skillCategories": [
     {

@@ -23,6 +23,7 @@ export default function CombatScreen() {
   const hp = character.resources['hp'] ?? { current: 0, max: 10 };
   const wp = character.resources['wp'] ?? { current: 0, max: 10 };
   const deathRolls = character.resources['deathRolls'] ?? { current: 0, max: 3 };
+  const deathSuccesses = character.resources['deathSuccesses'] ?? { current: 0, max: 3 };
   const isDown = hp.current === 0;
 
   function updateResourceCurrent(id: string, value: number) {
@@ -47,8 +48,13 @@ export default function CombatScreen() {
     updateResourceCurrent('deathRolls', current);
   }
 
+  function updateDeathSuccesses(current: number) {
+    updateResourceCurrent('deathSuccesses', current);
+  }
+
   function resetDeathRolls() {
     updateResourceCurrent('deathRolls', 0);
+    updateResourceCurrent('deathSuccesses', 0);
   }
 
   // Equipped weapons
@@ -58,6 +64,8 @@ export default function CombatScreen() {
   // In Dragonbane, death rolls track failures. We use deathRolls.current as failure count.
   const deathRollFailures = deathRolls.current;
   const deathRollMax = deathRolls.max;
+  const deathSuccessCount = deathSuccesses.current;
+  const deathSuccessMax = deathSuccesses.max;
 
   return (
     <div style={{ padding: 'var(--space-md)' }}>
@@ -110,77 +118,134 @@ export default function CombatScreen() {
               Character is DOWN!
             </p>
           )}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 'var(--space-md)',
-          }}>
-            <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-md)', fontWeight: 'bold' }}>
-              Failures:
-            </span>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              {Array.from({ length: deathRollMax }, (_, i) => (
+          {isDown && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 'var(--space-md)',
+              }}>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-md)', fontWeight: 'bold' }}>
+                  Failures:
+                </span>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                  {Array.from({ length: deathRollMax }, (_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-label={`Death roll ${i + 1}`}
+                      onClick={() => {
+                        // Toggle: if clicking the last filled one, remove it; otherwise fill up to this one
+                        if (i < deathRollFailures) {
+                          updateDeathRolls(i);
+                        } else {
+                          updateDeathRolls(i + 1);
+                        }
+                      }}
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        border: '2px solid var(--color-danger)',
+                        backgroundColor: i < deathRollFailures ? 'var(--color-danger)' : 'transparent',
+                        color: i < deathRollFailures ? 'var(--color-text-inverse)' : 'var(--color-danger)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 'var(--font-size-lg)',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {i < deathRollFailures ? '\u2716' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {deathRollFailures >= deathRollMax && (
+                <p style={{
+                  color: 'var(--color-danger)',
+                  fontWeight: 'bold',
+                  fontSize: 'var(--font-size-lg)',
+                  textAlign: 'center',
+                }}>
+                  DEAD
+                </p>
+              )}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 'var(--space-md)',
+              }}>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-md)', fontWeight: 'bold' }}>
+                  Successes:
+                </span>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                  {Array.from({ length: deathSuccessMax }, (_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-label={`Death success ${i + 1}`}
+                      onClick={() => {
+                        if (i < deathSuccessCount) {
+                          updateDeathSuccesses(i);
+                        } else {
+                          updateDeathSuccesses(i + 1);
+                        }
+                      }}
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '50%',
+                        border: '2px solid var(--color-success)',
+                        backgroundColor: i < deathSuccessCount ? 'var(--color-success)' : 'transparent',
+                        color: i < deathSuccessCount ? 'var(--color-text-inverse)' : 'var(--color-success)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: 'var(--font-size-lg)',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      {i < deathSuccessCount ? '\u2714' : ''}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {deathSuccessCount >= deathSuccessMax && (
+                <p style={{
+                  color: 'var(--color-success)',
+                  fontWeight: 'bold',
+                  fontSize: 'var(--font-size-lg)',
+                  textAlign: 'center',
+                }}>
+                  Stabilized!
+                </p>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-sm)' }}>
                 <button
-                  key={i}
                   type="button"
-                  aria-label={`Death roll ${i + 1}`}
-                  onClick={() => {
-                    // Toggle: if clicking the last filled one, remove it; otherwise fill up to this one
-                    if (i < deathRollFailures) {
-                      updateDeathRolls(i);
-                    } else {
-                      updateDeathRolls(i + 1);
-                    }
-                  }}
+                  aria-label="Reset death rolls"
+                  onClick={resetDeathRolls}
                   style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    border: '2px solid var(--color-danger)',
-                    backgroundColor: i < deathRollFailures ? 'var(--color-danger)' : 'transparent',
-                    color: i < deathRollFailures ? 'var(--color-text-inverse)' : 'var(--color-danger)',
+                    minWidth: 'var(--touch-target-min)',
+                    minHeight: 'var(--touch-target-min)',
+                    fontSize: 'var(--font-size-sm)',
+                    background: 'var(--color-surface-alt)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-sm)',
+                    color: 'var(--color-text-muted)',
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 'var(--font-size-lg)',
-                    fontWeight: 'bold',
+                    padding: '0 var(--space-sm)',
                   }}
                 >
-                  {i < deathRollFailures ? '\u2716' : ''}
+                  Reset
                 </button>
-              ))}
+              </div>
             </div>
-            <button
-              type="button"
-              aria-label="Reset death rolls"
-              onClick={resetDeathRolls}
-              style={{
-                minWidth: 'var(--touch-target-min)',
-                minHeight: 'var(--touch-target-min)',
-                fontSize: 'var(--font-size-sm)',
-                background: 'var(--color-surface-alt)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-sm)',
-                color: 'var(--color-text-muted)',
-                cursor: 'pointer',
-                padding: '0 var(--space-sm)',
-              }}
-            >
-              Reset
-            </button>
-          </div>
-          {deathRollFailures >= deathRollMax && (
-            <p style={{
-              color: 'var(--color-danger)',
-              fontWeight: 'bold',
-              fontSize: 'var(--font-size-lg)',
-              textAlign: 'center',
-              marginTop: 'var(--space-sm)',
-            }}>
-              DEAD
-            </p>
           )}
         </div>
       </SectionPanel>
