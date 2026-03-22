@@ -14,6 +14,7 @@ const DEFAULT_SETTINGS: AppSettings = {
 export function useAppSettings() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -34,12 +35,16 @@ export function useAppSettings() {
   }, []);
 
   const updateSettings = useCallback(async (partial: Partial<AppSettings>) => {
-    setSettings(prev => {
-      const updated = { ...prev, ...partial };
-      settingsRepository.save(updated).catch(console.error);
-      return updated;
-    });
-  }, []);
+    const updated = { ...settings, ...partial };
+    setSettings(updated);
+    try {
+      await settingsRepository.save(updated);
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError('Failed to save settings: ' + message);
+    }
+  }, [settings]);
 
-  return { settings, updateSettings, isLoading };
+  return { settings, updateSettings, isLoading, error };
 }

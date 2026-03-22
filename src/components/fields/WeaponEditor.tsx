@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Weapon } from '../../types/character';
 import { Drawer } from '../primitives/Drawer';
 import { Button } from '../primitives/Button';
@@ -16,9 +16,21 @@ const empty: Omit<Weapon, 'id'> = { name: '', grip: 'one-handed', range: '', dam
 export function WeaponEditor({ open, onClose, weapon, onSave }: WeaponEditorProps) {
   const [form, setForm] = useState<Omit<Weapon, 'id'>>(weapon ? { ...weapon } : { ...empty });
 
-  function handleOpen() {
-    setForm(weapon ? { ...weapon } : { ...empty });
-  }
+  useEffect(() => {
+    if (open && weapon) {
+      setForm({
+        name: weapon.name,
+        grip: weapon.grip,
+        range: weapon.range,
+        damage: weapon.damage,
+        durability: weapon.durability,
+        features: weapon.features,
+        equipped: weapon.equipped,
+      });
+    } else if (open && !weapon) {
+      setForm({ ...empty });
+    }
+  }, [open, weapon]);
 
   function handleSave() {
     onSave({ ...form, id: weapon?.id ?? generateId() });
@@ -37,10 +49,6 @@ export function WeaponEditor({ open, onClose, weapon, onSave }: WeaponEditorProp
   };
 
   if (!open) return null;
-
-  if (open && form.name === '' && weapon) {
-    handleOpen();
-  }
 
   return (
     <Drawer open={open} onClose={onClose} title={weapon ? 'Edit Weapon' : 'Add Weapon'}>
