@@ -18,6 +18,9 @@ export function BottomNav() {
       <NavLink to="/combat" className={({ isActive }) => isActive ? 'bottom-nav__item bottom-nav__item--active' : 'bottom-nav__item'}>
         Combat
       </NavLink>
+      <NavLink to="/reference" className={({ isActive }) => isActive ? 'bottom-nav__item bottom-nav__item--active' : 'bottom-nav__item'}>
+        Reference
+      </NavLink>
     </nav>
   );
 }
