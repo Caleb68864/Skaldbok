@@ -32,7 +32,8 @@ export function useAutosave(
     }, debounceMs);
 
     return () => {
-      // Cleanup: flush on unmount
+      // Cancel pending debounce timer on re-render or dependency change
+      if (timerRef.current) clearTimeout(timerRef.current);
     };
   // We deliberately key on character object identity (not deep comparison) for debounce
   // eslint-disable-next-line react-hooks/exhaustive-deps
