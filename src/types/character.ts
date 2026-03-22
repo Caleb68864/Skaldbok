@@ -31,6 +31,9 @@ export interface ArmorPiece {
   rating: number;
   features: string;
   equipped: boolean;
+  weight?: number;          // contributes to encumbrance
+  bodyPart?: string;        // coverage area e.g. "Torso", "Full Body"
+  movementPenalty?: number; // movement reduction
 }
 
 export interface InventoryItem {

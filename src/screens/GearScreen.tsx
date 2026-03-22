@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
-import { useAppState } from '../context/AppStateContext';
 import { WeaponCard } from '../components/fields/WeaponCard';
 import { WeaponEditor } from '../components/fields/WeaponEditor';
 import { InventoryList } from '../components/fields/InventoryList';
@@ -9,25 +8,78 @@ import { InventoryItemEditor } from '../components/fields/InventoryItemEditor';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { CounterControl } from '../components/primitives/CounterControl';
 import { Button } from '../components/primitives/Button';
-import type { Weapon, InventoryItem } from '../types/character';
+import { Drawer } from '../components/primitives/Drawer';
+import type { Weapon, InventoryItem, ArmorPiece } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { computeEncumbranceLimit } from '../utils/derivedValues';
+import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 
 export default function GearScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { settings } = useAppState();
+  const isEditMode = useIsEditMode();
+  const armorEquipEditable = useFieldEditable('armor.equipped');
+  const helmetEquipEditable = useFieldEditable('helmet.equipped');
+
   const [weaponDrawerOpen, setWeaponDrawerOpen] = useState(false);
   const [editingWeapon, setEditingWeapon] = useState<Weapon | null>(null);
   const [inventoryDrawerOpen, setInventoryDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [newTinyItem, setNewTinyItem] = useState('');
 
+  // Armor drawer state
+  const [armorDrawerOpen, setArmorDrawerOpen] = useState(false);
+  const [armorName, setArmorName] = useState('');
+  const [armorRating, setArmorRating] = useState(0);
+  const [armorBodyPart, setArmorBodyPart] = useState('');
+  const [armorWeight, setArmorWeight] = useState(0);
+  const [armorMovementPenalty, setArmorMovementPenalty] = useState(0);
+  const [armorEquipped, setArmorEquipped] = useState(false);
+
+  // Helmet drawer state
+  const [helmetDrawerOpen, setHelmetDrawerOpen] = useState(false);
+  const [helmetName, setHelmetName] = useState('');
+  const [helmetRating, setHelmetRating] = useState(0);
+  const [helmetWeight, setHelmetWeight] = useState(0);
+  const [helmetEquipped, setHelmetEquipped] = useState(false);
+
+  // Populate armor form when drawer opens
+  useEffect(() => {
+    if (armorDrawerOpen && character?.armor) {
+      setArmorName(character.armor.name);
+      setArmorRating(character.armor.rating);
+      setArmorBodyPart(character.armor.bodyPart ?? '');
+      setArmorWeight(character.armor.weight ?? 0);
+      setArmorMovementPenalty(character.armor.movementPenalty ?? 0);
+      setArmorEquipped(character.armor.equipped);
+    } else if (armorDrawerOpen && !character?.armor) {
+      setArmorName('');
+      setArmorRating(0);
+      setArmorBodyPart('');
+      setArmorWeight(0);
+      setArmorMovementPenalty(0);
+      setArmorEquipped(false);
+    }
+  }, [armorDrawerOpen, character?.armor]);
+
+  // Populate helmet form when drawer opens
+  useEffect(() => {
+    if (helmetDrawerOpen && character?.helmet) {
+      setHelmetName(character.helmet.name);
+      setHelmetRating(character.helmet.rating);
+      setHelmetWeight(character.helmet.weight ?? 0);
+      setHelmetEquipped(character.helmet.equipped);
+    } else if (helmetDrawerOpen && !character?.helmet) {
+      setHelmetName('');
+      setHelmetRating(0);
+      setHelmetWeight(0);
+      setHelmetEquipped(false);
+    }
+  }, [helmetDrawerOpen, character?.helmet]);
+
   if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
   if (!character) { navigate('/library'); return null; }
-
-  const isEditMode = settings.mode === 'edit';
 
   function handleWeaponSave(weapon: Weapon) {
     if (!character) return;
@@ -81,8 +133,64 @@ export default function GearScreen() {
     updateCharacter({ tinyItems: character.tinyItems.filter((_, i) => i !== index), updatedAt: nowISO() });
   }
 
-  const totalWeight = character.inventory.reduce((sum, i) => sum + i.weight * i.quantity, 0);
+  function handleArmorSave() {
+    if (!character) return;
+    const existingId = character.armor?.id ?? generateId();
+    const armor: ArmorPiece = {
+      id: existingId,
+      name: armorName,
+      rating: armorRating,
+      features: character.armor?.features ?? '',
+      equipped: armorEquipped,
+      weight: armorWeight,
+      bodyPart: armorBodyPart,
+      movementPenalty: armorMovementPenalty,
+    };
+    updateCharacter({ armor, updatedAt: nowISO() });
+    setArmorDrawerOpen(false);
+  }
+
+  function handleHelmetSave() {
+    if (!character) return;
+    const existingId = character.helmet?.id ?? generateId();
+    const helmet: ArmorPiece = {
+      id: existingId,
+      name: helmetName,
+      rating: helmetRating,
+      features: character.helmet?.features ?? '',
+      equipped: helmetEquipped,
+      weight: helmetWeight,
+    };
+    updateCharacter({ helmet, updatedAt: nowISO() });
+    setHelmetDrawerOpen(false);
+  }
+
+  function handleAddArmor() {
+    updateCharacter({ armor: { id: generateId(), name: 'New Armor', rating: 0, features: '', equipped: false, weight: 0 }, updatedAt: nowISO() });
+    setArmorDrawerOpen(true);
+  }
+
+  function handleAddHelmet() {
+    updateCharacter({ helmet: { id: generateId(), name: 'New Helmet', rating: 0, features: '', equipped: false, weight: 0 }, updatedAt: nowISO() });
+    setHelmetDrawerOpen(true);
+  }
+
+  const totalWeight = character.inventory.reduce((sum, i) => sum + i.weight * i.quantity, 0)
+    + (character.armor?.weight ?? 0)
+    + (character.helmet?.weight ?? 0);
   const encumbranceLimit = computeEncumbranceLimit(character);
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: 'var(--space-sm)',
+    border: '1px solid var(--color-border)',
+    borderRadius: 'var(--radius-sm)',
+    background: 'var(--color-surface-alt)',
+    color: 'var(--color-text)',
+    fontSize: 'var(--font-size-md)',
+    fontFamily: 'inherit',
+    boxSizing: 'border-box',
+  };
 
   return (
     <div style={{ padding: 'var(--space-md)' }}>
@@ -113,35 +221,64 @@ export default function GearScreen() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
           {character.armor ? (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--color-text)' }}>Armor: {character.armor.name} (rating {character.armor.rating})</span>
-              <Button size="sm" variant={character.armor.equipped ? 'primary' : 'secondary'} onClick={() => {
-                if (!character?.armor) return;
-                updateCharacter({ armor: { ...character.armor, equipped: !character.armor.equipped }, updatedAt: nowISO() });
-              }}>
-                {character.armor.equipped ? 'Equipped' : 'Equip'}
-              </Button>
+              <button
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: isEditMode ? 'pointer' : 'default',
+                  textAlign: 'left',
+                  color: 'var(--color-text)',
+                  flex: 1,
+                }}
+                onClick={() => { if (isEditMode) setArmorDrawerOpen(true); }}
+              >
+                Armor: {character.armor.name} (rating {character.armor.rating}){character.armor.weight ? `, ${character.armor.weight} wt` : ''}
+              </button>
+              {armorEquipEditable && (
+                <Button size="sm" variant={character.armor.equipped ? 'primary' : 'secondary'} onClick={() => {
+                  if (!character?.armor) return;
+                  updateCharacter({ armor: { ...character.armor, equipped: !character.armor.equipped }, updatedAt: nowISO() });
+                }}>
+                  {character.armor.equipped ? 'Equipped' : 'Equip'}
+                </Button>
+              )}
             </div>
-          ) : <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No armor.</p>}
+          ) : (
+            isEditMode
+              ? <Button size="sm" variant="secondary" onClick={handleAddArmor}>+ Add Armor</Button>
+              : <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No armor.</p>
+          )}
+
           {character.helmet ? (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--color-text)' }}>Helmet: {character.helmet.name} (rating {character.helmet.rating})</span>
-              <Button size="sm" variant={character.helmet.equipped ? 'primary' : 'secondary'} onClick={() => {
-                if (!character?.helmet) return;
-                updateCharacter({ helmet: { ...character.helmet, equipped: !character.helmet.equipped }, updatedAt: nowISO() });
-              }}>
-                {character.helmet.equipped ? 'Equipped' : 'Equip'}
-              </Button>
+              <button
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  padding: 0,
+                  cursor: isEditMode ? 'pointer' : 'default',
+                  textAlign: 'left',
+                  color: 'var(--color-text)',
+                  flex: 1,
+                }}
+                onClick={() => { if (isEditMode) setHelmetDrawerOpen(true); }}
+              >
+                Helmet: {character.helmet.name} (rating {character.helmet.rating}){character.helmet.weight ? `, ${character.helmet.weight} wt` : ''}
+              </button>
+              {helmetEquipEditable && (
+                <Button size="sm" variant={character.helmet.equipped ? 'primary' : 'secondary'} onClick={() => {
+                  if (!character?.helmet) return;
+                  updateCharacter({ helmet: { ...character.helmet, equipped: !character.helmet.equipped }, updatedAt: nowISO() });
+                }}>
+                  {character.helmet.equipped ? 'Equipped' : 'Equip'}
+                </Button>
+              )}
             </div>
-          ) : <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No helmet.</p>}
-          {isEditMode && (
-            <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
-              <Button size="sm" variant="secondary" onClick={() => updateCharacter({ armor: { id: generateId(), name: 'Armor', rating: 2, features: '', equipped: false }, updatedAt: nowISO() })}>
-                Set Armor
-              </Button>
-              <Button size="sm" variant="secondary" onClick={() => updateCharacter({ helmet: { id: generateId(), name: 'Helmet', rating: 1, features: '', equipped: false }, updatedAt: nowISO() })}>
-                Set Helmet
-              </Button>
-            </div>
+          ) : (
+            isEditMode
+              ? <Button size="sm" variant="secondary" onClick={handleAddHelmet}>+ Add Helmet</Button>
+              : <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No helmet.</p>
           )}
         </div>
       </SectionPanel>
@@ -245,6 +382,74 @@ export default function GearScreen() {
         item={editingItem}
         onSave={handleInventorySave}
       />
+
+      {/* Armor Edit Drawer */}
+      <Drawer open={armorDrawerOpen} onClose={() => setArmorDrawerOpen(false)} title={character.armor ? 'Edit Armor' : 'Add Armor'}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
+            <input style={inputStyle} value={armorName} onChange={e => setArmorName(e.target.value)} placeholder="Armor name" />
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Rating / Protection</label>
+              <input type="number" style={inputStyle} value={armorRating} min={0} onChange={e => setArmorRating(Number(e.target.value))} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Weight</label>
+              <input type="number" style={inputStyle} value={armorWeight} min={0} onChange={e => setArmorWeight(Number(e.target.value))} />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Body Part</label>
+            <input style={inputStyle} value={armorBodyPart} onChange={e => setArmorBodyPart(e.target.value)} placeholder="e.g. Torso, Full Body" />
+          </div>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Movement Penalty</label>
+            <input type="number" style={inputStyle} value={armorMovementPenalty} min={0} onChange={e => setArmorMovementPenalty(Number(e.target.value))} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+            <label style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>Equipped</label>
+            <Button size="sm" variant={armorEquipped ? 'primary' : 'secondary'} onClick={() => setArmorEquipped(v => !v)}>
+              {armorEquipped ? 'Yes' : 'No'}
+            </Button>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => setArmorDrawerOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleArmorSave}>Save</Button>
+          </div>
+        </div>
+      </Drawer>
+
+      {/* Helmet Edit Drawer */}
+      <Drawer open={helmetDrawerOpen} onClose={() => setHelmetDrawerOpen(false)} title={character.helmet ? 'Edit Helmet' : 'Add Helmet'}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
+            <input style={inputStyle} value={helmetName} onChange={e => setHelmetName(e.target.value)} placeholder="Helmet name" />
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Rating / Protection</label>
+              <input type="number" style={inputStyle} value={helmetRating} min={0} onChange={e => setHelmetRating(Number(e.target.value))} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Weight</label>
+              <input type="number" style={inputStyle} value={helmetWeight} min={0} onChange={e => setHelmetWeight(Number(e.target.value))} />
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+            <label style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>Equipped</label>
+            <Button size="sm" variant={helmetEquipped ? 'primary' : 'secondary'} onClick={() => setHelmetEquipped(v => !v)}>
+              {helmetEquipped ? 'Yes' : 'No'}
+            </Button>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end' }}>
+            <Button variant="secondary" onClick={() => setHelmetDrawerOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={handleHelmetSave}>Save</Button>
+          </div>
+        </div>
+      </Drawer>
     </div>
   );
 }

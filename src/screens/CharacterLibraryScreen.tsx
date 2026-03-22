@@ -8,6 +8,8 @@ import type { CharacterRecord } from '../types/character';
 import { Card } from '../components/primitives/Card';
 import { Button } from '../components/primitives/Button';
 import { Modal } from '../components/primitives/Modal';
+import { useToast } from '../context/ToastContext';
+import styles from './CharacterLibraryScreen.module.css';
 
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
