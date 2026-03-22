@@ -3,19 +3,20 @@ import type { ReactNode } from 'react';
 
 interface SectionPanelProps {
   title: string;
+  icon?: ReactNode;
   children: ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
 }
 
-export function SectionPanel({ title, children, collapsible = false, defaultOpen = true }: SectionPanelProps) {
+export function SectionPanel({ title, icon, children, collapsible = false, defaultOpen = true }: SectionPanelProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
     <div style={{
       border: '1px solid var(--color-border)',
       borderRadius: 'var(--radius-md)',
-      marginBottom: 'var(--space-md)',
+      marginBottom: 0,
       overflow: 'hidden',
     }}>
       <div
@@ -23,7 +24,7 @@ export function SectionPanel({ title, children, collapsible = false, defaultOpen
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: 'var(--space-sm) var(--space-md)',
+          padding: 'var(--space-xs) var(--space-sm)',
           backgroundColor: 'var(--color-surface-alt)',
           cursor: collapsible ? 'pointer' : 'default',
           minHeight: collapsible ? 'var(--touch-target-min)' : 'auto',
@@ -33,7 +34,10 @@ export function SectionPanel({ title, children, collapsible = false, defaultOpen
         role={collapsible ? 'button' : undefined}
         aria-expanded={collapsible ? open : undefined}
       >
-        <h3 style={{ fontSize: 'var(--size-md)', fontFamily: 'var(--font-display)', color: 'var(--color-text)', fontWeight: 'bold' }}>{title}</h3>
+        <h3 style={{ fontSize: 'var(--size-md)', fontFamily: 'var(--font-display)', color: 'var(--color-text)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+          {icon}
+          {title}
+        </h3>
         {collapsible && (
           <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-lg)' }}>
             {open ? '▲' : '▼'}
@@ -41,7 +45,7 @@ export function SectionPanel({ title, children, collapsible = false, defaultOpen
         )}
       </div>
       {open && (
-        <div style={{ padding: 'var(--space-md)' }}>
+        <div style={{ padding: 'var(--space-sm)' }}>
           {children}
         </div>
       )}

@@ -96,4 +96,5 @@ export interface CharacterRecord extends Versioned, Timestamped {
   heroicAbilities: HeroicAbility[];
   derivedOverrides: DerivedOverrides;
   uiState: CharacterUiState;
+  portraitUri?: string;
 }
