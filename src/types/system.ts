@@ -50,4 +50,5 @@ export interface SystemDefinition {
   resources: ResourceDefinition[];
   skillCategories: SkillCategory[];
   sectionLayouts?: SectionLayout[];
+  themesSupported?: string[];
 }

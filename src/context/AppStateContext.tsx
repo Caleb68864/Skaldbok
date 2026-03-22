@@ -10,6 +10,7 @@ interface AppStateContextValue {
   settings: AppSettings;
   updateSettings: (partial: Partial<AppSettings>) => Promise<void>;
   isLoading: boolean;
+  settingsError: string | null;
   toggleMode: () => void;
 }
 
@@ -20,7 +21,7 @@ interface AppStateProviderProps {
 }
 
 export function AppStateProvider({ children }: AppStateProviderProps) {
-  const { settings, updateSettings, isLoading } = useAppSettings();
+  const { settings, updateSettings, isLoading, error: settingsError } = useAppSettings();
   const { setTheme } = useTheme();
 
   // Sync theme from loaded settings
@@ -45,7 +46,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   }
 
   return (
-    <AppStateContext.Provider value={{ settings, updateSettings, isLoading, toggleMode }}>
+    <AppStateContext.Provider value={{ settings, updateSettings, isLoading, settingsError, toggleMode }}>
       {children}
     </AppStateContext.Provider>
   );

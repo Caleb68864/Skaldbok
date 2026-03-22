@@ -52,6 +52,7 @@ export const systemDefinitionSchema = z.object({
   resources: z.array(resourceDefinitionSchema).describe('Resource definitions'),
   skillCategories: z.array(skillCategorySchema).describe('Grouped skill definitions'),
   sectionLayouts: z.array(sectionLayoutSchema).optional().describe('Optional section layout overrides'),
+  themesSupported: z.array(z.string()).optional().describe('Theme names this system supports'),
 });
 
 export type SystemDefinitionSchema = z.infer<typeof systemDefinitionSchema>;

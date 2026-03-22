@@ -76,5 +76,6 @@
         { "id": "mentalism",    "name": "Mentalism",    "baseChance": 0 }
       ]
     }
-  ]
+  ],
+  "themesSupported": ["dark", "parchment", "light"]
 }
