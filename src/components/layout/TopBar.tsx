@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAppState } from '../../context/AppStateContext';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
+import { GameIcon } from '../primitives/GameIcon';
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
 
@@ -61,15 +62,19 @@ export function TopBar() {
         <button
           className="top-bar__btn"
           onClick={toggleMode}
-          aria-label={`Switch to ${isPlayMode ? 'Edit' : 'Play'} mode`}
+          aria-label={isPlayMode ? 'Switch to Edit Mode' : 'Switch to Play Mode'}
           style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
             backgroundColor: isPlayMode ? 'var(--color-mode-play)' : 'var(--color-mode-edit)',
             color: 'var(--color-bg)',
             fontWeight: 'bold',
             border: 'none',
           }}
         >
-          {isPlayMode ? 'PLAY' : 'EDIT'}
+          <GameIcon name={isPlayMode ? 'crossed-swords' : 'open-book'} size={16} />
+          {isPlayMode ? 'PLAY MODE' : 'EDIT MODE'}
         </button>
 
         {fsSupported && (

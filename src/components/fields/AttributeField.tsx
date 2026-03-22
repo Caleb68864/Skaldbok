@@ -18,6 +18,23 @@ interface AttributeFieldProps {
 }
 
 export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false, linkedConditions, onConditionToggle }: AttributeFieldProps) {
+  const stepperButtonStyle: React.CSSProperties = {
+    minWidth: '48px',
+    minHeight: '48px',
+    fontSize: 'var(--size-2xl)',
+    fontWeight: 'bold',
+    background: 'var(--color-surface-alt)',
+    border: '2px solid var(--color-border)',
+    borderRadius: 'var(--radius-md)',
+    color: 'var(--color-text)',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    userSelect: 'none',
+    lineHeight: 1,
+  };
+
   return (
     <div style={{
       display: 'flex',
@@ -27,27 +44,49 @@ export function AttributeField({ attributeId: _attributeId, abbreviation, value,
       minWidth: '60px',
     }}>
       <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', fontWeight: 'bold' }}>{abbreviation}</span>
-      <input
-        type="number"
-        value={value}
-        min={min}
-        max={max}
-        disabled={disabled}
-        onChange={e => onChange(Number(e.target.value))}
-        className={disabled ? 'field--locked' : 'field--editable'}
-        style={{
-          width: '56px',
-          height: '56px',
+      {!disabled ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+          <button
+            type="button"
+            aria-label={`Decrease ${abbreviation}`}
+            onClick={() => onChange(value - 1)}
+            disabled={value <= min}
+            style={stepperButtonStyle}
+          >
+            −
+          </button>
+          <span style={{
+            minWidth: '40px',
+            textAlign: 'center',
+            fontSize: 'var(--size-2xl)',
+            fontWeight: 'bold',
+            color: 'var(--color-text)',
+            fontFamily: 'var(--font-display)',
+          }}>
+            {value}
+          </span>
+          <button
+            type="button"
+            aria-label={`Increase ${abbreviation}`}
+            onClick={() => onChange(value + 1)}
+            disabled={value >= max}
+            style={stepperButtonStyle}
+          >
+            +
+          </button>
+        </div>
+      ) : (
+        <span style={{
+          minWidth: '40px',
           textAlign: 'center',
-          fontSize: 'var(--font-size-lg)',
+          fontSize: 'var(--size-2xl)',
           fontWeight: 'bold',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-sm)',
-          background: disabled ? 'var(--color-surface)' : 'var(--color-surface-alt)',
           color: 'var(--color-text)',
-          cursor: disabled ? 'default' : 'text',
-        }}
-      />
+          fontFamily: 'var(--font-display)',
+        }}>
+          {value}
+        </span>
+      )}
       {linkedConditions && linkedConditions.length > 0 && (
         <div style={{
           display: 'flex',
