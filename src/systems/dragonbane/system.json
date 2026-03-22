@@ -1,0 +1,80 @@
+{
+  "id": "dragonbane",
+  "version": 1,
+  "name": "dragonbane",
+  "displayName": "Dragonbane",
+  "attributes": [
+    { "id": "str", "name": "Strength", "abbreviation": "STR", "min": 3, "max": 18 },
+    { "id": "con", "name": "Constitution", "abbreviation": "CON", "min": 3, "max": 18 },
+    { "id": "agl", "name": "Agility", "abbreviation": "AGL", "min": 3, "max": 18 },
+    { "id": "int", "name": "Intelligence", "abbreviation": "INT", "min": 3, "max": 18 },
+    { "id": "wil", "name": "Willpower", "abbreviation": "WIL", "min": 3, "max": 18 },
+    { "id": "cha", "name": "Charisma", "abbreviation": "CHA", "min": 3, "max": 18 }
+  ],
+  "conditions": [
+    { "id": "exhausted", "name": "Exhausted", "linkedAttributeId": "str", "description": "Affects STR-based actions" },
+    { "id": "sickly",    "name": "Sickly",    "linkedAttributeId": "con", "description": "Affects CON-based actions" },
+    { "id": "dazed",     "name": "Dazed",     "linkedAttributeId": "agl", "description": "Affects AGL-based actions" },
+    { "id": "angry",     "name": "Angry",     "linkedAttributeId": "int", "description": "Affects INT-based actions" },
+    { "id": "scared",    "name": "Scared",    "linkedAttributeId": "wil", "description": "Affects WIL-based actions" },
+    { "id": "disheartened", "name": "Disheartened", "linkedAttributeId": "cha", "description": "Affects CHA-based actions" }
+  ],
+  "resources": [
+    { "id": "hp",         "name": "Hit Points",  "derivedFrom": "con", "min": 0, "defaultMax": 10 },
+    { "id": "wp",         "name": "Willpower Points", "derivedFrom": "wil", "min": 0, "defaultMax": 10 },
+    { "id": "deathRolls", "name": "Death Rolls", "min": 0, "defaultMax": 3 }
+  ],
+  "skillCategories": [
+    {
+      "id": "core",
+      "name": "Core Skills",
+      "skills": [
+        { "id": "acrobatics",       "name": "Acrobatics",        "baseChance": 5,  "linkedAttributeId": "agl" },
+        { "id": "awareness",        "name": "Awareness",         "baseChance": 5,  "linkedAttributeId": "int" },
+        { "id": "bartering",        "name": "Bartering",         "baseChance": 5,  "linkedAttributeId": "cha" },
+        { "id": "beastLore",        "name": "Beast Lore",        "baseChance": 5,  "linkedAttributeId": "int" },
+        { "id": "bluffing",         "name": "Bluffing",          "baseChance": 5,  "linkedAttributeId": "cha" },
+        { "id": "bushcraft",        "name": "Bushcraft",         "baseChance": 5,  "linkedAttributeId": "int" },
+        { "id": "crafting",         "name": "Crafting",          "baseChance": 5,  "linkedAttributeId": "str" },
+        { "id": "evade",            "name": "Evade",             "baseChance": 5,  "linkedAttributeId": "agl" },
+        { "id": "healing",          "name": "Healing",           "baseChance": 5,  "linkedAttributeId": "int" },
+        { "id": "huntingFishing",   "name": "Hunting & Fishing", "baseChance": 5,  "linkedAttributeId": "agl" },
+        { "id": "languages",        "name": "Languages",         "baseChance": 5,  "linkedAttributeId": "int" },
+        { "id": "mythsLegends",     "name": "Myths & Legends",   "baseChance": 5,  "linkedAttributeId": "int" },
+        { "id": "performance",      "name": "Performance",       "baseChance": 5,  "linkedAttributeId": "cha" },
+        { "id": "persuasion",       "name": "Persuasion",        "baseChance": 5,  "linkedAttributeId": "cha" },
+        { "id": "riding",           "name": "Riding",            "baseChance": 5,  "linkedAttributeId": "agl" },
+        { "id": "seamanship",       "name": "Seamanship",        "baseChance": 5,  "linkedAttributeId": "agl" },
+        { "id": "sleightOfHand",    "name": "Sleight of Hand",   "baseChance": 5,  "linkedAttributeId": "agl" },
+        { "id": "sneaking",         "name": "Sneaking",          "baseChance": 5,  "linkedAttributeId": "agl" },
+        { "id": "spotHidden",       "name": "Spot Hidden",       "baseChance": 5,  "linkedAttributeId": "int" },
+        { "id": "swimming",         "name": "Swimming",          "baseChance": 5,  "linkedAttributeId": "str" }
+      ]
+    },
+    {
+      "id": "weapon",
+      "name": "Weapon Skills",
+      "skills": [
+        { "id": "axes",       "name": "Axes",       "baseChance": 5, "linkedAttributeId": "str" },
+        { "id": "bows",       "name": "Bows",       "baseChance": 5, "linkedAttributeId": "agl" },
+        { "id": "brawling",   "name": "Brawling",   "baseChance": 5, "linkedAttributeId": "str" },
+        { "id": "crossbows",  "name": "Crossbows",  "baseChance": 5, "linkedAttributeId": "agl" },
+        { "id": "hammers",    "name": "Hammers",    "baseChance": 5, "linkedAttributeId": "str" },
+        { "id": "knives",     "name": "Knives",     "baseChance": 5, "linkedAttributeId": "agl" },
+        { "id": "slings",     "name": "Slings",     "baseChance": 5, "linkedAttributeId": "agl" },
+        { "id": "spears",     "name": "Spears",     "baseChance": 5, "linkedAttributeId": "str" },
+        { "id": "staves",     "name": "Staves",     "baseChance": 5, "linkedAttributeId": "str" },
+        { "id": "swords",     "name": "Swords",     "baseChance": 5, "linkedAttributeId": "str" }
+      ]
+    },
+    {
+      "id": "magic",
+      "name": "Magic Schools",
+      "skills": [
+        { "id": "animism",      "name": "Animism",      "baseChance": 0 },
+        { "id": "elementalism", "name": "Elementalism", "baseChance": 0 },
+        { "id": "mentalism",    "name": "Mentalism",    "baseChance": 0 }
+      ]
+    }
+  ]
+}

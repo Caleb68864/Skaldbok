@@ -1,0 +1,203 @@
+/* Base variables shared across all themes */
+:root {
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --font-family: system-ui, -apple-system, sans-serif;
+  --font-size-sm: 0.8rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.6rem;
+  --touch-target-min: 44px;
+}
+
+/* Dark theme (default) */
+[data-theme="dark"] {
+  --color-bg: #0f0f1a;
+  --color-surface: #1a1a2e;
+  --color-surface-alt: #22223a;
+  --color-text: #e8e8f0;
+  --color-text-muted: #8888aa;
+  --color-text-inverse: #0f0f1a;
+  --color-primary: #c9a84c;
+  --color-primary-hover: #dbbf6a;
+  --color-primary-text: #0f0f1a;
+  --color-accent: #7b68ee;
+  --color-danger: #e05555;
+  --color-success: #55bb77;
+  --color-warning: #e0aa44;
+  --color-border: #333355;
+  --color-divider: #2a2a44;
+  --color-mode-play: #2a6e3f;
+  --color-mode-edit: #3a4a9e;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.5);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.6);
+}
+
+/* Parchment theme */
+[data-theme="parchment"] {
+  --color-bg: #f5ead6;
+  --color-surface: #fffbf0;
+  --color-surface-alt: #ede0c8;
+  --color-text: #3b2b1a;
+  --color-text-muted: #7a6248;
+  --color-text-inverse: #fffbf0;
+  --color-primary: #8b4513;
+  --color-primary-hover: #a0522d;
+  --color-primary-text: #fffbf0;
+  --color-accent: #6b3a7d;
+  --color-danger: #c0392b;
+  --color-success: #2e7d32;
+  --color-warning: #b8860b;
+  --color-border: #c8a87a;
+  --color-divider: #d4b896;
+  --color-mode-play: #2e6930;
+  --color-mode-edit: #2c4a8a;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.15);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.2);
+  --font-family: Georgia, 'Times New Roman', serif;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --color-bg: #f5f5f5;
+  --color-surface: #ffffff;
+  --color-surface-alt: #eeeeee;
+  --color-text: #111111;
+  --color-text-muted: #666666;
+  --color-text-inverse: #ffffff;
+  --color-primary: #1565c0;
+  --color-primary-hover: #1976d2;
+  --color-primary-text: #ffffff;
+  --color-accent: #7b1fa2;
+  --color-danger: #c62828;
+  --color-success: #2e7d32;
+  --color-warning: #f57f17;
+  --color-border: #dddddd;
+  --color-divider: #e0e0e0;
+  --color-mode-play: #2e7d32;
+  --color-mode-edit: #1565c0;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12);
+  --shadow-md: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+/* Global base styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  min-height: 100vh;
+}
+
+/* App layout */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background-color: var(--color-bg);
+}
+
+.app-main {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+  padding-bottom: calc(var(--touch-target-min) + var(--space-md));
+}
+
+/* TopBar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-md);
+  min-height: var(--touch-target-min);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.top-bar__title {
+  font-size: var(--font-size-lg);
+  font-weight: bold;
+  color: var(--color-primary);
+}
+
+.top-bar__actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.top-bar__btn {
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  padding: 0 var(--space-sm);
+}
+
+.top-bar__btn:hover {
+  background-color: var(--color-surface-alt);
+}
+
+/* BottomNav */
+.bottom-nav {
+  display: flex;
+  background-color: var(--color-surface);
+  border-top: 1px solid var(--color-border);
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+}
+
+.bottom-nav__item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--touch-target-min);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  font-size: var(--font-size-sm);
+  padding: var(--space-xs);
+  border-right: 1px solid var(--color-border);
+}
+
+.bottom-nav__item:last-child {
+  border-right: none;
+}
+
+.bottom-nav__item--active {
+  color: var(--color-primary);
+  font-weight: bold;
+  border-top: 2px solid var(--color-primary);
+}
+
+/* Field states */
+.field--locked {
+  opacity: 0.6;
+  cursor: default;
+  pointer-events: none;
+}
+
+.field--editable {
+  opacity: 1;
+  cursor: pointer;
+}
