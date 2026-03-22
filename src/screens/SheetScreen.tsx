@@ -3,13 +3,15 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useAutosave } from '../hooks/useAutosave';
-import { useFieldEditable } from '../utils/modeGuards';
+import { useFieldEditable, useIsEditMode } from '../utils/modeGuards';
 import { AttributeField } from '../components/fields/AttributeField';
+import { CharacterPortrait } from '../components/fields/CharacterPortrait';
 import { ConditionToggleGroup } from '../components/fields/ConditionToggleGroup';
 import { ResourceTracker } from '../components/fields/ResourceTracker';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { DerivedFieldDisplay } from '../components/fields/DerivedFieldDisplay';
 import { getDerivedValue } from '../utils/derivedValues';
+import { GameIcon } from '../components/primitives/GameIcon';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { nowISO } from '../utils/dates';
 
@@ -20,6 +22,7 @@ export default function SheetScreen() {
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
 
+  const isEditMode = useIsEditMode();
   const identityEditable = useFieldEditable('identity');
   const attributesEditable = useFieldEditable('attributes.str');
   const resourceMaxEditable = useFieldEditable('resources.hp.max');
@@ -81,62 +84,84 @@ export default function SheetScreen() {
   });
 
   return (
-    <div style={{ padding: 'var(--space-md)' }}>
-      {saveError && <div style={{ color: 'var(--color-danger)', marginBottom: 'var(--space-sm)', fontSize: 'var(--font-size-sm)' }}>{saveError}</div>}
+    <div className="sheet-grid" style={{ padding: 'var(--space-sm)' }}>
+      {saveError && <div className="sheet-grid__full-width" style={{ color: 'var(--color-danger)', marginBottom: 'var(--space-sm)', fontSize: 'var(--font-size-sm)' }}>{saveError}</div>}
 
-      <SectionPanel title="Identity" collapsible defaultOpen>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-          <div>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
-            <input
-              style={inputStyle(identityEditable)}
-              value={character.name}
-              disabled={!identityEditable}
-              className={identityEditable ? 'field--editable' : 'field--locked'}
-              onChange={e => updateCharacter({ name: e.target.value, updatedAt: nowISO() })}
+      <div className="sheet-grid__full-width">
+        <SectionPanel title="Identity" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
+          <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'flex-start' }}>
+            <CharacterPortrait
+              portraitUri={character.portraitUri}
+              characterName={character.name}
+              isEditMode={isEditMode}
+              onPortraitChange={(dataUrl) => updateCharacter({ portraitUri: dataUrl, updatedAt: nowISO() })}
             />
-          </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Kin</label>
-              <input style={inputStyle(identityEditable)} value={character.metadata.kin} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('kin', e.target.value)} />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', flex: 1, minWidth: 0 }}>
+              <div>
+                <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
+                <input
+                  style={inputStyle(identityEditable)}
+                  value={character.name}
+                  disabled={!identityEditable}
+                  className={identityEditable ? 'field--editable' : 'field--locked'}
+                  onChange={e => updateCharacter({ name: e.target.value, updatedAt: nowISO() })}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Kin</label>
+                  <input style={inputStyle(identityEditable)} value={character.metadata.kin} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('kin', e.target.value)} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Profession</label>
+                  <input style={inputStyle(identityEditable)} value={character.metadata.profession} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('profession', e.target.value)} />
+                </div>
+              </div>
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Profession</label>
-              <input style={inputStyle(identityEditable)} value={character.metadata.profession} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('profession', e.target.value)} />
-            </div>
           </div>
-        </div>
-      </SectionPanel>
+        </SectionPanel>
+      </div>
 
-      <SectionPanel title={`Attributes${isPlayMode ? ' (locked in Play Mode)' : ''}`} collapsible defaultOpen>
+      <SectionPanel title={`Attributes${isPlayMode ? ' (locked in Play Mode)' : ''}`} icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', justifyContent: 'center' }}>
-          {system?.attributes.map(attr => (
-            <AttributeField
-              key={attr.id}
-              attributeId={attr.id}
-              abbreviation={attr.abbreviation}
-              value={character.attributes[attr.id] ?? 10}
-              min={attr.min}
-              max={attr.max}
-              onChange={v => updateAttr(attr.id, v)}
-              disabled={!attributesEditable}
-            />
-          ))}
+          {system?.attributes.map(attr => {
+            const linked = system.conditions
+              .filter(c => c.linkedAttributeId === attr.id)
+              .map(def => ({ definition: def, active: !!character.conditions[def.id] }));
+            return (
+              <AttributeField
+                key={attr.id}
+                attributeId={attr.id}
+                abbreviation={attr.abbreviation}
+                value={character.attributes[attr.id] ?? 10}
+                min={attr.min}
+                max={attr.max}
+                onChange={v => updateAttr(attr.id, v)}
+                disabled={!attributesEditable}
+                linkedConditions={linked}
+                onConditionToggle={updateCondition}
+              />
+            );
+          })}
         </div>
       </SectionPanel>
 
-      <SectionPanel title="Conditions" collapsible defaultOpen>
-        {system && (
-          <ConditionToggleGroup
-            conditions={character.conditions}
-            definitions={system.conditions}
-            onChange={updateCondition}
-          />
-        )}
-      </SectionPanel>
+      {system && (() => {
+        const linkedAttrIds = new Set(system.attributes.map(a => a.id));
+        const orphanConditions = system.conditions.filter(c => !linkedAttrIds.has(c.linkedAttributeId));
+        if (orphanConditions.length === 0) return null;
+        return (
+          <SectionPanel title="Conditions" collapsible defaultOpen>
+            <ConditionToggleGroup
+              conditions={character.conditions}
+              definitions={orphanConditions}
+              onChange={updateCondition}
+            />
+          </SectionPanel>
+        );
+      })()}
 
-      <SectionPanel title="Resources" collapsible defaultOpen>
+      <SectionPanel title="Resources" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
           {['hp', 'wp'].map(resId => {
             const res = character.resources[resId];
@@ -151,14 +176,14 @@ export default function SheetScreen() {
                 max={res.max}
                 onCurrentChange={v => updateResourceCurrent(resId, v)}
                 onMaxChange={v => updateResourceMax(resId, v)}
-                maxDisabled={!resourceMaxEditable}
+                maxEditable={resourceMaxEditable}
               />
             );
           })}
         </div>
       </SectionPanel>
 
-      <SectionPanel title="Derived Values" collapsible defaultOpen>
+      <SectionPanel title="Derived Values" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {([
             { key: 'movement', label: 'Movement' },

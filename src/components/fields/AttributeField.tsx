@@ -1,3 +1,10 @@
+import type { ConditionDefinition } from '../../types/system';
+
+interface LinkedCondition {
+  definition: ConditionDefinition;
+  active: boolean;
+}
+
 interface AttributeFieldProps {
   attributeId: string;
   abbreviation: string;
@@ -6,9 +13,11 @@ interface AttributeFieldProps {
   max?: number;
   onChange: (value: number) => void;
   disabled?: boolean;
+  linkedConditions?: LinkedCondition[];
+  onConditionToggle?: (conditionId: string, value: boolean) => void;
 }
 
-export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false }: AttributeFieldProps) {
+export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false, linkedConditions, onConditionToggle }: AttributeFieldProps) {
   return (
     <div style={{
       display: 'flex',
@@ -39,6 +48,44 @@ export function AttributeField({ attributeId: _attributeId, abbreviation, value,
           cursor: disabled ? 'default' : 'text',
         }}
       />
+      {linkedConditions && linkedConditions.length > 0 && (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--space-xs)',
+          alignItems: 'center',
+          width: '100%',
+        }}>
+          {linkedConditions.map(({ definition, active }) => (
+            <button
+              key={definition.id}
+              type="button"
+              role="switch"
+              aria-checked={active}
+              aria-label={`${definition.name} condition (${abbreviation})`}
+              onClick={() => onConditionToggle?.(definition.id, !active)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: 'var(--touch-target-min)',
+                minWidth: 'var(--touch-target-min)',
+                padding: '0 var(--space-sm)',
+                borderRadius: 'var(--radius-md)',
+                border: active ? '2px solid var(--color-danger)' : '2px solid var(--color-border)',
+                backgroundColor: active ? 'var(--color-danger)' : 'var(--color-surface-alt)',
+                color: active ? '#fff' : 'var(--color-text)',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                fontSize: 'var(--font-size-sm)',
+                fontWeight: active ? 'bold' : 'normal',
+              }}
+            >
+              {definition.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
