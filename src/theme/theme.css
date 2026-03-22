@@ -137,10 +137,41 @@ body {
   z-index: 100;
 }
 
+.top-bar__title-group {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  min-width: 0;
+  overflow: hidden;
+}
+
 .top-bar__title {
   font-size: var(--font-size-lg);
   font-weight: bold;
   color: var(--color-primary);
+  flex-shrink: 0;
+}
+
+.top-bar__title--link {
+  cursor: pointer;
+}
+
+.top-bar__title--link:hover {
+  text-decoration: underline;
+}
+
+.top-bar__character {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-bar__character:hover {
+  color: var(--color-primary);
+  text-decoration: underline;
 }
 
 .top-bar__actions {
