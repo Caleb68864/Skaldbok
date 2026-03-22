@@ -9,15 +9,13 @@ import { Card } from '../components/primitives/Card';
 import { Button } from '../components/primitives/Button';
 import { Modal } from '../components/primitives/Modal';
 import { useToast } from '../context/ToastContext';
-import styles from './CharacterLibraryScreen.module.css';
 
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<CharacterRecord | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const { character: activeCharacter, setCharacter } = useActiveCharacter();
   const { createCharacter, duplicateCharacter, deleteCharacter } = useCharacterActions();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,8 +32,9 @@ export default function CharacterLibraryScreen() {
     try {
       await createCharacter();
       await loadCharacters();
+      showToast('Character created', 'success');
     } catch (e) {
-      setErrorMsg(String(e));
+      showToast(String(e), 'error');
     }
   }
 
@@ -43,8 +42,9 @@ export default function CharacterLibraryScreen() {
     try {
       await duplicateCharacter(id);
       await loadCharacters();
+      showToast('Character duplicated', 'success');
     } catch (e) {
-      setErrorMsg(String(e));
+      showToast(String(e), 'error');
     }
   }
 
@@ -54,8 +54,9 @@ export default function CharacterLibraryScreen() {
       await deleteCharacter(deleteTarget.id);
       setDeleteTarget(null);
       await loadCharacters();
+      showToast('Character deleted', 'success');
     } catch (e) {
-      setErrorMsg(String(e));
+      showToast(String(e), 'error');
     }
   }
 
@@ -76,12 +77,12 @@ export default function CharacterLibraryScreen() {
     if (result.success) {
       await loadCharacters();
       if (result.warning) {
-        setSuccessMsg(`Character imported successfully. Note: ${result.warning}`);
+        showToast(`Imported. Note: ${result.warning}`, 'warning');
       } else {
-        setSuccessMsg('Character imported successfully.');
+        showToast('Character imported successfully', 'success');
       }
     } else {
-      setErrorMsg(result.error ?? 'Import failed.');
+      showToast(result.error ?? 'Import failed.', 'error');
     }
   }
 
@@ -163,13 +164,6 @@ export default function CharacterLibraryScreen() {
         </p>
       </Modal>
 
-      <Modal open={errorMsg !== null} onClose={() => setErrorMsg(null)} title="Error">
-        <p style={{ color: 'var(--color-danger)' }}>{errorMsg}</p>
-      </Modal>
-
-      <Modal open={successMsg !== null} onClose={() => setSuccessMsg(null)} title="Success">
-        <p style={{ color: 'var(--color-success)' }}>{successMsg}</p>
-      </Modal>
     </div>
   );
 }
