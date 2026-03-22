@@ -22,6 +22,7 @@ export default function GearScreen() {
   const [editingWeapon, setEditingWeapon] = useState<Weapon | null>(null);
   const [inventoryDrawerOpen, setInventoryDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [newTinyItem, setNewTinyItem] = useState('');
 
   if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
   if (!character) { navigate('/library'); return null; }
@@ -65,6 +66,19 @@ export default function GearScreen() {
   function updateCoin(coin: 'gold' | 'silver' | 'copper', value: number) {
     if (!character) return;
     updateCharacter({ coins: { ...character.coins, [coin]: value }, updatedAt: nowISO() });
+  }
+
+  function addTinyItem() {
+    if (!character) return;
+    const trimmed = newTinyItem.trim();
+    if (!trimmed) return;
+    updateCharacter({ tinyItems: [...character.tinyItems, trimmed], updatedAt: nowISO() });
+    setNewTinyItem('');
+  }
+
+  function removeTinyItem(index: number) {
+    if (!character) return;
+    updateCharacter({ tinyItems: character.tinyItems.filter((_, i) => i !== index), updatedAt: nowISO() });
   }
 
   const totalWeight = character.inventory.reduce((sum, i) => sum + i.weight * i.quantity, 0);
@@ -148,6 +162,68 @@ export default function GearScreen() {
           <CounterControl label="Silver" value={character.coins.silver} min={0} onChange={v => updateCoin('silver', v)} />
           <CounterControl label="Copper" value={character.coins.copper} min={0} onChange={v => updateCoin('copper', v)} />
         </div>
+      </SectionPanel>
+
+      <SectionPanel title="Tiny Items" collapsible defaultOpen>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+          {character.tinyItems.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No tiny items.</p>}
+          {character.tinyItems.map((item, index) => (
+            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>{item}</span>
+              {isEditMode && (
+                <Button size="sm" variant="secondary" onClick={() => removeTinyItem(index)}>Remove</Button>
+              )}
+            </div>
+          ))}
+          {isEditMode && (
+            <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+              <input
+                type="text"
+                value={newTinyItem}
+                onChange={e => setNewTinyItem(e.target.value)}
+                placeholder="New tiny item..."
+                style={{
+                  flex: 1,
+                  padding: 'var(--space-sm)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-surface-alt)',
+                  color: 'var(--color-text)',
+                  fontSize: 'var(--font-size-md)',
+                  fontFamily: 'inherit',
+                }}
+                onKeyDown={e => { if (e.key === 'Enter') addTinyItem(); }}
+              />
+              <Button size="sm" variant="secondary" onClick={addTinyItem}>Add</Button>
+            </div>
+          )}
+        </div>
+      </SectionPanel>
+
+      <SectionPanel title="Memento" collapsible defaultOpen>
+        {isEditMode ? (
+          <input
+            type="text"
+            value={character.memento}
+            onChange={e => updateCharacter({ memento: e.target.value, updatedAt: nowISO() })}
+            placeholder="Your memento..."
+            style={{
+              width: '100%',
+              padding: 'var(--space-sm)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--color-surface-alt)',
+              color: 'var(--color-text)',
+              fontSize: 'var(--font-size-md)',
+              fontFamily: 'inherit',
+              boxSizing: 'border-box',
+            }}
+          />
+        ) : (
+          <span style={{ color: character.memento ? 'var(--color-text)' : 'var(--color-text-muted)', fontSize: 'var(--font-size-md)' }}>
+            {character.memento || 'No memento.'}
+          </span>
+        )}
       </SectionPanel>
 
       <SectionPanel title="Encumbrance" collapsible defaultOpen>
