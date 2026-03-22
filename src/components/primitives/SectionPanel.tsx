@@ -13,13 +13,14 @@ export function SectionPanel({ title, icon, children, collapsible = false, defau
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div style={{
+    <div className="section-panel" style={{
       border: '1px solid var(--color-border)',
       borderRadius: 'var(--radius-md)',
       marginBottom: 0,
       overflow: 'hidden',
     }}>
       <div
+        className="section-panel__header"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -45,7 +46,7 @@ export function SectionPanel({ title, icon, children, collapsible = false, defau
         )}
       </div>
       {open && (
-        <div style={{ padding: 'var(--space-sm)' }}>
+        <div className="section-panel__body" style={{ padding: 'var(--space-sm)' }}>
           {children}
         </div>
       )}

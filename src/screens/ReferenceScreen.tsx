@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import * as referenceNoteRepository from '../storage/repositories/referenceNoteRepository';
 import type { ReferenceNote } from '../storage/db/client';
 import { generateId } from '../utils/ids';
@@ -9,13 +9,23 @@ import { Drawer } from '../components/primitives/Drawer';
 import { Modal } from '../components/primitives/Modal';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { ReferenceSectionRenderer } from '../components/fields/ReferenceSectionRenderer';
-import { referenceSections } from '../data/dragonbaneReference';
+import { referenceSections, referencePages } from '../data/dragonbaneReference';
+
+/** Map each section ID to its parent page title */
+const sectionToPage: Record<string, string> = {};
+referencePages.forEach(page => {
+  page.sections.forEach(sectionId => {
+    sectionToPage[sectionId] = page.title;
+  });
+});
 
 type ActiveTab = 'reference' | 'notes';
 
 export default function ReferenceScreen() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('reference');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activePage, setActivePage] = useState<string>(referencePages[0].title);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Notes state
   const [notes, setNotes] = useState<ReferenceNote[]>([]);
@@ -80,6 +90,64 @@ export default function ReferenceScreen() {
     });
   }, [searchQuery]);
 
+  // IntersectionObserver for active pill tracking
+  useEffect(() => {
+    if (activeTab !== 'reference') {
+      // Cleanup when switching away from reference tab
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+      return;
+    }
+
+    // Graceful degradation: if IntersectionObserver is not available, skip
+    if (typeof IntersectionObserver === 'undefined') {
+      return;
+    }
+
+    // Small delay to let DOM render section elements
+    const timeoutId = setTimeout(() => {
+      const allSectionIds = referencePages.flatMap(p => p.sections);
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              const pageTitle = sectionToPage[entry.target.id];
+              if (pageTitle) {
+                setActivePage(pageTitle);
+              }
+            }
+          }
+        },
+        { rootMargin: '-20% 0px -60% 0px', threshold: 0 }
+      );
+
+      allSectionIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+      });
+
+      observerRef.current = observer;
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+    };
+  }, [activeTab, searchQuery]);
+
+  function handlePillClick(pageTitle: string) {
+    const page = referencePages.find(p => p.title === pageTitle);
+    if (!page || page.sections.length === 0) return;
+    const firstSectionId = page.sections[0];
+    document.getElementById(firstSectionId)?.scrollIntoView({ behavior: 'smooth' });
+    setActivePage(pageTitle);
+  }
+
   const tabBtnStyle = (tab: ActiveTab) => ({
     padding: 'var(--space-sm) var(--space-md)',
     border: '1px solid var(--color-border)',
@@ -129,11 +197,32 @@ export default function ReferenceScreen() {
             </div>
           )}
           {filteredSections.map(section => (
-            <SectionPanel key={section.id} title={section.title} collapsible defaultOpen>
-              <ReferenceSectionRenderer section={section} />
-            </SectionPanel>
+            <div key={section.id} id={section.id}>
+              <SectionPanel title={section.title} collapsible defaultOpen>
+                <ReferenceSectionRenderer section={section} />
+              </SectionPanel>
+            </div>
           ))}
         </div>
+      )}
+
+      {/* Floating pill bar — only visible on reference tab */}
+      {activeTab === 'reference' && (
+        <nav className="reference-pill-bar" aria-label="Jump to section">
+          {referencePages.map(page => (
+            <button
+              key={page.title}
+              className={
+                'reference-pill-bar__pill' +
+                (activePage === page.title ? ' reference-pill-bar__pill--active' : '')
+              }
+              onClick={() => handlePillClick(page.title)}
+              type="button"
+            >
+              {page.title}
+            </button>
+          ))}
+        </nav>
       )}
 
       {/* My Notes Tab */}
