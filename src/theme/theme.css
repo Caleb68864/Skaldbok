@@ -361,16 +361,18 @@ a:focus:not(:focus-visible),
    ============================================================ */
 
 .top-bar {
-  display: flex;
+  /* Three-zone grid: left (title) | center (mode-toggle) | right (actions) */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
-  padding: 0 var(--space-md);
+  padding: 0 var(--space-sm);
   min-height: var(--touch-target-min);
   position: sticky;
   top: 0;
   z-index: 100;
+  gap: var(--space-xs);
 }
 
 .top-bar__title-group {
@@ -379,6 +381,7 @@ a:focus:not(:focus-visible),
   gap: var(--space-sm);
   min-width: 0;
   overflow: hidden;
+  justify-self: start;
 }
 
 .top-bar__title {
@@ -411,9 +414,29 @@ a:focus:not(:focus-visible),
   text-decoration: underline;
 }
 
+/* Dedicated center slot for mode toggle — prevents overlap with action buttons */
+.top-bar__mode-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+}
+
+.top-bar__mode-label {
+  /* Label shown by default; hidden on narrow screens via media query below */
+}
+
+/* Narrow screen: mode toggle collapses to icon-only (<360px) */
+@media (max-width: 359px) {
+  .top-bar__mode-label {
+    display: none;
+  }
+}
+
 .top-bar__actions {
   display: flex;
   gap: var(--space-sm);
+  justify-self: end;
 }
 
 .top-bar__btn {
@@ -475,6 +498,13 @@ a:focus:not(:focus-visible),
   color: var(--color-accent);
   font-weight: bold;
   border-top: 2px solid var(--color-accent);
+}
+
+/* Narrow screen: bottom nav uses icon-only mode (<360px) */
+@media (max-width: 359px) {
+  .bottom-nav__label {
+    display: none;
+  }
 }
 
 /* ============================================================
@@ -567,19 +597,69 @@ a:focus:not(:focus-visible),
 }
 
 /* ============================================================
-   Reference Pill Bar (Jump Nav)
+   Reference Pill Bar (Two-Tier Jump Nav)
    ============================================================ */
 
-.reference-pill-bar {
+/* Fixed container housing both tier rows */
+.reference-pill-container {
   position: fixed;
   bottom: calc(var(--touch-target-min) + 8px);
   left: 0;
   right: 0;
   z-index: 90;
   display: flex;
+  flex-direction: column;
+}
+
+/* Sub-section pill row (tier 2) — appears above the category row */
+.sub-pill-row {
+  display: flex;
   gap: var(--space-xs);
   padding: 0 var(--space-sm);
-  height: 36px;
+  min-height: var(--touch-target-min);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background-color: var(--color-surface-alt);
+  border-top: 1px solid var(--color-border);
+  align-items: center;
+  scrollbar-width: none;
+}
+
+.sub-pill-row::-webkit-scrollbar {
+  display: none;
+}
+
+.sub-pill {
+  flex-shrink: 0;
+  min-height: var(--touch-target-min);
+  padding: 0 var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--size-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sub-pill--active {
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+  font-weight: var(--weight-bold);
+}
+
+/* Category pill row (tier 1) */
+.reference-pill-bar {
+  display: flex;
+  gap: var(--space-xs);
+  padding: 0 var(--space-sm);
+  min-height: var(--touch-target-min);
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   background-color: var(--color-surface);
@@ -615,6 +695,11 @@ a:focus:not(:focus-visible),
   color: var(--color-bg);
   border-color: var(--color-accent);
   font-weight: var(--weight-bold);
+}
+
+.reference-pill-bar__pill--expanded {
+  outline: 2px solid var(--color-accent-alt);
+  outline-offset: -2px;
 }
 
 /* ============================================================
@@ -679,6 +764,60 @@ select:focus {
   box-shadow: inset 0 -2px 0 var(--color-gold);
 }
 
+/* ============================================================
+   Dragon Marks — Advancement Tracking
+   ============================================================ */
+
+/* Gold highlight on dragon-marked skill rows */
+.dragon-marked {
+  background-color: color-mix(in srgb, var(--color-gold) 12%, transparent);
+  border-left: 3px solid var(--color-gold);
+  padding-left: var(--space-sm);
+}
+
+/* Dragon mark toggle button */
+.dragon-mark-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 1.1rem;
+  opacity: 0.4;
+  transition: opacity 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.dragon-mark-toggle:hover:not(:disabled) {
+  opacity: 0.75;
+  border-color: var(--color-gold);
+}
+
+.dragon-mark-toggle--active {
+  opacity: 1;
+  border-color: var(--color-gold);
+  background-color: color-mix(in srgb, var(--color-gold) 15%, transparent);
+}
+
+/* Dragon mark count badge */
+.dragon-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-sm);
+  background-color: color-mix(in srgb, var(--color-gold) 20%, transparent);
+  border: 1px solid var(--color-gold);
+  border-radius: var(--radius-sm);
+  color: var(--color-gold);
+  font-size: var(--size-sm);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-sm);
+}
+
 /* Gold underline on headings inside panels */
 .section-panel h1,
 .section-panel h2,
@@ -690,4 +829,1434 @@ select:focus {
   text-decoration-color: var(--color-gold);
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
+}
+
+/* Portrait thumbnail wrapper */
+.portrait-thumbnail {
+  position: relative;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+}
+
+/* Portrait lightbox full-screen overlay */
+.portrait-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Identity metadata grid: 2x2 on >= 600px, single column on narrower */
+.identity-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-sm);
+}
+
+@media (min-width: 600px) {
+  .identity-meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ============================================================
+   Profile Screen — SS-02
+   ============================================================ */
+
+/* Screen wrapper */
+.profile-screen {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  overflow-y: auto;
+}
+
+/* Hero portrait area — ~40vh */
+.profile-hero {
+  position: relative;
+  width: 100%;
+  height: 40vh;
+  min-height: 180px;
+  background-color: var(--color-surface);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Portrait image fills hero area */
+.profile-hero__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Upload / change overlay button (edit mode) */
+.profile-hero__upload-btn {
+  position: absolute;
+  bottom: var(--space-md);
+  right: var(--space-md);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--size-sm);
+  font-weight: var(--weight-semibold);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.15s ease;
+}
+
+.profile-hero__upload-btn:hover {
+  opacity: 0.9;
+}
+
+/* Placeholder when no portrait is set */
+.profile-hero__placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  background-color: var(--color-surface);
+}
+
+/* Silhouette SVG */
+.profile-hero__silhouette {
+  width: 72px;
+  height: 108px;
+  color: var(--color-text-muted, var(--color-text));
+  opacity: 0.5;
+}
+
+/* "No portrait set" label */
+.profile-hero__no-portrait-text {
+  font-size: var(--size-sm);
+  color: var(--color-text-muted, var(--color-text));
+  opacity: 0.7;
+}
+
+/* "Add Portrait" button (edit mode, in placeholder) */
+.profile-hero__add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-md);
+  background-color: var(--color-accent);
+  color: var(--color-bg);
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--size-sm);
+  font-weight: var(--weight-semibold);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.15s ease;
+}
+
+.profile-hero__add-btn:hover {
+  opacity: 0.9;
+}
+
+/* Appearance / Notes section wrapper */
+.profile-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--color-border, rgba(128, 128, 128, 0.2));
+}
+
+/* Section label */
+.profile-label {
+  font-size: var(--size-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted, var(--color-text));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Multi-line text areas */
+.profile-textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-sm) var(--space-md);
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border, rgba(128, 128, 128, 0.3));
+  border-radius: var(--radius-sm);
+  font-size: var(--size-md);
+  font-family: var(--font-text);
+  line-height: var(--lh-relaxed);
+  resize: vertical;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.profile-textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px rgba(var(--color-accent-rgb, 47, 135, 122), 0.25);
+}
+
+.profile-textarea[readonly] {
+  opacity: 0.85;
+  cursor: default;
+  resize: none;
+}
+
+/* ============================================================
+   Skills Screen — SS-03: Boon/Bane Controls, Attribute Tags,
+   Probability Display
+   ============================================================ */
+
+/* Global three-segment boon/bane selector */
+.boon-bane-selector {
+  display: flex;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--space-md);
+}
+
+.boon-bane-segment {
+  flex: 1;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  border: none;
+  background-color: var(--color-surface);
+  color: var(--color-text-muted, var(--color-text));
+  font-size: var(--size-sm);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  text-transform: uppercase;
+}
+
+.boon-bane-segment + .boon-bane-segment {
+  border-left: 1px solid var(--color-border);
+}
+
+.boon-bane-segment:hover:not(.boon-bane-segment--active) {
+  background-color: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface));
+}
+
+/* Active (selected) state */
+.boon-bane-segment--active {
+  color: var(--color-bg);
+  font-weight: var(--weight-bold, 700);
+}
+
+.boon-bane-segment--boon.boon-bane-segment--active {
+  background-color: var(--color-accent);
+}
+
+.boon-bane-segment--none.boon-bane-segment--active {
+  background-color: var(--color-text-muted, #888);
+}
+
+.boon-bane-segment--bane.boon-bane-segment--active {
+  background-color: color-mix(in srgb, #c0392b 70%, var(--color-surface));
+}
+
+/* Per-skill override button */
+.skill-override-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background-color: transparent;
+  color: var(--color-text-muted, var(--color-text));
+  font-size: var(--size-md);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.skill-override-btn--inherit {
+  opacity: 0.45;
+}
+
+.skill-override-btn--boon {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  opacity: 1;
+}
+
+.skill-override-btn--bane {
+  color: #c0392b;
+  border-color: #c0392b;
+  background-color: color-mix(in srgb, #c0392b 12%, transparent);
+  opacity: 1;
+}
+
+.skill-override-btn:hover {
+  opacity: 0.8;
+}
+
+/* Attribute tag — small inline badge next to skill name */
+.attribute-tag {
+  display: inline-block;
+  margin-left: var(--space-xs);
+  padding: 1px 5px;
+  border-radius: var(--radius-xs, 4px);
+  border: 1px solid var(--color-border);
+  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-text-muted, var(--color-text));
+  font-size: var(--size-xs, 0.7rem);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  line-height: 1.4;
+}
+
+/* Probability display — inline text beside skill value */
+.probability-display {
+  font-size: var(--size-xs, 0.75rem);
+  color: var(--color-text-muted, var(--color-text));
+  font-family: var(--font-ui);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Rest & Recovery — Buttons and Modal Styles
+   ============================================================ */
+
+/* Rest action buttons — play mode only, shown in Rest & Recovery section */
+.rest-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 120px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  text-align: center;
+}
+
+.rest-btn:hover,
+.rest-btn:focus-visible {
+  background-color: color-mix(in srgb, var(--color-accent) 28%, transparent);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.rest-btn:active {
+  opacity: 0.8;
+}
+
+.rest-btn--round {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+}
+
+.rest-btn--stretch {
+  border-color: var(--color-success, #4caf50);
+  color: var(--color-success, #4caf50);
+  background-color: color-mix(in srgb, var(--color-success, #4caf50) 12%, transparent);
+}
+
+.rest-btn--stretch:hover,
+.rest-btn--stretch:focus-visible {
+  background-color: color-mix(in srgb, var(--color-success, #4caf50) 28%, transparent);
+  outline-color: var(--color-success, #4caf50);
+}
+
+/* Rest modal inputs (number inputs, select) */
+.rest-modal-input {
+  padding: var(--space-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rest-modal-input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* Rest modal action buttons (Cancel / Confirm) */
+.rest-modal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 80px;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.rest-modal-btn--cancel {
+  border-color: var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.rest-modal-btn--cancel:hover {
+  background-color: color-mix(in srgb, var(--color-border) 20%, transparent);
+}
+
+.rest-modal-btn--confirm {
+  border-color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 20%, transparent);
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+}
+
+.rest-modal-btn--confirm:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+/* ============================================================
+   End-of-Session Modal (EOS) — SS-07
+   ============================================================ */
+
+/* Hamburger menu action button (non-NavLink items) */
+.topbar-menu__item--action {
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  width: 100%;
+  border-top: 1px solid var(--color-border);
+  margin-top: var(--space-xs);
+  padding-top: var(--space-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.topbar-menu__item--action:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 15%, transparent);
+  color: var(--color-accent);
+}
+
+/* Step wrapper */
+.eos-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-sm) 0;
+}
+
+.eos-step__desc {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--space-xs);
+  line-height: 1.5;
+}
+
+/* Checkbox rows */
+.eos-check-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 44px;
+  padding: var(--space-xs) 0;
+  cursor: pointer;
+}
+
+.eos-checkbox {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  cursor: pointer;
+  accent-color: var(--color-accent);
+}
+
+.eos-check-label {
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  flex: 1;
+}
+
+.eos-hint {
+  font-size: var(--font-size-sm);
+  color: var(--color-accent);
+  margin: var(--space-xs) 0 0;
+  padding: var(--space-xs) var(--space-sm);
+  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--color-accent);
+}
+
+.eos-empty {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: var(--space-md) 0;
+}
+
+/* Bonus assignment rows */
+.eos-bonus-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 44px;
+}
+
+.eos-bonus-label {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  min-width: 56px;
+}
+
+.eos-skill-select {
+  flex: 1;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-md);
+  cursor: pointer;
+}
+
+.eos-skill-select:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* Roll-through card */
+.eos-roll-card {
+  align-items: center;
+  text-align: center;
+  background-color: color-mix(in srgb, var(--color-surface) 80%, var(--color-accent) 20%);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border);
+}
+
+.eos-roll-progress {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-sm);
+  font-style: italic;
+}
+
+.eos-roll-skill {
+  font-family: var(--font-display);
+  font-size: var(--font-size-xl);
+  color: var(--color-text);
+  margin: 0 0 var(--space-sm);
+}
+
+.eos-roll-value {
+  font-size: var(--font-size-md);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-xs);
+}
+
+.eos-roll-target {
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-md);
+  padding: var(--space-sm);
+  background-color: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border-radius: var(--radius-sm);
+}
+
+.eos-roll-btns {
+  display: flex;
+  gap: var(--space-sm);
+  width: 100%;
+  margin-top: var(--space-sm);
+}
+
+/* Summary list */
+.eos-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.eos-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+}
+
+.eos-summary-skill {
+  font-size: var(--font-size-md);
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+.eos-summary-status {
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.eos-summary-status--pass {
+  background-color: color-mix(in srgb, var(--color-success) 20%, transparent);
+  color: var(--color-success);
+  border: 1px solid var(--color-success);
+}
+
+.eos-summary-status--fail {
+  background-color: color-mix(in srgb, var(--color-danger) 15%, transparent);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
+}
+
+.eos-summary-status--skip {
+  background-color: color-mix(in srgb, var(--color-text-muted) 15%, transparent);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+/* ============================================================
+   DraggableCardContainer — SS-03
+   ============================================================ */
+
+/* Wrapper for each draggable panel row (handle + content) */
+.draggable-panel-wrapper {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  position: relative;
+  will-change: transform;
+}
+
+/* Drag handle button */
+.drag-handle {
+  /* ≥ 44px touch target */
+  min-width: var(--touch-target-min);
+  min-height: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Distinct from panel content */
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: var(--size-lg);
+  cursor: grab;
+  user-select: none;
+  touch-action: none; /* prevent browser scroll takeover on the handle */
+  flex-shrink: 0;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.drag-handle:hover {
+  color: var(--color-accent);
+  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  border-color: var(--color-accent);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Dragged panel: elevated shadow + slight scale */
+.panel-dragging {
+  box-shadow: var(--shadow-deep), 0 0 0 2px var(--color-accent);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface);
+}
+
+/* Panels that shift to make room during drag */
+.panel-shifting {
+  will-change: transform;
+}
+
+/* Panel content area — takes remaining width */
+.draggable-panel-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PinnedSkillsPanel — SS-05
+   ═══════════════════════════════════════════════════════════════ */
+
+.pinned-skills-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pinned-skills-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.pinned-skills-title {
+  font-weight: 600;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pinned-skills-edit-btn {
+  /* ≥ 44px touch target */
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  padding: 0 var(--space-3);
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  color: var(--color-accent);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pinned-skills-edit-btn:hover {
+  background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+}
+
+.pinned-skill-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.pinned-skill-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-surface-raised, var(--color-surface));
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  min-height: var(--touch-target-min);
+}
+
+.pinned-skill-name {
+  flex: 1;
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pinned-skill-value {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 2ch;
+  text-align: center;
+}
+
+.pinned-skill-trained {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.pinned-skill-trained.is-trained {
+  color: var(--color-accent);
+}
+
+.pinned-skill-trained.is-untrained {
+  color: var(--color-text-muted);
+}
+
+.pinned-skills-empty {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin: 0;
+  padding: var(--space-2) 0;
+}
+
+/* ── Skill Picker Modal ──────────────────────────────────────── */
+
+.skill-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: color-mix(in srgb, var(--color-bg, #000) 60%, transparent);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 640px) {
+  .skill-picker-backdrop {
+    align-items: center;
+  }
+}
+
+.skill-picker {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  width: 100%;
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: var(--shadow-deep);
+}
+
+@media (min-width: 640px) {
+  .skill-picker {
+    border-radius: var(--radius-md);
+    max-height: 70vh;
+  }
+}
+
+.skill-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.skill-picker-title {
+  font-weight: 700;
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+.skill-picker-close {
+  min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.skill-picker-close:hover {
+  color: var(--color-text);
+  border-color: var(--color-text);
+}
+
+.skill-picker-max-msg {
+  margin: 0;
+  padding: var(--space-2) var(--space-4);
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 15%, transparent);
+  color: var(--color-warning, #f59e0b);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.skill-picker-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2) 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.skill-picker-category {
+  margin-bottom: var(--space-2);
+}
+
+.skill-picker-category-name {
+  display: block;
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--font-size-xs, 0.75rem);
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.skill-picker-row {
+  list-style: none;
+}
+
+.skill-picker-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  min-height: var(--touch-target-min);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.skill-picker-label:hover {
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+.skill-picker-label.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.skill-picker-checkbox {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: var(--color-accent);
+  cursor: inherit;
+  flex-shrink: 0;
+}
+
+.skill-picker-skill-name {
+  font-size: var(--font-size-base);
+  color: var(--color-text);
+}
+
+.skill-picker-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.skill-picker-done-btn {
+  width: 100%;
+  min-height: var(--touch-target-min);
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-on-accent, #fff);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.skill-picker-done-btn:hover {
+  opacity: 0.88;
+}
+
+/* ============================================================
+   PreparedSpellsPanel — SS-06
+   Compact dashboard panel for prepared spells.
+   ============================================================ */
+
+/* Panel card container */
+.prepared-spells-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, var(--radius-sm));
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+/* Header row */
+.prepared-spells-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prepared-spells-title {
+  font-size: var(--font-size-sm, var(--size-sm));
+  font-weight: 700;
+  color: var(--color-text-muted, var(--color-text));
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* "Magic tricks are always prepared" note */
+.prepared-spells-tricks-note {
+  font-size: var(--font-size-sm, var(--size-sm));
+  color: var(--color-text-muted, var(--color-text));
+  font-style: italic;
+  margin: 0;
+  padding: 0;
+}
+
+/* Empty state */
+.prepared-spells-empty {
+  font-size: var(--font-size-sm, var(--size-sm));
+  color: var(--color-text-muted, var(--color-text));
+  margin: 0;
+  padding: var(--space-xs) 0;
+}
+
+/* Spell list — reset default list styles */
+.prepared-spells-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Individual spell row — tappable, ≥ 44px touch target */
+.spell-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--color-text);
+  font-size: var(--font-size-sm, var(--size-sm));
+  transition: background-color 0.12s ease, opacity 0.12s ease;
+}
+
+.spell-entry:hover {
+  background-color: var(--color-surface-alt, rgba(128, 128, 128, 0.08));
+}
+
+.spell-entry-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spell-entry-cost {
+  flex-shrink: 0;
+  margin-left: var(--space-sm);
+  font-size: var(--font-size-xs, var(--size-xs, 0.75rem));
+  color: var(--color-text-muted, var(--color-text));
+  font-weight: 600;
+}
+
+/* ── WP-insufficient: faded/dimmed ─────────────────────────────── */
+.spell-entry.spell-dimmed {
+  opacity: 0.45;
+}
+
+.spell-entry.spell-dimmed .spell-entry-cost {
+  opacity: 0.6;
+}
+
+/* ── Metal-blocked: red/warning (takes visual precedence) ──────── */
+.spell-entry.spell-blocked {
+  color: var(--color-danger, #c0392b);
+  opacity: 1; /* Override any dimming — metal blocking takes precedence */
+}
+
+.spell-entry.spell-blocked .spell-entry-name {
+  color: var(--color-danger, #c0392b);
+}
+
+.spell-entry.spell-blocked .spell-entry-cost {
+  color: var(--color-danger, #c0392b);
+  opacity: 0.85;
+}
+
+.spell-entry.spell-blocked:hover {
+  background-color: rgba(192, 57, 43, 0.08);
+}
+
+/* ============================================================
+   Custom Note Cards — SS-07
+   ============================================================ */
+
+.custom-note-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.12));
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.custom-note-card__title {
+  margin: 0;
+  font-size: var(--size-md);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+  text-decoration: underline;
+  text-decoration-color: var(--color-gold);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+.custom-note-card__body {
+  margin: 0;
+  font-size: var(--size-sm);
+  color: var(--color-text);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* Edit mode header row */
+.custom-note-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.custom-note-card__confirm-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.custom-note-card__confirm-label {
+  font-size: var(--size-sm);
+  color: var(--color-danger, #c0392b);
+  font-weight: var(--weight-semibold);
+}
+
+/* Inline edit inputs */
+.custom-note-card input,
+.custom-note-card textarea {
+  background-color: var(--color-input-bg, var(--color-bg));
+  color: var(--color-text);
+  border: 1px solid var(--color-border, rgba(255, 255, 255, 0.2));
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  font-family: inherit;
+  font-size: var(--size-sm);
+  line-height: 1.5;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.custom-note-card__title-input {
+  flex: 1;
+  font-weight: var(--weight-semibold);
+  min-height: 44px;
+}
+
+.custom-note-card__body-input {
+  resize: vertical;
+  min-height: 88px;
+}
+
+/* Delete button */
+.custom-note-delete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 1rem;
+  color: var(--color-text-muted, var(--color-text));
+  flex-shrink: 0;
+  transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.custom-note-delete:hover {
+  color: var(--color-danger, #c0392b);
+  border-color: var(--color-danger, #c0392b);
+  background-color: rgba(192, 57, 43, 0.08);
+}
+
+.custom-note-delete--confirm {
+  color: var(--color-danger, #c0392b);
+  border-color: var(--color-danger, #c0392b);
+  font-weight: var(--weight-semibold);
+  font-size: var(--size-sm);
+  padding: 0 var(--space-sm);
+}
+
+.custom-note-delete--cancel {
+  color: var(--color-text-muted, var(--color-text));
+  font-size: var(--size-sm);
+  padding: 0 var(--space-sm);
+}
+
+/* Add Note Card button */
+.add-note-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-md);
+  background-color: transparent;
+  color: var(--color-accent);
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--size-sm);
+  font-weight: var(--weight-semibold);
+  font-family: inherit;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.add-note-button:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 10%, transparent);
+}
+
+/* ============================================================
+   MagicScreen — SS-08
+   Spell preparation system: filter tabs, power level selector,
+   prepare/unprepare buttons, metal warning banner, reaction badge.
+   ============================================================ */
+
+/* ── Filter tabs: Prepared | Grimoire ─────────────────────────── */
+.magic-filter-tabs {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--color-border, rgba(128, 128, 128, 0.25));
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.magic-filter-tab {
+  flex: 1;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-md);
+  background: var(--color-surface);
+  border: none;
+  border-right: 1px solid var(--color-border, rgba(128, 128, 128, 0.25));
+  color: var(--color-text-muted, var(--color-text));
+  font-size: var(--font-size-sm, var(--size-sm));
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  text-align: center;
+}
+
+.magic-filter-tab:last-child {
+  border-right: none;
+}
+
+.magic-filter-tab:hover {
+  background-color: var(--color-surface-alt, rgba(128, 128, 128, 0.1));
+  color: var(--color-text);
+}
+
+.magic-filter-tab--active {
+  background-color: var(--color-accent, #7b5ccc);
+  color: #fff;
+  font-weight: 700;
+}
+
+.magic-filter-tab--active:hover {
+  background-color: var(--color-accent, #7b5ccc);
+  opacity: 0.9;
+  color: #fff;
+}
+
+/* ── Metal warning banner ─────────────────────────────────────── */
+.metal-warning-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  margin-bottom: var(--space-sm);
+  background: color-mix(in srgb, var(--color-danger, #c0392b) 12%, transparent);
+  border: 1px solid var(--color-danger, #c0392b);
+  border-radius: var(--radius-sm);
+  color: var(--color-danger, #c0392b);
+  font-size: var(--font-size-sm, var(--size-sm));
+  font-weight: 600;
+}
+
+/* ── Power level selector ─────────────────────────────────────── */
+.power-level-selector {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--color-border, rgba(128, 128, 128, 0.25));
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  width: fit-content;
+}
+
+.power-level-btn {
+  min-width: 44px;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--color-surface);
+  border: none;
+  border-right: 1px solid var(--color-border, rgba(128, 128, 128, 0.25));
+  color: var(--color-text);
+  font-size: var(--font-size-sm, var(--size-sm));
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  text-align: center;
+}
+
+.power-level-btn:last-of-type {
+  border-right: none;
+}
+
+.power-level-btn:hover:not(:disabled) {
+  background-color: var(--color-surface-alt, rgba(128, 128, 128, 0.1));
+}
+
+.power-level-btn--active {
+  background-color: var(--color-accent, #7b5ccc);
+  color: #fff;
+}
+
+.power-level-btn--active:hover {
+  background-color: var(--color-accent, #7b5ccc);
+  opacity: 0.9;
+}
+
+/* Gray out insufficient WP levels */
+.power-level-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  color: var(--color-text-muted, var(--color-text));
+}
+
+.power-level-cost {
+  padding: 0 var(--space-sm);
+  font-size: var(--font-size-sm, var(--size-sm));
+  color: var(--color-text-muted, var(--color-text));
+  font-weight: 600;
+  border-left: 1px solid var(--color-border, rgba(128, 128, 128, 0.25));
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Prepare / Unprepare button ───────────────────────────────── */
+.prepare-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 88px;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: var(--font-size-sm, var(--size-sm));
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.prepare-button--prepare {
+  background-color: var(--color-accent, #7b5ccc);
+  color: #fff;
+  border-color: var(--color-accent, #7b5ccc);
+}
+
+.prepare-button--prepare:hover {
+  opacity: 0.88;
+}
+
+.prepare-button--unprepare {
+  background-color: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border, rgba(128, 128, 128, 0.4));
+}
+
+.prepare-button--unprepare:hover {
+  background-color: var(--color-surface-alt, rgba(128, 128, 128, 0.08));
+}
+
+.prepare-button--disabled {
+  background-color: transparent;
+  color: var(--color-text-muted, var(--color-text));
+  border-color: var(--color-border, rgba(128, 128, 128, 0.25));
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Reaction spell badge ─────────────────────────────────────── */
+.reaction-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--space-xs);
+  background: color-mix(in srgb, var(--color-warning, #e67e22) 18%, transparent);
+  border: 1px solid var(--color-warning, #e67e22);
+  border-radius: 9999px;
+  color: var(--color-warning, #e67e22);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }

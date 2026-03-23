@@ -12,6 +12,7 @@ export interface CharacterMetadata {
 export interface CharacterSkill {
   value: number;
   trained: boolean;
+  dragonMarked?: boolean;
 }
 
 export interface Weapon {
@@ -23,6 +24,7 @@ export interface Weapon {
   durability: number;
   features: string;
   equipped: boolean;
+  metal?: boolean;
 }
 
 export interface ArmorPiece {
@@ -34,6 +36,7 @@ export interface ArmorPiece {
   weight?: number;          // contributes to encumbrance
   bodyPart?: string;        // coverage area e.g. "Torso", "Full Body"
   movementPenalty?: number; // movement reduction
+  metal?: boolean;
 }
 
 export interface InventoryItem {
@@ -53,6 +56,10 @@ export interface Spell {
   range: string;
   duration: string;
   summary: string;
+  prepared?: boolean;
+  rank?: number;
+  requirements?: string[];
+  castingTime?: 'action' | 'reaction' | 'ritual';
 }
 
 export interface HeroicAbility {
@@ -63,8 +70,18 @@ export interface HeroicAbility {
 
 export type DerivedOverrides = Record<string, number | null>;
 
+export interface CustomCard {
+  id: string;
+  title: string;
+  body: string;
+}
+
 export interface CharacterUiState {
   expandedSections: string[];
+  pinnedSkills?: string[];
+  sheetCardOrder?: string[];
+  sheetCustomCards?: CustomCard[];
+  sheetPanelVisibility?: Record<string, boolean>;
 }
 
 export interface CharacterResource {
@@ -97,4 +114,10 @@ export interface CharacterRecord extends Versioned, Timestamped {
   derivedOverrides: DerivedOverrides;
   uiState: CharacterUiState;
   portraitUri?: string;
+  advancementChecks?: {
+    combat?: boolean;
+    explore?: boolean;
+    weakness?: boolean;
+    heroic?: boolean;
+  };
 }

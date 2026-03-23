@@ -6,6 +6,7 @@ export interface DerivedValues {
   wpMax: number;
   movement: number;
   damageBonus: string;
+  aglDamageBonus: string;
   encumbranceLimit: number;
 }
 
@@ -42,6 +43,17 @@ export function computeDamageBonus(character: CharacterRecord): string {
   return '+0';
 }
 
+/**
+ * AGL Damage Bonus: AGL 17+ → +D6, AGL 13-16 → +D4, AGL ≤12 → +0.
+ * Uses the same threshold logic as STR damage bonus. Dragonbane Core Rules p. 40.
+ */
+export function computeAGLDamageBonus(character: CharacterRecord): string {
+  const agl = character.attributes['agl'] ?? 10;
+  if (agl >= 17) return '+D6';
+  if (agl >= 13) return '+D4';
+  return '+0';
+}
+
 /** Encumbrance Limit = STR / 2 (rounded up). Dragonbane Core Rules p. 46. */
 export function computeEncumbranceLimit(character: CharacterRecord): number {
   const str = character.attributes['str'] ?? 10;
@@ -65,12 +77,24 @@ export function getSkillBaseChance(attributeValue: number): number {
   return 7;
 }
 
+/**
+ * Max prepared spells = INT base chance (3–7). Dragonbane Core Rules.
+ * Uses the standard skill base chance table applied to the INT attribute.
+ * Defaults to 5 (equivalent to INT 10) if INT is undefined.
+ */
+export function computeMaxPreparedSpells(character: CharacterRecord): number {
+  const int = character.attributes['int'];
+  if (int === undefined || int === null) return 5;
+  return getSkillBaseChance(int);
+}
+
 export function computeDerivedValues(character: CharacterRecord, _system?: SystemDefinition): DerivedValues {
   return {
     hpMax: computeHPMax(character),
     wpMax: computeWPMax(character),
     movement: computeMovement(character),
     damageBonus: computeDamageBonus(character),
+    aglDamageBonus: computeAGLDamageBonus(character),
     encumbranceLimit: computeEncumbranceLimit(character),
   };
 }

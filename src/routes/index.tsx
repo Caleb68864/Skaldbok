@@ -8,6 +8,7 @@ import MagicScreen from '../screens/MagicScreen';
 import CombatScreen from '../screens/CombatScreen';
 import ReferenceScreen from '../screens/ReferenceScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import ProfileScreen from '../screens/ProfileScreen';
 import type { RouteObject } from 'react-router-dom';
 
 export const routes: RouteObject[] = [
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
       { path: '/combat', element: <CombatScreen /> },
       { path: '/reference', element: <ReferenceScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
+      { path: '/profile', element: <ProfileScreen /> },
       { path: '*', element: <Navigate to="/library" replace /> },
     ],
   },

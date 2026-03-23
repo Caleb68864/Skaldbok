@@ -2,6 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import * as settingsRepository from '../../storage/repositories/settingsRepository';
 import type { AppSettings } from '../../types/settings';
 
+export const DEFAULT_BOTTOM_NAV_TABS: Record<string, boolean> = {
+  sheet: true,
+  skills: true,
+  gear: true,
+  magic: true,
+  combat: true,
+  reference: true,
+  profile: false,
+};
+
 const DEFAULT_SETTINGS: AppSettings = {
   id: 'default',
   schemaVersion: 1,
@@ -9,6 +19,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   mode: 'play',
   wakeLockEnabled: false,
+  bottomNavTabs: DEFAULT_BOTTOM_NAV_TABS,
 };
 
 export function useAppSettings() {
@@ -21,7 +32,8 @@ export function useAppSettings() {
     settingsRepository.get().then(stored => {
       if (!mounted) return;
       if (stored) {
-        setSettings(stored);
+        // Merge with defaults to handle old stored data that lacks new fields
+        setSettings({ ...DEFAULT_SETTINGS, ...stored });
       } else {
         // First launch: persist defaults
         settingsRepository.save(DEFAULT_SETTINGS).catch(console.error);

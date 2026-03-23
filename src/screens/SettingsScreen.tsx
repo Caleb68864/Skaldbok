@@ -7,6 +7,9 @@ import { Button } from '../components/primitives/Button';
 import { Modal } from '../components/primitives/Modal';
 import { db } from '../storage/db/client';
 import type { ThemeName } from '../theme/themes';
+import { DEFAULT_BOTTOM_NAV_TABS } from '../features/settings/useAppSettings';
+
+const BOTTOM_NAV_TAB_LABELS = ['Sheet', 'Skills', 'Gear', 'Magic', 'Combat', 'Reference', 'Profile'] as const;
 
 const THEMES: { value: ThemeName; label: string; description: string }[] = [
   { value: 'dark', label: 'Dark', description: 'Deep grays with golden accents' },
@@ -87,6 +90,70 @@ export default function SettingsScreen() {
               {m}
             </button>
           ))}
+        </div>
+      </Card>
+
+      {/* Bottom Navigation */}
+      <Card>
+        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>
+          Bottom Navigation
+        </h2>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+          Choose which tabs appear in the bottom navigation bar. Hidden tabs remain accessible via the ☰ menu.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+          {BOTTOM_NAV_TAB_LABELS.map(tabLabel => {
+            const key = tabLabel.toLowerCase();
+            const currentTabs: Record<string, boolean> = {
+              ...DEFAULT_BOTTOM_NAV_TABS,
+              ...(settings.bottomNavTabs ?? {}),
+            };
+            const isVisible = currentTabs[key] ?? DEFAULT_BOTTOM_NAV_TABS[key] ?? false;
+            return (
+              <div
+                key={key}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--space-sm) var(--space-md)',
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--color-surface-alt)',
+                  minHeight: 'var(--touch-target-min)',
+                }}
+              >
+                <span style={{ color: 'var(--color-text)', fontWeight: 'var(--weight-medium)' }}>
+                  {tabLabel}
+                </span>
+                <button
+                  onClick={() => {
+                    const updated = { ...currentTabs, [key]: !isVisible };
+                    updateSettings({ bottomNavTabs: updated }).catch(console.error);
+                  }}
+                  aria-label={`${isVisible ? 'Hide' : 'Show'} ${tabLabel} tab in bottom navigation`}
+                  aria-pressed={isVisible}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minWidth: '64px',
+                    minHeight: 'var(--touch-target-min)',
+                    padding: '0 var(--space-sm)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-sm)',
+                    background: isVisible ? 'var(--color-success)' : 'var(--color-surface)',
+                    color: isVisible ? 'var(--color-bg)' : 'var(--color-text-muted)',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: 'var(--font-size-sm)',
+                  }}
+                >
+                  {isVisible ? 'ON' : 'OFF'}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </Card>
 
