@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dragonbane Quick Reference</title>
+<style>
+  @page {
+    size: letter;
+    margin: 0.4in 0.45in;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+    font-size: 7.5pt;
+    line-height: 1.25;
+    color: #1a1a1a;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  h1 {
+    font-size: 14pt;
+    text-align: center;
+    margin-bottom: 3pt;
+    letter-spacing: 1pt;
+    text-transform: uppercase;
+    border-bottom: 2pt solid #333;
+    padding-bottom: 2pt;
+  }
+  h2 {
+    font-size: 8pt;
+    background: #2c2c2c;
+    color: #fff;
+    padding: 1.5pt 5pt;
+    margin: 4pt 0 1.5pt 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5pt;
+    page-break-after: avoid;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h2 .pg {
+    font-size: 6pt;
+    font-weight: 400;
+    opacity: 0.7;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  h3 {
+    font-size: 7.5pt;
+    border-bottom: 1pt solid #999;
+    margin: 3pt 0 1pt 0;
+    padding-bottom: 1pt;
+    page-break-after: avoid;
+  }
+
+  .columns-2 { columns: 2; column-gap: 10pt; }
+  .no-break { break-inside: avoid; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2pt;
+    font-size: 6.5pt;
+  }
+  th {
+    background: #e0e0e0;
+    font-weight: 700;
+    text-align: left;
+    padding: 1pt 2.5pt;
+    border: 0.5pt solid #999;
+    font-size: 6pt;
+    text-transform: uppercase;
+  }
+  td {
+    padding: 1pt 2.5pt;
+    border: 0.5pt solid #ccc;
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: #f5f5f5; }
+
+  .footnote {
+    font-style: italic;
+    font-size: 6pt;
+    color: #555;
+    margin-top: 1pt;
+  }
+
+  .kv-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0;
+    font-size: 6.5pt;
+  }
+  .kv-label {
+    font-weight: 700;
+    padding: 0.5pt 3pt 0.5pt 1pt;
+    white-space: nowrap;
+  }
+  .kv-desc {
+    padding: 0.5pt 0;
+  }
+  .kv-grid > div:nth-child(4n+1),
+  .kv-grid > div:nth-child(4n+2) { background: #f5f5f5; }
+
+  .rules-text { font-size: 6.5pt; padding: 1pt 0; }
+  .rules-text p { margin-bottom: 1.5pt; }
+
+  .compact-table td:first-child,
+  .compact-table th:first-child { white-space: nowrap; width: 1%; }
+
+  .page-break { page-break-before: always; }
+
+  @media screen {
+    body { max-width: 8.5in; margin: 0.5in auto; padding: 0 0.45in; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Dragonbane Quick Reference</h1>
+
+<!-- ==================== PAGE 1 ==================== -->
+
+<div class="columns-2">
+
+<!-- LEFT COLUMN: Skills first -->
+<div class="no-break">
+<h2>Skills <span class="pg">p. 37-39</span></h2>
+<table>
+  <tr><th>Skill</th><th>Attr</th><th>Description</th></tr>
+  <tr><td>Acrobatics</td><td>AGL</td><td>Jumping, climbing, balancing, physical actions.</td></tr>
+  <tr><td>Awareness</td><td>INT</td><td>Watch/listen for sneaking, notice threats.</td></tr>
+  <tr><td>Bartering</td><td>CHA</td><td>Haggling over prices.</td></tr>
+  <tr><td>Beast Lore</td><td>INT</td><td>Identify animal/monster habits, abilities, weaknesses.</td></tr>
+  <tr><td>Bluffing</td><td>CHA</td><td>Come up with a convincing lie.</td></tr>
+  <tr><td>Bushcraft</td><td>INT</td><td>Wilderness navigation, camp, cook, stay warm.</td></tr>
+  <tr><td>Crafting</td><td>STR</td><td>Repair gear/weapons, craft items.</td></tr>
+  <tr><td>Evade</td><td>AGL</td><td>Dodge an attack or flee combat.</td></tr>
+  <tr><td>Healing</td><td>INT</td><td>Save fallen companions.</td></tr>
+  <tr><td>Hunting &amp; Fishing</td><td>AGL</td><td>Find and obtain food in wilderness.</td></tr>
+  <tr><td>Languages</td><td>INT</td><td>Understand foreign/ancient languages.</td></tr>
+  <tr><td>Myths &amp; Legends</td><td>INT</td><td>Remember old stories, understand the past.</td></tr>
+  <tr><td>Performance</td><td>CHA</td><td>Singing, poems, jokes, amusing a crowd.</td></tr>
+  <tr><td>Persuasion</td><td>CHA</td><td>Charm, threaten, or reason with others.</td></tr>
+  <tr><td>Riding</td><td>AGL</td><td>Advanced maneuvers while mounted.</td></tr>
+  <tr><td>Seamanship</td><td>INT</td><td>Steer a vessel, navigate water.</td></tr>
+  <tr><td>Sleight of Hand</td><td>AGL</td><td>Steal, pick locks, fine motor tasks.</td></tr>
+  <tr><td>Sneaking</td><td>AGL</td><td>Sneak past enemies undetected.</td></tr>
+  <tr><td>Spot Hidden</td><td>INT</td><td>Find hidden/concealed things.</td></tr>
+  <tr><td>Swimming</td><td>AGL</td><td>Swim in difficult situations.</td></tr>
+</table>
+</div>
+
+<div class="no-break">
+<h3>Weapon Skills</h3>
+<table>
+  <tr><th>Weapon</th><th>Attr</th><th>Description</th></tr>
+  <tr><td>Axes</td><td>STR</td><td>All axes, including thrown.</td></tr>
+  <tr><td>Bows</td><td>AGL</td><td>All types of bows.</td></tr>
+  <tr><td>Brawling</td><td>STR</td><td>Unarmed: fists, feet, teeth, claws.</td></tr>
+  <tr><td>Crossbows</td><td>AGL</td><td>Crossbows of all kinds.</td></tr>
+  <tr><td>Hammers</td><td>STR</td><td>Warhammers, clubs, maces.</td></tr>
+  <tr><td>Knives</td><td>AGL</td><td>Knives and daggers, including thrown.</td></tr>
+  <tr><td>Slings</td><td>AGL</td><td>Slings.</td></tr>
+  <tr><td>Spears</td><td>STR</td><td>Spears, tridents, lances, including thrown.</td></tr>
+  <tr><td>Staves</td><td>AGL</td><td>Staff fighting.</td></tr>
+  <tr><td>Swords</td><td>STR</td><td>All types of swords.</td></tr>
+</table>
+</div>
+
+<!-- RIGHT COLUMN -->
+<div class="no-break">
+<h2>Measuring Time <span class="pg">p. 11</span></h2>
+<table>
+  <tr><th>Unit</th><th>Duration</th><th>Enough Time To...</th></tr>
+  <tr><td><b>Round</b></td><td>10 sec</td><td>Perform an action in combat, take a round rest</td></tr>
+  <tr><td><b>Stretch</b></td><td>15 min</td><td>Explore a room, take a stretch rest</td></tr>
+  <tr><td><b>Shift</b></td><td>6 hours</td><td>Hike 15 km, take a shift rest</td></tr>
+</table>
+</div>
+
+<div class="no-break">
+<h2>Combat Round Structure <span class="pg">p. 46</span></h2>
+<div class="rules-text">
+  <p>1. Draw initiative cards (1-10) &mdash; one per character. Lowest acts first.</p>
+  <p>2. Each turn: one free movement (10m) + one action.</p>
+  <p>3. After acting or reacting, flip card face-down &mdash; no further reactions allowed.</p>
+  <p>4. <b>Wait:</b> Swap initiative card with a later creature (they can't refuse). Monsters never wait.</p>
+  <p>5. Cards are redrawn every round.</p>
+</div>
+</div>
+
+<div class="no-break">
+<h2>Free Actions <span class="pg">p. 47</span></h2>
+<div class="kv-grid">
+  <div class="kv-label">Draw Weapon</div><div class="kv-desc">Draw, exchange, or put away a weapon kept at hand.</div>
+  <div class="kv-label">Change Position</div><div class="kv-desc">Throw yourself to the ground or get up.</div>
+  <div class="kv-label">Drop Item</div><div class="kv-desc">Drop an item on the ground.</div>
+  <div class="kv-label">Shout</div><div class="kv-desc">Say or shout a few words.</div>
+</div>
+</div>
+
+<div class="no-break">
+<h2>Environmental Hazards <span class="pg">p. 57-59</span></h2>
+<div class="kv-grid">
+  <div class="kv-label">Cold</div><div class="kv-desc">BUSHCRAFT roll per shift (per stretch/round in extreme cold). No blanket = bane, fur = boon. Fail = D6 HP + D6 WP, can't heal except by magic. 0 HP in cold = death at next roll.</div>
+  <div class="kv-label">Drowning</div><div class="kv-desc">Half movement, no ranged, bane on melee. SWIMMING roll per stretch (per round in heavy armor). Underwater: CON each round or D6 dmg/round. 0 HP = death (only failed rolls count).</div>
+  <div class="kv-label">Falling</div><div class="kv-desc">D6 per 2m fallen (rounded down). Under 2m = no damage. ACROBATICS halves dice (rounded up). Armor does NOT protect.</div>
+  <div class="kv-label">Fire</div><div class="kv-desc">Torch as weapon = small wooden club + fire damage.</div>
+</div>
+</div>
+
+<div class="no-break">
+<h2>Actions <span class="pg">p. 47-48</span></h2>
+<div class="kv-grid">
+  <div class="kv-label">Dash</div><div class="kv-desc">Doubles your movement rate in the round.</div>
+  <div class="kv-label">Melee Attack</div><div class="kv-desc">Against enemy within 2m (4m for long weapons).</div>
+  <div class="kv-label">Ranged Attack</div><div class="kv-desc">Against targets within the weapon's range.</div>
+  <div class="kv-label">Parry</div><div class="kv-desc">Parry melee/ranged (ranged requires shield). Reaction, replaces your action.</div>
+  <div class="kv-label">Dodge</div><div class="kv-desc">Dodge melee or ranged attacks. Also a reaction.</div>
+  <div class="kv-label">Pick Up Item</div><div class="kv-desc">Pick up item within 2m, or from your inventory.</div>
+  <div class="kv-label">Equip Armor</div><div class="kv-desc">Put on or remove armor/helmet.</div>
+  <div class="kv-label">First Aid</div><div class="kv-desc">HEALING skill to save someone at 0 HP.</div>
+  <div class="kv-label">Rally</div><div class="kv-desc">PERSUADE another PC at 0 HP to keep fighting.</div>
+  <div class="kv-label">Break Down Door</div><div class="kv-desc">Doors take a certain amount of damage before breaking.</div>
+  <div class="kv-label">Pick Lock</div><div class="kv-desc">SLEIGHT OF HAND roll. Bane without lockpicks.</div>
+  <div class="kv-label">Use Item</div><div class="kv-desc">Use a potion or item within 2m.</div>
+  <div class="kv-label">Activate Ability</div><div class="kv-desc">Use an innate or heroic ability.</div>
+  <div class="kv-label">Cast Spell</div><div class="kv-desc">Most spells are actions (incl. magic tricks). Some are reactions.</div>
+  <div class="kv-label">Helping</div><div class="kv-desc">Give another character a boon on a roll this round.</div>
+  <div class="kv-label">Round Rest</div><div class="kv-desc">Recover D6 WP. Once per shift only.</div>
+</div>
+</div>
+
+<div class="no-break">
+<h2>Healing &amp; Rest <span class="pg">p. 55, 57</span></h2>
+<table>
+  <tr><th>Rest Type</th><th>Effect</th></tr>
+  <tr><td><b>Round Rest</b></td><td>Recover D6 WP. Once per shift.</td></tr>
+  <tr><td><b>Stretch Rest</b></td><td>Heal D6 HP (2D6 if HEALING roll succeeds). Recover D6 WP. Heal one condition.</td></tr>
+  <tr><td><b>Shift Rest</b></td><td>Recover all HP and WP, heal all conditions.</td></tr>
+</table>
+</div>
+
+<div class="no-break">
+<h2>Attributes, Conditions &amp; Skill Base Chance <span class="pg">p. 28-29, 56</span></h2>
+<table>
+  <tr><th>Attr</th><th>Description</th><th>Condition</th><th>Range</th><th>Base</th></tr>
+  <tr><td><b>STR</b></td><td>Raw muscle power</td><td>Exhausted</td><td>1-5</td><td>3</td></tr>
+  <tr><td><b>CON</b></td><td>Fitness &amp; resilience</td><td>Sickly</td><td>6-8</td><td>4</td></tr>
+  <tr><td><b>AGL</b></td><td>Body control, speed, fine motor</td><td>Dazed</td><td>9-12</td><td>5</td></tr>
+  <tr><td><b>INT</b></td><td>Intellect &amp; reasoning</td><td>Angry</td><td>13-15</td><td>6</td></tr>
+  <tr><td><b>WIL</b></td><td>Self-discipline &amp; focus</td><td>Scared</td><td>16-18</td><td>7</td></tr>
+  <tr><td><b>CHA</b></td><td>Personality &amp; empathy</td><td>Disheartened</td><td></td><td></td></tr>
+</table>
+<div class="footnote">Condition = bane on all rolls against that attribute and skill rolls based on it.</div>
+</div>
+
+<div class="no-break">
+<h2>Fear <span class="pg">p. 58-59</span></h2>
+<table class="compact-table">
+  <tr><th>D8</th><th>Effect</th></tr>
+  <tr><td>1</td><td><b>Enfeebled.</b> Lose 2D6 WP (min 0), become Disheartened.</td></tr>
+  <tr><td>2</td><td><b>Shaken.</b> Suffer the Scared condition.</td></tr>
+  <tr><td>3</td><td><b>Panting.</b> Become Exhausted.</td></tr>
+  <tr><td>4</td><td><b>Pale.</b> You and all PCs within 10m in sight become Scared.</td></tr>
+  <tr><td>5</td><td><b>Scream.</b> All PCs who hear must also resist fear (one WIL roll per fear source).</td></tr>
+  <tr><td>6</td><td><b>Rage.</b> Must attack fear source next turn (melee if possible). Become Angry.</td></tr>
+  <tr><td>7</td><td><b>Paralyzed.</b> No action/movement next turn. WIL roll each turn to break free.</td></tr>
+  <tr><td>8</td><td><b>Wild Panic.</b> Must dash away from fear source. WIL roll each turn to stop.</td></tr>
+</table>
+</div>
+
+<div class="no-break">
+<h2>Encumbrance <span class="pg">p. 32</span></h2>
+<div class="rules-text">
+  <p>Carry up to <b>STR / 2</b> (rounded up) items in inventory.</p>
+  <p>Weapons at hand (up to 3) and worn armor/helmet <b>don't count</b>.</p>
+  <p>4 rations = 1 slot. Under 100 coins = free, 100-199 = 1 slot.</p>
+  <p><b>Over-encumbered:</b> STR roll to move each round/shift. Fail = drop items or stay put.</p>
+</div>
+</div>
+
+<div class="no-break">
+<h2>Darkness &amp; Light <span class="pg">p. 57</span></h2>
+<table>
+  <tr><th>Source</th><th>Radius</th><th>Duration</th><th>Goes Out</th></tr>
+  <tr><td>Torch</td><td>10m</td><td>~1 shift</td><td>D6: 1 per stretch</td></tr>
+  <tr><td>Lantern</td><td>10m</td><td>1 shift/oil</td><td>D8: 1 per stretch</td></tr>
+  <tr><td>Oil Lamp</td><td>10m</td><td>1 shift/dose</td><td>D6: 1 per stretch</td></tr>
+  <tr><td>Candle</td><td>4m</td><td>Variable</td><td>D4: 1 per stretch</td></tr>
+</table>
+<div class="footnote"><b>Total darkness:</b> No dash, no ranged attacks. Melee requires AWARENESS roll first (not an action). Fail = miss.</div>
+</div>
+
+</div><!-- end page 1 columns-2 -->
+
+<!-- ==================== PAGE 2 ==================== -->
+<div class="page-break"></div>
+
+<div class="columns-2">
+
+<div class="no-break">
+<h2>Severe Injuries <span class="pg">p. 56</span></h2>
+<table class="compact-table">
+  <tr><th>D20</th><th>Injury</th><th>Effect</th></tr>
+  <tr><td>1-2</td><td>Broken nose</td><td>Bane on AWARENESS. Heals: D6 days.</td></tr>
+  <tr><td>3-4</td><td>Scarred face</td><td>Bane on PERFORMANCE &amp; PERSUASION. Heals: 2D6 days.</td></tr>
+  <tr><td>5-6</td><td>Teeth knocked out</td><td>PERFORMANCE &amp; PERSUASION permanently -2 (min 3).</td></tr>
+  <tr><td>7-8</td><td>Broken ribs</td><td>Bane on all STR &amp; AGL skills. Heals: D6 days.</td></tr>
+  <tr><td>9-10</td><td>Concussion</td><td>Bane on all INT skills. Heals: D6 days.</td></tr>
+  <tr><td>11-12</td><td>Deep wounds</td><td>Bane on STR &amp; AGL skills + D6 dmg per roll. Heals: 2D6 days.</td></tr>
+  <tr><td>13</td><td>Broken leg</td><td>Movement halved. Heals: 3D6 days.</td></tr>
+  <tr><td>14</td><td>Broken arm</td><td>No two-handed/dual wield, bane on two-arm tasks. Heals: 3D6 days.</td></tr>
+  <tr><td>15</td><td>Severed toe</td><td>Movement permanently -2 (min 4).</td></tr>
+  <tr><td>16</td><td>Severed finger</td><td>All weapon skill levels permanently -1 (min 3).</td></tr>
+  <tr><td>17</td><td>Gouged eye</td><td>SPOT HIDDEN permanently -2 (min 3).</td></tr>
+  <tr><td>18</td><td>Nightmares</td><td>Fear roll each shift slept. Fail = doesn't count. Heals: 2D6 days.</td></tr>
+  <tr><td>19</td><td>Changed personality</td><td>Randomly generate a new weakness.</td></tr>
+  <tr><td>20</td><td>Amnesia</td><td>Can't remember identity. Must roleplay. Heals: D6 days.</td></tr>
+</table>
+</div>
+
+<div class="no-break">
+<h2>Surprise &amp; Sneak Attacks <span class="pg">p. 48</span></h2>
+<div class="rules-text">
+  <p><b>Sneak Attack:</b> SNEAKING roll to approach. Success = choose any initiative card, boon on attack, target can't dodge/parry. Subtle weapons double damage dice.</p>
+  <p><b>Ambush:</b> Victims roll AWARENESS (bane if ambushers prepared). Fail = bottom initiative cards.</p>
+</div>
+</div>
+
+<div class="no-break">
+<h2>Mounted Combat <span class="pg">p. 50</span></h2>
+<div class="rules-text">
+  <p>Mount must be combat trained. Move at mount's rate. Attacks/parries use <b>lowest of RIDING and weapon skill</b>.</p>
+  <p>RIDING replaces EVADE. No saddle = bane on all rolls. Ground melee vs mounted = bane.</p>
+  <p>Enemies choose: target rider or mount. Mount at 0 HP = dead (no death rolls).</p>
+</div>
+</div>
+
+<div class="no-break">
+<h2>Poison <span class="pg">p. 57</span></h2>
+<table>
+  <tr><th>Type</th><th>Full Effect (poison wins)</th><th>Limited (victim wins)</th></tr>
+  <tr><td><b>Lethal</b></td><td>D6 dmg/round until 0 HP. Antidote stops it.</td><td>D6 dmg next turn only.</td></tr>
+  <tr><td><b>Paralyzing</b></td><td>Exhausted + CON/round or lose all actions. Lasts 1 stretch or antidote.</td><td>Exhausted only.</td></tr>
+  <tr><td><b>Sleeping</b></td><td>Dazed + CON/round or sleep 1 shift. Antidote or 1+ dmg wakes.</td><td>Dazed only.</td></tr>
+</table>
+<div class="footnote">Opposed roll: poison potency vs. victim's CON. Poison has no effect on monsters.</div>
+</div>
+
+<div class="no-break">
+<h2>Mishaps (Travel) <span class="pg">p. 107</span></h2>
+<table class="compact-table">
+  <tr><th>D12</th><th>Mishap</th></tr>
+  <tr><td>1</td><td><b>Fog.</b> Distance covered halved this shift.</td></tr>
+  <tr><td>2</td><td><b>Blocking Terrain.</b> ACROBATICS roll or no progress. Success can help others.</td></tr>
+  <tr><td>3</td><td><b>Torn Clothes.</b> Random PC's clothes become rags.</td></tr>
+  <tr><td>4</td><td><b>Lost.</b> No progress. Pathfinder BUSHCRAFT to find way (no help).</td></tr>
+  <tr><td>5</td><td><b>Dropped Item.</b> Random PC drops/breaks an item.</td></tr>
+  <tr><td>6</td><td><b>Mosquito Swarm.</b> All PCs without cloak become Angry.</td></tr>
+  <tr><td>7</td><td><b>Sprained Ankle.</b> Random PC takes D6 dmg (boots -2, no armor).</td></tr>
+  <tr><td>8</td><td><b>Downpour.</b> No cloak = cold roll. Must shelter, no progress this shift.</td></tr>
+  <tr><td>9</td><td><b>Wasps.</b> All PCs EVADE or take D6 dmg + a condition.</td></tr>
+  <tr><td>10</td><td><b>Landslide.</b> All PCs EVADE or take D10 dmg.</td></tr>
+  <tr><td>11</td><td><b>Savage Animal.</b> Wolf, bear, or similar attacks.</td></tr>
+  <tr><td>12</td><td><b>Quicksand.</b> BUSHCRAFT or condition + reroll. Second fail = death. Others can help.</td></tr>
+</table>
+</div>
+
+<div class="no-break">
+<h2>Spellcasting <span class="pg">p. 63-64</span></h2>
+<table>
+  <tr><th>Type</th><th>WP Cost</th><th>Casting Time</th></tr>
+  <tr><td>Magic Trick</td><td>1 WP</td><td>1 action (auto-success)</td></tr>
+  <tr><td>Spell (Power 1)</td><td>2 WP</td><td>1 action (memorized) / 2 actions (grimoire)</td></tr>
+  <tr><td>Spell (Power 2)</td><td>4 WP</td><td>1 action (memorized) / 2 actions (grimoire)</td></tr>
+  <tr><td>Spell (Power 3)</td><td>6 WP</td><td>1 action (memorized) / 2 actions (grimoire)</td></tr>
+  <tr><td>Reaction Spell</td><td>Varies</td><td>Triggered (does NOT replace your action)</td></tr>
+  <tr><td>Ritual</td><td>Varies</td><td>1 stretch or shift</td></tr>
+</table>
+<div class="rules-text">
+  <p>Roll d20 &le; school skill. Fail = no effect, WP still spent. <b>Dragon (1):</b> Double damage/range, OR spell costs no WP, OR cast another spell (with bane). <b>Demon (20):</b> Mishap &mdash; roll on Magical Mishaps table. Cannot push spell rolls.</p>
+  <p><b>Requirements:</b> Word (chant), Gesture (hand movements), Focus (held item), Ingredient (consumed). All listed requirements must be met.</p>
+</div>
+</div>
+
+<div class="no-break">
+<h2>Magical Mishaps <span class="pg">p. 65</span></h2>
+<table class="compact-table">
+  <tr><th>D20</th><th>Mishap</th><th>Effect</th></tr>
+  <tr><td>1</td><td>Dazed</td><td>You become Dazed.</td></tr>
+  <tr><td>2</td><td>Exhausted</td><td>You become Exhausted.</td></tr>
+  <tr><td>3</td><td>Sickly</td><td>You become Sickly.</td></tr>
+  <tr><td>4</td><td>Angry</td><td>You lose control of the spell, become Angry.</td></tr>
+  <tr><td>5</td><td>Scared</td><td>Demonic visions leave you Scared.</td></tr>
+  <tr><td>6</td><td>Disheartened</td><td>You see beyond the veil, realize your insignificance. Disheartened.</td></tr>
+  <tr><td>7</td><td>Damage</td><td>Magic ravages your body: D6 damage per power level.</td></tr>
+  <tr><td>8</td><td>WP Drain</td><td>Spell drains willpower: lose D6 WP per power level.</td></tr>
+  <tr><td>9</td><td>Magical Disease</td><td>Disease with Virulence 3D6. You and all contacts next shift are exposed.</td></tr>
+  <tr><td>10</td><td>Wrong Spell</td><td>Random spell of yours activates instead, same target and power level.</td></tr>
+  <tr><td>11</td><td>Frog Curse</td><td>Vomit a frog when you lie. D4 each morning, 1 = wears off. Dispel lifts it.</td></tr>
+  <tr><td>12</td><td>Midas Bane</td><td>Gold/silver you touch turns to dust. D4 each morning, 1 = wears off. Dispel lifts it.</td></tr>
+  <tr><td>13</td><td>Blindness</td><td>Blinded (total darkness rules). D4 each morning, 1 = recover. Dispel lifts it.</td></tr>
+  <tr><td>14</td><td>Amnesia</td><td>Forget identity. Must roleplay. D4 each morning, 1 = memory returns.</td></tr>
+  <tr><td>15</td><td>Unintended Victim</td><td>Spell also hits a friend. Healing/helping spells affect an enemy instead.</td></tr>
+  <tr><td>16</td><td>Backfire</td><td>Offensive spell hits you instead. Protect/heal spell deals damage instead.</td></tr>
+  <tr><td>17</td><td>Polymorph</td><td>Turn into animal. D6: 1=cat, 2=fox, 3=goat, 4=wolf, 5=deer, 6=bear.</td></tr>
+  <tr><td>18</td><td>Youth</td><td>Become one age category younger. Permanent (normal aging resumes).</td></tr>
+  <tr><td>19</td><td>Aging</td><td>Become one age category older. Permanent (normal aging resumes).</td></tr>
+  <tr><td>20</td><td>Demon Attracted</td><td>A demon arrives within the next shift and attacks or causes trouble.</td></tr>
+</table>
+</div>
+
+</div><!-- end page 2 columns-2 -->
+
+<!-- ==================== PAGE 3: NPCs & ANIMALS ==================== -->
+<div class="page-break"></div>
+
+<div class="no-break">
+<h2>Typical NPCs <span class="pg">p. 110</span></h2>
+<table style="font-size: 6.5pt;">
+  <tr><th>Type</th><th>Skills</th><th>Heroic Abilities</th><th>Dmg Bonus</th><th>HP</th><th>WP</th><th>Gear</th></tr>
+  <tr><td>Guard</td><td>Awareness 10, Swords 12</td><td>-</td><td>STR +D4</td><td>12</td><td>-</td><td>Broadsword, studded leather</td></tr>
+  <tr><td>Cultist</td><td>Evade 14, Knives 14</td><td>-</td><td>AGL +D4</td><td>12</td><td>-</td><td>Dagger</td></tr>
+  <tr><td>Thief</td><td>Evade 12, Knives 12</td><td>-</td><td>AGL +D4</td><td>10</td><td>-</td><td>Knife</td></tr>
+  <tr><td>Villager</td><td>Brawling 8</td><td>-</td><td>-</td><td>8</td><td>-</td><td>Wooden club</td></tr>
+  <tr><td>Hunter</td><td>Awareness 12, Bows 13</td><td>-</td><td>AGL +D4</td><td>13</td><td>-</td><td>Longbow, leather armor</td></tr>
+  <tr><td>Bandit</td><td>Bows 12, Evade 10, Swords 12</td><td>-</td><td>-</td><td>12</td><td>-</td><td>Short sword, short bow</td></tr>
+  <tr><td>Adventurer</td><td>Awareness 10, Swords 12</td><td>-</td><td>STR +D4</td><td>13</td><td>-</td><td>Broadsword, studded leather</td></tr>
+  <tr><td>Scholar</td><td>Languages 13, Myths &amp; Legends 13, Staves 8</td><td>-</td><td>-</td><td>7</td><td>-</td><td>A good book</td></tr>
+  <tr><td><b>Bandit Chief</b></td><td>Awareness 12, Brawling 15, Hammers 15</td><td>Berserker, Robust x6, Veteran</td><td>STR +D6</td><td>30</td><td>16</td><td>Heavy warhammer, chainmail, open helm</td></tr>
+  <tr><td><b>Knight Champion</b></td><td>Brawling 14, Swords 16</td><td>Defensive, Double Slash, Focused x6, Robust x6</td><td>STR +D6</td><td>28</td><td>26</td><td>Longsword, large shield, plate, great helm, horse</td></tr>
+  <tr><td><b>Archmage</b></td><td>Magic School 15, Staves 13</td><td>Focused x6, Master Spellcaster, Robust x4</td><td>-</td><td>22</td><td>30</td><td>Staff, grimoire</td></tr>
+</table>
+</div>
+
+<div class="columns-2">
+
+<div class="no-break">
+<h2>Common Animals <span class="pg">p. 104</span></h2>
+<table>
+  <tr><th>Animal</th><th>Mv</th><th>HP</th><th>Attack</th><th>Skills</th></tr>
+  <tr><td>Cat</td><td>12</td><td>4</td><td>Bite (8, D3)</td><td>Awar 12, Evade 14, Sneak 16</td></tr>
+  <tr><td>Dog</td><td>14</td><td>8</td><td>Bite (12, D8)</td><td>Awar 14, Evade 10, Sneak 12</td></tr>
+  <tr><td>Goat</td><td>10</td><td>6</td><td>Horns (10, D6)</td><td>Awar 10, Evade 12</td></tr>
+  <tr><td>Donkey</td><td>14</td><td>12</td><td>Kick (10, D10)</td><td>Awar 10, Evade 6</td></tr>
+  <tr><td>Horse</td><td>20</td><td>16</td><td>Kick (10, 2D4)</td><td>Awar 12, Evade 8</td></tr>
+  <tr><td>Wild Boar</td><td>12</td><td>14</td><td>Tusks (12, 2D6)</td><td>Awar 10, Evade 8</td></tr>
+  <tr><td>Deer</td><td>18</td><td>12</td><td>Horns (10, D8)</td><td>Awar 12, Evade 12</td></tr>
+  <tr><td>Moose</td><td>16</td><td>18</td><td>Horns (10, 2D6)</td><td>Awar 10, Evade 8</td></tr>
+  <tr><td>Fox</td><td>10</td><td>6</td><td>Bite (12, D6)</td><td>Awar 12, Evade 10, Sneak 14</td></tr>
+  <tr><td>Wolf</td><td>16</td><td>10</td><td>Bite (14, 2D6)</td><td>Awar 14, Evade 12, Sneak 14</td></tr>
+  <tr><td>Bear</td><td>12</td><td>20</td><td>Bite (12, 2D8)</td><td>Awar 10, Evade 8</td></tr>
+</table>
+</div>
+
+<div class="no-break">
+<h2>NPC Attribute Guidelines <span class="pg">p. 109</span></h2>
+<div class="rules-text" style="padding: 2pt;">
+  <p><b>STR &amp; AGL:</b> Use damage bonus. +D6 = 17, +D4 = 14, none = 10.</p>
+  <p><b>CON:</b> Roll against max HP, -2 per Robust level.</p>
+  <p><b>WIL:</b> Roll against max WP (if listed), -2 per Focused level. If no WP listed, use 10.</p>
+  <p><b>INT &amp; CHA:</b> Roll against 10.</p>
+</div>
+</div>
+
+<div class="no-break">
+<h2>NPC Generator <span class="pg">p. 111</span></h2>
+<table>
+  <tr><th>D20</th><th>Attitude (D4)</th><th>Kin (D6)</th><th>Motivation (D8)</th><th>Profession (D10)</th><th>Trait (D12)</th></tr>
+  <tr><td>1</td><td>Hostile</td><td>Human</td><td>Sweet, glittering gold</td><td>Bard</td><td>Talks too much</td></tr>
+  <tr><td>2</td><td>Evasive</td><td>Dwarf</td><td>Knowledge of the world</td><td>Artisan</td><td>Strange clothes</td></tr>
+  <tr><td>3</td><td>Indifferent</td><td>Elf</td><td>Deep and eternal love</td><td>Hunter</td><td>Wild-eyed</td></tr>
+  <tr><td>4</td><td>Friendly</td><td>Halfling</td><td>A lifelong oath</td><td>Fighter</td><td>Smells bad</td></tr>
+  <tr><td>5</td><td></td><td>Wolfkin</td><td>Injustice demands retribution</td><td>Scholar</td><td>Joker</td></tr>
+  <tr><td>6</td><td></td><td>Mallard</td><td>A life of joy and song</td><td>Mage</td><td>Cultist</td></tr>
+  <tr><td>7</td><td></td><td></td><td>Blood ties never severed</td><td>Merchant</td><td>A bit childish</td></tr>
+  <tr><td>8</td><td></td><td></td><td>Escaping the dark past</td><td>Knight</td><td>Quiet and difficult</td></tr>
+  <tr><td>9</td><td></td><td></td><td></td><td>Mariner</td><td>Demon worshiper</td></tr>
+  <tr><td>10</td><td></td><td></td><td></td><td>Thief</td><td>Obstinate</td></tr>
+  <tr><td>11</td><td></td><td></td><td></td><td></td><td>Very touchy</td></tr>
+  <tr><td>12</td><td></td><td></td><td></td><td></td><td>Highly romantic</td></tr>
+</table>
+</div>
+
+</div><!-- end columns-2 -->
+
+<div class="no-break">
+<h2>NPC Names <span class="pg">p. 111</span></h2>
+<table style="font-size: 6pt;">
+  <tr><th>D20</th><th>Name Options</th></tr>
+  <tr><td>1</td><td>Agnar / Jorid / Dereios</td></tr>
+  <tr><td>2</td><td>Ragnfast / Ask / Euanthe</td></tr>
+  <tr><td>3</td><td>Arnulf / Tyra / Xanthos</td></tr>
+  <tr><td>4</td><td>Atle / Liv / Athalia</td></tr>
+  <tr><td>5</td><td>Guthorm / Embla / Kleitos</td></tr>
+  <tr><td>6</td><td>Botvid / Ragna / Astara</td></tr>
+  <tr><td>7</td><td>Kale / Turid / Priamus</td></tr>
+  <tr><td>8</td><td>Egil / Jorunn / Galyna</td></tr>
+  <tr><td>9</td><td>Ingemund / Borghild / Taras</td></tr>
+  <tr><td>10</td><td>Gudmund / Gylla / Zenais</td></tr>
+  <tr><td>11</td><td>Grim / Tora / Hesiod</td></tr>
+  <tr><td>12</td><td>Brand / Edda / Liene</td></tr>
+  <tr><td>13</td><td>Folkvid / Sigrun / Eupraxia</td></tr>
+  <tr><td>14</td><td>Germund / Dagrun / Tyrus</td></tr>
+  <tr><td>15</td><td>Algot / Bolla / Lysandra</td></tr>
+  <tr><td>16</td><td>Tolir / Yrsa / Kallias</td></tr>
+  <tr><td>17</td><td>Hjorvald / Estrid / Isidora</td></tr>
+  <tr><td>18</td><td>Ambjorn / Signe / Athos</td></tr>
+  <tr><td>19</td><td>Grunn / Tilde / Larysa</td></tr>
+  <tr><td>20</td><td>Olgrid / Idun / Nikias</td></tr>
+</table>
+</div>
+
+</body>
+</html>
