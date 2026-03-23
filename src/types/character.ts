@@ -25,6 +25,10 @@ export interface Weapon {
   features: string;
   equipped: boolean;
   metal?: boolean;
+  damageType?: 'bludgeoning' | 'slashing' | 'piercing' | null;
+  strRequirement?: number | null;
+  damaged?: boolean;
+  isShield?: boolean;
 }
 
 export interface ArmorPiece {
@@ -66,6 +70,10 @@ export interface HeroicAbility {
   id: ID;
   name: string;
   summary: string;
+  wpCost?: number;
+  requirement?: string | null;
+  requirementSkillId?: string | null;
+  requirementSkillLevel?: number | null;
 }
 
 export type DerivedOverrides = Record<string, number | null>;
@@ -82,6 +90,8 @@ export interface CharacterUiState {
   sheetCardOrder?: string[];
   sheetCustomCards?: CustomCard[];
   sheetPanelVisibility?: Record<string, boolean>;
+  combatCardOrder?: string[];
+  combatPanelVisibility?: Record<string, boolean>;
 }
 
 export interface CharacterResource {
