@@ -1,0 +1,90 @@
+{
+  "run_id": "2026-03-22T19-41-57-design-doc",
+  "current_phase": "complete",
+  "phase_status": "complete",
+  "attempts": 0,
+  "phases": [
+    {
+      "name": "triage",
+      "status": "skipped",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "forge",
+      "status": "complete",
+      "started": "2026-03-22T19:41:58.199Z",
+      "completed": "2026-03-22T19:46:00.675Z",
+      "attempts": 1
+    },
+    {
+      "name": "prep",
+      "status": "complete",
+      "started": "2026-03-22T19:46:00.685Z",
+      "completed": "2026-03-22T19:50:48.859Z",
+      "attempts": 1
+    },
+    {
+      "name": "preflight",
+      "status": "complete",
+      "started": "2026-03-22T19:50:48.868Z",
+      "completed": "2026-03-22T19:57:48.117Z",
+      "attempts": 1
+    },
+    {
+      "name": "run",
+      "status": "complete",
+      "started": "2026-03-22T19:57:48.128Z",
+      "completed": "2026-03-22T20:11:14.465Z",
+      "attempts": 1
+    },
+    {
+      "name": "verify",
+      "status": "complete",
+      "started": "2026-03-22T20:16:35.244Z",
+      "completed": "2026-03-22T20:29:17.183Z",
+      "attempts": 2
+    },
+    {
+      "name": "completeness",
+      "status": "complete",
+      "started": "2026-03-22T20:40:47.963Z",
+      "completed": "2026-03-22T20:42:41.310Z",
+      "attempts": 3
+    },
+    {
+      "name": "outcomes",
+      "status": "complete",
+      "started": "2026-03-22T20:42:41.318Z",
+      "completed": "2026-03-22T20:45:32.350Z",
+      "attempts": 1
+    }
+  ],
+  "timing": {
+    "total_start": "2026-03-22T19:41:57.866Z",
+    "total_end": null,
+    "total_duration_ms": null
+  },
+  "dry_run": false,
+  "unattended": false,
+  "doom_loop": {
+    "total_tokens_used": 0,
+    "token_budget": 500000,
+    "consecutive_non_productive_waves": 0,
+    "total_waves": 10
+  },
+  "spec_score": null,
+  "sub_spec_count": null,
+  "completeness_cycles": 0,
+  "input_type": "design-doc",
+  "input_source": "C:/Users/CalebBennett/Documents/GitHub/Skaldmark/docs/factory/forge-input-20260322-194500.md",
+  "git": {
+    "branch": "2026/03/22-1939-caleb-feat-design-doc",
+    "head_commit": "4a6d550171a37f3f70f71eb75128c069029701e1",
+    "base_ref": "4a6d550171a37f3f70f71eb75128c069029701e1",
+    "dirty": true,
+    "recent_commits": "4a6d550 factory: 2026-03-22T18-57-06-design-doc (abort)\nfc32987 fix: complete remaining spec gaps from completeness report\n281fa34 factory: 2026-03-22T17-55-04-design-doc (abort)\n7d46777 feat: implement Skaldbok Dragonbane character sheet PWA\n59b17d1 Initial commit — Skaldmark: The Adventurer's Ledger",
+    "uncommitted_diff_stat": ""
+  }
+}

@@ -1,0 +1,74 @@
+sub_spec:
+  id: "SS-BF-01"
+  title: "IndexedDB Metadata Store"
+  parent_spec: "SPEC-SKALDBOK-BUGFIX-001"
+  score: 93
+  priority: "P0"
+  phase: 1
+  depends_on: []
+  goals: ["G2"]
+  source_violation: "REQ-015 — metadata IndexedDB store missing; no schema version tracking store in Dexie"
+
+  intent: >
+    Add the missing 'metadata' IndexedDB store to the Dexie database schema.
+    This store is specified in AC-015-1 of SS-02 which requires stores:
+    characters, systems, appSettings, referenceNotes, AND metadata.
+    The metadata store is used for tracking database schema version and
+    app-level metadata independently of settings.
+
+  scope:
+    in:
+      - "Add metadata store to Dexie schema in src/storage/db/client.ts"
+      - "Define MetadataRecord type"
+      - "Bump Dexie version to 2 with additive migration"
+      - "Add metadata repository"
+    out:
+      - "Populating metadata on first launch (deferred to implementation)"
+      - "Migration logic beyond store creation"
+
+  analysis:
+    current_state: >
+      src/storage/db/client.ts defines 4 stores in version(1):
+      characters, systems, appSettings, referenceNotes.
+      The spec (AC-015-1) requires 5 stores including 'metadata'.
+    root_cause: "Store was specified but omitted during implementation"
+    fix_approach: >
+      Add a version(2) migration that creates the metadata store.
+      Define a MetadataRecord interface with id, key, value fields.
+      Add a metadataRepository with get/set operations.
+
+  tasks:
+    - id: "T-BF-001"
+      title: "Add metadata store to Dexie schema"
+      acceptance_criteria:
+        - id: "AC-BF-001-1"
+          criterion: "SkaldbokDatabase class declares a metadata table"
+          testable: true
+          test_type: "automated"
+        - id: "AC-BF-001-2"
+          criterion: "Dexie version(2) adds metadata store with 'id' key"
+          testable: true
+          test_type: "integration"
+        - id: "AC-BF-001-3"
+          criterion: "Existing version(1) databases upgrade to version(2) without data loss"
+          testable: true
+          test_type: "integration"
+        - id: "AC-BF-001-4"
+          criterion: "MetadataRecord interface is exported from types"
+          testable: true
+          test_type: "automated"
+
+  files:
+    modifies:
+      - "src/storage/db/client.ts"
+      - "src/storage/index.ts"
+    creates:
+      - "src/storage/repositories/metadataRepository.ts"
+
+  guardrails:
+    do:
+      - "Use additive Dexie versioning (version 2 adds store, version 1 unchanged)"
+      - "Keep metadata store schema minimal"
+    dont:
+      - "Do not modify existing store schemas"
+      - "Do not remove or rename existing stores"

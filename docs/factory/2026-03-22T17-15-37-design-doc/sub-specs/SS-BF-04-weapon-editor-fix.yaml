@@ -1,0 +1,81 @@
+sub_spec:
+  id: "SS-BF-04"
+  title: "WeaponEditor Render Loop Fix"
+  parent_spec: "SPEC-SKALDBOK-BUGFIX-001"
+  score: 95
+  priority: "P0"
+  phase: 1
+  depends_on: []
+  goals: ["G3"]
+  source_bug: >
+    WeaponEditor.tsx calls handleOpen() during the render body (lines 41-43).
+    handleOpen() calls setForm() which triggers a state update during render,
+    causing a potential infinite re-render loop. The condition
+    `if (open && form.name === '' && weapon)` may repeatedly fire because
+    setForm is asynchronous and form.name may still be '' on the next render
+    before the state update completes.
+
+  intent: >
+    Refactor WeaponEditor to sync form state from weapon prop using a
+    useEffect hook instead of calling a state setter during render.
+    This eliminates the infinite re-render risk and follows React best
+    practices for derived state.
+
+  scope:
+    in:
+      - "Replace render-time handleOpen() call with useEffect-based form sync"
+      - "Ensure form resets correctly when opening for a new weapon"
+      - "Ensure form populates correctly when editing an existing weapon"
+    out:
+      - "Changes to WeaponEditor UI layout or styling"
+      - "Changes to weapon save/delete logic"
+
+  analysis:
+    current_state: >
+      WeaponEditor.tsx lines 40-43:
+        if (open && form.name === '' && weapon) {
+          handleOpen();
+        }
+      This runs during render. handleOpen() calls setForm() which triggers
+      a re-render. If the condition is still true on re-render (race condition
+      with React batching), it creates an infinite loop.
+    root_cause: "State mutation during render body instead of effect"
+    fix_approach: >
+      Remove the render-time conditional call. Add a useEffect that watches
+      the 'open' and 'weapon' props and syncs the form state when the drawer
+      opens. This is the standard React pattern for derived state from props.
+
+  tasks:
+    - id: "T-BF-005"
+      title: "Fix WeaponEditor render loop"
+      acceptance_criteria:
+        - id: "AC-BF-005-1"
+          criterion: "No state setters are called during the render body of WeaponEditor"
+          testable: true
+          test_type: "automated"
+        - id: "AC-BF-005-2"
+          criterion: "Opening WeaponEditor with an existing weapon populates all fields correctly"
+          testable: true
+          test_type: "component"
+        - id: "AC-BF-005-3"
+          criterion: "Opening WeaponEditor for a new weapon shows empty fields"
+          testable: true
+          test_type: "component"
+        - id: "AC-BF-005-4"
+          criterion: "Rapidly opening/closing the editor does not cause errors or stale state"
+          testable: true
+          test_type: "manual"
+
+  files:
+    modifies:
+      - "src/components/fields/WeaponEditor.tsx"
+    creates: []
+
+  guardrails:
+    do:
+      - "Use useEffect with [open, weapon] dependencies for form sync"
+      - "Keep the existing form field structure and save logic"
+      - "Return early if !open before rendering drawer content"
+    dont:
+      - "Do not call any state setters outside of event handlers or effects"
+      - "Do not change the WeaponEditor public API (props interface)"

@@ -1,0 +1,76 @@
+sub_spec:
+  id: "SS-BF-03"
+  title: "SystemDefinition themesSupported Field"
+  parent_spec: "SPEC-SKALDBOK-BUGFIX-001"
+  score: 94
+  priority: "P1"
+  phase: 1
+  depends_on: ["SS-BF-01"]
+  goals: ["G5", "G7"]
+  source_violation: >
+    The spec requires SystemDefinition to include a themesSupported field
+    listing which themes are valid for a given system. This field is missing
+    from both the TypeScript type and the Zod schema.
+
+  intent: >
+    Add an optional themesSupported field to SystemDefinition type and Zod schema.
+    Update the Dragonbane system.json to include the field. This enables future
+    systems to declare theme compatibility.
+
+  scope:
+    in:
+      - "Add themesSupported field to SystemDefinition TypeScript type"
+      - "Add themesSupported field to systemDefinitionSchema Zod schema"
+      - "Add themesSupported to Dragonbane system.json"
+      - "Export updated type from index"
+    out:
+      - "Theme filtering logic in ThemeProvider (future feature)"
+      - "UI changes to surface theme restrictions"
+
+  analysis:
+    current_state: >
+      SystemDefinition in src/types/system.ts has: id, version, name, displayName,
+      attributes, conditions, resources, skillCategories, sectionLayouts.
+      Missing: themesSupported.
+      system.schema.ts Zod schema mirrors this without themesSupported.
+    root_cause: "Field was specified but omitted during type definition"
+    fix_approach: >
+      Add optional themesSupported: string[] to both the TypeScript interface
+      and Zod schema. Update Dragonbane system.json to include
+      themesSupported: ["dark", "parchment", "light"].
+
+  tasks:
+    - id: "T-BF-004"
+      title: "Add themesSupported to SystemDefinition"
+      acceptance_criteria:
+        - id: "AC-BF-004-1"
+          criterion: "SystemDefinition interface includes optional themesSupported: string[]"
+          testable: true
+          test_type: "automated"
+        - id: "AC-BF-004-2"
+          criterion: "systemDefinitionSchema Zod schema includes optional themesSupported array of strings"
+          testable: true
+          test_type: "automated"
+        - id: "AC-BF-004-3"
+          criterion: "Dragonbane system.json includes themesSupported: ['dark', 'parchment', 'light']"
+          testable: true
+          test_type: "unit"
+        - id: "AC-BF-004-4"
+          criterion: "Existing system data without themesSupported still validates (field is optional)"
+          testable: true
+          test_type: "unit"
+
+  files:
+    modifies:
+      - "src/types/system.ts"
+      - "schemas/system.schema.ts"
+      - "src/systems/dragonbane/system.json"
+    creates: []
+
+  guardrails:
+    do:
+      - "Make the field optional to maintain backward compatibility"
+      - "Use string array to allow arbitrary theme names"
+    dont:
+      - "Do not make themesSupported required (breaks existing data)"
+      - "Do not add theme filtering logic in this sub-spec"

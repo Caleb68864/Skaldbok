@@ -1,0 +1,122 @@
+spec:
+  id: "SPEC-SKALDBOK-BUGFIX-001"
+  title: "Skaldbok Bugfix & Completion Run"
+  parent_spec: "SPEC-SKALDBOK-V1"
+  version: "1.0.0"
+  status: "scored"
+  run_id: "2026-03-22T17-15-37-design-doc"
+
+  scoring:
+    total: 91
+    completeness: 94
+    clarity: 93
+    testability: 90
+    feasibility: 92
+    risk_coverage: 85
+
+  mission: >
+    Fix all spec violations and bugs identified in the completeness report for the
+    2026-03-22T14-15-55-design-doc run, plus any additional issues found during
+    code audit. This is a bugfix/completion run — no new features.
+
+  scope:
+    in:
+      - "Fix 4 spec violations from completeness report"
+      - "Fix 2 confirmed bugs from completeness report"
+      - "Fix additional bugs discovered during code audit"
+      - "Ensure all existing spec acceptance criteria are met"
+    out:
+      - "New features beyond what was specified in SPEC-SKALDBOK-V1"
+      - "Refactoring beyond what is necessary to fix identified issues"
+      - "Test authoring (covered by SS-11 of parent spec)"
+
+  constraints:
+    - "Correctness over speed"
+    - "No shell commands during implementation"
+    - "Cross-platform compatible changes only"
+    - "Preserve all existing working functionality"
+    - "Minimal diff — fix only what is broken or missing"
+
+  sub_specs:
+    - id: "SS-BF-01"
+      title: "IndexedDB Metadata Store"
+      score: 93
+      priority: "P0"
+      phase: 1
+      file: "sub-specs/SS-BF-01-metadata-store.yaml"
+    - id: "SS-BF-02"
+      title: "GearScreen Missing UI Sections"
+      score: 92
+      priority: "P0"
+      phase: 1
+      file: "sub-specs/SS-BF-02-gear-screen-sections.yaml"
+    - id: "SS-BF-03"
+      title: "SystemDefinition themesSupported Field"
+      score: 94
+      priority: "P1"
+      phase: 1
+      file: "sub-specs/SS-BF-03-themes-supported-field.yaml"
+    - id: "SS-BF-04"
+      title: "WeaponEditor Render Loop Fix"
+      score: 95
+      priority: "P0"
+      phase: 1
+      file: "sub-specs/SS-BF-04-weapon-editor-fix.yaml"
+    - id: "SS-BF-05"
+      title: "Settings Save Error Surfacing"
+      score: 90
+      priority: "P0"
+      phase: 1
+      file: "sub-specs/SS-BF-05-settings-save-errors.yaml"
+    - id: "SS-BF-06"
+      title: "Autosave Timer Leak Fix"
+      score: 88
+      priority: "P1"
+      phase: 1
+      file: "sub-specs/SS-BF-06-autosave-timer-fix.yaml"
+
+  dependency_graph:
+    SS-BF-01: []
+    SS-BF-02: []
+    SS-BF-03: ["SS-BF-01"]
+    SS-BF-04: []
+    SS-BF-05: []
+    SS-BF-06: []
+
+  execution_waves:
+    - wave: 1
+      specs: ["SS-BF-01", "SS-BF-02", "SS-BF-04", "SS-BF-05", "SS-BF-06"]
+      rationale: "All independent fixes, can be applied in parallel"
+    - wave: 2
+      specs: ["SS-BF-03"]
+      rationale: "Depends on SS-BF-01 for metadata store schema awareness"
+
+  intent_hierarchy:
+    top_level: "Achieve full compliance with SPEC-SKALDBOK-V1 acceptance criteria"
+    secondary:
+      - "Eliminate runtime bugs that degrade user experience"
+      - "Close all gaps between specified and implemented behavior"
+      - "Harden data persistence against silent failures"
+
+  acceptance_criteria_summary:
+    total: 30
+    functional: 18
+    technical: 8
+    safety: 4
+
+  risks:
+    - id: "R-BF-001"
+      description: "Adding metadata store requires Dexie version bump"
+      impact: "medium"
+      likelihood: "low"
+      mitigation: "Dexie handles version upgrades transparently; test with existing DB data"
+    - id: "R-BF-002"
+      description: "WeaponEditor fix may change form reset timing"
+      impact: "low"
+      likelihood: "medium"
+      mitigation: "Use useEffect with proper dependency for form sync instead of render-time call"
+    - id: "R-BF-003"
+      description: "Settings error surfacing may require UI changes"
+      impact: "low"
+      likelihood: "low"
+      mitigation: "Use existing error display patterns from useAutosave"

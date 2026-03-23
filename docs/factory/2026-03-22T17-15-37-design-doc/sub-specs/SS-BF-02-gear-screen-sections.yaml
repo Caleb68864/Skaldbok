@@ -1,0 +1,110 @@
+sub_spec:
+  id: "SS-BF-02"
+  title: "GearScreen Missing UI Sections"
+  parent_spec: "SPEC-SKALDBOK-BUGFIX-001"
+  score: 92
+  priority: "P0"
+  phase: 1
+  depends_on: []
+  goals: ["G3"]
+  source_violation: >
+    SS-04 scope specifies Gear screen includes "tiny items, memento" but
+    GearScreen.tsx has no UI sections for tinyItems or memento fields.
+    CharacterRecord already has tinyItems: string[] and memento: string fields,
+    Zod schemas validate them, but the UI never renders or edits them.
+
+  intent: >
+    Add Tiny Items and Memento UI sections to GearScreen.tsx so users can
+    view and edit these character fields. Tiny Items should display as a
+    simple list of strings with add/remove. Memento should display as a
+    single text field.
+
+  scope:
+    in:
+      - "Add Tiny Items section to GearScreen with add/remove UI"
+      - "Add Memento section to GearScreen with text input"
+      - "Respect mode guards (edit-only for structural changes)"
+      - "Persist changes via updateCharacter"
+    out:
+      - "Changes to CharacterRecord type (fields already exist)"
+      - "Changes to Zod schemas (already validated)"
+
+  analysis:
+    current_state: >
+      GearScreen.tsx renders: Weapons, Armor & Helmet, Inventory, Coins, Encumbrance.
+      Missing: Tiny Items section, Memento section.
+      CharacterRecord has tinyItems: string[] and memento: string.
+      character.schema.ts validates both fields.
+    root_cause: "UI sections were silently dropped during GearScreen implementation"
+    fix_approach: >
+      Add two new SectionPanel blocks to GearScreen.tsx:
+      1. Tiny Items — a tag-like list with add/remove in edit mode
+      2. Memento — a text input/textarea for the memento string
+
+  tasks:
+    - id: "T-BF-002"
+      title: "Add Tiny Items section to GearScreen"
+      acceptance_criteria:
+        - id: "AC-BF-002-1"
+          criterion: "GearScreen renders a 'Tiny Items' SectionPanel"
+          testable: true
+          test_type: "component"
+        - id: "AC-BF-002-2"
+          criterion: "All items in character.tinyItems are displayed"
+          testable: true
+          test_type: "component"
+        - id: "AC-BF-002-3"
+          criterion: "In Edit Mode, user can add a new tiny item via text input"
+          testable: true
+          test_type: "integration"
+        - id: "AC-BF-002-4"
+          criterion: "In Edit Mode, user can remove a tiny item"
+          testable: true
+          test_type: "integration"
+        - id: "AC-BF-002-5"
+          criterion: "In Play Mode, tiny items are displayed but not editable"
+          testable: true
+          test_type: "component"
+        - id: "AC-BF-002-6"
+          criterion: "Tiny item changes persist after page reload"
+          testable: true
+          test_type: "integration"
+
+    - id: "T-BF-003"
+      title: "Add Memento section to GearScreen"
+      acceptance_criteria:
+        - id: "AC-BF-003-1"
+          criterion: "GearScreen renders a 'Memento' SectionPanel"
+          testable: true
+          test_type: "component"
+        - id: "AC-BF-003-2"
+          criterion: "Memento displays the character.memento value"
+          testable: true
+          test_type: "component"
+        - id: "AC-BF-003-3"
+          criterion: "In Edit Mode, user can edit the memento text"
+          testable: true
+          test_type: "integration"
+        - id: "AC-BF-003-4"
+          criterion: "In Play Mode, memento is displayed but not editable"
+          testable: true
+          test_type: "component"
+        - id: "AC-BF-003-5"
+          criterion: "Memento changes persist after page reload"
+          testable: true
+          test_type: "integration"
+
+  files:
+    modifies:
+      - "src/screens/GearScreen.tsx"
+    creates: []
+
+  guardrails:
+    do:
+      - "Place Tiny Items section after Coins, before Encumbrance"
+      - "Place Memento section after Tiny Items, before Encumbrance"
+      - "Use existing SectionPanel, Button, and input styling patterns"
+      - "Respect mode guards for edit vs play mode"
+    dont:
+      - "Do not use a drawer/modal for tiny items (they are simple strings)"
+      - "Do not modify CharacterRecord or Zod schemas"
