@@ -37,7 +37,7 @@ export function applyRoundRest(character: CharacterRecord, wpRoll: number): Roun
  */
 export function applyStretchRest(
   character: CharacterRecord,
-  wpRoll: number,
+  _wpRoll: number,
   hpRoll: number,
   conditionToClear?: string,
 ): StretchRestResult {
