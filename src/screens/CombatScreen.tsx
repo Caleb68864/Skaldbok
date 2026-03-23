@@ -1,18 +1,34 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
+import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useAutosave } from '../hooks/useAutosave';
 import { CombatResourcePanel } from '../components/fields/CombatResourcePanel';
 import { QuickConditionPanel } from '../components/fields/QuickConditionPanel';
 import { SectionPanel } from '../components/primitives/SectionPanel';
+import { Modal } from '../components/primitives/Modal';
+import { GameIcon } from '../components/primitives/GameIcon';
+import { useToast } from '../context/ToastContext';
+import { applyRoundRest, applyStretchRest } from '../utils/restActions';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { nowISO } from '../utils/dates';
 
 export default function CombatScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
+  const { settings } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
+  const { showToast } = useToast();
+
+  // Rest modal state
+  const [roundRestOpen, setRoundRestOpen] = useState(false);
+  const [roundRestWp, setRoundRestWp] = useState('');
+  const [stretchRestOpen, setStretchRestOpen] = useState(false);
+  const [stretchRestWp, setStretchRestWp] = useState('');
+  const [stretchRestHp, setStretchRestHp] = useState('');
+  const [stretchRestCondition, setStretchRestCondition] = useState('');
 
   if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
   if (!character) {
@@ -55,6 +71,75 @@ export default function CombatScreen() {
   function resetDeathRolls() {
     updateResourceCurrent('deathRolls', 0);
     updateResourceCurrent('deathSuccesses', 0);
+  }
+
+  const isPlayMode = settings.mode === 'play';
+
+  function confirmRoundRest() {
+    if (!character) return;
+    const roll = parseInt(roundRestWp, 10);
+    if (isNaN(roll) || roll < 1 || roll > 6) {
+      showToast('Please enter a value between 1 and 6.', 'error');
+      return;
+    }
+    const result = applyRoundRest(character, roll);
+    if (result.alreadyFull && result.recovered === 0) {
+      showToast('Already at full WP.', 'info');
+    } else {
+      updateCharacter({
+        resources: { ...character.resources, wp: { ...character.resources['wp'], current: result.newWpCurrent } },
+        updatedAt: nowISO(),
+      });
+      showToast(`Recovered ${result.recovered} WP.`, 'success');
+    }
+    setRoundRestOpen(false);
+    setRoundRestWp('');
+  }
+
+  function confirmStretchRest() {
+    if (!character) return;
+    const wpRoll = parseInt(stretchRestWp, 10);
+    const hpRoll = parseInt(stretchRestHp, 10);
+    if (isNaN(wpRoll) || wpRoll < 1 || wpRoll > 6) {
+      showToast('Please enter a WP d6 value between 1 and 6.', 'error');
+      return;
+    }
+    if (isNaN(hpRoll) || hpRoll < 1 || hpRoll > 6) {
+      showToast('Please enter an HP d6 value between 1 and 6.', 'error');
+      return;
+    }
+    const result = applyStretchRest(character, wpRoll, hpRoll, stretchRestCondition || undefined);
+    const updatedResources = {
+      ...character.resources,
+      wp: { ...character.resources['wp'], current: result.newWpCurrent },
+      hp: { ...character.resources['hp'], current: result.newHpCurrent },
+    };
+    const updatedConditions = result.conditionCleared
+      ? { ...character.conditions, [result.conditionCleared]: false }
+      : character.conditions;
+    updateCharacter({ resources: updatedResources, conditions: updatedConditions, updatedAt: nowISO() });
+
+    const parts: string[] = [];
+    if (result.alreadyFullWp) {
+      parts.push('Already at full WP.');
+    } else {
+      parts.push('WP restored to max.');
+    }
+    if (result.alreadyFullHp && result.hpRecovered === 0) {
+      parts.push('Already at full HP.');
+    } else {
+      parts.push(`Recovered ${result.hpRecovered} HP.`);
+    }
+    if (result.conditionCleared) {
+      const condDef = system?.conditions.find(c => c.id === result.conditionCleared);
+      const condName = condDef?.name ?? result.conditionCleared;
+      parts.push(`Cleared ${condName}.`);
+    }
+    showToast(parts.join(' '), 'success');
+    setStretchRestOpen(false);
+    setStretchRestWp('');
+    setStretchRestHp('');
+    setStretchRestCondition('');
   }
 
   // Equipped weapons
@@ -345,6 +430,143 @@ export default function CombatScreen() {
           </p>
         </div>
       </SectionPanel>
+
+      {/* Rest & Recovery — play mode only */}
+      {isPlayMode && (
+        <SectionPanel title="Rest & Recovery" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+          <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="rest-btn rest-btn--round"
+              onClick={() => setRoundRestOpen(true)}
+            >
+              Round Rest
+            </button>
+            <button
+              type="button"
+              className="rest-btn rest-btn--stretch"
+              onClick={() => setStretchRestOpen(true)}
+            >
+              Stretch Rest
+            </button>
+          </div>
+        </SectionPanel>
+      )}
+
+      {/* Round Rest Modal */}
+      <Modal
+        open={roundRestOpen}
+        onClose={() => { setRoundRestOpen(false); setRoundRestWp(''); }}
+        title="Round Rest"
+        actions={
+          <>
+            <button
+              type="button"
+              className="rest-modal-btn rest-modal-btn--cancel"
+              onClick={() => { setRoundRestOpen(false); setRoundRestWp(''); }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rest-modal-btn rest-modal-btn--confirm"
+              onClick={confirmRoundRest}
+            >
+              Confirm
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <p style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>
+            Roll a d6 for WP recovery.
+          </p>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            d6 Result (1–6)
+            <input
+              type="number"
+              min={1}
+              max={6}
+              value={roundRestWp}
+              onChange={e => setRoundRestWp(e.target.value)}
+              className="rest-modal-input"
+              placeholder="Enter 1–6"
+            />
+          </label>
+        </div>
+      </Modal>
+
+      {/* Stretch Rest Modal */}
+      <Modal
+        open={stretchRestOpen}
+        onClose={() => { setStretchRestOpen(false); setStretchRestWp(''); setStretchRestHp(''); setStretchRestCondition(''); }}
+        title="Stretch Rest"
+        actions={
+          <>
+            <button
+              type="button"
+              className="rest-modal-btn rest-modal-btn--cancel"
+              onClick={() => { setStretchRestOpen(false); setStretchRestWp(''); setStretchRestHp(''); setStretchRestCondition(''); }}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="rest-modal-btn rest-modal-btn--confirm"
+              onClick={confirmStretchRest}
+            >
+              Confirm
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <p style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>
+            Roll d6 for WP and HP recovery. WP is fully restored. HP is recovered by your roll result.
+          </p>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            WP d6 Result (1–6)
+            <input
+              type="number"
+              min={1}
+              max={6}
+              value={stretchRestWp}
+              onChange={e => setStretchRestWp(e.target.value)}
+              className="rest-modal-input"
+              placeholder="Enter 1–6"
+            />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            HP d6 Result (1–6)
+            <input
+              type="number"
+              min={1}
+              max={6}
+              value={stretchRestHp}
+              onChange={e => setStretchRestHp(e.target.value)}
+              className="rest-modal-input"
+              placeholder="Enter 1–6"
+            />
+          </label>
+          {system && system.conditions.length > 0 && (
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+              Clear a Condition (optional)
+              <select
+                value={stretchRestCondition}
+                onChange={e => setStretchRestCondition(e.target.value)}
+                className="rest-modal-input"
+              >
+                <option value="">— None —</option>
+                {system.conditions
+                  .filter(c => character.conditions[c.id])
+                  .map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+              </select>
+            </label>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

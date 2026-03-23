@@ -19,12 +19,20 @@ referencePages.forEach(page => {
   });
 });
 
+/** Map section ID to human-readable title */
+const sectionTitleMap: Record<string, string> = {};
+referenceSections.forEach(s => {
+  sectionTitleMap[s.id] = s.title;
+});
+
 type ActiveTab = 'reference' | 'notes';
 
 export default function ReferenceScreen() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('reference');
   const [searchQuery, setSearchQuery] = useState('');
   const [activePage, setActivePage] = useState<string>(referencePages[0].title);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const [activeSubPill, setActiveSubPill] = useState<string | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Notes state
@@ -116,6 +124,7 @@ export default function ReferenceScreen() {
               const pageTitle = sectionToPage[entry.target.id];
               if (pageTitle) {
                 setActivePage(pageTitle);
+                setActiveSubPill(entry.target.id);
               }
             }
           }
@@ -140,13 +149,27 @@ export default function ReferenceScreen() {
     };
   }, [activeTab, searchQuery]);
 
-  function handlePillClick(pageTitle: string) {
-    const page = referencePages.find(p => p.title === pageTitle);
-    if (!page || page.sections.length === 0) return;
-    const firstSectionId = page.sections[0];
-    document.getElementById(firstSectionId)?.scrollIntoView({ behavior: 'smooth' });
-    setActivePage(pageTitle);
+  function handleTopPillClick(pageTitle: string) {
+    if (expandedCategory === pageTitle) {
+      // Collapse if already expanded — toggle off
+      setExpandedCategory(null);
+    } else {
+      setExpandedCategory(pageTitle);
+      setActivePage(pageTitle);
+      // Scroll to first section of this category
+      const page = referencePages.find(p => p.title === pageTitle);
+      if (page && page.sections.length > 0) {
+        document.getElementById(page.sections[0])?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
   }
+
+  function handleSubPillClick(sectionId: string) {
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+    setActiveSubPill(sectionId);
+  }
+
+  const expandedPage = referencePages.find(p => p.title === expandedCategory) ?? null;
 
   const tabBtnStyle = (tab: ActiveTab) => ({
     padding: 'var(--space-sm) var(--space-md)',
@@ -206,23 +229,43 @@ export default function ReferenceScreen() {
         </div>
       )}
 
-      {/* Floating pill bar — only visible on reference tab */}
+      {/* Two-tier floating pill bar — only visible on reference tab */}
       {activeTab === 'reference' && (
-        <nav className="reference-pill-bar" aria-label="Jump to section">
-          {referencePages.map(page => (
-            <button
-              key={page.title}
-              className={
-                'reference-pill-bar__pill' +
-                (activePage === page.title ? ' reference-pill-bar__pill--active' : '')
-              }
-              onClick={() => handlePillClick(page.title)}
-              type="button"
-            >
-              {page.title}
-            </button>
-          ))}
-        </nav>
+        <div className="reference-pill-container">
+          {expandedPage && (
+            <nav className="sub-pill-row" aria-label="Jump to sub-section">
+              {expandedPage.sections.map(sectionId => (
+                <button
+                  key={sectionId}
+                  className={
+                    'sub-pill' +
+                    (activeSubPill === sectionId ? ' sub-pill--active' : '')
+                  }
+                  onClick={() => handleSubPillClick(sectionId)}
+                  type="button"
+                >
+                  {sectionTitleMap[sectionId] ?? sectionId}
+                </button>
+              ))}
+            </nav>
+          )}
+          <nav className="reference-pill-bar" aria-label="Jump to section">
+            {referencePages.map(page => (
+              <button
+                key={page.title}
+                className={
+                  'reference-pill-bar__pill' +
+                  (activePage === page.title ? ' reference-pill-bar__pill--active' : '') +
+                  (expandedCategory === page.title ? ' reference-pill-bar__pill--expanded' : '')
+                }
+                onClick={() => handleTopPillClick(page.title)}
+                type="button"
+              >
+                {page.title}
+              </button>
+            ))}
+          </nav>
+        </div>
       )}
 
       {/* My Notes Tab */}
