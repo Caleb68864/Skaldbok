@@ -11,10 +11,22 @@ interface WeaponEditorProps {
   onSave: (weapon: Weapon) => void;
 }
 
-const empty: Omit<Weapon, 'id'> = { name: '', grip: 'one-handed', range: '', damage: '', durability: 0, features: '', equipped: false };
+const empty: Omit<Weapon, 'id'> = {
+  name: '',
+  grip: 'one-handed',
+  range: '',
+  damage: '',
+  durability: 0,
+  features: '',
+  equipped: false,
+  damageType: null,
+  strRequirement: null,
+  damaged: false,
+  isShield: false,
+};
 
 export function WeaponEditor({ open, onClose, weapon, onSave }: WeaponEditorProps) {
-  const [form, setForm] = useState<Omit<Weapon, 'id'>>(weapon ? { ...weapon } : { ...empty });
+  const [form, setForm] = useState<Omit<Weapon, 'id'>>(weapon ? { ...empty, ...weapon } : { ...empty });
 
   useEffect(() => {
     if (open && weapon) {
@@ -26,6 +38,11 @@ export function WeaponEditor({ open, onClose, weapon, onSave }: WeaponEditorProp
         durability: weapon.durability,
         features: weapon.features,
         equipped: weapon.equipped,
+        metal: weapon.metal,
+        damageType: weapon.damageType ?? null,
+        strRequirement: weapon.strRequirement ?? null,
+        damaged: weapon.damaged ?? false,
+        isShield: weapon.isShield ?? false,
       });
     } else if (open && !weapon) {
       setForm({ ...empty });
@@ -69,6 +86,78 @@ export function WeaponEditor({ open, onClose, weapon, onSave }: WeaponEditorProp
         <div>
           <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Durability</label>
           <input type="number" value={form.durability} min={0} onChange={e => setForm(f => ({ ...f, durability: Number(e.target.value) }))} style={inputStyle} />
+        </div>
+        <div>
+          <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Damage Type</label>
+          <select
+            value={form.damageType ?? ''}
+            onChange={e => {
+              const val = e.target.value;
+              setForm(f => ({ ...f, damageType: val === '' ? null : (val as 'bludgeoning' | 'slashing' | 'piercing') }));
+            }}
+            style={{ ...inputStyle, minHeight: '44px' }}
+          >
+            <option value="">None</option>
+            <option value="bludgeoning">Bludgeoning</option>
+            <option value="slashing">Slashing</option>
+            <option value="piercing">Piercing</option>
+          </select>
+        </div>
+        <div>
+          <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>STR Requirement</label>
+          <input
+            type="number"
+            value={form.strRequirement ?? ''}
+            min={0}
+            placeholder="None"
+            onChange={e => {
+              const val = e.target.value;
+              setForm(f => ({ ...f, strRequirement: val === '' || Number(val) === 0 ? null : Number(val) }));
+            }}
+            style={{ ...inputStyle, minHeight: '44px' }}
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', minHeight: '44px' }}>
+          <label style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', flex: 1 }}>Shield</label>
+          <button
+            type="button"
+            onClick={() => setForm(f => ({ ...f, isShield: !f.isShield }))}
+            style={{
+              minHeight: '44px',
+              minWidth: '80px',
+              padding: '0 var(--space-md)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-sm)',
+              background: form.isShield ? 'var(--color-primary)' : 'var(--color-surface-alt)',
+              color: form.isShield ? 'var(--color-primary-text, #fff)' : 'var(--color-text)',
+              fontSize: 'var(--font-size-md)',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+            }}
+          >
+            {form.isShield ? 'Yes' : 'No'}
+          </button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', minHeight: '44px' }}>
+          <label style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', flex: 1 }}>Damaged</label>
+          <button
+            type="button"
+            onClick={() => setForm(f => ({ ...f, damaged: !f.damaged }))}
+            style={{
+              minHeight: '44px',
+              minWidth: '80px',
+              padding: '0 var(--space-md)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-sm)',
+              background: form.damaged ? 'var(--color-danger, #c0392b)' : 'var(--color-surface-alt)',
+              color: form.damaged ? '#fff' : 'var(--color-text)',
+              fontSize: 'var(--font-size-md)',
+              fontFamily: 'inherit',
+              cursor: 'pointer',
+            }}
+          >
+            {form.damaged ? 'Yes' : 'No'}
+          </button>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end', marginTop: 'var(--space-md)' }}>
           <Button variant="secondary" onClick={onClose}>Cancel</Button>

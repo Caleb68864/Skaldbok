@@ -2,14 +2,26 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { useAppState } from '../context/AppStateContext';
+import { useActiveCharacter } from '../context/ActiveCharacterContext';
+import { useAutosave } from '../hooks/useAutosave';
 import { Card } from '../components/primitives/Card';
 import { Button } from '../components/primitives/Button';
 import { Modal } from '../components/primitives/Modal';
 import { db } from '../storage/db/client';
+import * as characterRepository from '../storage/repositories/characterRepository';
 import type { ThemeName } from '../theme/themes';
 import { DEFAULT_BOTTOM_NAV_TABS } from '../features/settings/useAppSettings';
+import { nowISO } from '../utils/dates';
 
 const BOTTOM_NAV_TAB_LABELS = ['Sheet', 'Skills', 'Gear', 'Magic', 'Combat', 'Reference', 'Profile'] as const;
+
+const COMBAT_PANELS: { key: string; label: string }[] = [
+  { key: 'weaponRack', label: 'Weapon Rack' },
+  { key: 'heroicAbilities', label: 'Heroic Abilities' },
+  { key: 'conditions', label: 'Conditions' },
+  { key: 'deathRolls', label: 'Death Rolls' },
+  { key: 'restRecovery', label: 'Rest & Recovery' },
+];
 
 const THEMES: { value: ThemeName; label: string; description: string }[] = [
   { value: 'dark', label: 'Dark', description: 'Deep grays with golden accents' },
@@ -20,9 +32,23 @@ const THEMES: { value: ThemeName; label: string; description: string }[] = [
 export default function SettingsScreen() {
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings } = useAppState();
+  const { character, updateCharacter } = useActiveCharacter();
   const navigate = useNavigate();
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
+
+  useAutosave(character, characterRepository.save, 1000);
+
+  function handleCombatPanelToggle(panelKey: string) {
+    if (!character) return;
+    const current = character.uiState.combatPanelVisibility ?? {};
+    const isOn = current[panelKey] !== false;
+    const updated: Record<string, boolean> = { ...current, [panelKey]: !isOn };
+    updateCharacter({
+      uiState: { ...character.uiState, combatPanelVisibility: updated },
+      updatedAt: nowISO(),
+    });
+  }
 
   async function handleClearAll() {
     if (confirmText !== 'DELETE') return;
@@ -155,6 +181,71 @@ export default function SettingsScreen() {
             );
           })}
         </div>
+      </Card>
+
+      {/* Combat Panels */}
+      <Card>
+        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>
+          Combat Panels
+        </h2>
+        {character ? (
+          <>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+              Choose which panels appear on the Combat screen.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+              {COMBAT_PANELS.map(panel => {
+                const visibility = character.uiState.combatPanelVisibility ?? {};
+                const isOn = visibility[panel.key] !== false;
+                return (
+                  <div
+                    key={panel.key}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: 'var(--space-sm) var(--space-md)',
+                      border: '1px solid var(--color-border)',
+                      borderRadius: 'var(--radius-sm)',
+                      background: 'var(--color-surface-alt)',
+                      minHeight: 'var(--touch-target-min)',
+                    }}
+                  >
+                    <span style={{ color: 'var(--color-text)', fontWeight: 'var(--weight-medium)' }}>
+                      {panel.label}
+                    </span>
+                    <button
+                      onClick={() => handleCombatPanelToggle(panel.key)}
+                      aria-label={`${isOn ? 'Hide' : 'Show'} ${panel.label} panel in combat`}
+                      aria-pressed={isOn}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '64px',
+                        minHeight: 'var(--touch-target-min)',
+                        padding: '0 var(--space-sm)',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: 'var(--radius-sm)',
+                        background: isOn ? 'var(--color-success)' : 'var(--color-surface)',
+                        color: isOn ? 'var(--color-bg)' : 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        fontSize: 'var(--font-size-sm)',
+                      }}
+                    >
+                      {isOn ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            Select a character to configure combat panels.
+          </p>
+        )}
       </Card>
 
       {/* Import / Export */}
