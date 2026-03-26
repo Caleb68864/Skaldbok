@@ -3,13 +3,14 @@ import type { ReactNode } from 'react';
 
 interface SectionPanelProps {
   title: string;
+  subtitle?: string;
   icon?: ReactNode;
   children: ReactNode;
   collapsible?: boolean;
   defaultOpen?: boolean;
 }
 
-export function SectionPanel({ title, icon, children, collapsible = false, defaultOpen = true }: SectionPanelProps) {
+export function SectionPanel({ title, subtitle, icon, children, collapsible = false, defaultOpen = true }: SectionPanelProps) {
   const [open, setOpen] = useState(defaultOpen);
 
   return (
@@ -38,6 +39,11 @@ export function SectionPanel({ title, icon, children, collapsible = false, defau
         <h3 style={{ fontSize: 'var(--size-md)', fontFamily: 'var(--font-display)', color: 'var(--color-text)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
           {icon}
           {title}
+          {subtitle && (
+            <span style={{ fontSize: 'var(--font-size-xs, 0.7rem)', fontWeight: 'normal', color: 'var(--color-text-muted)', marginLeft: 'var(--space-xs)', whiteSpace: 'nowrap' }}>
+              {subtitle}
+            </span>
+          )}
         </h3>
         {collapsible && (
           <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-lg)' }}>
