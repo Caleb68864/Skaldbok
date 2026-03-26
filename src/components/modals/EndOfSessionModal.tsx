@@ -75,7 +75,10 @@ export function EndOfSessionModal({ open, onClose }: Props) {
 
   function getSkillFallback(skillId: string): CharacterSkill {
     const def = allSkillDefs.find(s => s.id === skillId);
-    const attrVal = def?.linkedAttributeId && character ? (character.attributes[def.linkedAttributeId] ?? 10) : 10;
+    if (!def?.linkedAttributeId) {
+      return { value: def?.baseChance ?? 0, trained: false };
+    }
+    const attrVal = character ? (character.attributes[def.linkedAttributeId] ?? 10) : 10;
     return { value: computeSkillValue(attrVal, false), trained: false };
   }
 

@@ -779,7 +779,13 @@ select:focus {
    Dragon Marks — Advancement Tracking
    ============================================================ */
 
-/* Gold highlight on dragon-marked skill rows */
+/* Trained skill indicator in play mode */
+.skill-trained {
+  border-left: 3px solid var(--color-accent);
+  padding-left: var(--space-sm);
+}
+
+/* Gold highlight on dragon-marked skill rows (overrides trained) */
 .dragon-marked {
   background-color: color-mix(in srgb, var(--color-gold) 12%, transparent);
   border-left: 3px solid var(--color-gold);
