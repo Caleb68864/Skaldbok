@@ -363,7 +363,7 @@ a:focus:not(:focus-visible),
 .top-bar {
   /* Three-zone grid: left (title) | center (mode-toggle) | right (actions) */
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   background-color: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
@@ -373,6 +373,7 @@ a:focus:not(:focus-visible),
   top: 0;
   z-index: 100;
   gap: var(--space-xs);
+  overflow: hidden;
 }
 
 .top-bar__title-group {
@@ -390,6 +391,7 @@ a:focus:not(:focus-visible),
   color: var(--color-accent);
   font-family: var(--font-display);
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .top-bar__title--link {
@@ -426,10 +428,16 @@ a:focus:not(:focus-visible),
   /* Label shown by default; hidden on narrow screens via media query below */
 }
 
-/* Narrow screen: mode toggle collapses to icon-only (<360px) */
-@media (max-width: 359px) {
+/* Narrow screen: hide character name, collapse mode label, shrink spacing */
+@media (max-width: 479px) {
+  .top-bar__character {
+    display: none;
+  }
   .top-bar__mode-label {
     display: none;
+  }
+  .top-bar__actions {
+    gap: var(--space-xs);
   }
 }
 
@@ -437,6 +445,7 @@ a:focus:not(:focus-visible),
   display: flex;
   gap: var(--space-sm);
   justify-self: end;
+  flex-shrink: 0;
 }
 
 .top-bar__btn {
