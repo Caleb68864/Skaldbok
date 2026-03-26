@@ -306,7 +306,6 @@ export default function SheetScreen() {
       </SectionPanel>
 
       {isPlayMode && (
-        <div className="sheet-grid__full-width">
           <SectionPanel title="Rest & Recovery" subtitle="p. 55, 57" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
             <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
               <button
@@ -325,7 +324,6 @@ export default function SheetScreen() {
               </button>
             </div>
           </SectionPanel>
-        </div>
       )}
 
       {/* Round Rest Modal */}

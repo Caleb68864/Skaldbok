@@ -782,7 +782,7 @@ select:focus {
 /* Trained skill indicator in play mode */
 .skill-trained {
   border-left: 3px solid var(--color-accent);
-  padding-left: var(--space-sm);
+  padding-left: var(--space-md);
 }
 
 /* Gold highlight on dragon-marked skill rows (overrides trained) */
