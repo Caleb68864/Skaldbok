@@ -18,4 +18,6 @@ export interface AppSettings extends Versioned {
   wakeLockEnabled: boolean;
   /** Visibility map for bottom nav tabs; keyed by lowercase label (e.g. "sheet", "profile"). */
   bottomNavTabs?: Record<string, boolean>;
+  /** Panel display order for the Sheet page. */
+  sheetPanelOrder?: string[];
 }
