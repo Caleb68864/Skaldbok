@@ -6,6 +6,7 @@ import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useFieldEditable } from '../utils/modeGuards';
 import { SkillList } from '../components/fields/SkillList';
 import { Chip } from '../components/primitives/Chip';
+import { GameIcon } from '../components/primitives/GameIcon';
 import {
   calcNormalProb,
   calcBoonProb,
@@ -218,20 +219,25 @@ export default function SkillsScreen() {
                       borderBottom: '1px solid var(--color-border)',
                       minHeight: 'var(--touch-target-min)',
                     }}>
-                      <input
-                        type="checkbox"
-                        checked={isTrained}
-                        disabled={!skillsEditable}
-                        onChange={e => {
-                          const newTrained = e.target.checked;
-                          const newValue = skill.linkedAttributeId
-                            ? computeSkillValue(attrValue, newTrained)
-                            : (newTrained ? Math.max(skill.baseChance * 2, 1) : skill.baseChance);
-                          handleSkillChange(skill.id, { value: newValue, trained: newTrained });
-                        }}
-                        aria-label={`${skill.name} trained`}
-                        style={{ width: '20px', height: '20px', cursor: skillsEditable ? 'pointer' : 'default', flexShrink: 0 }}
-                      />
+                      {skillsEditable ? (
+                        <input
+                          type="checkbox"
+                          checked={isTrained}
+                          onChange={e => {
+                            const newTrained = e.target.checked;
+                            const newValue = skill.linkedAttributeId
+                              ? computeSkillValue(attrValue, newTrained)
+                              : (newTrained ? Math.max(skill.baseChance * 2, 1) : skill.baseChance);
+                            handleSkillChange(skill.id, { value: newValue, trained: newTrained });
+                          }}
+                          aria-label={`${skill.name} trained`}
+                          style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
+                        />
+                      ) : (
+                        <span style={{ width: '20px', height: '20px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {isTrained && <GameIcon name="checked-shield" size={18} color="var(--color-accent)" />}
+                        </span>
+                      )}
 
                       {/* Name + attribute tag */}
                       <span style={{ flex: 1, color: 'var(--color-text)', fontSize: 'var(--font-size-md)', fontWeight: isTrained ? 600 : 'normal' }}>
