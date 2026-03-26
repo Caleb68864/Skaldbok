@@ -42,9 +42,11 @@ export default function SkillsScreen() {
     if (!character || skillsEditable) return;
     const cs = character.skills[skillId];
     const def = system?.skillCategories.flatMap(c => c.skills).find(s => s.id === skillId);
-    const attrVal = def?.linkedAttributeId ? (character.attributes[def.linkedAttributeId] ?? 10) : 10;
+    const attrVal = def?.linkedAttributeId ? (character.attributes[def.linkedAttributeId] ?? 10) : 0;
     const trained = cs?.trained ?? false;
-    const fallbackValue = computeSkillValue(attrVal, trained);
+    const fallbackValue = def?.linkedAttributeId
+      ? computeSkillValue(attrVal, trained)
+      : (trained ? Math.max((def?.baseChance ?? 0) * 2, 1) : (def?.baseChance ?? 0));
     const skill = cs ?? { value: fallbackValue, trained: false };
     const updated: CharacterSkill = { ...skill, dragonMarked: !(cs?.dragonMarked ?? false) };
     updateCharacter({ skills: { ...character.skills, [skillId]: updated }, updatedAt: nowISO() });
@@ -193,8 +195,10 @@ export default function SkillsScreen() {
                 </h2>
                 {visibleSkills.map(skill => {
                   const cs = character.skills[skill.id];
-                  const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 10;
-                  const computedValue = computeSkillValue(attrValue, cs?.trained ?? false);
+                  const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 0;
+                  const computedValue = skill.linkedAttributeId
+                    ? computeSkillValue(attrValue, cs?.trained ?? false)
+                    : (cs?.trained ? skill.baseChance * 2 : skill.baseChance);
                   const skillValue = cs?.value ?? computedValue;
                   const attrAbbr = skill.linkedAttributeId ? (attrAbbrMap[skill.linkedAttributeId] ?? '') : '';
                   const probDisplay = getProbDisplay(skill.id, skillValue, skill.linkedAttributeId);
@@ -203,8 +207,10 @@ export default function SkillsScreen() {
 
                   const isDragonMarked = cs?.dragonMarked ?? false;
 
+                  const isTrained = cs?.trained ?? false;
+
                   return (
-                    <div key={skill.id} className={isDragonMarked ? 'dragon-marked' : ''} style={{
+                    <div key={skill.id} className={[isDragonMarked ? 'dragon-marked' : '', isTrained && !skillsEditable ? 'skill-trained' : ''].filter(Boolean).join(' ')} style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 'var(--space-sm)',
@@ -214,11 +220,13 @@ export default function SkillsScreen() {
                     }}>
                       <input
                         type="checkbox"
-                        checked={cs?.trained ?? false}
+                        checked={isTrained}
                         disabled={!skillsEditable}
                         onChange={e => {
                           const newTrained = e.target.checked;
-                          const newValue = computeSkillValue(attrValue, newTrained);
+                          const newValue = skill.linkedAttributeId
+                            ? computeSkillValue(attrValue, newTrained)
+                            : (newTrained ? Math.max(skill.baseChance * 2, 1) : skill.baseChance);
                           handleSkillChange(skill.id, { value: newValue, trained: newTrained });
                         }}
                         aria-label={`${skill.name} trained`}
@@ -226,7 +234,7 @@ export default function SkillsScreen() {
                       />
 
                       {/* Name + attribute tag */}
-                      <span style={{ flex: 1, color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>
+                      <span style={{ flex: 1, color: 'var(--color-text)', fontSize: 'var(--font-size-md)', fontWeight: isTrained ? 600 : 'normal' }}>
                         {skill.name}
                         {attrAbbr && (
                           <span className="attribute-tag" aria-label={`Linked attribute: ${attrAbbr}`}>

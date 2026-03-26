@@ -144,9 +144,6 @@ export default function CombatScreen() {
     setStretchRestCondition('');
   }
 
-  // Equipped weapons
-  const equippedWeapons = character.weapons.filter(w => w.equipped);
-
   // Death roll display: show as success/failure marks out of 3
   // In Dragonbane, death rolls track failures. We use deathRolls.current as failure count.
   const deathRollFailures = deathRolls.current;
@@ -349,7 +346,7 @@ export default function CombatScreen() {
         )}
       </SectionPanel>
 
-      {/* Equipment Summary */}
+      {/* Equipment — Quick Equip */}
       <SectionPanel title="Equipment" subtitle="p. 73-77" collapsible defaultOpen>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
           {/* Weapons */}
@@ -357,28 +354,44 @@ export default function CombatScreen() {
             <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', fontWeight: 'bold' }}>
               Weapons
             </span>
-            {equippedWeapons.length === 0 ? (
+            {character.weapons.length === 0 ? (
               <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', fontStyle: 'italic' }}>
-                No weapons equipped.
+                No weapons. Add weapons on the Gear page.
               </p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)', marginTop: 'var(--space-xs)' }}>
-                {equippedWeapons.map(w => (
-                  <div key={w.id} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: 'var(--space-sm)',
-                    backgroundColor: 'var(--color-surface-alt)',
-                    borderRadius: 'var(--radius-sm)',
-                  }}>
-                    <span style={{ color: 'var(--color-text)', fontWeight: 'bold' }}>
-                      {w.name}
+                {character.weapons.map(w => (
+                  <button
+                    key={w.id}
+                    type="button"
+                    onClick={() => {
+                      const updated = character.weapons.map(wp =>
+                        wp.id === w.id ? { ...wp, equipped: !wp.equipped } : wp
+                      );
+                      updateCharacter({ weapons: updated, updatedAt: nowISO() });
+                    }}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: 'var(--space-sm)',
+                      backgroundColor: w.equipped ? 'var(--color-surface-alt)' : 'transparent',
+                      borderRadius: 'var(--radius-sm)',
+                      border: w.equipped ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+                      cursor: 'pointer',
+                      width: '100%',
+                      textAlign: 'left',
+                      opacity: w.equipped ? 1 : 0.6,
+                      minHeight: 'var(--touch-target-min)',
+                    }}
+                  >
+                    <span style={{ color: 'var(--color-text)', fontWeight: w.equipped ? 'bold' : 'normal' }}>
+                      {w.equipped ? '\u2694\uFE0F ' : ''}{w.name}
                     </span>
                     <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
-                      {w.grip} | Dmg: {w.damage} | Range: {w.range}
+                      {w.grip} | {w.damage} | {w.range}
                     </span>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -389,13 +402,41 @@ export default function CombatScreen() {
             <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', fontWeight: 'bold' }}>
               Armor
             </span>
-            {character.armor && character.armor.equipped ? (
-              <p style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)', marginTop: 'var(--space-xs)' }}>
-                {character.armor.name} (rating {character.armor.rating})
-              </p>
+            {character.armor ? (
+              <button
+                type="button"
+                onClick={() => {
+                  updateCharacter(prev => ({
+                    armor: prev.armor ? { ...prev.armor, equipped: !prev.armor.equipped } : prev.armor,
+                    updatedAt: nowISO(),
+                  }));
+                }}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--space-sm)',
+                  backgroundColor: character.armor.equipped ? 'var(--color-surface-alt)' : 'transparent',
+                  borderRadius: 'var(--radius-sm)',
+                  border: character.armor.equipped ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+                  cursor: 'pointer',
+                  width: '100%',
+                  textAlign: 'left',
+                  opacity: character.armor.equipped ? 1 : 0.6,
+                  minHeight: 'var(--touch-target-min)',
+                  marginTop: 'var(--space-xs)',
+                }}
+              >
+                <span style={{ color: 'var(--color-text)', fontWeight: character.armor.equipped ? 'bold' : 'normal' }}>
+                  {character.armor.equipped ? '\uD83D\uDEE1\uFE0F ' : ''}{character.armor.name}
+                </span>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                  AR {character.armor.rating}
+                </span>
+              </button>
             ) : (
               <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', fontStyle: 'italic' }}>
-                No armor equipped.
+                No armor.
               </p>
             )}
           </div>
@@ -405,13 +446,41 @@ export default function CombatScreen() {
             <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', fontWeight: 'bold' }}>
               Helmet
             </span>
-            {character.helmet && character.helmet.equipped ? (
-              <p style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)', marginTop: 'var(--space-xs)' }}>
-                {character.helmet.name} (rating {character.helmet.rating})
-              </p>
+            {character.helmet ? (
+              <button
+                type="button"
+                onClick={() => {
+                  updateCharacter(prev => ({
+                    helmet: prev.helmet ? { ...prev.helmet, equipped: !prev.helmet.equipped } : prev.helmet,
+                    updatedAt: nowISO(),
+                  }));
+                }}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--space-sm)',
+                  backgroundColor: character.helmet.equipped ? 'var(--color-surface-alt)' : 'transparent',
+                  borderRadius: 'var(--radius-sm)',
+                  border: character.helmet.equipped ? '2px solid var(--color-accent)' : '1px solid var(--color-border)',
+                  cursor: 'pointer',
+                  width: '100%',
+                  textAlign: 'left',
+                  opacity: character.helmet.equipped ? 1 : 0.6,
+                  minHeight: 'var(--touch-target-min)',
+                  marginTop: 'var(--space-xs)',
+                }}
+              >
+                <span style={{ color: 'var(--color-text)', fontWeight: character.helmet.equipped ? 'bold' : 'normal' }}>
+                  {character.helmet.equipped ? '\uD83D\uDEE1\uFE0F ' : ''}{character.helmet.name}
+                </span>
+                <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                  AR {character.helmet.rating}
+                </span>
+              </button>
             ) : (
               <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', fontStyle: 'italic' }}>
-                No helmet equipped.
+                No helmet.
               </p>
             )}
           </div>
