@@ -18,11 +18,13 @@ import { useToast } from '../context/ToastContext';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../utils/restActions';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { nowISO } from '../utils/dates';
+import DraggableCardContainer from '../components/panels/DraggableCardContainer';
+import type { PanelItem } from '../components/panels/DraggableCardContainer';
 
 export default function SheetScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { settings } = useAppState();
+  const { settings, updateSettings } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   const { showToast } = useToast();
@@ -32,6 +34,9 @@ export default function SheetScreen() {
   const attributesEditable = useFieldEditable('attributes.str');
   const resourceMaxEditable = useFieldEditable('resources.hp.max');
   const derivedEditable = useFieldEditable('derivedOverrides');
+
+  // Reorder mode state
+  const [reorderMode, setReorderMode] = useState(false);
 
   // Rest modal state
   const [roundRestOpen, setRoundRestOpen] = useState(false);
@@ -48,6 +53,9 @@ export default function SheetScreen() {
   }
 
   const isPlayMode = settings.mode === 'play';
+
+  const DEFAULT_PANEL_ORDER = ['identity', 'attributes', 'resources', 'derived', 'rest'];
+  const panelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
 
   function updateAttr(id: string, delta: number) {
     if (!character) return;
@@ -172,53 +180,52 @@ export default function SheetScreen() {
     opacity: editable ? 1 : 0.7,
   });
 
-  return (
-    <div className="sheet-grid" style={{ padding: 'var(--space-sm)' }}>
-      {saveError && <div className="sheet-grid__full-width" style={{ color: 'var(--color-danger)', marginBottom: 'var(--space-sm)', fontSize: 'var(--font-size-sm)' }}>{saveError}</div>}
-
-      <div className="sheet-grid__full-width">
-        <SectionPanel title="Identity" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
-          <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'flex-start' }}>
-            <CharacterPortrait
-              portraitUri={character.portraitUri}
-              characterName={character.name}
-              isEditMode={isEditMode}
-              onPortraitChange={(dataUrl) => updateCharacter({ portraitUri: dataUrl, updatedAt: nowISO() })}
+  // ---- Panel definitions ----
+  const identityPanel = (
+    <SectionPanel title="Identity" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
+      <div style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'flex-start' }}>
+        <CharacterPortrait
+          portraitUri={character.portraitUri}
+          characterName={character.name}
+          isEditMode={isEditMode}
+          onPortraitChange={(dataUrl) => updateCharacter({ portraitUri: dataUrl, updatedAt: nowISO() })}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', flex: 1, minWidth: 0 }}>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
+            <input
+              style={inputStyle(identityEditable)}
+              value={character.name}
+              disabled={!identityEditable}
+              className={identityEditable ? 'field--editable' : 'field--locked'}
+              onChange={e => updateCharacter({ name: e.target.value, updatedAt: nowISO() })}
             />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', flex: 1, minWidth: 0 }}>
-              <div>
-                <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
-                <input
-                  style={inputStyle(identityEditable)}
-                  value={character.name}
-                  disabled={!identityEditable}
-                  className={identityEditable ? 'field--editable' : 'field--locked'}
-                  onChange={e => updateCharacter({ name: e.target.value, updatedAt: nowISO() })}
-                />
-              </div>
-              <div className="identity-meta-row">
-                <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Kin</label>
-                  <input aria-label="Kin" style={inputStyle(identityEditable)} value={character.metadata.kin} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('kin', e.target.value)} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Profession</label>
-                  <input aria-label="Profession" style={inputStyle(identityEditable)} value={character.metadata.profession} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('profession', e.target.value)} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Age</label>
-                  <input aria-label="Age" style={inputStyle(identityEditable)} value={character.metadata.age ?? ''} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('age', e.target.value)} />
-                </div>
-              </div>
-              <div>
-                <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Weakness</label>
-                <input aria-label="Weakness" style={inputStyle(identityEditable)} value={character.metadata.weakness ?? ''} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('weakness', e.target.value)} />
-              </div>
+          </div>
+          <div className="identity-meta-row">
+            <div>
+              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Kin</label>
+              <input aria-label="Kin" style={inputStyle(identityEditable)} value={character.metadata.kin} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('kin', e.target.value)} />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Profession</label>
+              <input aria-label="Profession" style={inputStyle(identityEditable)} value={character.metadata.profession} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('profession', e.target.value)} />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Age</label>
+              <input aria-label="Age" style={inputStyle(identityEditable)} value={character.metadata.age ?? ''} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('age', e.target.value)} />
             </div>
           </div>
-        </SectionPanel>
+          <div>
+            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Weakness</label>
+            <input aria-label="Weakness" style={inputStyle(identityEditable)} value={character.metadata.weakness ?? ''} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('weakness', e.target.value)} />
+          </div>
+        </div>
       </div>
+    </SectionPanel>
+  );
 
+  const attributesPanel = (
+    <>
       <SectionPanel title={`Attributes${isPlayMode ? ' (locked in Play Mode)' : ''}`} subtitle="p. 28-29" icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', justifyContent: 'center' }}>
           {system?.attributes.map(attr => {
@@ -242,7 +249,6 @@ export default function SheetScreen() {
           })}
         </div>
       </SectionPanel>
-
       {system && (() => {
         const linkedAttrIds = new Set(system.attributes.map(a => a.id));
         const orphanConditions = system.conditions.filter(c => !linkedAttrIds.has(c.linkedAttributeId));
@@ -257,100 +263,167 @@ export default function SheetScreen() {
           </SectionPanel>
         );
       })()}
+    </>
+  );
 
-      <SectionPanel title="Resources" subtitle="p. 55" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-          {['hp', 'wp'].map(resId => {
-            const res = character.resources[resId];
-            if (!res) return null;
-            const def = system?.resources.find(r => r.id === resId);
-            return (
-              <ResourceTracker
-                key={resId}
-                resourceId={resId}
-                label={def?.name ?? resId.toUpperCase()}
-                current={res.current}
-                max={res.max}
-                onCurrentChange={v => updateResourceCurrent(resId, v)}
-                onMaxChange={v => updateResourceMax(resId, v)}
-                maxEditable={resourceMaxEditable}
-              />
+  const resourcesPanel = (
+    <SectionPanel title="Resources" subtitle="p. 55" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        {['hp', 'wp'].map(resId => {
+          const res = character.resources[resId];
+          if (!res) return null;
+          const def = system?.resources.find(r => r.id === resId);
+          return (
+            <ResourceTracker
+              key={resId}
+              resourceId={resId}
+              label={def?.name ?? resId.toUpperCase()}
+              current={res.current}
+              max={res.max}
+              onCurrentChange={v => updateResourceCurrent(resId, v)}
+              onMaxChange={v => updateResourceMax(resId, v)}
+              maxEditable={resourceMaxEditable}
+            />
+          );
+        })}
+      </div>
+    </SectionPanel>
+  );
+
+  const derivedPanel = (
+    <SectionPanel title="Derived Values" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {([
+          { key: 'movement', label: 'Movement' },
+          { key: 'hpMax', label: 'HP Max' },
+          { key: 'wpMax', label: 'WP Max' },
+          { key: 'damageBonus', label: 'STR Damage Bonus' },
+          { key: 'aglDamageBonus', label: 'AGL Damage Bonus' },
+        ] as const).map(({ key, label }) => {
+          const dv = getDerivedValue(character, key);
+          return (
+            <DerivedFieldDisplay
+              key={key}
+              label={label}
+              computedValue={dv.computed}
+              override={dv.override as number | null}
+              onOverride={v => setDerivedOverride(key, v)}
+              onReset={() => resetDerivedOverride(key)}
+              editable={derivedEditable}
+            />
+          );
+        })}
+      </div>
+    </SectionPanel>
+  );
+
+  const restPanel = (
+    <SectionPanel title="Rest & Recovery" subtitle="p. 55, 57" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+      <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="rest-btn rest-btn--round"
+          onClick={() => setRoundRestOpen(true)}
+        >
+          Round Rest
+        </button>
+        <button
+          type="button"
+          className="rest-btn rest-btn--stretch"
+          onClick={() => setStretchRestOpen(true)}
+        >
+          Stretch Rest
+        </button>
+        <button
+          type="button"
+          className="rest-btn rest-btn--stretch"
+          onClick={() => {
+            if (!character || !system) return;
+            const result = applyShiftRest(character);
+            const updatedResources = {
+              ...character.resources,
+              hp: { ...character.resources['hp'], current: character.resources['hp']?.max ?? 0 },
+              wp: { ...character.resources['wp'], current: character.resources['wp']?.max ?? 0 },
+            };
+            const clearedConditions = Object.fromEntries(
+              Object.keys(character.conditions).map(id => [id, false])
             );
-          })}
-        </div>
-      </SectionPanel>
+            updateCharacter({ resources: updatedResources, conditions: clearedConditions, updatedAt: nowISO() });
+            const parts: string[] = [];
+            parts.push(result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.');
+            parts.push(result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.');
+            if (result.conditionsCleared.length > 0) {
+              const names = result.conditionsCleared.map(id => system.conditions.find(c => c.id === id)?.name ?? id);
+              parts.push(`Cleared ${names.join(', ')}.`);
+            }
+            showToast(parts.join(' '), 'success');
+          }}
+        >
+          Shift Rest
+        </button>
+      </div>
+    </SectionPanel>
+  );
 
-      <SectionPanel title="Derived Values" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {([
-            { key: 'movement', label: 'Movement' },
-            { key: 'hpMax', label: 'HP Max' },
-            { key: 'wpMax', label: 'WP Max' },
-            { key: 'damageBonus', label: 'STR Damage Bonus' },
-            { key: 'aglDamageBonus', label: 'AGL Damage Bonus' },
-          ] as const).map(({ key, label }) => {
-            const dv = getDerivedValue(character, key);
-            return (
-              <DerivedFieldDisplay
-                key={key}
-                label={label}
-                computedValue={dv.computed}
-                override={dv.override as number | null}
-                onOverride={v => setDerivedOverride(key, v)}
-                onReset={() => resetDerivedOverride(key)}
-                editable={derivedEditable}
-              />
-            );
-          })}
-        </div>
-      </SectionPanel>
+  // ---- Panel map & visibility ----
+  const panelMap: Record<string, React.ReactNode> = {
+    identity: identityPanel,
+    attributes: attributesPanel,
+    resources: resourcesPanel,
+    derived: derivedPanel,
+    rest: restPanel,
+  };
 
-      {isPlayMode && (
-          <SectionPanel title="Rest & Recovery" subtitle="p. 55, 57" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
-            <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                className="rest-btn rest-btn--round"
-                onClick={() => setRoundRestOpen(true)}
-              >
-                Round Rest
-              </button>
-              <button
-                type="button"
-                className="rest-btn rest-btn--stretch"
-                onClick={() => setStretchRestOpen(true)}
-              >
-                Stretch Rest
-              </button>
-              <button
-                type="button"
-                className="rest-btn rest-btn--stretch"
-                onClick={() => {
-                  if (!character || !system) return;
-                  const result = applyShiftRest(character);
-                  const updatedResources = {
-                    ...character.resources,
-                    hp: { ...character.resources['hp'], current: character.resources['hp']?.max ?? 0 },
-                    wp: { ...character.resources['wp'], current: character.resources['wp']?.max ?? 0 },
-                  };
-                  const clearedConditions = Object.fromEntries(
-                    Object.keys(character.conditions).map(id => [id, false])
-                  );
-                  updateCharacter({ resources: updatedResources, conditions: clearedConditions, updatedAt: nowISO() });
-                  const parts: string[] = [];
-                  parts.push(result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.');
-                  parts.push(result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.');
-                  if (result.conditionsCleared.length > 0) {
-                    const names = result.conditionsCleared.map(id => system.conditions.find(c => c.id === id)?.name ?? id);
-                    parts.push(`Cleared ${names.join(', ')}.`);
-                  }
-                  showToast(parts.join(' '), 'success');
-                }}
-              >
-                Shift Rest
-              </button>
+  const panelVisibility: Record<string, boolean> = {
+    identity: true,
+    attributes: true,
+    resources: true,
+    derived: true,
+    rest: isPlayMode,
+  };
+
+  const panelItems: PanelItem[] = panelOrder
+    .filter(key => panelMap[key] !== undefined)
+    .map(key => ({ key, element: panelMap[key] }));
+
+  const handleOrderChange = (newOrder: string[]) => {
+    updateSettings({ sheetPanelOrder: newOrder }).catch(console.error);
+  };
+
+  return (
+    <div style={{ padding: 'var(--space-sm)' }}>
+      {saveError && <div style={{ color: 'var(--color-danger)', marginBottom: 'var(--space-sm)', fontSize: 'var(--font-size-sm)' }}>{saveError}</div>}
+
+      {isEditMode && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-sm)' }}>
+          <button
+            type="button"
+            className={reorderMode ? 'rest-btn rest-btn--stretch' : 'rest-btn rest-btn--round'}
+            onClick={() => setReorderMode(prev => !prev)}
+            style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}
+          >
+            <GameIcon name="cog" size={16} />
+            {reorderMode ? 'Done Reordering' : 'Reorder Panels'}
+          </button>
+        </div>
+      )}
+
+      {reorderMode ? (
+        <DraggableCardContainer
+          panels={panelItems}
+          cardOrder={panelOrder}
+          panelVisibility={panelVisibility}
+          isEditMode={isEditMode}
+          onOrderChange={handleOrderChange}
+        />
+      ) : (
+        <div className="sheet-grid">
+          {panelOrder.filter(key => panelVisibility[key] !== false && panelMap[key] !== undefined).map(key => (
+            <div key={key} className={key === 'identity' ? 'sheet-grid__full-width' : undefined}>
+              {panelMap[key]}
             </div>
-          </SectionPanel>
+          ))}
+        </div>
       )}
 
       {/* Round Rest Modal */}
