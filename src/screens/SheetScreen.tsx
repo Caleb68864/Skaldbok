@@ -15,7 +15,7 @@ import { getDerivedValue } from '../utils/derivedValues';
 import { GameIcon } from '../components/primitives/GameIcon';
 import { Modal } from '../components/primitives/Modal';
 import { useToast } from '../context/ToastContext';
-import { applyRoundRest, applyStretchRest } from '../utils/restActions';
+import { applyRoundRest, applyStretchRest, applyShiftRest } from '../utils/restActions';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { nowISO } from '../utils/dates';
 
@@ -321,6 +321,33 @@ export default function SheetScreen() {
                 onClick={() => setStretchRestOpen(true)}
               >
                 Stretch Rest
+              </button>
+              <button
+                type="button"
+                className="rest-btn rest-btn--stretch"
+                onClick={() => {
+                  if (!character || !system) return;
+                  const result = applyShiftRest(character);
+                  const updatedResources = {
+                    ...character.resources,
+                    hp: { ...character.resources['hp'], current: character.resources['hp']?.max ?? 0 },
+                    wp: { ...character.resources['wp'], current: character.resources['wp']?.max ?? 0 },
+                  };
+                  const clearedConditions = Object.fromEntries(
+                    Object.keys(character.conditions).map(id => [id, false])
+                  );
+                  updateCharacter({ resources: updatedResources, conditions: clearedConditions, updatedAt: nowISO() });
+                  const parts: string[] = [];
+                  parts.push(result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.');
+                  parts.push(result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.');
+                  if (result.conditionsCleared.length > 0) {
+                    const names = result.conditionsCleared.map(id => system.conditions.find(c => c.id === id)?.name ?? id);
+                    parts.push(`Cleared ${names.join(', ')}.`);
+                  }
+                  showToast(parts.join(' '), 'success');
+                }}
+              >
+                Shift Rest
               </button>
             </div>
           </SectionPanel>
