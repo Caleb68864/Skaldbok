@@ -11,7 +11,7 @@ interface AttributeFieldProps {
   value: number;
   min?: number;
   max?: number;
-  onChange: (value: number) => void;
+  onChange: (delta: number) => void;
   disabled?: boolean;
   linkedConditions?: LinkedCondition[];
   onConditionToggle?: (conditionId: string, value: boolean) => void;
@@ -49,7 +49,7 @@ export function AttributeField({ attributeId: _attributeId, abbreviation, value,
           <button
             type="button"
             aria-label={`Decrease ${abbreviation}`}
-            onClick={() => onChange(value - 1)}
+            onClick={() => onChange(-1)}
             disabled={value <= min}
             style={stepperButtonStyle}
           >
@@ -68,7 +68,7 @@ export function AttributeField({ attributeId: _attributeId, abbreviation, value,
           <button
             type="button"
             aria-label={`Increase ${abbreviation}`}
-            onClick={() => onChange(value + 1)}
+            onClick={() => onChange(1)}
             disabled={value >= max}
             style={stepperButtonStyle}
           >

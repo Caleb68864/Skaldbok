@@ -17,6 +17,7 @@ import type { BoonBaneState } from '../types/settings';
 import type { CharacterSkill } from '../types/character';
 import type { ConditionDefinition, AttributeDefinition } from '../types/system';
 import { nowISO } from '../utils/dates';
+import { computeSkillValue } from '../utils/derivedValues';
 
 export default function SkillsScreen() {
   const navigate = useNavigate();
@@ -41,8 +42,10 @@ export default function SkillsScreen() {
     if (!character || skillsEditable) return;
     const cs = character.skills[skillId];
     const def = system?.skillCategories.flatMap(c => c.skills).find(s => s.id === skillId);
-    const baseValue = def?.baseChance ?? 0;
-    const skill = cs ?? { value: baseValue, trained: false };
+    const attrVal = def?.linkedAttributeId ? (character.attributes[def.linkedAttributeId] ?? 10) : 10;
+    const trained = cs?.trained ?? false;
+    const fallbackValue = computeSkillValue(attrVal, trained);
+    const skill = cs ?? { value: fallbackValue, trained: false };
     const updated: CharacterSkill = { ...skill, dragonMarked: !(cs?.dragonMarked ?? false) };
     updateCharacter({ skills: { ...character.skills, [skillId]: updated }, updatedAt: nowISO() });
   }
@@ -190,7 +193,9 @@ export default function SkillsScreen() {
                 </h2>
                 {visibleSkills.map(skill => {
                   const cs = character.skills[skill.id];
-                  const skillValue = cs?.value ?? skill.baseChance;
+                  const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 10;
+                  const computedValue = computeSkillValue(attrValue, cs?.trained ?? false);
+                  const skillValue = cs?.value ?? computedValue;
                   const attrAbbr = skill.linkedAttributeId ? (attrAbbrMap[skill.linkedAttributeId] ?? '') : '';
                   const probDisplay = getProbDisplay(skill.id, skillValue, skill.linkedAttributeId);
                   const overrideLabel = getOverrideLabel(skill.id);
@@ -211,7 +216,11 @@ export default function SkillsScreen() {
                         type="checkbox"
                         checked={cs?.trained ?? false}
                         disabled={!skillsEditable}
-                        onChange={e => handleSkillChange(skill.id, { value: skillValue, trained: e.target.checked })}
+                        onChange={e => {
+                          const newTrained = e.target.checked;
+                          const newValue = computeSkillValue(attrValue, newTrained);
+                          handleSkillChange(skill.id, { value: newValue, trained: newTrained });
+                        }}
                         aria-label={`${skill.name} trained`}
                         style={{ width: '20px', height: '20px', cursor: skillsEditable ? 'pointer' : 'default', flexShrink: 0 }}
                       />

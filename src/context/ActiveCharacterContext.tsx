@@ -4,10 +4,12 @@ import { useAppState } from './AppStateContext';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../types/character';
 
+type CharacterUpdater = Partial<CharacterRecord> | ((prev: CharacterRecord) => Partial<CharacterRecord>);
+
 interface ActiveCharacterContextValue {
   character: CharacterRecord | null;
   setCharacter: (id: string) => Promise<void>;
-  updateCharacter: (partial: Partial<CharacterRecord>) => void;
+  updateCharacter: (partialOrFn: CharacterUpdater) => void;
   clearCharacter: () => void;
   isLoading: boolean;
 }
@@ -61,9 +63,10 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
     }
   }, [updateSettings]);
 
-  const updateCharacter = useCallback((partial: Partial<CharacterRecord>) => {
+  const updateCharacter = useCallback((partialOrFn: CharacterUpdater) => {
     setCharacterState(prev => {
       if (!prev) return null;
+      const partial = typeof partialOrFn === 'function' ? partialOrFn(prev) : partialOrFn;
       return { ...prev, ...partial };
     });
   }, []);

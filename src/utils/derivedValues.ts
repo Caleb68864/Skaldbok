@@ -16,6 +16,27 @@ export interface DerivedValueResult {
   effective: number | string;
 }
 
+/**
+ * Base chance from attribute value. Dragonbane Core Rules p. 28.
+ * Attr 1-5 → 3, 6-8 → 4, 9-12 → 5, 13-15 → 6, 16-18 → 7.
+ */
+export function computeBaseChance(attributeValue: number): number {
+  if (attributeValue <= 5) return 3;
+  if (attributeValue <= 8) return 4;
+  if (attributeValue <= 12) return 5;
+  if (attributeValue <= 15) return 6;
+  return 7;
+}
+
+/**
+ * Compute skill value from attribute and training status.
+ * Untrained = base chance. Trained = 2x base chance.
+ */
+export function computeSkillValue(attributeValue: number, trained: boolean): number {
+  const base = computeBaseChance(attributeValue);
+  return trained ? base * 2 : base;
+}
+
 /** HP Max = CON attribute value. Dragonbane Core Rules p. 26. */
 export function computeHPMax(character: CharacterRecord): number {
   return character.attributes['con'] ?? 10;

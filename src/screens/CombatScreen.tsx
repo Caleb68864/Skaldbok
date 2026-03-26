@@ -44,20 +44,22 @@ export default function CombatScreen() {
 
   function updateResourceCurrent(id: string, value: number) {
     if (!character) return;
-    const res = character.resources[id];
-    if (!res) return;
-    updateCharacter({
-      resources: { ...character.resources, [id]: { ...res, current: value } },
-      updatedAt: nowISO(),
+    updateCharacter(prev => {
+      const res = prev.resources[id];
+      if (!res) return {};
+      return {
+        resources: { ...prev.resources, [id]: { ...res, current: value } },
+        updatedAt: nowISO(),
+      };
     });
   }
 
   function updateCondition(id: string, value: boolean) {
     if (!character) return;
-    updateCharacter({
-      conditions: { ...character.conditions, [id]: value },
+    updateCharacter(prev => ({
+      conditions: { ...prev.conditions, [id]: value },
       updatedAt: nowISO(),
-    });
+    }));
   }
 
   function updateDeathRolls(current: number) {
@@ -161,7 +163,7 @@ export default function CombatScreen() {
       )}
 
       {/* HP and WP Counters */}
-      <SectionPanel title="Resources" collapsible defaultOpen>
+      <SectionPanel title="Resources" subtitle="p. 55" collapsible defaultOpen>
         <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
           <CombatResourcePanel
             label="HP"
@@ -185,7 +187,7 @@ export default function CombatScreen() {
       </SectionPanel>
 
       {/* Death Rolls */}
-      <SectionPanel title="Death Rolls" collapsible defaultOpen>
+      <SectionPanel title="Death Rolls" subtitle="p. 55" collapsible defaultOpen>
         <div style={{
           padding: 'var(--space-sm)',
           borderRadius: 'var(--radius-md)',
@@ -336,7 +338,7 @@ export default function CombatScreen() {
       </SectionPanel>
 
       {/* Conditions */}
-      <SectionPanel title="Conditions" collapsible defaultOpen>
+      <SectionPanel title="Conditions" subtitle="p. 56" collapsible defaultOpen>
         {system && (
           <QuickConditionPanel
             conditions={character.conditions}
@@ -348,7 +350,7 @@ export default function CombatScreen() {
       </SectionPanel>
 
       {/* Equipment Summary */}
-      <SectionPanel title="Equipment" collapsible defaultOpen>
+      <SectionPanel title="Equipment" subtitle="p. 73-77" collapsible defaultOpen>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
           {/* Weapons */}
           <div>
@@ -417,7 +419,7 @@ export default function CombatScreen() {
       </SectionPanel>
 
       {/* Round Tracker */}
-      <SectionPanel title="Round Tracker" collapsible defaultOpen>
+      <SectionPanel title="Round Tracker" subtitle="p. 46" collapsible defaultOpen>
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -433,7 +435,7 @@ export default function CombatScreen() {
 
       {/* Rest & Recovery — play mode only */}
       {isPlayMode && (
-        <SectionPanel title="Rest & Recovery" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+        <SectionPanel title="Rest & Recovery" subtitle="p. 55, 57" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
           <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
             <button
               type="button"

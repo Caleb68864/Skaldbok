@@ -49,24 +49,33 @@ export default function SheetScreen() {
 
   const isPlayMode = settings.mode === 'play';
 
-  function updateAttr(id: string, value: number) {
+  function updateAttr(id: string, delta: number) {
     if (!character) return;
-    updateCharacter({ attributes: { ...character.attributes, [id]: value }, updatedAt: nowISO() });
+    updateCharacter(prev => {
+      const current = prev.attributes[id] ?? 10;
+      return { attributes: { ...prev.attributes, [id]: current + delta }, updatedAt: nowISO() };
+    });
   }
 
   function updateCondition(id: string, value: boolean) {
     if (!character) return;
-    updateCharacter({ conditions: { ...character.conditions, [id]: value }, updatedAt: nowISO() });
+    updateCharacter(prev => ({ conditions: { ...prev.conditions, [id]: value }, updatedAt: nowISO() }));
   }
 
-  function updateResourceCurrent(id: string, value: number) {
+  function updateResourceCurrent(id: string, delta: number) {
     if (!character) return;
-    updateCharacter({ resources: { ...character.resources, [id]: { ...character.resources[id], current: value } }, updatedAt: nowISO() });
+    updateCharacter(prev => {
+      const current = prev.resources[id]?.current ?? 0;
+      return { resources: { ...prev.resources, [id]: { ...prev.resources[id], current: current + delta } }, updatedAt: nowISO() };
+    });
   }
 
-  function updateResourceMax(id: string, value: number) {
+  function updateResourceMax(id: string, delta: number) {
     if (!character) return;
-    updateCharacter({ resources: { ...character.resources, [id]: { ...character.resources[id], max: value } }, updatedAt: nowISO() });
+    updateCharacter(prev => {
+      const max = prev.resources[id]?.max ?? 0;
+      return { resources: { ...prev.resources, [id]: { ...prev.resources[id], max: max + delta } }, updatedAt: nowISO() };
+    });
   }
 
   function updateMeta(field: string, value: string) {
@@ -210,7 +219,7 @@ export default function SheetScreen() {
         </SectionPanel>
       </div>
 
-      <SectionPanel title={`Attributes${isPlayMode ? ' (locked in Play Mode)' : ''}`} icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
+      <SectionPanel title={`Attributes${isPlayMode ? ' (locked in Play Mode)' : ''}`} subtitle="p. 28-29" icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', justifyContent: 'center' }}>
           {system?.attributes.map(attr => {
             const linked = system.conditions
@@ -239,7 +248,7 @@ export default function SheetScreen() {
         const orphanConditions = system.conditions.filter(c => !linkedAttrIds.has(c.linkedAttributeId));
         if (orphanConditions.length === 0) return null;
         return (
-          <SectionPanel title="Conditions" collapsible defaultOpen>
+          <SectionPanel title="Conditions" subtitle="p. 56" collapsible defaultOpen>
             <ConditionToggleGroup
               conditions={character.conditions}
               definitions={orphanConditions}
@@ -249,7 +258,7 @@ export default function SheetScreen() {
         );
       })()}
 
-      <SectionPanel title="Resources" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+      <SectionPanel title="Resources" subtitle="p. 55" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
           {['hp', 'wp'].map(resId => {
             const res = character.resources[resId];
@@ -298,7 +307,7 @@ export default function SheetScreen() {
 
       {isPlayMode && (
         <div className="sheet-grid__full-width">
-          <SectionPanel title="Rest & Recovery" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+          <SectionPanel title="Rest & Recovery" subtitle="p. 55, 57" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
             <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
               <button
                 type="button"
