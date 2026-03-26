@@ -3,8 +3,8 @@ interface ResourceTrackerProps {
   label: string;
   current: number;
   max: number;
-  onCurrentChange: (value: number) => void;
-  onMaxChange?: (value: number) => void;
+  onCurrentChange: (delta: number) => void;
+  onMaxChange?: (delta: number) => void;
   disabled?: boolean;
   maxDisabled?: boolean;
   maxEditable?: boolean;
@@ -12,16 +12,16 @@ interface ResourceTrackerProps {
 
 export function ResourceTracker({ label, current, max, onCurrentChange, onMaxChange, disabled = false, maxDisabled = false, maxEditable = true }: ResourceTrackerProps) {
   function decrementCurrent() {
-    if (!disabled && current > 0) onCurrentChange(current - 1);
+    if (!disabled && current > 0) onCurrentChange(-1);
   }
   function incrementCurrent() {
-    if (!disabled && current < max) onCurrentChange(current + 1);
+    if (!disabled && current < max) onCurrentChange(1);
   }
   function decrementMax() {
-    if (!maxDisabled && !disabled && max > 0) onMaxChange?.(max - 1);
+    if (!maxDisabled && !disabled && max > 0) onMaxChange?.(-1);
   }
   function incrementMax() {
-    if (!maxDisabled && !disabled) onMaxChange?.(max + 1);
+    if (!maxDisabled && !disabled) onMaxChange?.(1);
   }
 
   const bigButtonStyle: React.CSSProperties = {

@@ -38,8 +38,6 @@ export default function MagicScreen() {
   // Spell form state
   const [sName, setSName] = useState('');
   const [sSchool, setSSchool] = useState('');
-  const [sPowerLevel, setSPowerLevel] = useState(1);
-  const [sWpCost, setSWpCost] = useState(0);
   const [sRange, setSRange] = useState('');
   const [sDuration, setSDuration] = useState('');
   const [sSummary, setSSummary] = useState('');
@@ -50,11 +48,11 @@ export default function MagicScreen() {
 
   useEffect(() => {
     if (spellDrawerOpen && editingSpell) {
-      setSName(editingSpell.name); setSSchool(editingSpell.school); setSPowerLevel(editingSpell.powerLevel);
-      setSWpCost(editingSpell.wpCost); setSRange(editingSpell.range); setSDuration(editingSpell.duration);
+      setSName(editingSpell.name); setSSchool(editingSpell.school);
+      setSRange(editingSpell.range); setSDuration(editingSpell.duration);
       setSSummary(editingSpell.summary);
     } else if (spellDrawerOpen && !editingSpell) {
-      setSName(''); setSSchool(''); setSPowerLevel(1); setSWpCost(0); setSRange(''); setSDuration(''); setSSummary('');
+      setSName(''); setSSchool(''); setSRange(''); setSDuration(''); setSSummary('');
     }
   }, [spellDrawerOpen, editingSpell]);
 
@@ -89,7 +87,7 @@ export default function MagicScreen() {
   }
 
   function handleSpellSave() {
-    const spell: Spell = { id: editingSpell?.id ?? generateId(), name: sName, school: sSchool, powerLevel: sPowerLevel, wpCost: sWpCost, range: sRange, duration: sDuration, summary: sSummary };
+    const spell: Spell = { id: editingSpell?.id ?? generateId(), name: sName, school: sSchool, powerLevel: 1, wpCost: 2, range: sRange, duration: sDuration, summary: sSummary };
     const spells = editingSpell ? character!.spells.map(s => s.id === spell.id ? spell : s) : [...character!.spells, spell];
     updateCharacter({ spells, updatedAt: nowISO() });
     setSpellDrawerOpen(false);
@@ -157,7 +155,7 @@ export default function MagicScreen() {
       </div>
 
       {/* ── Spells section ── */}
-      <SectionPanel title="Spells" collapsible defaultOpen>
+      <SectionPanel title="Spells" subtitle="p. 63-64" collapsible defaultOpen>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-sm)' }}>
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingSpell(null); setSpellDrawerOpen(true); }}>+ Add Spell</Button>}
         </div>
@@ -187,7 +185,7 @@ export default function MagicScreen() {
       </SectionPanel>
 
       {/* ── Heroic Abilities section ── */}
-      <SectionPanel title="Heroic Abilities" collapsible defaultOpen>
+      <SectionPanel title="Heroic Abilities" subtitle="p. 30-31" collapsible defaultOpen>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-sm)' }}>
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingAbility(null); setAbilityDrawerOpen(true); }}>+ Add Ability</Button>}
         </div>
@@ -206,15 +204,10 @@ export default function MagicScreen() {
               <input style={inputStyle} value={String(val)} onChange={e => (setter as (v: string) => void)(e.target.value)} />
             </div>
           ))}
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Power Level</label>
-              <input type="number" style={inputStyle} value={sPowerLevel} min={1} onChange={e => setSPowerLevel(Number(e.target.value))} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>WP Cost</label>
-              <input type="number" style={inputStyle} value={sWpCost} min={0} onChange={e => setSWpCost(Number(e.target.value))} />
-            </div>
+          <div>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+              WP cost: 2 per power level (selected at cast time). Tricks always cost 1 WP.
+            </p>
           </div>
           <div>
             <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Summary</label>

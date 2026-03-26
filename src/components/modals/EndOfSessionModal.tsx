@@ -4,6 +4,7 @@ import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import { nowISO } from '../../utils/dates';
+import { computeSkillValue } from '../../utils/derivedValues';
 import type { CharacterSkill } from '../../types/character';
 
 interface Props {
@@ -71,6 +72,12 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     if (!system) return [];
     return system.skillCategories.flatMap(cat => cat.skills);
   }, [system]);
+
+  function getSkillFallback(skillId: string): CharacterSkill {
+    const def = allSkillDefs.find(s => s.id === skillId);
+    const attrVal = def?.linkedAttributeId && character ? (character.attributes[def.linkedAttributeId] ?? 10) : 10;
+    return { value: computeSkillValue(attrVal, false), trained: false };
+  }
 
   const markedIds = useMemo(
     () => Object.entries(skills).filter(([, cs]) => cs?.dragonMarked).map(([id]) => id),
@@ -150,7 +157,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     if (!character) return;
     const skillId = rollQueue[rollIndex];
     const def = allSkillDefs.find(s => s.id === skillId);
-    const cs = skills[skillId] ?? { value: def?.baseChance ?? 0, trained: false };
+    const cs = skills[skillId] ?? getSkillFallback(skillId);
     const newValue = Math.min(cs.value + 1, MAX_SKILL_VALUE);
     const updatedSkill = { ...cs, value: newValue, dragonMarked: false };
     const updatedSkills = { ...skills, [skillId]: updatedSkill };
@@ -165,7 +172,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     if (!character) return;
     const skillId = rollQueue[rollIndex];
     const def = allSkillDefs.find(s => s.id === skillId);
-    const cs = skills[skillId] ?? { value: def?.baseChance ?? 0, trained: false };
+    const cs = skills[skillId] ?? getSkillFallback(skillId);
     const updatedSkill = { ...cs, dragonMarked: false };
     const updatedSkills = { ...skills, [skillId]: updatedSkill };
     setSkills(updatedSkills);
@@ -268,7 +275,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
   // Step 3 — Roll Through
   const currentSkillId = rollQueue[rollIndex];
   const currentDef = allSkillDefs.find(s => s.id === currentSkillId);
-  const currentCs = currentSkillId ? (skills[currentSkillId] ?? { value: currentDef?.baseChance ?? 0, trained: false }) : null;
+  const currentCs = currentSkillId ? (skills[currentSkillId] ?? getSkillFallback(currentSkillId)) : null;
   const step3 = currentCs ? (
     <div className="eos-step eos-roll-card">
       <div className="eos-roll-progress">{rollIndex + 1} / {rollQueue.length}</div>

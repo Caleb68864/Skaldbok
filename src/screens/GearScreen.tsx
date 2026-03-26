@@ -175,7 +175,7 @@ export default function GearScreen() {
     setHelmetDrawerOpen(true);
   }
 
-  const totalWeight = character.inventory.reduce((sum, i) => sum + i.weight * i.quantity, 0)
+  const totalWeight = character.inventory.reduce((sum, i) => sum + i.weight, 0)
     + (character.armor?.weight ?? 0)
     + (character.helmet?.weight ?? 0);
   const encumbranceLimit = computeEncumbranceLimit(character);
@@ -196,7 +196,7 @@ export default function GearScreen() {
     <div style={{ padding: 'var(--space-md)' }}>
       <h1 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text)', marginBottom: 'var(--space-md)' }}>Gear</h1>
 
-      <SectionPanel title="Weapons" collapsible defaultOpen>
+      <SectionPanel title="Weapons" subtitle="p. 73-76" collapsible defaultOpen>
         {character.weapons.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No weapons.</p>}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
           {character.weapons.map(weapon => (
@@ -217,7 +217,7 @@ export default function GearScreen() {
         )}
       </SectionPanel>
 
-      <SectionPanel title="Armor &amp; Helmet" collapsible defaultOpen>
+      <SectionPanel title="Armor &amp; Helmet" subtitle="p. 77" collapsible defaultOpen>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
           {character.armor ? (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -283,7 +283,7 @@ export default function GearScreen() {
         </div>
       </SectionPanel>
 
-      <SectionPanel title="Inventory" collapsible defaultOpen>
+      <SectionPanel title="Inventory" subtitle="p. 32" collapsible defaultOpen>
         <InventoryList
           items={character.inventory}
           onEdit={item => { setEditingItem(item); setInventoryDrawerOpen(true); }}
@@ -363,7 +363,7 @@ export default function GearScreen() {
         )}
       </SectionPanel>
 
-      <SectionPanel title="Encumbrance" collapsible defaultOpen>
+      <SectionPanel title="Encumbrance" subtitle="p. 32" collapsible defaultOpen>
         <p style={{ color: totalWeight > encumbranceLimit ? 'var(--color-danger)' : 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>
           {totalWeight} / {encumbranceLimit} {totalWeight > encumbranceLimit ? '(Overloaded!)' : ''}
         </p>

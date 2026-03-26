@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
 import { useIsEditMode } from '../../utils/modeGuards';
+import { computeSkillValue } from '../../utils/derivedValues';
 import type { SkillDefinition } from '../../types/system';
 
 interface PinnedSkillsProps {
@@ -78,7 +79,8 @@ export function PinnedSkillsPanel({ isEditMode: isEditModeProp }: PinnedSkillsPr
   const pinnedSkillRows = validPinnedIds.map(id => {
     const def = skillDefMap.get(id)!;
     const charSkill = character.skills?.[id];
-    const value = charSkill?.value ?? 0;
+    const attrVal = def.linkedAttributeId ? (character.attributes?.[def.linkedAttributeId] ?? 10) : 10;
+    const value = charSkill?.value ?? computeSkillValue(attrVal, charSkill?.trained ?? false);
     const trained = charSkill?.trained ?? false;
     return { id, name: def.name, value, trained };
   });
