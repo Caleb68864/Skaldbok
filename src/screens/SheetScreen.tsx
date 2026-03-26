@@ -196,7 +196,7 @@ export default function SheetScreen() {
                   onChange={e => updateCharacter({ name: e.target.value, updatedAt: nowISO() })}
                 />
               </div>
-              <div className="identity-meta-grid">
+              <div className="identity-meta-row">
                 <div>
                   <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Kin</label>
                   <input aria-label="Kin" style={inputStyle(identityEditable)} value={character.metadata.kin} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('kin', e.target.value)} />
@@ -209,10 +209,10 @@ export default function SheetScreen() {
                   <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Age</label>
                   <input aria-label="Age" style={inputStyle(identityEditable)} value={character.metadata.age ?? ''} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('age', e.target.value)} />
                 </div>
-                <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Weakness</label>
-                  <input aria-label="Weakness" style={inputStyle(identityEditable)} value={character.metadata.weakness ?? ''} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('weakness', e.target.value)} />
-                </div>
+              </div>
+              <div>
+                <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Weakness</label>
+                <input aria-label="Weakness" style={inputStyle(identityEditable)} value={character.metadata.weakness ?? ''} disabled={!identityEditable} className={identityEditable ? 'field--editable' : 'field--locked'} onChange={e => updateMeta('weakness', e.target.value)} />
               </div>
             </div>
           </div>
