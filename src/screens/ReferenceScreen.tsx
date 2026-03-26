@@ -221,7 +221,7 @@ export default function ReferenceScreen() {
           )}
           {filteredSections.map(section => (
             <div key={section.id} id={section.id}>
-              <SectionPanel title={section.title} collapsible defaultOpen>
+              <SectionPanel title={section.title} subtitle={section.pg ? `p. ${section.pg}` : undefined} collapsible defaultOpen>
                 <ReferenceSectionRenderer section={section} />
               </SectionPanel>
             </div>
