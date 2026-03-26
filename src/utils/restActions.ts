@@ -70,3 +70,27 @@ export function applyStretchRest(
 
   return result;
 }
+
+export interface ShiftRestResult {
+  hpRestored: number;
+  wpRestored: number;
+  conditionsCleared: string[];
+}
+
+/**
+ * Applies a shift rest (6 hours) to the character.
+ * Fully restores HP and WP to max, clears all conditions.
+ * Pure function — no side effects.
+ */
+export function applyShiftRest(character: CharacterRecord): ShiftRestResult {
+  const wp = character.resources['wp'] ?? { current: 0, max: 0 };
+  const hp = character.resources['hp'] ?? { current: 0, max: 0 };
+
+  const hpRestored = hp.max - hp.current;
+  const wpRestored = wp.max - wp.current;
+  const conditionsCleared = Object.entries(character.conditions)
+    .filter(([, active]) => active)
+    .map(([id]) => id);
+
+  return { hpRestored, wpRestored, conditionsCleared };
+}
