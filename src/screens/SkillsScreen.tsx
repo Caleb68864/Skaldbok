@@ -40,7 +40,9 @@ export default function SkillsScreen() {
   function toggleDragonMark(skillId: string) {
     if (!character || skillsEditable) return;
     const cs = character.skills[skillId];
-    const skill = character.skills[skillId] ?? { value: 0, trained: false };
+    const def = system?.skillCategories.flatMap(c => c.skills).find(s => s.id === skillId);
+    const baseValue = def?.baseChance ?? 0;
+    const skill = cs ?? { value: baseValue, trained: false };
     const updated: CharacterSkill = { ...skill, dragonMarked: !(cs?.dragonMarked ?? false) };
     updateCharacter({ skills: { ...character.skills, [skillId]: updated }, updatedAt: nowISO() });
   }
