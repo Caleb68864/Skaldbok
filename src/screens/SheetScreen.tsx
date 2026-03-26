@@ -395,7 +395,20 @@ export default function SheetScreen() {
       {saveError && <div style={{ color: 'var(--color-danger)', marginBottom: 'var(--space-sm)', fontSize: 'var(--font-size-sm)' }}>{saveError}</div>}
 
       {isEditMode && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-sm)' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+          {reorderMode && (
+            <button
+              type="button"
+              className="rest-btn rest-btn--round"
+              onClick={() => {
+                handleOrderChange(DEFAULT_PANEL_ORDER);
+                showToast('Panel order reset to default.', 'info');
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}
+            >
+              Reset Order
+            </button>
+          )}
           <button
             type="button"
             className={reorderMode ? 'rest-btn rest-btn--stretch' : 'rest-btn rest-btn--round'}
