@@ -9,9 +9,11 @@ import CombatScreen from '../screens/CombatScreen';
 import ReferenceScreen from '../screens/ReferenceScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import PrintableSheetScreen from '../screens/PrintableSheetScreen';
 import type { RouteObject } from 'react-router-dom';
 
 export const routes: RouteObject[] = [
+  { path: '/print', element: <PrintableSheetScreen /> },
   {
     element: <AppLayout />,
     children: [
