@@ -3,7 +3,6 @@
 import React from 'react';
 import type {
   CharacterRecord,
-  Weapon,
   Spell,
   HeroicAbility,
 } from '../types/character';
@@ -78,57 +77,37 @@ function SheetHeader({ character }: { character: CharacterRecord }): React.React
 // Section 2 — Attribute Band (SS-05)
 // ──────────────────────────────────────────────
 
+const ATTR_CONDITION_PAIRS = [
+  { attr: 'STR', attrKey: 'str', cond: 'Exhausted', condKey: 'exhausted' },
+  { attr: 'CON', attrKey: 'con', cond: 'Sickly', condKey: 'sickly' },
+  { attr: 'AGL', attrKey: 'agl', cond: 'Dazed', condKey: 'dazed' },
+  { attr: 'INT', attrKey: 'int', cond: 'Angry', condKey: 'angry' },
+  { attr: 'WIL', attrKey: 'wil', cond: 'Scared', condKey: 'scared' },
+  { attr: 'CHA', attrKey: 'cha', cond: 'Disheartened', condKey: 'disheartened' },
+] as const;
+
 function AttributeBand({
   character,
 }: {
   character: CharacterRecord;
 }): React.ReactElement {
   return (
-    <div className="sheet-attribute-band">
-      {[
-        { label: 'STR', key: 'str' },
-        { label: 'CON', key: 'con' },
-        { label: 'AGL', key: 'agl' },
-        { label: 'INT', key: 'int' },
-        { label: 'WIL', key: 'wil' },
-        { label: 'CHA', key: 'cha' },
-      ].map(({ label, key }) => (
-        <div key={key} className="sheet-attribute-box">
-          <div className="sheet-attribute-label">{label}</div>
-          <div className="sheet-attribute-value">
-            {character.attributes?.[key] != null ? character.attributes[key] : ''}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────
-// Section 2b — Conditions (SS-05)
-// ──────────────────────────────────────────────
-
-function ConditionBand({
-  character,
-}: {
-  character: CharacterRecord;
-}): React.ReactElement {
-  return (
-    <div className="sheet-conditions">
-      {[
-        { label: 'Exhausted',    key: 'exhausted' },
-        { label: 'Sickly',       key: 'sickly' },
-        { label: 'Dazed',        key: 'dazed' },
-        { label: 'Angry',        key: 'angry' },
-        { label: 'Scared',       key: 'scared' },
-        { label: 'Disheartened', key: 'disheartened' },
-      ].map(({ label, key }) => {
-        const active = character.conditions?.[key] === true;
+    <div className="sheet-attribute-grid">
+      {ATTR_CONDITION_PAIRS.map(({ attr, attrKey, cond, condKey }) => {
+        const active = character.conditions?.[condKey] === true;
         return (
-          <span key={key} className="sheet-condition">
-            <span className="sheet-condition-diamond">{active ? '◆' : '◇'}</span>
-            <span className="sheet-condition-label">{label}</span>
-          </span>
+          <div key={attrKey} className="sheet-attribute-column">
+            <div className="sheet-attribute-box">
+              <div className="sheet-attribute-label">{attr}</div>
+              <div className="sheet-attribute-value">
+                {character.attributes?.[attrKey] != null ? character.attributes[attrKey] : ''}
+              </div>
+            </div>
+            <div className="sheet-condition">
+              <span className="sheet-condition-diamond">{active ? '◆' : '◇'}</span>
+              <span className="sheet-condition-label">{cond}</span>
+            </div>
+          </div>
         );
       })}
     </div>
@@ -240,12 +219,10 @@ function Currency({ character }: { character: CharacterRecord }): React.ReactEle
 // ──────────────────────────────────────────────
 
 function SkillRow({
-  skillKey,
   name,
   value,
   trained,
 }: {
-  skillKey: string;
   name: string;
   value: number | string;
   trained: boolean;
@@ -295,7 +272,6 @@ function SkillsSection({
         return (
           <SkillRow
             key={skill.id}
-            skillKey={skill.id}
             name={skill.name}
             value={charSkill?.value ?? ''}
             trained={charSkill?.trained ?? false}
@@ -309,7 +285,6 @@ function SkillsSection({
         return (
           <SkillRow
             key={skill.id}
-            skillKey={skill.id}
             name={skill.name}
             value={charSkill?.value ?? ''}
             trained={charSkill?.trained ?? false}
@@ -325,7 +300,6 @@ function SkillsSection({
         return (
           <SkillRow
             key={key ?? `secondary-${i}`}
-            skillKey={key ?? `secondary-${i}`}
             name={key ?? ''}
             value={charSkill?.value ?? ''}
             trained={charSkill?.trained ?? false}
@@ -540,6 +514,10 @@ function ResourceTrackers({
           <span className="sheet-checkbox-box" />
           <span className="sheet-checkbox-label">Stretch Rest</span>
         </label>
+        <label className="sheet-rest-checkbox">
+          <span className="sheet-checkbox-box" />
+          <span className="sheet-checkbox-label">Shift Rest</span>
+        </label>
       </div>
 
       {/* Death Rolls */}
@@ -581,7 +559,6 @@ export default function PrintableSheet({
 
       {/* 2. Attribute Band + Conditions (SS-05) */}
       <AttributeBand character={character} />
-      <ConditionBand character={character} />
 
       {/* 3. Derived Stats Row (SS-06) */}
       <DerivedStatsRow derived={derived} />
