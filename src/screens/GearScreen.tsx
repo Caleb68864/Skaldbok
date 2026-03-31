@@ -14,6 +14,7 @@ import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { computeEncumbranceLimit } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
+import { useSessionLog } from '../features/session/useSessionLog';
 
 export default function GearScreen() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function GearScreen() {
   const isEditMode = useIsEditMode();
   const armorEquipEditable = useFieldEditable('armor.equipped');
   const helmetEquipEditable = useFieldEditable('helmet.equipped');
+  const { logToSession } = useSessionLog();
 
   const [weaponDrawerOpen, setWeaponDrawerOpen] = useState(false);
   const [editingWeapon, setEditingWeapon] = useState<Weapon | null>(null);
@@ -104,20 +106,34 @@ export default function GearScreen() {
   function handleInventorySave(item: InventoryItem) {
     if (!character) return;
     const existing = character.inventory.findIndex(i => i.id === item.id);
+    const isNew = existing < 0;
     const inventory = existing >= 0
       ? character.inventory.map(i => i.id === item.id ? item : i)
       : [...character.inventory, item];
     updateCharacter({ inventory, updatedAt: nowISO() });
+    if (isNew) {
+      logToSession(`${character.name}: Acquired ${item.name}`);
+    }
   }
 
   function handleInventoryDelete(id: string) {
     if (!character) return;
+    const item = character.inventory.find(i => i.id === id);
     updateCharacter({ inventory: character.inventory.filter(i => i.id !== id), updatedAt: nowISO() });
+    if (item) {
+      logToSession(`${character.name}: Removed ${item.name}`);
+    }
   }
 
   function updateCoin(coin: 'gold' | 'silver' | 'copper', value: number) {
     if (!character) return;
+    const old = character.coins[coin] ?? 0;
     updateCharacter({ coins: { ...character.coins, [coin]: value }, updatedAt: nowISO() });
+    const diff = value - old;
+    if (diff !== 0) {
+      const action = diff > 0 ? 'Gained' : 'Spent';
+      logToSession(`${character.name}: ${action} ${Math.abs(diff)} ${coin}`);
+    }
   }
 
   function addTinyItem() {
