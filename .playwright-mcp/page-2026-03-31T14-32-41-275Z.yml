@@ -1,0 +1,34 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test Campaign
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - main [ref=e9]:
+      - generic [ref=e533]:
+        - heading "Test Campaign" [level=2] [ref=e534]
+        - generic [ref=e535]:
+          - generic [ref=e639]:
+            - paragraph [ref=e640]: Last Session
+            - paragraph [ref=e641]: Session 1 — 2026-03-31
+            - paragraph [ref=e642]: 3/30/2026 · 1 note
+          - button "Start Session" [ref=e643] [cursor=pointer]
+        - button "Export All Notes (.zip)" [ref=e538] [cursor=pointer]
+        - generic [ref=e644]:
+          - heading "Past Sessions" [level=3] [ref=e645]
+          - generic [ref=e647]:
+            - generic [ref=e648]:
+              - paragraph [ref=e649]: Session 1 — 2026-03-31
+              - paragraph [ref=e650]: 3/30/2026
+            - generic [ref=e651]:
+              - button ".md" [ref=e652] [cursor=pointer]
+              - button ".zip" [ref=e653] [cursor=pointer]
+    - navigation "Main navigation" [ref=e23]:
+      - link "Session" [ref=e24] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e25] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e26] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert

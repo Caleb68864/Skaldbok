@@ -127,9 +127,29 @@ function PartyPicker({
     return selected.includes(id);
   };
 
+  // Disambiguate duplicate names by appending an index suffix
+  const disambiguatedNames = members.map((m, idx) => {
+    const sameNameCount = members.filter(other => other.name === m.name).length;
+    if (sameNameCount > 1) {
+      const rank = members.slice(0, idx + 1).filter(other => other.name === m.name).length;
+      return { ...m, displayName: `${m.name} (${rank})` };
+    }
+    return { ...m, displayName: m.name };
+  });
+
   return (
-    <div style={{ marginBottom: '12px' }}>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+    <div
+      style={{
+        position: 'sticky',
+        top: 0,
+        background: 'var(--color-surface)',
+        paddingBottom: '8px',
+        marginBottom: '4px',
+        borderBottom: '1px solid var(--color-border)',
+        zIndex: 1,
+      }}
+    >
+      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', marginTop: '0' }}>
         Who?
       </p>
       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -145,7 +165,7 @@ function PartyPicker({
             Party
           </button>
         )}
-        {members.map(m => (
+        {disambiguatedNames.map(m => (
           <button
             key={m.id}
             onClick={() => toggle(m.id)}
@@ -155,7 +175,7 @@ function PartyPicker({
               color: isSelected(m.id) ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
             }}
           >
-            {m.name}
+            {m.displayName}
           </button>
         ))}
       </div>
@@ -218,7 +238,8 @@ function TagPicker({
             key={tag}
             onClick={() => onToggle(tag)}
             style={{
-              minHeight: '32px',
+              minHeight: '44px',
+              minWidth: '44px',
               padding: '0 10px',
               borderRadius: '16px',
               border: 'none',
@@ -313,6 +334,20 @@ export function SessionQuickActions() {
     });
     return () => { mounted = false; };
   }, [activeDrawer, activeCampaign]);
+
+  // Re-select active character when a drawer opens (AC2.2)
+  useEffect(() => {
+    if (!activeDrawer) return;
+    const activeId = activeCharacterInCampaign?.id;
+    if (activeId && resolvedMembers.some(r => r.id === activeId)) {
+      setSelectedMembers([activeId]);
+    } else if (character && resolvedMembers.length === 0) {
+      setSelectedMembers(['__self__']);
+    } else if (resolvedMembers.length > 0) {
+      setSelectedMembers([resolvedMembers[0].id]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeDrawer]);
 
   const close = () => {
     setActiveDrawer(null);

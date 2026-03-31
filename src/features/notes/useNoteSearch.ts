@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import MiniSearch from 'minisearch';
 import type { Note } from '../../types/note';
 import { extractText } from '../../utils/prosemirror';
+import { extractDescriptors } from '../../utils/notes/extractDescriptors';
 
 interface IndexedDoc {
   id: string;
@@ -9,14 +10,15 @@ interface IndexedDoc {
   bodyText: string;
   tags: string;
   type: string;
+  descriptors: string;
 }
 
 // Module-level singleton: persists across renders, not across page reloads
 const searchIndex = new MiniSearch<IndexedDoc>({
-  fields: ['title', 'bodyText', 'tags'],
+  fields: ['title', 'bodyText', 'tags', 'descriptors'],
   storeFields: ['title', 'type'],
   searchOptions: {
-    boost: { title: 2, tags: 1.5, bodyText: 1 },
+    boost: { title: 2, tags: 1.5, descriptors: 1.5, bodyText: 1 },
     fuzzy: 0.2,
     prefix: true,
   },
@@ -29,6 +31,7 @@ function noteToDoc(note: Note): IndexedDoc {
     bodyText: extractText(note.body),
     tags: (note.tags ?? []).join(' '),
     type: note.type,
+    descriptors: extractDescriptors(note.body).join(' '),
   };
 }
 

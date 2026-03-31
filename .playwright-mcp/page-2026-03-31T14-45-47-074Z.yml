@@ -1,0 +1,78 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - generic [ref=e891]:
+      - link "Sheet" [ref=e892] [cursor=pointer]:
+        - /url: /character/sheet
+      - link "Skills" [ref=e893] [cursor=pointer]:
+        - /url: /character/skills
+      - link "Gear" [ref=e894] [cursor=pointer]:
+        - /url: /character/gear
+      - link "Magic" [ref=e895] [cursor=pointer]:
+        - /url: /character/magic
+      - link "Combat" [ref=e896] [cursor=pointer]:
+        - /url: /character/combat
+    - main [ref=e9]:
+      - generic [ref=e1300]:
+        - generic [ref=e1301]:
+          - heading "Magic" [level=1] [ref=e1302]
+          - generic [ref=e1303]: 1/5 Prepared
+        - generic [ref=e1304]:
+          - button "Prepared" [ref=e1305] [cursor=pointer]
+          - button "Grimoire" [ref=e1306] [cursor=pointer]
+        - generic [ref=e1307]:
+          - button "Spells p. 63-64 ▲" [expanded] [ref=e1308] [cursor=pointer]:
+            - heading "Spells p. 63-64" [level=3] [ref=e1309]:
+              - text: Spells
+              - generic [ref=e1310]: p. 63-64
+            - generic [ref=e1311]: ▲
+          - generic [ref=e1312]:
+            - button "+ Add Spell" [ref=e1314] [cursor=pointer]
+            - generic [ref=e1354]:
+              - generic [ref=e1355]:
+                - generic [ref=e1356]:
+                  - heading "Fireball Elementalism" [level=3] [ref=e1357]:
+                    - text: Fireball
+                    - generic [ref=e1358]: Elementalism
+                  - paragraph [ref=e1359]: "Range: 4 hexes · Duration: Instant"
+                  - paragraph [ref=e1360]: Deals fire damage in an area.
+                - generic [ref=e1361]:
+                  - button "Edit" [ref=e1362] [cursor=pointer]
+                  - button "Delete" [ref=e1363] [cursor=pointer]
+              - group "Power level" [ref=e1364]:
+                - button "Power level 1 — 2 WP" [ref=e1365] [cursor=pointer]: "1"
+                - button "Power level 2 — 4 WP" [pressed] [ref=e1366] [cursor=pointer]: "2"
+                - button "Power level 3 — 6 WP" [ref=e1367] [cursor=pointer]: "3"
+                - generic [ref=e1368]: 4 WP
+              - button "Unprepare" [ref=e1417] [cursor=pointer]
+        - generic [ref=e1316]:
+          - button "Heroic Abilities p. 30-31 ▲" [expanded] [ref=e1317] [cursor=pointer]:
+            - heading "Heroic Abilities p. 30-31" [level=3] [ref=e1318]:
+              - text: Heroic Abilities
+              - generic [ref=e1319]: p. 30-31
+            - generic [ref=e1320]: ▲
+          - generic [ref=e1321]:
+            - button "+ Add Ability" [ref=e1323] [cursor=pointer]
+            - generic [ref=e1454]:
+              - generic [ref=e1455]:
+                - heading "Veteran" [level=3] [ref=e1456]
+                - paragraph [ref=e1457]: Re-roll one failed attack per stretch.
+              - generic [ref=e1458]:
+                - button "Edit" [ref=e1459] [cursor=pointer]
+                - button "Delete" [ref=e1460] [cursor=pointer]
+    - navigation "Main navigation" [ref=e23]:
+      - link "Session" [ref=e24] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e25] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e26] [cursor=pointer]:
+        - /url: /character/sheet
+    - generic [ref=e1055]:
+      - button "🎲" [ref=e1056] [cursor=pointer]
+      - button "✨" [ref=e1371] [cursor=pointer]
+      - button "⚔️" [ref=e1461] [cursor=pointer]
+  - alert

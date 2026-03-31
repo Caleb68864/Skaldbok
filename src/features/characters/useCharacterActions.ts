@@ -7,8 +7,12 @@ import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 export function useCharacterActions() {
   const { clearCharacter, character: activeCharacter } = useActiveCharacter();
 
-  async function createCharacter() {
+  async function createCharacter(name?: string) {
     const newChar = createBlankCharacter('dragonbane');
+    // If a name is provided and non-empty, use it; otherwise keep the blank template default
+    if (name && name.trim().length > 0) {
+      newChar.name = name.trim();
+    }
     await characterRepository.save(newChar);
     return newChar;
   }

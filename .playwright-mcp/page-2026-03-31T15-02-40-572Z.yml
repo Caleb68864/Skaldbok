@@ -1,0 +1,124 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [active] [ref=e8] [cursor=pointer]: ☰
+    - generic [ref=e340]:
+      - button "⚔️ PLAY MODE" [ref=e341] [cursor=pointer]
+      - button "Manage Party" [ref=e342] [cursor=pointer]
+      - link "Settings" [ref=e343] [cursor=pointer]:
+        - /url: /settings
+      - link "Reference" [ref=e344] [cursor=pointer]:
+        - /url: /reference
+      - link "Character Library" [ref=e345] [cursor=pointer]:
+        - /url: /library
+      - link "Profile" [ref=e346] [cursor=pointer]:
+        - /url: /profile
+      - button "Fullscreen" [ref=e347] [cursor=pointer]
+      - button "🔓 Wake Lock Off" [ref=e348] [cursor=pointer]
+    - generic [ref=e107]:
+      - link "Sheet" [ref=e108] [cursor=pointer]:
+        - /url: /character/sheet
+      - link "Skills" [ref=e109] [cursor=pointer]:
+        - /url: /character/skills
+      - link "Gear" [ref=e110] [cursor=pointer]:
+        - /url: /character/gear
+      - link "Magic" [ref=e111] [cursor=pointer]:
+        - /url: /character/magic
+      - link "Combat" [ref=e112] [cursor=pointer]:
+        - /url: /character/combat
+    - main [ref=e9]:
+      - generic [ref=e259]:
+        - generic [ref=e260]:
+          - button "Resources p. 55 ▲" [expanded] [ref=e261] [cursor=pointer]:
+            - heading "Resources p. 55" [level=3] [ref=e262]:
+              - text: Resources
+              - generic [ref=e263]: p. 55
+            - generic [ref=e264]: ▲
+          - generic [ref=e266]:
+            - generic [ref=e267]:
+              - generic [ref=e268]: HP
+              - generic [ref=e269]:
+                - button "Decrease HP" [ref=e270] [cursor=pointer]: −
+                - generic [ref=e271]:
+                  - text: "10"
+                  - generic [ref=e272]: / 10
+                - button "Increase HP" [disabled] [ref=e273]: +
+            - generic [ref=e274]:
+              - generic [ref=e275]: WP
+              - generic [ref=e276]:
+                - button "Decrease WP" [ref=e277] [cursor=pointer]: −
+                - generic [ref=e278]:
+                  - text: "10"
+                  - generic [ref=e279]: / 10
+                - button "Increase WP" [disabled] [ref=e280]: +
+        - generic [ref=e281]:
+          - button "Conditions p. 56 ▲" [expanded] [ref=e282] [cursor=pointer]:
+            - heading "Conditions p. 56" [level=3] [ref=e283]:
+              - text: Conditions
+              - generic [ref=e284]: p. 56
+            - generic [ref=e285]: ▲
+          - generic [ref=e287]:
+            - button "Exhausted STR" [ref=e288] [cursor=pointer]:
+              - generic [ref=e289]: Exhausted
+              - generic [ref=e290]: STR
+            - button "Sickly CON" [ref=e291] [cursor=pointer]:
+              - generic [ref=e292]: Sickly
+              - generic [ref=e293]: CON
+            - button "Dazed AGL" [ref=e294] [cursor=pointer]:
+              - generic [ref=e295]: Dazed
+              - generic [ref=e296]: AGL
+            - button "Angry INT" [ref=e297] [cursor=pointer]:
+              - generic [ref=e298]: Angry
+              - generic [ref=e299]: INT
+            - button "Scared WIL" [ref=e300] [cursor=pointer]:
+              - generic [ref=e301]: Scared
+              - generic [ref=e302]: WIL
+            - button "Disheartened CHA" [ref=e303] [cursor=pointer]:
+              - generic [ref=e304]: Disheartened
+              - generic [ref=e305]: CHA
+        - generic [ref=e306]:
+          - button "Equipment p. 73-77 ▲" [expanded] [ref=e307] [cursor=pointer]:
+            - heading "Equipment p. 73-77" [level=3] [ref=e308]:
+              - text: Equipment
+              - generic [ref=e309]: p. 73-77
+            - generic [ref=e310]: ▲
+          - generic [ref=e312]:
+            - generic [ref=e313]:
+              - text: Weapons
+              - paragraph [ref=e314]: No weapons. Add weapons on the Gear page.
+            - generic [ref=e315]:
+              - text: Armor
+              - paragraph [ref=e316]: No armor.
+            - generic [ref=e317]:
+              - text: Helmet
+              - paragraph [ref=e318]: No helmet.
+        - generic [ref=e319]:
+          - button "Round Tracker p. 46 ▲" [expanded] [ref=e320] [cursor=pointer]:
+            - heading "Round Tracker p. 46" [level=3] [ref=e321]:
+              - text: Round Tracker
+              - generic [ref=e322]: p. 46
+            - generic [ref=e323]: ▲
+          - paragraph [ref=e326]: Use this area to track initiative and round count during combat. Round tracking is managed by your GM.
+        - generic [ref=e327]:
+          - button "Rest & Recovery p. 55, 57 ▲" [expanded] [ref=e328] [cursor=pointer]:
+            - heading "Rest & Recovery p. 55, 57" [level=3] [ref=e329]:
+              - img [ref=e330]
+              - text: Rest & Recovery
+              - generic [ref=e332]: p. 55, 57
+            - generic [ref=e333]: ▲
+          - generic [ref=e335]:
+            - button "Round Rest" [ref=e336] [cursor=pointer]
+            - button "Stretch Rest" [ref=e337] [cursor=pointer]
+            - button "Shift Rest" [ref=e338] [cursor=pointer]
+    - navigation "Main navigation" [ref=e51]:
+      - link "Session" [ref=e52] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e53] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e54] [cursor=pointer]:
+        - /url: /character/sheet
+    - button "🎲" [ref=e248] [cursor=pointer]
+  - alert

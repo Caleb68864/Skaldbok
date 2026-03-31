@@ -43,6 +43,16 @@ const EMPTY_FORM: EventFormState = {
   value: '',
 };
 
+const DEFAULT_LABELS: Record<EventType, string> = {
+  attack: 'Attack',
+  spell: 'Spell',
+  ability: 'Ability',
+  damage: 'Damage',
+  heal: 'Heal',
+  condition: 'Condition',
+  note: 'Note',
+};
+
 export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
   const { character: activeCharacter } = useActiveCharacter();
   const [typeData, setTypeData] = useState<CombatTypeData>({
@@ -50,11 +60,30 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
     participants: [],
   });
   const [currentRound, setCurrentRound] = useState(1);
-  const [eventForm, setEventForm] = useState<EventFormState>(EMPTY_FORM);
+  const [eventForm, setEventForm] = useState<EventFormState>(() => ({
+    ...EMPTY_FORM,
+    actorName: activeCharacter?.name ?? '',
+  }));
   const [showAbilityPicker, setShowAbilityPicker] = useState(false);
   const [showSpellPicker, setShowSpellPicker] = useState(false);
   const [showConditionPicker, setShowConditionPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Sync actorName pre-fill when active character resolves (form in untyped state only)
+  useEffect(() => {
+    if (activeCharacter?.name) {
+      setEventForm(prev => prev.type === null ? { ...prev, actorName: activeCharacter.name } : prev);
+    }
+  }, [activeCharacter?.name]);
+
+  // Update label when event type changes
+  useEffect(() => {
+    if (eventForm.type) {
+      setEventForm(prev => ({ ...prev, label: DEFAULT_LABELS[prev.type!] }));
+    }
+  // Only run when type changes, not on every eventForm change
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventForm.type]);
 
   // Load combat note on mount
   useEffect(() => {
@@ -93,8 +122,8 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
     const updated: CombatTypeData = { ...typeData, rounds: updatedRounds };
     setTypeData(updated);
     await persistTypeData(updated);
-    setEventForm(EMPTY_FORM);
-  }, [typeData, currentRound, persistTypeData]);
+    setEventForm({ ...EMPTY_FORM, actorName: activeCharacter?.name ?? '' });
+  }, [typeData, currentRound, persistTypeData, activeCharacter?.name]);
 
   const handleEventTypeClick = (type: EventType) => {
     if (type === 'ability') {
@@ -239,7 +268,8 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
         <button
           onClick={handleEndCombat}
           style={{
-            minHeight: '36px',
+            minHeight: '44px',
+            minWidth: '44px',
             padding: '0 12px',
             background: 'none',
             border: '1px solid var(--color-border)',
@@ -393,7 +423,7 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
               Log Event
             </button>
             <button
-              onClick={() => setEventForm(EMPTY_FORM)}
+              onClick={() => setEventForm({ ...EMPTY_FORM, actorName: activeCharacter?.name ?? '' })}
               style={{
                 minHeight: '44px',
                 padding: '0 12px',
@@ -413,24 +443,24 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
       {/* Ability picker drawer */}
       <Drawer
         open={showAbilityPicker}
-        onClose={() => { setShowAbilityPicker(false); setEventForm(EMPTY_FORM); }}
+        onClose={() => { setShowAbilityPicker(false); setEventForm({ ...EMPTY_FORM, actorName: activeCharacter?.name ?? '' }); }}
         title="Heroic Abilities"
       >
         <AbilityPicker
           onSelect={handleAbilitySelect}
-          onClose={() => { setShowAbilityPicker(false); setEventForm(EMPTY_FORM); }}
+          onClose={() => { setShowAbilityPicker(false); setEventForm({ ...EMPTY_FORM, actorName: activeCharacter?.name ?? '' }); }}
         />
       </Drawer>
 
       {/* Spell picker drawer */}
       <Drawer
         open={showSpellPicker}
-        onClose={() => { setShowSpellPicker(false); setEventForm(EMPTY_FORM); }}
+        onClose={() => { setShowSpellPicker(false); setEventForm({ ...EMPTY_FORM, actorName: activeCharacter?.name ?? '' }); }}
         title="Spells"
       >
         <SpellPicker
           onSelect={handleSpellSelect}
-          onClose={() => { setShowSpellPicker(false); setEventForm(EMPTY_FORM); }}
+          onClose={() => { setShowSpellPicker(false); setEventForm({ ...EMPTY_FORM, actorName: activeCharacter?.name ?? '' }); }}
         />
       </Drawer>
 

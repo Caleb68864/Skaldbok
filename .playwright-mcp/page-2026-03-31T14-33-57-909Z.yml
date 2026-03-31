@@ -1,0 +1,85 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - main [ref=e9]:
+      - generic [ref=e690]:
+        - generic [ref=e691]:
+          - button "Quick Note" [ref=e692] [cursor=pointer]
+          - button "Quick NPC" [ref=e693] [cursor=pointer]
+          - button "Location" [ref=e694] [cursor=pointer]
+          - button "Link Note" [ref=e695] [cursor=pointer]
+        - heading "NPCs 1" [level=3] [ref=e799]:
+          - text: NPCs
+          - generic [ref=e697]: "1"
+        - generic [ref=e801]:
+          - generic [ref=e802]:
+            - text: Grimjaw the Merchant
+            - generic [ref=e803]: 09:33 AM · npc
+          - button "Note actions" [ref=e804] [cursor=pointer]: ...
+        - heading "Notes 1" [level=3] [ref=e748]:
+          - text: Notes
+          - generic [ref=e700]: "1"
+        - generic [ref=e750]:
+          - generic [ref=e751]:
+            - text: Goblin Ambush Plans
+            - generic [ref=e752]: 09:33 AM
+          - button "Note actions" [ref=e753] [cursor=pointer]: ...
+        - heading "Locations 0" [level=3] [ref=e702]:
+          - text: Locations
+          - generic [ref=e703]: "0"
+        - paragraph [ref=e704]: No locations yet.
+        - dialog "Quick Location" [ref=e805]:
+          - generic [ref=e806]:
+            - heading "Quick Location" [level=3] [ref=e807]
+            - textbox "Location name (required)" [active] [ref=e808]
+            - textbox "Type — tavern, dungeon, town... (optional)" [ref=e809]
+            - textbox "Region (optional)" [ref=e810]
+            - generic [ref=e811]:
+              - paragraph [ref=e812]: Tags
+              - generic [ref=e813]:
+                - button "tense" [ref=e814] [cursor=pointer]
+                - button "funny" [ref=e815] [cursor=pointer]
+                - button "dramatic" [ref=e816] [cursor=pointer]
+                - button "sad" [ref=e817] [cursor=pointer]
+                - button "victorious" [ref=e818] [cursor=pointer]
+                - button "combat" [ref=e819] [cursor=pointer]
+                - button "exploration" [ref=e820] [cursor=pointer]
+                - button "social" [ref=e821] [cursor=pointer]
+                - button "mystery" [ref=e822] [cursor=pointer]
+                - button "travel" [ref=e823] [cursor=pointer]
+                - button "downtime" [ref=e824] [cursor=pointer]
+                - button "important" [ref=e825] [cursor=pointer]
+                - button "follow-up" [ref=e826] [cursor=pointer]
+                - button "plot-hook" [ref=e827] [cursor=pointer]
+                - button "lore" [ref=e828] [cursor=pointer]
+                - button "treasure" [ref=e829] [cursor=pointer]
+                - button "npc" [ref=e830] [cursor=pointer]
+                - button "location" [ref=e831] [cursor=pointer]
+                - button "rumor" [ref=e832] [cursor=pointer]
+                - button "quest" [ref=e833] [cursor=pointer]
+                - button "loot" [ref=e834] [cursor=pointer]
+                - button "skill-check" [ref=e835] [cursor=pointer]
+                - button "spell" [ref=e836] [cursor=pointer]
+                - button "ability" [ref=e837] [cursor=pointer]
+                - button "death" [ref=e838] [cursor=pointer]
+                - button "rest" [ref=e839] [cursor=pointer]
+            - button "📎 Attach Photo" [ref=e841] [cursor=pointer]:
+              - generic [ref=e842]: 📎
+              - text: Attach Photo
+            - textbox [ref=e845]:
+              - paragraph [ref=e846]
+            - generic [ref=e847]:
+              - button "Save Location" [disabled] [ref=e848] [cursor=pointer]
+              - button "Cancel" [ref=e849] [cursor=pointer]
+    - navigation "Main navigation" [ref=e23]:
+      - link "Session" [ref=e24] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e25] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e26] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert

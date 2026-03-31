@@ -1,0 +1,55 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - main [ref=e9]:
+      - generic [ref=e533]:
+        - heading "Test Campaign" [level=2] [ref=e534]
+        - generic [ref=e535]:
+          - generic [ref=e639]:
+            - heading "Session 2 — 2026-03-31" [level=3] [ref=e654]
+            - generic [ref=e655]: 0m
+          - paragraph [ref=e656]: "Started: 3/31/2026, 9:32:56 AM"
+          - generic [ref=e657]:
+            - button "End Session" [ref=e658] [cursor=pointer]
+            - button "Export Session" [ref=e659] [cursor=pointer]
+            - button "Export + Notes (ZIP)" [ref=e660] [cursor=pointer]
+          - generic [ref=e661]:
+            - paragraph [ref=e662]: Quick Log
+            - generic [ref=e663]:
+              - button "Skill Check" [ref=e664] [cursor=pointer]
+              - button "Cast Spell" [ref=e665] [cursor=pointer]
+              - button "Ability" [ref=e666] [cursor=pointer]
+              - button "Condition" [ref=e667] [cursor=pointer]
+              - button "Damage" [ref=e668] [cursor=pointer]
+              - button "Death Roll" [ref=e669] [cursor=pointer]
+              - button "Rest" [ref=e670] [cursor=pointer]
+              - button "Camp" [ref=e671] [cursor=pointer]
+              - button "Travel" [ref=e672] [cursor=pointer]
+              - button "Quote" [ref=e673] [cursor=pointer]
+              - button "Rumor" [ref=e674] [cursor=pointer]
+              - button "Shopping" [ref=e675] [cursor=pointer]
+              - button "Encounter" [ref=e676] [cursor=pointer]
+              - button "Loot" [ref=e677] [cursor=pointer]
+          - button "Start Combat" [ref=e679] [cursor=pointer]
+        - button "Export All Notes (.zip)" [ref=e538] [cursor=pointer]
+        - generic [ref=e680]:
+          - heading "Past Sessions" [level=3] [ref=e681]
+          - generic [ref=e683]:
+            - generic [ref=e684]:
+              - paragraph [ref=e685]: Session 1 — 2026-03-31
+              - paragraph [ref=e686]: 3/30/2026
+            - generic [ref=e687]:
+              - button ".md" [ref=e688] [cursor=pointer]
+              - button ".zip" [ref=e689] [cursor=pointer]
+    - navigation "Main navigation" [ref=e23]:
+      - link "Session" [ref=e24] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e25] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e26] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert

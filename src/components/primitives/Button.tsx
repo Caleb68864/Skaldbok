@@ -25,7 +25,7 @@ const variantStyles: Record<string, React.CSSProperties> = {
 };
 
 const sizeStyles: Record<string, React.CSSProperties> = {
-  sm: { fontSize: 'var(--font-size-sm)', padding: '6px 12px', minHeight: '36px' },
+  sm: { fontSize: 'var(--font-size-sm)', padding: '6px 12px', minHeight: '44px' },
   md: { fontSize: 'var(--font-size-md)', padding: '10px 16px', minHeight: 'var(--touch-target-min)' },
   lg: { fontSize: 'var(--font-size-lg)', padding: '14px 24px', minHeight: '52px' },
 };

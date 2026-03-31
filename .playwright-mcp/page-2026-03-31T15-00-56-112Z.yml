@@ -1,0 +1,110 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - main [ref=e9]:
+      - generic [ref=e10]:
+        - heading "Settings" [level=1] [ref=e11]
+        - generic [ref=e12]:
+          - heading "Install App" [level=2] [ref=e13]
+          - paragraph [ref=e14]: Install Skaldbok to your device for offline use.
+          - button "Install Skaldbok" [ref=e15] [cursor=pointer]
+        - generic [ref=e16]:
+          - heading "Theme" [level=2] [ref=e17]
+          - generic [ref=e18]:
+            - button "Dark Deep grays with golden accents" [ref=e19] [cursor=pointer]:
+              - generic [ref=e20]: Dark
+              - generic [ref=e21]: Deep grays with golden accents
+            - button "Parchment Warm fantasy-inspired tones" [ref=e22] [cursor=pointer]:
+              - generic [ref=e23]: Parchment
+              - generic [ref=e24]: Warm fantasy-inspired tones
+            - button "Light Clean whites and light grays" [ref=e25] [cursor=pointer]:
+              - generic [ref=e26]: Light
+              - generic [ref=e27]: Clean whites and light grays
+        - generic [ref=e28]:
+          - heading "Default Mode" [level=2] [ref=e29]
+          - generic [ref=e30]:
+            - button "play" [ref=e31] [cursor=pointer]
+            - button "edit" [ref=e32] [cursor=pointer]
+        - generic [ref=e33]:
+          - heading "Bottom Navigation" [level=2] [ref=e34]
+          - paragraph [ref=e35]: Choose which tabs appear in the bottom navigation bar. Hidden tabs remain accessible via the ☰ menu.
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - generic [ref=e38]: Sheet
+              - button "Hide Sheet tab in bottom navigation" [pressed] [ref=e39] [cursor=pointer]: "ON"
+            - generic [ref=e40]:
+              - generic [ref=e41]: Skills
+              - button "Hide Skills tab in bottom navigation" [pressed] [ref=e42] [cursor=pointer]: "ON"
+            - generic [ref=e43]:
+              - generic [ref=e44]: Gear
+              - button "Hide Gear tab in bottom navigation" [pressed] [ref=e45] [cursor=pointer]: "ON"
+            - generic [ref=e46]:
+              - generic [ref=e47]: Magic
+              - button "Hide Magic tab in bottom navigation" [pressed] [ref=e48] [cursor=pointer]: "ON"
+            - generic [ref=e49]:
+              - generic [ref=e50]: Combat
+              - button "Hide Combat tab in bottom navigation" [pressed] [ref=e51] [cursor=pointer]: "ON"
+            - generic [ref=e52]:
+              - generic [ref=e53]: Reference
+              - button "Show Reference tab in bottom navigation" [ref=e54] [cursor=pointer]: "OFF"
+            - generic [ref=e55]:
+              - generic [ref=e56]: Profile
+              - button "Show Profile tab in bottom navigation" [ref=e57] [cursor=pointer]: "OFF"
+        - generic [ref=e58]:
+          - heading "Combat Panels" [level=2] [ref=e59]
+          - paragraph [ref=e60]: Choose which panels appear on the Combat screen.
+          - generic [ref=e61]:
+            - generic [ref=e62]:
+              - generic [ref=e63]: Weapon Rack
+              - button "Hide Weapon Rack panel in combat" [pressed] [ref=e64] [cursor=pointer]: "ON"
+            - generic [ref=e65]:
+              - generic [ref=e66]: Heroic Abilities
+              - button "Hide Heroic Abilities panel in combat" [pressed] [ref=e67] [cursor=pointer]: "ON"
+            - generic [ref=e68]:
+              - generic [ref=e69]: Conditions
+              - button "Hide Conditions panel in combat" [pressed] [ref=e70] [cursor=pointer]: "ON"
+            - generic [ref=e71]:
+              - generic [ref=e72]: Death Rolls
+              - button "Show Death Rolls panel in combat" [ref=e73] [cursor=pointer]: "OFF"
+            - generic [ref=e74]:
+              - generic [ref=e75]: Rest & Recovery
+              - button "Hide Rest & Recovery panel in combat" [pressed] [ref=e76] [cursor=pointer]: "ON"
+        - generic [ref=e77]:
+          - heading "Print Character Sheet" [level=2] [ref=e78]
+          - paragraph [ref=e79]: Open a print-friendly version of the active character sheet.
+          - button "Print Character Sheet" [ref=e80] [cursor=pointer]
+        - generic [ref=e81]:
+          - heading "Import / Export" [level=2] [ref=e82]
+          - paragraph [ref=e83]: Import and export characters from the Character Library.
+          - button "Go to Character Library" [ref=e84] [cursor=pointer]
+        - generic [ref=e85]:
+          - heading "About" [level=2] [ref=e86]
+          - paragraph [ref=e87]: Skaldbok v1.0 — The Adventurer's Ledger
+        - generic [ref=e88]:
+          - heading "Danger Zone" [level=2] [ref=e89]
+          - button "Clear All Data" [ref=e90] [cursor=pointer]
+        - dialog "Final Confirmation" [ref=e106]:
+          - generic [ref=e107]:
+            - heading "Final Confirmation" [level=2] [ref=e108]
+            - button "Close modal" [ref=e109] [cursor=pointer]: ✕
+          - generic [ref=e111]:
+            - paragraph [ref=e112]:
+              - text: Type
+              - strong [ref=e113]: DELETE
+              - text: "to confirm:"
+            - textbox [ref=e114]
+          - generic [ref=e115]:
+            - button "Cancel" [ref=e116] [cursor=pointer]
+            - button "Delete Everything" [disabled] [ref=e117]
+    - navigation "Main navigation" [ref=e91]:
+      - link "Session" [ref=e92] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e93] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e94] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert
