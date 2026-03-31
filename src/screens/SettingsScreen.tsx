@@ -57,6 +57,13 @@ export default function SettingsScreen() {
     await db.characters.clear();
     await db.referenceNotes.clear();
     await db.appSettings.clear();
+    await db.campaigns.clear();
+    await db.sessions.clear();
+    await db.notes.clear();
+    await db.entityLinks.clear();
+    await db.parties.clear();
+    await db.partyMembers.clear();
+    await db.attachments.clear();
     setClearStep(0);
     setConfirmText('');
     navigate('/library');

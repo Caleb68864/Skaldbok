@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { useNoteActions } from '../features/notes/useNoteActions';
 import { useExportActions } from '../features/export/useExportActions';
+import { useNoteSearch } from '../features/notes/useNoteSearch';
 import { QuickNoteDrawer } from '../features/notes/QuickNoteDrawer';
 import { QuickNPCDrawer } from '../features/notes/QuickNPCDrawer';
 import { LinkNoteDrawer } from '../features/notes/LinkNoteDrawer';
@@ -15,11 +16,15 @@ export function NotesScreen() {
   const { activeCampaign, activeSession } = useCampaignContext();
   const { pinNote, unpinNote, deleteNote } = useNoteActions();
   const { exportNote, copyNoteAsMarkdown } = useExportActions();
+  const { search, rebuildIndex } = useNoteSearch();
   const [notes, setNotes] = useState<Note[]>([]);
   const [showQuickNote, setShowQuickNote] = useState(false);
   const [showQuickNPC, setShowQuickNPC] = useState(false);
   const [showLinkNote, setShowLinkNote] = useState(false);
   const [showQuickLocation, setShowQuickLocation] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const refreshNotes = useCallback(async () => {
     if (!activeCampaign) return;
@@ -35,6 +40,30 @@ export function NotesScreen() {
     });
     return () => { mounted = false; };
   }, [activeCampaign?.id]);
+
+  // Rebuild search index when notes change
+  useEffect(() => {
+    rebuildIndex(notes);
+  }, [notes, rebuildIndex]);
+
+  // Debounce search query (200ms)
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 200);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [searchQuery]);
+
+  // Compute search results
+  const searchResults = useMemo(() => {
+    if (!debouncedQuery.trim()) return null;
+    const results = search(debouncedQuery);
+    const resultIds = new Set(results.map(r => r.id));
+    return notes.filter(n => resultIds.has(n.id));
+  }, [debouncedQuery, search, notes]);
 
   // Auto-close Link Note drawer when session ends (AC6.4)
   useEffect(() => {
@@ -105,6 +134,27 @@ export function NotesScreen() {
 
   return (
     <div style={{ padding: '16px', position: 'relative' }}>
+      {/* Search bar */}
+      <div style={{ marginBottom: '12px' }}>
+        <input
+          type="text"
+          placeholder="Search notes..."
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            background: 'var(--color-surface-raised)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '8px',
+            color: 'var(--color-text)',
+            fontSize: '14px',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+      </div>
+
       {/* Action bar */}
       <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         {[
@@ -171,11 +221,51 @@ export function NotesScreen() {
         )}
       </div>
 
-      {/* Pinned section */}
-      {pinned.length > 0 && (
+      {/* Search results or grouped view */}
+      {searchResults !== null ? (
+        searchResults.length > 0 ? (
+          <>
+            {sectionHeader('Search Results', searchResults.length)}
+            {searchResults.map(note => (
+              <NoteItem
+                key={note.id}
+                note={note}
+                onPin={handlePin}
+                onUnpin={handleUnpin}
+                onExport={exportNote}
+                onCopy={copyNoteAsMarkdown}
+                onDelete={handleDelete}
+              />
+            ))}
+          </>
+        ) : (
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', textAlign: 'center', marginTop: '24px' }}>
+            No results found.
+          </p>
+        )
+      ) : (
         <>
-          {sectionHeader('Pinned', pinned.length)}
-          {pinned.map(note => (
+          {/* Pinned section */}
+          {pinned.length > 0 && (
+            <>
+              {sectionHeader('Pinned', pinned.length)}
+              {pinned.map(note => (
+                <NoteItem
+                  key={note.id}
+                  note={note}
+                  onPin={handlePin}
+                  onUnpin={handleUnpin}
+                  onExport={exportNote}
+                  onCopy={copyNoteAsMarkdown}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </>
+          )}
+
+          {/* NPCs section */}
+          {sectionHeader('NPCs', npcs.length)}
+          {npcs.map(note => (
             <NoteItem
               key={note.id}
               note={note}
@@ -186,65 +276,13 @@ export function NotesScreen() {
               onDelete={handleDelete}
             />
           ))}
-        </>
-      )}
+          {npcs.length === 0 && (
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No NPCs yet.</p>
+          )}
 
-      {/* NPCs section */}
-      {sectionHeader('NPCs', npcs.length)}
-      {npcs.map(note => (
-        <NoteItem
-          key={note.id}
-          note={note}
-          onPin={handlePin}
-          onUnpin={handleUnpin}
-          onExport={exportNote}
-          onCopy={copyNoteAsMarkdown}
-          onDelete={handleDelete}
-        />
-      ))}
-      {npcs.length === 0 && (
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No NPCs yet.</p>
-      )}
-
-      {/* Notes section */}
-      {sectionHeader('Notes', generic.length)}
-      {generic.map(note => (
-        <NoteItem
-          key={note.id}
-          note={note}
-          onPin={handlePin}
-          onUnpin={handleUnpin}
-          onExport={exportNote}
-          onCopy={copyNoteAsMarkdown}
-          onDelete={handleDelete}
-        />
-      ))}
-      {generic.length === 0 && (
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No notes yet.</p>
-      )}
-
-      {/* Locations section */}
-      {sectionHeader('Locations', locations.length)}
-      {locations.map(note => (
-        <NoteItem
-          key={note.id}
-          note={note}
-          onPin={handlePin}
-          onUnpin={handleUnpin}
-          onExport={exportNote}
-          onCopy={copyNoteAsMarkdown}
-          onDelete={handleDelete}
-        />
-      ))}
-      {locations.length === 0 && (
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No locations yet.</p>
-      )}
-
-      {/* Combat notes section */}
-      {combat.length > 0 && (
-        <>
-          {sectionHeader('Combat Logs', combat.length)}
-          {combat.map(note => (
+          {/* Notes section */}
+          {sectionHeader('Notes', generic.length)}
+          {generic.map(note => (
             <NoteItem
               key={note.id}
               note={note}
@@ -255,6 +293,44 @@ export function NotesScreen() {
               onDelete={handleDelete}
             />
           ))}
+          {generic.length === 0 && (
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No notes yet.</p>
+          )}
+
+          {/* Locations section */}
+          {sectionHeader('Locations', locations.length)}
+          {locations.map(note => (
+            <NoteItem
+              key={note.id}
+              note={note}
+              onPin={handlePin}
+              onUnpin={handleUnpin}
+              onExport={exportNote}
+              onCopy={copyNoteAsMarkdown}
+              onDelete={handleDelete}
+            />
+          ))}
+          {locations.length === 0 && (
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No locations yet.</p>
+          )}
+
+          {/* Combat notes section */}
+          {combat.length > 0 && (
+            <>
+              {sectionHeader('Combat Logs', combat.length)}
+              {combat.map(note => (
+                <NoteItem
+                  key={note.id}
+                  note={note}
+                  onPin={handlePin}
+                  onUnpin={handleUnpin}
+                  onExport={exportNote}
+                  onCopy={copyNoteAsMarkdown}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </>
+          )}
         </>
       )}
 
