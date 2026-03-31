@@ -50,12 +50,7 @@ export function useNoteSearch() {
     searchIndex.add(noteToDoc(note));
   }, []);
 
-  const updateInIndex = useCallback((note: Note): void => {
-    if (searchIndex.has(note.id)) {
-      searchIndex.remove({ id: note.id } as IndexedDoc);
-    }
-    searchIndex.add(noteToDoc(note));
-  }, []);
+  const updateInIndex = addToIndex;
 
   const removeFromIndex = useCallback((id: string): void => {
     if (searchIndex.has(id)) {

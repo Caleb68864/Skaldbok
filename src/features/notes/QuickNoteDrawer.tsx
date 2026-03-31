@@ -22,7 +22,7 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
   const { activeCampaign } = useCampaignContext();
 
   // Build preview entries for pending files
-  const pendingThumbs = pendingFiles.map((file, index) => ({
+  const pendingThumbs = pendingFiles.map((_file, index) => ({
     id: `pending-${index}`,
     objectUrl: pendingUrlsRef.current[index] ?? '',
     caption: undefined,

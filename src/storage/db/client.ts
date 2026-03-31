@@ -54,6 +54,9 @@ class SkaldbokDatabase extends Dexie {
     this.version(4).stores({
       attachments: 'id, noteId, campaignId, createdAt',
     });
+    this.version(5).stores({
+      sessions: 'id, campaignId, status, date, [campaignId+status]',
+    });
   }
 }
 

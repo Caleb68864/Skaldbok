@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
@@ -32,11 +32,14 @@ export default function CombatScreen() {
   const [stretchRestHp, setStretchRestHp] = useState('');
   const [stretchRestCondition, setStretchRestCondition] = useState('');
 
+  useEffect(() => {
+    if (!isLoading && !character) {
+      navigate('/library');
+    }
+  }, [isLoading, character, navigate]);
+
   if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
-  if (!character) {
-    navigate('/library');
-    return null;
-  }
+  if (!character) return null;
 
   const hp = character.resources['hp'] ?? { current: 0, max: 10 };
   const wp = character.resources['wp'] ?? { current: 0, max: 10 };
