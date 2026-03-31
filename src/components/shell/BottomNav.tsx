@@ -1,9 +1,9 @@
 import { useLocation, Link } from 'react-router-dom';
 
 const NAV_TABS = [
+  { to: '/character/sheet', label: 'Characters' },
   { to: '/session', label: 'Session' },
-  { to: '/notes', label: 'Notes' },
-  { to: '/character/sheet', label: 'Character' },
+  { to: '/reference', label: 'Reference' },
 ] as const;
 
 export function BottomNav() {
@@ -21,9 +21,13 @@ export function BottomNav() {
     >
       {NAV_TABS.map(({ to, label }) => {
         const isActive =
-          label === 'Character'
+          label === 'Characters'
             ? location.pathname.startsWith('/character')
-            : location.pathname === to || location.pathname.startsWith(to + '/');
+            : label === 'Session'
+            ? location.pathname === '/session' || location.pathname.startsWith('/session/')
+            : label === 'Reference'
+            ? location.pathname === '/reference' || location.pathname.startsWith('/reference/')
+            : false;
 
         return (
           <Link

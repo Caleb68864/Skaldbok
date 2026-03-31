@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import { CampaignHeader } from './CampaignHeader';
 import { CharacterSubNav } from './CharacterSubNav';
 import { BottomNav } from './BottomNav';
+import { GlobalFAB } from './GlobalFAB';
 import { CampaignCreateModal } from '../../features/campaign/CampaignCreateModal';
 import { ManagePartyDrawer } from '../../features/campaign/ManagePartyDrawer';
 import { SessionLogOverlay } from '../../features/session/SessionLogOverlay';
@@ -37,6 +38,7 @@ export function ShellLayout() {
         <Outlet />
       </main>
       <BottomNav />
+      <GlobalFAB />
       {isCharacterTab && <SessionLogOverlay />}
       {showCreateCampaign && (
         <CampaignCreateModal onClose={() => setShowCreateCampaign(false)} />

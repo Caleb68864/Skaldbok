@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
+import Link from '@tiptap/extension-link';
 import { DescriptorMention } from '../../features/notes/descriptorMentionExtension';
 import { useDescriptorSuggestions } from '../../features/notes/useDescriptorSuggestions';
 import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
@@ -13,14 +14,67 @@ export interface TiptapNoteEditorProps {
   onChange: (content: unknown) => void;
   campaignId: string | null;
   placeholder?: string;
+  /** Show a formatting toolbar above the editor (default: false for backward compat) */
+  showToolbar?: boolean;
+  /** Minimum height for the editor content area (e.g. "200px") */
+  minHeight?: string;
 }
 
-// Minimal suggestion popup renderer for @mention (items are {id, title} objects)
+// Minimal suggestion popup renderer for @mention (items are {id, label} objects)
 function createSuggestionRenderer() {
   let container: HTMLDivElement | null = null;
+  let items: Array<{ id: string; label: string }> = [];
+  let command: ((item: { id: string; label: string }) => void) | null = null;
+  let selectedIndex = 0;
+
+  const highlightSelected = () => {
+    if (!container) return;
+    const buttons = container.querySelectorAll('button');
+    buttons.forEach((btn, i) => {
+      (btn as HTMLButtonElement).style.background = i === selectedIndex
+        ? 'var(--color-surface-raised, #f0f0f0)'
+        : 'none';
+    });
+  };
+
+  const buildItems = (
+    newItems: Array<{ id: string; label: string }>,
+    newCommand: (item: { id: string; label: string }) => void
+  ) => {
+    items = newItems;
+    command = newCommand;
+    selectedIndex = 0;
+    if (!container) return;
+    container.innerHTML = '';
+    items.forEach((item, i) => {
+      const btn = document.createElement('button');
+      btn.textContent = item.label;
+      btn.setAttribute('data-index', String(i));
+      btn.style.cssText = [
+        'display: block',
+        'width: 100%',
+        'text-align: left',
+        'padding: 8px 12px',
+        'min-height: 44px',
+        'background: none',
+        'border: none',
+        'cursor: pointer',
+        'color: var(--color-text, #333)',
+      ].join(';');
+      btn.addEventListener('click', () => {
+        command?.(item);
+      });
+      btn.addEventListener('mouseover', () => {
+        selectedIndex = i;
+        highlightSelected();
+      });
+      container!.appendChild(btn);
+    });
+    highlightSelected();
+  };
 
   return {
-    onStart: (props: { items: Array<{ id: string; title: string }>; command: (item: { id: string; title: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
+    onStart: (props: { items: Array<{ id: string; label: string }>; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
       container = document.createElement('div');
       container.style.cssText = [
         'position: fixed',
@@ -40,70 +94,46 @@ function createSuggestionRenderer() {
         container.style.left = `${rect.left}px`;
       }
 
-      props.items.forEach(item => {
-        const btn = document.createElement('button');
-        btn.textContent = item.title;
-        btn.style.cssText = [
-          'display: block',
-          'width: 100%',
-          'text-align: left',
-          'padding: 8px 12px',
-          'min-height: 44px',
-          'background: none',
-          'border: none',
-          'cursor: pointer',
-          'color: var(--color-text, #333)',
-        ].join(';');
-        btn.addEventListener('click', () => {
-          props.command(item);
-        });
-        btn.addEventListener('mouseover', () => {
-          btn.style.background = 'var(--color-surface-raised, #f0f0f0)';
-        });
-        btn.addEventListener('mouseout', () => {
-          btn.style.background = 'none';
-        });
-        container!.appendChild(btn);
-      });
-
+      buildItems(props.items, props.command);
       document.body.appendChild(container);
     },
-    onUpdate: (props: { items: Array<{ id: string; title: string }>; command: (item: { id: string; title: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
+    onUpdate: (props: { items: Array<{ id: string; label: string }>; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
       if (!container) return;
-      container.innerHTML = '';
       const rect = props.clientRect?.();
       if (rect) {
         container.style.top = `${rect.bottom + 4}px`;
         container.style.left = `${rect.left}px`;
       }
-      props.items.forEach(item => {
-        const btn = document.createElement('button');
-        btn.textContent = item.title;
-        btn.style.cssText = [
-          'display: block',
-          'width: 100%',
-          'text-align: left',
-          'padding: 8px 12px',
-          'min-height: 44px',
-          'background: none',
-          'border: none',
-          'cursor: pointer',
-          'color: var(--color-text, #333)',
-        ].join(';');
-        btn.addEventListener('click', () => {
-          props.command(item);
-        });
-        container!.appendChild(btn);
-      });
+      buildItems(props.items, props.command);
     },
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
-      return event.key === 'Escape';
+      if (event.key === 'Escape') return true;
+      if (event.key === 'ArrowDown') {
+        selectedIndex = (selectedIndex + 1) % Math.max(items.length, 1);
+        highlightSelected();
+        return true;
+      }
+      if (event.key === 'ArrowUp') {
+        selectedIndex = (selectedIndex - 1 + Math.max(items.length, 1)) % Math.max(items.length, 1);
+        highlightSelected();
+        return true;
+      }
+      if (event.key === 'Enter') {
+        if (items[selectedIndex]) {
+          command?.(items[selectedIndex]);
+          return true;
+        }
+      }
+      return false;
     },
     onExit: () => {
       if (container) {
         container.remove();
         container = null;
       }
+      items = [];
+      command = null;
+      selectedIndex = 0;
     },
   };
 }
@@ -111,14 +141,33 @@ function createSuggestionRenderer() {
 // Minimal suggestion popup renderer for #descriptor (items are strings)
 function createDescriptorRenderer() {
   let container: HTMLDivElement | null = null;
+  let items: string[] = [];
+  let command: ((item: { id: string; label: string }) => void) | null = null;
+  let selectedIndex = 0;
+
+  const highlightSelected = () => {
+    if (!container) return;
+    const buttons = container.querySelectorAll('button');
+    buttons.forEach((btn, i) => {
+      (btn as HTMLButtonElement).style.background = i === selectedIndex
+        ? 'var(--color-surface-raised, #f0f0f0)'
+        : 'none';
+    });
+  };
 
   const buildItems = (
-    items: string[],
-    command: (item: { id: string; label: string }) => void
+    newItems: string[],
+    newCommand: (item: { id: string; label: string }) => void
   ) => {
-    items.forEach(label => {
+    items = newItems;
+    command = newCommand;
+    selectedIndex = 0;
+    if (!container) return;
+    container.innerHTML = '';
+    items.forEach((label, i) => {
       const btn = document.createElement('button');
       btn.textContent = `#${label}`;
+      btn.setAttribute('data-index', String(i));
       btn.style.cssText = [
         'display: block',
         'width: 100%',
@@ -132,16 +181,15 @@ function createDescriptorRenderer() {
         'font-size: 14px',
       ].join(';');
       btn.addEventListener('click', () => {
-        command({ id: label, label });
+        command?.({ id: label, label });
       });
       btn.addEventListener('mouseover', () => {
-        btn.style.background = 'var(--color-surface-raised, #f0f0f0)';
-      });
-      btn.addEventListener('mouseout', () => {
-        btn.style.background = 'none';
+        selectedIndex = i;
+        highlightSelected();
       });
       container!.appendChild(btn);
     });
+    highlightSelected();
   };
 
   return {
@@ -169,7 +217,6 @@ function createDescriptorRenderer() {
     },
     onUpdate: (props: { items: string[]; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
       if (!container) return;
-      container.innerHTML = '';
       const rect = props.clientRect?.();
       if (rect) {
         container.style.top = `${rect.bottom + 4}px`;
@@ -178,13 +225,33 @@ function createDescriptorRenderer() {
       buildItems(props.items, props.command);
     },
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
-      return event.key === 'Escape';
+      if (event.key === 'Escape') return true;
+      if (event.key === 'ArrowDown') {
+        selectedIndex = (selectedIndex + 1) % Math.max(items.length, 1);
+        highlightSelected();
+        return true;
+      }
+      if (event.key === 'ArrowUp') {
+        selectedIndex = (selectedIndex - 1 + Math.max(items.length, 1)) % Math.max(items.length, 1);
+        highlightSelected();
+        return true;
+      }
+      if (event.key === 'Enter') {
+        if (items[selectedIndex]) {
+          command?.({ id: items[selectedIndex], label: items[selectedIndex] });
+          return true;
+        }
+      }
+      return false;
     },
     onExit: () => {
       if (container) {
         container.remove();
         container = null;
       }
+      items = [];
+      command = null;
+      selectedIndex = 0;
     },
   };
 }
@@ -211,7 +278,7 @@ function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) =
   );
 }
 
-export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeholder }: TiptapNoteEditorProps) {
+export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeholder, showToolbar = false, minHeight }: TiptapNoteEditorProps) {
   const [failed, setFailed] = React.useState(false);
   const [campaignNotes, setCampaignNotes] = useState<Note[]>([]);
   const rendererRef = useRef(createSuggestionRenderer());
@@ -241,12 +308,16 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
     {
       extensions: [
         StarterKit,
+        Link.configure({
+          openOnClick: false,
+          HTMLAttributes: { class: 'tiptap-link' },
+        }),
         Mention.configure({
           HTMLAttributes: { class: 'mention' },
           suggestion: {
             items: async ({ query }: { query: string }) => {
               try {
-                const results: Array<{ id: string; title: string }> = [];
+                const results: Array<{ id: string; label: string }> = [];
                 const q = query.toLowerCase();
 
                 // Notes from campaign (NPCs, locations, loot, etc.)
@@ -255,7 +326,7 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
                   for (const n of notes) {
                     if (n && n.title.toLowerCase().includes(q)) {
                       const typeLabel = n.type !== 'generic' ? ` [${n.type}]` : '';
-                      results.push({ id: n.id, title: `${n.title}${typeLabel}` });
+                      results.push({ id: n.id, label: `${n.title}${typeLabel}` });
                     }
                   }
                 }
@@ -265,8 +336,8 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
                 for (const c of chars) {
                   if (c.name.toLowerCase().includes(q)) {
                     // Avoid duplicates if character is already in notes as NPC
-                    if (!results.some(r => r.title.startsWith(c.name))) {
-                      results.push({ id: c.id, title: `${c.name} [character]` });
+                    if (!results.some(r => r.label.startsWith(c.name))) {
+                      results.push({ id: c.id, label: `${c.name} [character]` });
                     }
                   }
                 }
@@ -342,19 +413,64 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
     );
   }
 
+  const toolbarBtnStyle = (active: boolean): React.CSSProperties => ({
+    minHeight: '44px',
+    minWidth: '44px',
+    padding: '0 8px',
+    background: active ? 'var(--color-accent)' : 'var(--color-surface-raised)',
+    color: active ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
+    border: '1px solid var(--color-border)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: 600,
+  });
+
   return (
-    <EditorContent
-      editor={editor}
-      style={{
-        fontFamily: 'var(--font-body)',
-        color: 'var(--color-text)',
-        background: 'var(--color-surface)',
-        padding: '8px',
-        minHeight: '120px',
-        borderRadius: '4px',
-        border: '1px solid var(--color-border)',
-        cursor: 'text',
-      }}
-    />
+    <div>
+      {showToolbar && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '4px',
+            padding: '6px',
+            background: 'var(--color-surface-raised)',
+            border: '1px solid var(--color-border)',
+            borderBottom: 'none',
+            borderRadius: '4px 4px 0 0',
+          }}
+        >
+          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} style={toolbarBtnStyle(editor.isActive('bold'))}>B</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} style={toolbarBtnStyle(editor.isActive('italic'))}><em>I</em></button>
+          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} style={toolbarBtnStyle(editor.isActive('heading', { level: 2 }))}>H2</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} style={toolbarBtnStyle(editor.isActive('heading', { level: 3 }))}>H3</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} style={toolbarBtnStyle(editor.isActive('bulletList'))}>• List</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} style={toolbarBtnStyle(editor.isActive('orderedList'))}>1. List</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} style={toolbarBtnStyle(editor.isActive('blockquote'))}>❝</button>
+          <button type="button" onClick={() => {
+            if (editor.isActive('link')) {
+              editor.chain().focus().unsetLink().run();
+            } else {
+              const url = window.prompt('URL');
+              if (url) editor.chain().focus().setLink({ href: url }).run();
+            }
+          }} style={toolbarBtnStyle(editor.isActive('link'))}>Link</button>
+        </div>
+      )}
+      <EditorContent
+        editor={editor}
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-text)',
+          background: 'var(--color-surface)',
+          padding: '8px',
+          minHeight: minHeight ?? '120px',
+          borderRadius: showToolbar ? '0 0 4px 4px' : '4px',
+          border: '1px solid var(--color-border)',
+          cursor: 'text',
+        }}
+      />
+    </div>
   );
 }

@@ -5,7 +5,12 @@ export async function shareFile(blob: Blob, filename: string): Promise<void> {
     navigator.canShare &&
     navigator.canShare({ files: [file] })
   ) {
-    await navigator.share({ files: [file], title: filename });
+    try {
+      await navigator.share({ files: [file], title: filename });
+    } catch {
+      // NotAllowedError (async gap), AbortError (user cancelled), etc.
+      downloadBlob(blob, filename);
+    }
   } else {
     downloadBlob(blob, filename);
   }

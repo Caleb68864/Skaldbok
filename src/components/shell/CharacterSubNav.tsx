@@ -5,7 +5,6 @@ const CHARACTER_TABS = [
   { to: '/character/skills', label: 'Skills' },
   { to: '/character/gear', label: 'Gear' },
   { to: '/character/magic', label: 'Magic' },
-  { to: '/character/combat', label: 'Combat' },
 ] as const;
 
 export function CharacterSubNav() {

@@ -17,6 +17,14 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
   const [allCharacters, setAllCharacters] = useState<CharacterRecord[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Guard: show toast and close if no active campaign
+  useEffect(() => {
+    if (!activeCampaign) {
+      showToast('Create a campaign first');
+      onClose();
+    }
+  }, [activeCampaign, showToast, onClose]);
+
   useEffect(() => {
     let mounted = true;
     getAllCharacters().then(chars => {
@@ -24,6 +32,8 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
     });
     return () => { mounted = false; };
   }, []);
+
+  if (!activeCampaign) return null;
 
   const members: PartyMember[] = activeParty?.members ?? [];
   const memberCharacterIds = new Set(members.map(m => m.linkedCharacterId).filter(Boolean));

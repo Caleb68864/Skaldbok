@@ -94,6 +94,7 @@ export interface CampaignContextValue {
   activeCharacterInCampaign: PartyMember | null;
   startSession: () => Promise<void>;
   endSession: () => Promise<void>;
+  resumeSession: (sessionId: string) => Promise<void>;
   setActiveCampaign: (campaignId: string) => Promise<void>;
   refreshParty: () => Promise<void>;
 }
@@ -227,6 +228,27 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
   }, [activeSession, showToast]);
 
+  const resumeSession = useCallback(async (sessionId: string) => {
+    if (activeSession) {
+      showToast('End the current session first');
+      return;
+    }
+    try {
+      const session = await db.sessions.get(sessionId);
+      if (!session) { showToast('Session not found'); return; }
+      const now = nowISO();
+      await db.sessions.update(sessionId, {
+        status: 'active' as const,
+        endedAt: undefined,
+        updatedAt: now,
+      });
+      setActiveSession_({ ...session, status: 'active', endedAt: undefined, updatedAt: now });
+    } catch (e) {
+      showToast('Failed to resume session');
+      console.error('resumeSession failed:', e);
+    }
+  }, [activeSession, showToast]);
+
   const setActiveCampaign = useCallback(async (campaignId: string) => {
     try {
       const campaign = await db.campaigns.get(campaignId);
@@ -304,6 +326,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         activeCharacterInCampaign,
         startSession,
         endSession,
+        resumeSession,
         setActiveCampaign,
         refreshParty,
       }}

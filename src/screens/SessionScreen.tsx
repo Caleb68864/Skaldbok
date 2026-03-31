@@ -5,6 +5,7 @@ import { EndSessionModal } from '../features/campaign/EndSessionModal';
 import { useExportActions } from '../features/export/useExportActions';
 import { CombatTimeline } from '../features/combat/CombatTimeline';
 import { useNoteActions } from '../features/notes/useNoteActions';
+import { NotesGrid } from '../features/notes/NotesGrid';
 import { SessionQuickActions } from '../features/session/SessionQuickActions';
 import { getNotesBySession } from '../storage/repositories/noteRepository';
 import { getSessionsByCampaign } from '../storage/repositories/sessionRepository';
@@ -28,7 +29,7 @@ function formatDate(iso: string): string {
 }
 
 export function SessionScreen() {
-  const { activeCampaign, activeSession, startSession, endSession } = useCampaignContext();
+  const { activeCampaign, activeSession, startSession, endSession, resumeSession } = useCampaignContext();
   const { exportSessionMarkdown, exportSessionBundle, exportAllNotes } = useExportActions();
   const { createNote } = useNoteActions();
   const [showEndConfirm, setShowEndConfirm] = useState(false);
@@ -352,6 +353,24 @@ export function SessionScreen() {
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  {!activeSession && (
+                    <button
+                      onClick={() => resumeSession(session.id)}
+                      style={{
+                        minHeight: '44px',
+                        padding: '0 8px',
+                        background: 'var(--color-accent)',
+                        color: 'var(--color-on-accent, #fff)',
+                        border: 'none',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                      }}
+                    >
+                      Resume
+                    </button>
+                  )}
                   <button
                     onClick={() => exportSessionMarkdown(session.id)}
                     style={{
@@ -388,6 +407,12 @@ export function SessionScreen() {
           ))}
         </div>
       )}
+
+      {/* Notes Grid */}
+      <NotesGrid
+        campaignId={activeCampaign.id}
+        activeSessionId={activeSession?.id ?? null}
+      />
 
       {showEndConfirm && activeSession && (
         <EndSessionModal
