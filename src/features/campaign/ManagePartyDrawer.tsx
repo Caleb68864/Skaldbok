@@ -153,7 +153,7 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
                 }}
               >
                 <span style={{ flex: 1, color: 'var(--color-text)' }}>
-                  {member.name ?? member.linkedCharacterId ?? member.id}
+                  {member.name ?? 'Unknown character'}
                   {activeCampaign?.activeCharacterMemberId === member.id && (
                     <span style={{ color: 'var(--color-accent)', marginLeft: '8px', fontSize: '12px' }}>
                       (my character)

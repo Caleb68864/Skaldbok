@@ -3,6 +3,7 @@ import { createBlankCharacter } from './characterMappers';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
+import { db } from '../../storage/db/client';
 
 export function useCharacterActions() {
   const { clearCharacter, character: activeCharacter } = useActiveCharacter();
@@ -35,6 +36,7 @@ export function useCharacterActions() {
     if (activeCharacter?.id === id) {
       clearCharacter();
     }
+    await db.partyMembers.where('linkedCharacterId').equals(id).delete();
     await characterRepository.remove(id);
   }
 
