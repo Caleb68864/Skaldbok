@@ -107,7 +107,7 @@ export function SessionLogOverlay() {
 
   const renderSkillList = () => {
     if (selectedItem) return renderResultPicker(handleSkillResult);
-    const skills = character.skills ? Object.entries(character.skills).map(([id, s]) => ({ id, name: s?.name ?? id })) : [];
+    const skills = character.skills ? Object.entries(character.skills).map(([id]) => ({ id, name: id })) : [];
     return (
       <div>
         {skills.length > 0 ? skills.map(s => (

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
@@ -29,7 +29,7 @@ export default function SheetScreen() {
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   const { showToast } = useToast();
-  const { logHPChange, logDeathRoll } = useSessionLog();
+  const { logHPChange } = useSessionLog();
 
   const isEditMode = useIsEditMode();
   const identityEditable = useFieldEditable('identity');
@@ -48,11 +48,14 @@ export default function SheetScreen() {
   const [stretchRestHp, setStretchRestHp] = useState('');
   const [stretchRestCondition, setStretchRestCondition] = useState('');
 
+  useEffect(() => {
+    if (!isLoading && !character) {
+      navigate('/library');
+    }
+  }, [isLoading, character, navigate]);
+
   if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
-  if (!character) {
-    navigate('/library');
-    return null;
-  }
+  if (!character) return null;
 
   const isPlayMode = settings.mode === 'play';
 

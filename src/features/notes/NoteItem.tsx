@@ -23,8 +23,12 @@ export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: N
         minHeight: '44px',
       }}
     >
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <span style={{ color: 'var(--color-text)', fontSize: '14px' }}>{note.title}</span>
+        <span style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: '11px', marginTop: '2px' }}>
+          {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          {note.type !== 'generic' && ` · ${note.type}`}
+        </span>
       </div>
       <button
         onClick={() => setShowActions(v => !v)}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Drawer } from '../../components/primitives/Drawer';
 import { useNoteActions } from '../notes/useNoteActions';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
@@ -400,7 +400,7 @@ export function SessionQuickActions() {
     }
 
     const char = selectedCharacter();
-    const charSkills = char?.skills?.map(s => s.name) ?? [];
+    const charSkills = char?.skills ? Object.keys(char.skills) : [];
 
     return (
       <div>
@@ -1084,7 +1084,7 @@ export function SessionQuickActions() {
     { id: 'loot', label: 'Loot' },
   ];
 
-  const drawerContent: Record<string, { title: string; render: () => JSX.Element }> = {
+  const drawerContent: Record<string, { title: string; render: () => React.JSX.Element }> = {
     skill: { title: 'Skill Check', render: renderSkillPicker },
     spell: { title: 'Cast Spell', render: renderSpellPicker },
     ability: { title: 'Heroic Ability', render: renderAbilityPicker },

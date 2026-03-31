@@ -80,8 +80,14 @@ export default function GearScreen() {
     }
   }, [helmetDrawerOpen, character?.helmet]);
 
+  useEffect(() => {
+    if (!isLoading && !character) {
+      navigate('/library');
+    }
+  }, [isLoading, character, navigate]);
+
   if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
-  if (!character) { navigate('/library'); return null; }
+  if (!character) return null;
 
   function handleWeaponSave(weapon: Weapon) {
     if (!character) return;

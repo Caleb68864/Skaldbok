@@ -64,8 +64,14 @@ export default function MagicScreen() {
     }
   }, [abilityDrawerOpen, editingAbility]);
 
+  useEffect(() => {
+    if (!isLoading && !character) {
+      navigate('/library');
+    }
+  }, [isLoading, character, navigate]);
+
   if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
-  if (!character) { navigate('/library'); return null; }
+  if (!character) return null;
 
   // ── Derived values ────────────────────────────────────────────────
   const maxPrepared = computeMaxPreparedSpells(character);
