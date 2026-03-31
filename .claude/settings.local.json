@@ -72,5 +72,10 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)"
+    ]
   }
 }
