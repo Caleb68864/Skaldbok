@@ -4,11 +4,14 @@ import { useNoteActions } from '../notes/useNoteActions';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
-import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
+import { getById as getCharacterById, save as saveCharacter } from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
 import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
 import type { Note } from '../../types/note';
+import { PartyPicker } from '../../components/fields/PartyPicker';
+import type { ResolvedMember } from '../../components/fields/PartyPicker';
+import { CounterControl } from '../../components/primitives/CounterControl';
 
 // ── Dragonbane Data ──────────────────────────────────────────────
 
@@ -87,101 +90,6 @@ const resultChipBase = {
   fontSize: '14px',
   fontWeight: 600,
 } as const;
-
-// ── Party Picker ────────────────────────────────────────────────
-
-interface ResolvedMember {
-  id: string;
-  name: string;
-  character: CharacterRecord | null;
-}
-
-function PartyPicker({
-  members,
-  selected,
-  onSelect,
-  multiSelect,
-}: {
-  members: ResolvedMember[];
-  selected: string[];
-  onSelect: (ids: string[]) => void;
-  multiSelect?: boolean;
-}) {
-  const toggle = (id: string) => {
-    if (multiSelect) {
-      if (id === '__party__') {
-        // Select all or deselect all
-        if (selected.length === members.length) onSelect([]);
-        else onSelect(members.map(m => m.id));
-      } else {
-        if (selected.includes(id)) onSelect(selected.filter(s => s !== id));
-        else onSelect([...selected.filter(s => s !== '__party__'), id]);
-      }
-    } else {
-      onSelect([id]);
-    }
-  };
-
-  const isSelected = (id: string) => {
-    if (id === '__party__') return selected.length === members.length && members.length > 0;
-    return selected.includes(id);
-  };
-
-  // Disambiguate duplicate names by appending an index suffix
-  const disambiguatedNames = members.map((m, idx) => {
-    const sameNameCount = members.filter(other => other.name === m.name).length;
-    if (sameNameCount > 1) {
-      const rank = members.slice(0, idx + 1).filter(other => other.name === m.name).length;
-      return { ...m, displayName: `${m.name} (${rank})` };
-    }
-    return { ...m, displayName: m.name };
-  });
-
-  return (
-    <div
-      style={{
-        position: 'sticky',
-        top: 0,
-        background: 'var(--color-surface)',
-        paddingBottom: '8px',
-        marginBottom: '4px',
-        borderBottom: '1px solid var(--color-border)',
-        zIndex: 1,
-      }}
-    >
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', marginTop: '0' }}>
-        Who?
-      </p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-        {members.length > 1 && (
-          <button
-            onClick={() => toggle('__party__')}
-            style={{
-              ...chipStyle,
-              background: isSelected('__party__') ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: isSelected('__party__') ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-            }}
-          >
-            Party
-          </button>
-        )}
-        {disambiguatedNames.map(m => (
-          <button
-            key={m.id}
-            onClick={() => toggle(m.id)}
-            style={{
-              ...chipStyle,
-              background: isSelected(m.id) ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: isSelected(m.id) ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-            }}
-          >
-            {m.displayName}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ── Roll Modifiers (Boon / Bane / Push) ─────────────────────────
 
@@ -287,8 +195,11 @@ export function SessionQuickActions() {
   const [rollMods, setRollMods] = useState<{ boon: boolean; bane: boolean; pushed: boolean }>({ boon: false, bane: false, pushed: false });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [shopItem, setShopItem] = useState('');
-  const [shopCost, setShopCost] = useState('');
   const [shopAction, setShopAction] = useState<'buy' | 'sell'>('buy');
+  const [shopGold, setShopGold] = useState(0);
+  const [shopSilver, setShopSilver] = useState(0);
+  const [shopCopper, setShopCopper] = useState(0);
+  const [shopQuantity, setShopQuantity] = useState(1);
 
   // Resolve party member names from linked characters
   useEffect(() => {
@@ -360,8 +271,11 @@ export function SessionQuickActions() {
     setRollMods({ boon: false, bane: false, pushed: false });
     setSelectedTags([]);
     setShopItem('');
-    setShopCost('');
     setShopAction('buy');
+    setShopGold(0);
+    setShopSilver(0);
+    setShopCopper(0);
+    setShopQuantity(1);
   };
 
   // Get display name for selected members
@@ -603,30 +517,80 @@ export function SessionQuickActions() {
 
   // ── Damage Flow ───────────────────────────────────────────────
 
+  const applyDamage = async (amount: number) => {
+    // Update HP on each selected character's sheet
+    for (const memberId of selectedMembers) {
+      const member = resolvedMembers.find(m => m.id === memberId);
+      if (!member?.character) continue;
+      const fresh = await getCharacterById(member.character.id);
+      if (!fresh) continue;
+      const hp = fresh.resources['hp'];
+      if (!hp) continue;
+      const newCurrent = Math.max(0, hp.current - amount);
+      await saveCharacter({
+        ...fresh,
+        resources: { ...fresh.resources, hp: { ...hp, current: newCurrent } },
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    await logEvent('generic', `Took ${amount} damage`, { damage: amount });
+  };
+
+  const applyHealing = async (amount: number) => {
+    // Update HP on each selected character's sheet
+    for (const memberId of selectedMembers) {
+      const member = resolvedMembers.find(m => m.id === memberId);
+      if (!member?.character) continue;
+      const fresh = await getCharacterById(member.character.id);
+      if (!fresh) continue;
+      const hp = fresh.resources['hp'];
+      if (!hp) continue;
+      const newCurrent = Math.min(hp.max, hp.current + amount);
+      await saveCharacter({
+        ...fresh,
+        resources: { ...fresh.resources, hp: { ...hp, current: newCurrent } },
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    await logEvent('generic', `Healed ${amount} HP`, { healing: amount });
+  };
+
   const renderDamagePicker = () => {
     const values = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 20];
     return (
       <div>
         <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>Damage taken:</p>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>Damage taken (updates HP):</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
           {values.map(v => (
             <button
               key={`t${v}`}
-              onClick={() => logEvent('generic', `Took ${v} damage`, {})}
+              onClick={() => applyDamage(v)}
               style={{ ...chipStyle, background: '#c0392b', color: '#fff', minWidth: '50px' }}
             >
               {v}
             </button>
           ))}
         </div>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>Damage dealt:</p>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>Healing (updates HP):</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+          {values.map(v => (
+            <button
+              key={`h${v}`}
+              onClick={() => applyHealing(v)}
+              style={{ ...chipStyle, background: '#27ae60', color: '#fff', minWidth: '50px' }}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>Damage dealt (log only):</p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {values.map(v => (
             <button
               key={`d${v}`}
               onClick={() => logEvent('generic', `Dealt ${v} damage`, {})}
-              style={{ ...chipStyle, background: '#27ae60', color: '#fff', minWidth: '50px' }}
+              style={{ ...chipStyle, background: 'var(--color-surface-raised)', color: 'var(--color-text)', minWidth: '50px' }}
             >
               {v}
             </button>
@@ -1007,98 +971,119 @@ export function SessionQuickActions() {
 
   // ── Shopping Flow ──────────────────────────────────────────────
 
-  const renderShoppingPicker = () => (
-    <div>
-      <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
-        <button
-          onClick={() => setShopAction('buy')}
+  const renderShoppingPicker = () => {
+    const totalGold = shopGold * shopQuantity;
+    const totalSilver = shopSilver * shopQuantity;
+    const totalCopper = shopCopper * shopQuantity;
+    const hasAnyCoin = shopGold > 0 || shopSilver > 0 || shopCopper > 0;
+    const totalStr = hasAnyCoin
+      ? [
+          totalGold > 0 ? `${totalGold}g` : '',
+          totalSilver > 0 ? `${totalSilver}s` : '',
+          totalCopper > 0 ? `${totalCopper}c` : '',
+        ].filter(Boolean).join(' ')
+      : '';
+
+    return (
+      <div>
+        <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
+        <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+          <button
+            onClick={() => setShopAction('buy')}
+            style={{
+              ...chipStyle,
+              flex: 1,
+              background: shopAction === 'buy' ? '#27ae60' : 'var(--color-surface-raised)',
+              color: shopAction === 'buy' ? '#fff' : 'var(--color-text)',
+            }}
+          >
+            Buy
+          </button>
+          <button
+            onClick={() => setShopAction('sell')}
+            style={{
+              ...chipStyle,
+              flex: 1,
+              background: shopAction === 'sell' ? 'var(--color-accent)' : 'var(--color-surface-raised)',
+              color: shopAction === 'sell' ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
+            }}
+          >
+            Sell
+          </button>
+        </div>
+        <input
+          type="text"
+          placeholder="Item name (optional)"
+          value={shopItem}
+          onChange={e => setShopItem(e.target.value)}
+          autoFocus
           style={{
-            ...chipStyle,
-            flex: 1,
-            background: shopAction === 'buy' ? '#27ae60' : 'var(--color-surface-raised)',
-            color: shopAction === 'buy' ? '#fff' : 'var(--color-text)',
+            width: '100%',
+            padding: '10px 12px',
+            minHeight: '44px',
+            background: 'var(--color-surface-raised)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '8px',
+            color: 'var(--color-text)',
+            fontSize: '16px',
+            marginBottom: '12px',
+            boxSizing: 'border-box',
+          }}
+        />
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+          Cost per item
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+          <CounterControl label="Gold" value={shopGold} min={0} onChange={setShopGold} />
+          <CounterControl label="Silver" value={shopSilver} min={0} onChange={setShopSilver} />
+          <CounterControl label="Copper" value={shopCopper} min={0} onChange={setShopCopper} />
+          <CounterControl label="Qty" value={shopQuantity} min={1} onChange={setShopQuantity} />
+        </div>
+        {hasAnyCoin && shopQuantity > 1 && (
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '12px' }}>
+            Total: {totalStr}
+          </p>
+        )}
+        <button
+          onClick={() => {
+            const verb = shopAction === 'buy' ? 'Bought' : 'Sold';
+            const itemPart = shopItem.trim() ? ` ${shopItem.trim()}` : '';
+            const coinPart = totalStr ? ` for ${totalStr}` : '';
+            const qtyPart = shopQuantity > 1 ? ` ×${shopQuantity}` : '';
+            logEvent('generic', `${verb}${itemPart}${qtyPart}${coinPart}`, {
+              action: shopAction,
+              item: shopItem.trim() || undefined,
+              quantity: shopQuantity,
+              costGold: shopGold,
+              costSilver: shopSilver,
+              costCopper: shopCopper,
+              totalGold,
+              totalSilver,
+              totalCopper,
+            });
+            setShopItem('');
+            setShopGold(0);
+            setShopSilver(0);
+            setShopCopper(0);
+            setShopQuantity(1);
+          }}
+          style={{
+            width: '100%',
+            minHeight: '44px',
+            background: shopAction === 'buy' ? '#27ae60' : 'var(--color-accent)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: 600,
+            cursor: 'pointer',
           }}
         >
-          Buy
-        </button>
-        <button
-          onClick={() => setShopAction('sell')}
-          style={{
-            ...chipStyle,
-            flex: 1,
-            background: shopAction === 'sell' ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-            color: shopAction === 'sell' ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-          }}
-        >
-          Sell
+          Log {shopAction === 'buy' ? 'Purchase' : 'Sale'}
         </button>
       </div>
-      <input
-        type="text"
-        placeholder="Item name"
-        value={shopItem}
-        onChange={e => setShopItem(e.target.value)}
-        autoFocus
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '8px',
-          boxSizing: 'border-box',
-        }}
-      />
-      <input
-        type="text"
-        placeholder="Cost — e.g. 5 gold, 10 silver (optional)"
-        value={shopCost}
-        onChange={e => setShopCost(e.target.value)}
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-        }}
-      />
-      <button
-        onClick={() => {
-          if (shopItem.trim()) {
-            const costStr = shopCost.trim() ? ` for ${shopCost.trim()}` : '';
-            const verb = shopAction === 'buy' ? 'Bought' : 'Sold';
-            logEvent('generic', `${verb} ${shopItem.trim()}${costStr}`, {});
-            setShopItem('');
-            setShopCost('');
-          }
-        }}
-        disabled={!shopItem.trim()}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: shopAction === 'buy' ? '#27ae60' : 'var(--color-accent)',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          opacity: !shopItem.trim() ? 0.6 : 1,
-        }}
-      >
-        Log {shopAction === 'buy' ? 'Purchase' : 'Sale'}
-      </button>
-    </div>
-  );
+    );
+  };
 
   // ── Render ────────────────────────────────────────────────────
 

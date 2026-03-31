@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
-import { getNoteById, getNotesByCampaign } from '../../storage/repositories/noteRepository';
+import { getNoteById, getNotesByCampaign, getNotesBySession } from '../../storage/repositories/noteRepository';
 import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
 import { getSessionById } from '../../storage/repositories/sessionRepository';
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
@@ -64,10 +64,14 @@ export function useExportActions() {
       const session = await getSessionById(sessionId);
       if (!session) { showToast('Session not found'); return; }
 
+      // Get notes by sessionId (primary) + any entity-linked notes as fallback
+      const sessionNotes = await getNotesBySession(sessionId);
       const containsLinks = await getLinksFrom(sessionId, 'contains');
       const linkedNoteIds = containsLinks.map(l => l.toEntityId);
-      const linkedNotes: Note[] = [];
+      const linkedNotes: Note[] = [...sessionNotes];
+      const seenIds = new Set(sessionNotes.map(n => n.id));
       for (const nid of linkedNoteIds) {
+        if (seenIds.has(nid)) continue;
         const n = await getNoteById(nid);
         if (n) linkedNotes.push(n);
       }
@@ -99,10 +103,14 @@ export function useExportActions() {
       const session = await getSessionById(sessionId);
       if (!session) { showToast('Session not found'); return; }
 
+      // Get notes by sessionId (primary) + any entity-linked notes as fallback
+      const sessionNotes = await getNotesBySession(sessionId);
       const containsLinks = await getLinksFrom(sessionId, 'contains');
       const linkedNoteIds = containsLinks.map(l => l.toEntityId);
-      const linkedNotes: Note[] = [];
+      const linkedNotes: Note[] = [...sessionNotes];
+      const seenIds = new Set(sessionNotes.map(n => n.id));
       for (const nid of linkedNoteIds) {
+        if (seenIds.has(nid)) continue;
         const n = await getNoteById(nid);
         if (n) linkedNotes.push(n);
       }

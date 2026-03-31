@@ -5,6 +5,7 @@ import { AttachButton } from '../../components/notes/AttachButton';
 import { AttachmentThumbs } from '../../components/notes/AttachmentThumbs';
 import { useNoteActions } from './useNoteActions';
 import { useCampaignContext } from '../campaign/CampaignContext';
+import { useAppState } from '../../context/AppStateContext';
 import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
 
 interface QuickNoteDrawerProps {
@@ -20,6 +21,15 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
   const pendingUrlsRef = useRef<string[]>([]);
   const { createNote } = useNoteActions();
   const { activeCampaign } = useCampaignContext();
+  const { settings, updateSettings } = useAppState();
+  const campaignId = activeCampaign?.id ?? null;
+  const customTags = campaignId ? (settings.customTags?.[campaignId] ?? []) : [];
+  const handleCreateTag = (tag: string) => {
+    if (!campaignId) return;
+    const existing = settings.customTags?.[campaignId] ?? [];
+    if (existing.includes(tag)) return;
+    updateSettings({ customTags: { ...settings.customTags, [campaignId]: [...existing, tag] } });
+  };
 
   // Build preview entries for pending files
   const pendingThumbs = pendingFiles.map((_file, index) => ({
@@ -118,7 +128,7 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
             boxSizing: 'border-box',
           }}
         />
-        <TagPicker selected={tags} onToggle={tag => setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])} />
+        <TagPicker selected={tags} onToggle={tag => setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])} customTags={customTags} onCreateTag={handleCreateTag} />
         <div style={{ marginBottom: '8px' }}>
           <AttachButton onFileSelected={handleFileSelected} disabled={pendingFiles.length >= 10} />
           <AttachmentThumbs
@@ -133,6 +143,8 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
             onChange={setBody}
             campaignId={activeCampaign?.id ?? null}
             placeholder="Add note body (optional)..."
+            showToolbar
+            minHeight="200px"
           />
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>

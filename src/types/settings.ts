@@ -20,4 +20,8 @@ export interface AppSettings extends Versioned {
   bottomNavTabs?: Record<string, boolean>;
   /** Panel display order for the Sheet page. */
   sheetPanelOrder?: string[];
+  /** Per-campaign preference for showing notes from other sessions in Notes Grid. Keyed by campaignId. */
+  showOtherSessionNotes?: Record<string, boolean>;
+  /** Per-campaign custom tags created by the user. Keyed by campaignId. */
+  customTags?: Record<string, string[]>;
 }

@@ -13,6 +13,7 @@ export interface CharacterSkill {
   value: number;
   trained: boolean;
   dragonMarked?: boolean;
+  demonMarked?: boolean;
 }
 
 export interface Weapon {

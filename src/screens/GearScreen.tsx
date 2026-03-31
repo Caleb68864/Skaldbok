@@ -22,7 +22,7 @@ export default function GearScreen() {
   const isEditMode = useIsEditMode();
   const armorEquipEditable = useFieldEditable('armor.equipped');
   const helmetEquipEditable = useFieldEditable('helmet.equipped');
-  const { logToSession } = useSessionLog();
+  const { logToSession, logCoinChange } = useSessionLog();
 
   const [weaponDrawerOpen, setWeaponDrawerOpen] = useState(false);
   const [editingWeapon, setEditingWeapon] = useState<Weapon | null>(null);
@@ -137,8 +137,7 @@ export default function GearScreen() {
     updateCharacter({ coins: { ...character.coins, [coin]: value }, updatedAt: nowISO() });
     const diff = value - old;
     if (diff !== 0) {
-      const action = diff > 0 ? 'Gained' : 'Spent';
-      logToSession(`${character.name}: ${action} ${Math.abs(diff)} ${coin}`);
+      logCoinChange(character.name, coin, diff);
     }
   }
 

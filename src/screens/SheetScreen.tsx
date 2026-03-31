@@ -29,7 +29,7 @@ export default function SheetScreen() {
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   const { showToast } = useToast();
-  const { logHPChange } = useSessionLog();
+  const { logHPChange, logDeathRoll, logRest } = useSessionLog();
 
   const isEditMode = useIsEditMode();
   const identityEditable = useFieldEditable('identity');
@@ -39,6 +39,38 @@ export default function SheetScreen() {
 
   // Reorder mode state
   const [reorderMode, setReorderMode] = useState(false);
+
+  // Death roll helpers (mirrored from CombatScreen)
+  function updateDeathRollCurrent(id: string, value: number) {
+    if (!character) return;
+    updateCharacter(prev => {
+      const res = prev.resources[id];
+      if (!res) return {};
+      return {
+        resources: { ...prev.resources, [id]: { ...res, current: value } },
+        updatedAt: nowISO(),
+      };
+    });
+  }
+
+  function updateDeathRolls(current: number) {
+    if (!character) return;
+    const prev = character.resources['deathRolls']?.current ?? 0;
+    updateDeathRollCurrent('deathRolls', current);
+    if (current > prev) logDeathRoll(character.name, current, false);
+  }
+
+  function updateDeathSuccesses(current: number) {
+    if (!character) return;
+    const prev = character.resources['deathSuccesses']?.current ?? 0;
+    updateDeathRollCurrent('deathSuccesses', current);
+    if (current > prev) logDeathRoll(character.name, current, true);
+  }
+
+  function resetDeathRolls() {
+    updateDeathRollCurrent('deathRolls', 0);
+    updateDeathRollCurrent('deathSuccesses', 0);
+  }
 
   // Rest modal state
   const [roundRestOpen, setRoundRestOpen] = useState(false);
@@ -83,9 +115,9 @@ export default function SheetScreen() {
       const current = prev.resources[id]?.current ?? 0;
       return { resources: { ...prev.resources, [id]: { ...prev.resources[id], current: current + delta } }, updatedAt: nowISO() };
     });
-    // Auto-log HP changes to active session
-    if (id === 'hp') {
-      logHPChange(character.name, oldCurrent, oldCurrent + delta, maxVal);
+    // Auto-log HP and WP changes to active session (debounced)
+    if (id === 'hp' || id === 'wp') {
+      logHPChange(character.name, oldCurrent, oldCurrent + delta, maxVal, id);
     }
   }
 
@@ -128,6 +160,7 @@ export default function SheetScreen() {
         updatedAt: nowISO(),
       });
       showToast(`Recovered ${result.recovered} WP.`, 'success');
+      logRest(character.name, 'Round Rest', `Recovered ${result.recovered} WP`);
     }
     setRoundRestOpen(false);
     setRoundRestWp('');
@@ -173,6 +206,7 @@ export default function SheetScreen() {
       parts.push(`Cleared ${condName}.`);
     }
     showToast(parts.join(' '), 'success');
+    logRest(character.name, 'Stretch Rest', parts.join(' '));
     setStretchRestOpen(false);
     setStretchRestWp('');
     setStretchRestHp('');
@@ -368,6 +402,7 @@ export default function SheetScreen() {
               parts.push(`Cleared ${names.join(', ')}.`);
             }
             showToast(parts.join(' '), 'success');
+            logRest(character.name, 'Shift Rest', 'Fully recovered');
           }}
         >
           Shift Rest
@@ -375,6 +410,139 @@ export default function SheetScreen() {
       </div>
     </SectionPanel>
   );
+
+  // Death rolls panel (only rendered when HP == 0)
+  const hp = character.resources['hp'] ?? { current: 0, max: 10 };
+  const isDown = hp.current === 0;
+  const deathRolls = character.resources['deathRolls'] ?? { current: 0, max: 3 };
+  const deathSuccesses = character.resources['deathSuccesses'] ?? { current: 0, max: 3 };
+  const deathRollFailures = deathRolls.current;
+  const deathRollMax = deathRolls.max;
+  const deathSuccessCount = deathSuccesses.current;
+  const deathSuccessMax = deathSuccesses.max;
+
+  const deathRollsPanel = isDown ? (
+    <SectionPanel title="Death Rolls" subtitle="p. 55" collapsible defaultOpen>
+      <div style={{
+        padding: 'var(--space-sm)',
+        borderRadius: 'var(--radius-md)',
+        border: '2px solid var(--color-danger)',
+        backgroundColor: 'rgba(224, 85, 85, 0.1)',
+      }}>
+        <p style={{
+          color: 'var(--color-danger)',
+          fontWeight: 'bold',
+          fontSize: 'var(--font-size-md)',
+          textAlign: 'center',
+          marginBottom: 'var(--space-sm)',
+        }}>
+          Character is DOWN!
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-md)' }}>
+            <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-md)', fontWeight: 'bold' }}>Failures:</span>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              {Array.from({ length: deathRollMax }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Death roll ${i + 1}`}
+                  onClick={() => {
+                    if (i < deathRollFailures) {
+                      updateDeathRolls(i);
+                    } else {
+                      updateDeathRolls(i + 1);
+                    }
+                  }}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    border: '2px solid var(--color-danger)',
+                    backgroundColor: i < deathRollFailures ? 'var(--color-danger)' : 'transparent',
+                    color: i < deathRollFailures ? 'var(--color-text-inverse, #fff)' : 'var(--color-danger)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {i < deathRollFailures ? '\u2716' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+          {deathRollFailures >= deathRollMax && (
+            <p style={{ color: 'var(--color-danger)', fontWeight: 'bold', fontSize: 'var(--font-size-lg)', textAlign: 'center' }}>
+              DEAD
+            </p>
+          )}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-md)' }}>
+            <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-md)', fontWeight: 'bold' }}>Successes:</span>
+            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+              {Array.from({ length: deathSuccessMax }, (_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  aria-label={`Death success ${i + 1}`}
+                  onClick={() => {
+                    if (i < deathSuccessCount) {
+                      updateDeathSuccesses(i);
+                    } else {
+                      updateDeathSuccesses(i + 1);
+                    }
+                  }}
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '50%',
+                    border: '2px solid var(--color-success, #27ae60)',
+                    backgroundColor: i < deathSuccessCount ? 'var(--color-success, #27ae60)' : 'transparent',
+                    color: i < deathSuccessCount ? '#fff' : 'var(--color-success, #27ae60)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {i < deathSuccessCount ? '\u2714' : ''}
+                </button>
+              ))}
+            </div>
+          </div>
+          {deathSuccessCount >= deathSuccessMax && (
+            <p style={{ color: 'var(--color-success, #27ae60)', fontWeight: 'bold', fontSize: 'var(--font-size-lg)', textAlign: 'center' }}>
+              Stabilized!
+            </p>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: 'var(--space-sm)' }}>
+            <button
+              type="button"
+              aria-label="Reset death rolls"
+              onClick={resetDeathRolls}
+              style={{
+                minWidth: 'var(--touch-target-min)',
+                minHeight: 'var(--touch-target-min)',
+                fontSize: 'var(--font-size-sm)',
+                background: 'var(--color-surface-alt)',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-sm)',
+                color: 'var(--color-text-muted)',
+                cursor: 'pointer',
+                padding: '0 var(--space-sm)',
+              }}
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
+    </SectionPanel>
+  ) : null;
 
   // ---- Panel map & visibility ----
   const panelMap: Record<string, React.ReactNode> = {
@@ -445,6 +613,8 @@ export default function SheetScreen() {
           {panelOrder.filter(key => panelVisibility[key] !== false && panelMap[key] !== undefined).map(key => (
             <div key={key} className={key === 'identity' ? 'sheet-grid__full-width' : undefined}>
               {panelMap[key]}
+              {/* Death rolls panel appears inline after Resources */}
+              {key === 'resources' && deathRollsPanel}
             </div>
           ))}
         </div>

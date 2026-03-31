@@ -42,7 +42,7 @@ export default function SkillsScreen() {
     updateCharacter({ skills: { ...character.skills, [skillId]: value }, updatedAt: nowISO() });
   }
 
-  function toggleDragonMark(skillId: string) {
+  function cycleSkillMark(skillId: string) {
     if (!character || skillsEditable) return;
     const cs = character.skills[skillId];
     const def = system?.skillCategories.flatMap(c => c.skills).find(s => s.id === skillId);
@@ -52,7 +52,18 @@ export default function SkillsScreen() {
       ? computeSkillValue(attrVal, trained)
       : (trained ? Math.max((def?.baseChance ?? 0) * 2, 1) : (def?.baseChance ?? 0));
     const skill = cs ?? { value: fallbackValue, trained: false };
-    const updated: CharacterSkill = { ...skill, dragonMarked: !(cs?.dragonMarked ?? false) };
+
+    let updated: CharacterSkill;
+    if (!cs?.dragonMarked && !cs?.demonMarked) {
+      // Unmarked -> Dragon
+      updated = { ...skill, dragonMarked: true, demonMarked: false };
+    } else if (cs?.dragonMarked) {
+      // Dragon -> Demon
+      updated = { ...skill, dragonMarked: false, demonMarked: true };
+    } else {
+      // Demon -> Clear
+      updated = { ...skill, dragonMarked: false, demonMarked: false };
+    }
     updateCharacter({ skills: { ...character.skills, [skillId]: updated }, updatedAt: nowISO() });
   }
 
@@ -210,11 +221,12 @@ export default function SkillsScreen() {
                   const overrideTitle = getOverrideTitle(skill.id);
 
                   const isDragonMarked = cs?.dragonMarked ?? false;
+                  const isDemonMarked = cs?.demonMarked ?? false;
 
                   const isTrained = cs?.trained ?? false;
 
                   return (
-                    <div key={skill.id} className={[isDragonMarked ? 'dragon-marked' : '', isTrained && !skillsEditable ? 'skill-trained' : ''].filter(Boolean).join(' ')} style={{
+                    <div key={skill.id} className={[isDragonMarked ? 'dragon-marked' : '', isDemonMarked ? 'demon-marked' : '', isTrained && !skillsEditable ? 'skill-trained' : ''].filter(Boolean).join(' ')} style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 'var(--space-sm)',
@@ -289,16 +301,19 @@ export default function SkillsScreen() {
                         {overrideLabel}
                       </button>
 
-                      {/* Dragon mark toggle (play mode only) */}
+                      {/* Skill mark cycle: unmarked -> dragon -> demon -> clear (play mode only) */}
                       {!skillsEditable && (
                         <button
-                          className={`dragon-mark-toggle${isDragonMarked ? ' dragon-mark-toggle--active' : ''}`}
-                          onClick={() => toggleDragonMark(skill.id)}
-                          title={isDragonMarked ? 'Dragon marked — tap to unmark' : 'Tap to dragon mark'}
-                          aria-label={isDragonMarked ? `Remove dragon mark from ${skill.name}` : `Dragon mark ${skill.name}`}
-                          aria-pressed={isDragonMarked}
+                          className={`dragon-mark-toggle${isDragonMarked ? ' dragon-mark-toggle--active' : ''}${isDemonMarked ? ' dragon-mark-toggle--demon' : ''}`}
+                          onClick={() => cycleSkillMark(skill.id)}
+                          title={isDragonMarked ? 'Dragon marked — tap for demon mark' : isDemonMarked ? 'Demon marked — tap to clear' : 'Tap to dragon mark'}
+                          aria-label={isDragonMarked ? `Dragon mark on ${skill.name}` : isDemonMarked ? `Demon mark on ${skill.name}` : `Mark ${skill.name}`}
+                          style={{
+                            background: isDragonMarked ? 'var(--color-accent)' : isDemonMarked ? '#c0392b' : 'var(--color-surface-raised)',
+                            color: (isDragonMarked || isDemonMarked) ? '#fff' : 'var(--color-text-muted)',
+                          }}
                         >
-                          🐉
+                          {isDragonMarked ? '🐉' : isDemonMarked ? '😈' : '○'}
                         </button>
                       )}
                     </div>
