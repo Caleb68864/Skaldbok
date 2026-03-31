@@ -1,0 +1,46 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: SR Test CampaignSession 1 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - main [ref=e9]:
+      - generic [ref=e34]:
+        - heading "SR Test Campaign" [level=2] [ref=e35]
+        - generic [ref=e36]:
+          - generic [ref=e40]:
+            - heading "Session 1 — 2026-03-31" [level=3] [ref=e41]
+            - generic [ref=e42]: 0m
+          - paragraph [ref=e43]: "Started: 3/31/2026, 10:45:47 AM"
+          - generic [ref=e44]:
+            - button "End Session" [ref=e45] [cursor=pointer]
+            - button "Export Session" [ref=e46] [cursor=pointer]
+            - button "Export + Notes (ZIP)" [ref=e47] [cursor=pointer]
+          - generic [ref=e48]:
+            - paragraph [ref=e49]: Quick Log
+            - generic [ref=e50]:
+              - button "Skill Check" [ref=e51] [cursor=pointer]
+              - button "Cast Spell" [ref=e52] [cursor=pointer]
+              - button "Ability" [ref=e53] [cursor=pointer]
+              - button "Condition" [ref=e54] [cursor=pointer]
+              - button "Damage" [ref=e55] [cursor=pointer]
+              - button "Death Roll" [ref=e56] [cursor=pointer]
+              - button "Rest" [ref=e57] [cursor=pointer]
+              - button "Camp" [ref=e58] [cursor=pointer]
+              - button "Travel" [ref=e59] [cursor=pointer]
+              - button "Quote" [ref=e60] [cursor=pointer]
+              - button "Rumor" [ref=e61] [cursor=pointer]
+              - button "Shopping" [ref=e62] [cursor=pointer]
+              - button "Encounter" [ref=e63] [cursor=pointer]
+              - button "Loot" [ref=e64] [cursor=pointer]
+          - button "Start Combat" [ref=e66] [cursor=pointer]
+        - button "Export All Notes (.zip)" [ref=e39] [cursor=pointer]
+    - navigation "Main navigation" [ref=e13]:
+      - link "Session" [ref=e14] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e15] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e16] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert

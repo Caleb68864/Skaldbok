@@ -13,6 +13,10 @@ import { useToast } from '../context/ToastContext';
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<CharacterRecord | null>(null);
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [pendingSetActiveId, setPendingSetActiveId] = useState<string | null>(null);
+  const [pendingSetActiveName, setPendingSetActiveName] = useState<string>('');
   const { character: activeCharacter, setCharacter } = useActiveCharacter();
   const { createCharacter, duplicateCharacter, deleteCharacter } = useCharacterActions();
   const { showToast } = useToast();
@@ -28,14 +32,50 @@ export default function CharacterLibraryScreen() {
     loadCharacters().catch(console.error);
   }, [loadCharacters]);
 
-  async function handleCreate() {
+  function handleCreate() {
+    setNameInput('');
+    setShowNamePrompt(true);
+  }
+
+  async function handleCreateConfirm() {
+    const trimmed = nameInput.trim();
+    if (!trimmed) return; // Guard: should not reach here with save disabled, but safety net
+    setShowNamePrompt(false);
+    const hadActiveCharacter = activeCharacter !== null;
     try {
-      await createCharacter();
+      const newChar = await createCharacter(trimmed);
       await loadCharacters();
-      showToast('Character created', 'success');
+      if (!hadActiveCharacter) {
+        // First character: auto-activate (AC3.1)
+        await setCharacter(newChar.id);
+        showToast('Character created and set as active', 'success');
+      } else {
+        // Subsequent character: offer Set Active? via inline banner (AC3.2)
+        setPendingSetActiveId(newChar.id);
+        setPendingSetActiveName(trimmed);
+        showToast('Character created', 'success');
+      }
     } catch (e) {
       showToast(String(e), 'error');
     }
+  }
+
+  async function handlePendingSetActive() {
+    if (!pendingSetActiveId) return;
+    await setCharacter(pendingSetActiveId);
+    setPendingSetActiveId(null);
+    setPendingSetActiveName('');
+    showToast('Active character updated', 'success');
+  }
+
+  function dismissPendingSetActive() {
+    setPendingSetActiveId(null);
+    setPendingSetActiveName('');
+  }
+
+  function handleCreateCancel() {
+    setShowNamePrompt(false);
+    setNameInput('');
   }
 
   async function handleDuplicate(id: string) {
@@ -104,6 +144,31 @@ export default function CharacterLibraryScreen() {
         onChange={handleImportFile}
       />
 
+      {/* Set Active? banner — shown when a second+ character is created (AC3.2, AC3.3) */}
+      {pendingSetActiveId && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 'var(--space-sm)',
+            background: 'var(--color-surface-raised)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '8px',
+            padding: '10px 16px',
+            marginBottom: 'var(--space-md)',
+          }}
+        >
+          <span style={{ color: 'var(--color-text)', fontSize: '14px' }}>
+            {pendingSetActiveName} created — Set Active?
+          </span>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)', flexShrink: 0 }}>
+            <Button size="sm" variant="primary" onClick={handlePendingSetActive}>Set Active</Button>
+            <Button size="sm" variant="secondary" onClick={dismissPendingSetActive}>Dismiss</Button>
+          </div>
+        </div>
+      )}
+
       {characters.length === 0 && (
         <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginTop: 'var(--space-xl)' }}>
           <p style={{ marginBottom: 'var(--space-md)' }}>No characters yet. Create your first character to get started.</p>
@@ -147,6 +212,47 @@ export default function CharacterLibraryScreen() {
           );
         })}
       </div>
+
+      <Modal
+        open={showNamePrompt}
+        onClose={handleCreateCancel}
+        title="New Character"
+        actions={
+          <>
+            <Button variant="secondary" onClick={handleCreateCancel}>Cancel</Button>
+            <Button
+              variant="primary"
+              onClick={handleCreateConfirm}
+              disabled={nameInput.trim().length === 0}
+            >
+              Create
+            </Button>
+          </>
+        }
+      >
+        <p style={{ color: 'var(--color-text-muted)', marginBottom: '12px', fontSize: '14px' }}>
+          Enter a name for your character.
+        </p>
+        <input
+          type="text"
+          placeholder="Character name"
+          value={nameInput}
+          onChange={e => setNameInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && nameInput.trim().length > 0) handleCreateConfirm(); }}
+          autoFocus
+          style={{
+            width: '100%',
+            padding: '10px 12px',
+            minHeight: '44px',
+            background: 'var(--color-surface-raised)',
+            border: '1px solid var(--color-border)',
+            borderRadius: '8px',
+            color: 'var(--color-text)',
+            fontSize: '16px',
+            boxSizing: 'border-box',
+          }}
+        />
+      </Modal>
 
       <Modal
         open={deleteTarget !== null}

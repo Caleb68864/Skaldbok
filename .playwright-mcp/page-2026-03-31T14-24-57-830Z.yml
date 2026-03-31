@@ -1,0 +1,163 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: No campaign
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - generic [ref=e46]:
+      - link "Sheet" [ref=e47] [cursor=pointer]:
+        - /url: /character/sheet
+      - link "Skills" [ref=e48] [cursor=pointer]:
+        - /url: /character/skills
+      - link "Gear" [ref=e49] [cursor=pointer]:
+        - /url: /character/gear
+      - link "Magic" [ref=e50] [cursor=pointer]:
+        - /url: /character/magic
+      - link "Combat" [ref=e51] [cursor=pointer]:
+        - /url: /character/combat
+    - main [ref=e9]:
+      - generic [ref=e52]:
+        - button "Reorder Panels" [ref=e54] [cursor=pointer]:
+          - img [ref=e55]
+          - text: Reorder Panels
+        - generic [ref=e57]:
+          - generic [ref=e59]:
+            - button "Identity ▲" [expanded] [ref=e60] [cursor=pointer]:
+              - heading "Identity" [level=3] [ref=e61]:
+                - img [ref=e62]
+                - text: Identity
+              - generic [ref=e64]: ▲
+            - generic [ref=e66]:
+              - generic [ref=e67]:
+                - button "View Test Warrior portrait" [ref=e68] [cursor=pointer]:
+                  - img "Test Warrior portrait" [ref=e69]
+                - button "Upload character portrait" [ref=e70] [cursor=pointer]:
+                  - img [ref=e71]
+              - generic [ref=e74]:
+                - generic [ref=e75]:
+                  - generic [ref=e76]: Name
+                  - textbox [ref=e77]: Test Warrior
+                - generic [ref=e78]:
+                  - generic [ref=e79]:
+                    - generic [ref=e80]: Kin
+                    - textbox "Kin" [ref=e81]
+                  - generic [ref=e82]:
+                    - generic [ref=e83]: Profession
+                    - textbox "Profession" [ref=e84]
+                  - generic [ref=e85]:
+                    - generic [ref=e86]: Age
+                    - textbox "Age" [ref=e87]: Adult
+                - generic [ref=e88]:
+                  - generic [ref=e89]: Weakness
+                  - textbox "Weakness" [ref=e90]
+          - generic [ref=e92]:
+            - button "Attributes p. 28-29 ▲" [expanded] [ref=e93] [cursor=pointer]:
+              - heading "Attributes p. 28-29" [level=3] [ref=e94]:
+                - img [ref=e95]
+                - text: Attributes
+                - generic [ref=e97]: p. 28-29
+              - generic [ref=e98]: ▲
+            - generic [ref=e100]:
+              - generic [ref=e101]:
+                - generic [ref=e102]: STR
+                - generic [ref=e103]:
+                  - button "Decrease STR" [ref=e104] [cursor=pointer]: −
+                  - generic [ref=e105]: "10"
+                  - button "Increase STR" [ref=e106] [cursor=pointer]: +
+                - switch "Exhausted condition (STR)" [ref=e108] [cursor=pointer]: Exhausted
+              - generic [ref=e109]:
+                - generic [ref=e110]: CON
+                - generic [ref=e111]:
+                  - button "Decrease CON" [ref=e112] [cursor=pointer]: −
+                  - generic [ref=e113]: "10"
+                  - button "Increase CON" [ref=e114] [cursor=pointer]: +
+                - switch "Sickly condition (CON)" [ref=e116] [cursor=pointer]: Sickly
+              - generic [ref=e117]:
+                - generic [ref=e118]: AGL
+                - generic [ref=e119]:
+                  - button "Decrease AGL" [ref=e120] [cursor=pointer]: −
+                  - generic [ref=e121]: "10"
+                  - button "Increase AGL" [ref=e122] [cursor=pointer]: +
+                - switch "Dazed condition (AGL)" [ref=e124] [cursor=pointer]: Dazed
+              - generic [ref=e125]:
+                - generic [ref=e126]: INT
+                - generic [ref=e127]:
+                  - button "Decrease INT" [ref=e128] [cursor=pointer]: −
+                  - generic [ref=e129]: "10"
+                  - button "Increase INT" [ref=e130] [cursor=pointer]: +
+                - switch "Angry condition (INT)" [ref=e132] [cursor=pointer]: Angry
+              - generic [ref=e133]:
+                - generic [ref=e134]: WIL
+                - generic [ref=e135]:
+                  - button "Decrease WIL" [ref=e136] [cursor=pointer]: −
+                  - generic [ref=e137]: "10"
+                  - button "Increase WIL" [ref=e138] [cursor=pointer]: +
+                - switch "Scared condition (WIL)" [ref=e140] [cursor=pointer]: Scared
+              - generic [ref=e141]:
+                - generic [ref=e142]: CHA
+                - generic [ref=e143]:
+                  - button "Decrease CHA" [ref=e144] [cursor=pointer]: −
+                  - generic [ref=e145]: "10"
+                  - button "Increase CHA" [ref=e146] [cursor=pointer]: +
+                - switch "Disheartened condition (CHA)" [ref=e148] [cursor=pointer]: Disheartened
+          - generic [ref=e150]:
+            - button "Resources p. 55 ▲" [expanded] [ref=e151] [cursor=pointer]:
+              - heading "Resources p. 55" [level=3] [ref=e152]:
+                - img [ref=e153]
+                - text: Resources
+                - generic [ref=e155]: p. 55
+              - generic [ref=e156]: ▲
+            - generic [ref=e158]:
+              - generic [ref=e159]:
+                - generic [ref=e160]: Hit Points
+                - generic [ref=e161]:
+                  - button "Decrease Hit Points" [ref=e162] [cursor=pointer]: −
+                  - generic [ref=e163]: "10"
+                  - button "Increase Hit Points" [disabled] [ref=e164] [cursor=pointer]: +
+                  - generic [ref=e165]: /
+                  - generic [ref=e166]:
+                    - button "Decrease Hit Points max" [ref=e167] [cursor=pointer]: −
+                    - generic [ref=e168]: "10"
+                    - button "Increase Hit Points max" [ref=e169] [cursor=pointer]: +
+              - generic [ref=e170]:
+                - generic [ref=e171]: Willpower Points
+                - generic [ref=e172]:
+                  - button "Decrease Willpower Points" [ref=e173] [cursor=pointer]: −
+                  - generic [ref=e174]: "10"
+                  - button "Increase Willpower Points" [disabled] [ref=e175] [cursor=pointer]: +
+                  - generic [ref=e176]: /
+                  - generic [ref=e177]:
+                    - button "Decrease Willpower Points max" [ref=e178] [cursor=pointer]: −
+                    - generic [ref=e179]: "10"
+                    - button "Increase Willpower Points max" [ref=e180] [cursor=pointer]: +
+          - generic [ref=e182]:
+            - button "Derived Values ▲" [expanded] [ref=e183] [cursor=pointer]:
+              - heading "Derived Values" [level=3] [ref=e184]:
+                - img [ref=e185]
+                - text: Derived Values
+              - generic [ref=e187]: ▲
+            - generic [ref=e189]:
+              - generic [ref=e190]:
+                - generic [ref=e191]: Movement
+                - generic [ref=e193] [cursor=pointer]: "10"
+              - generic [ref=e194]:
+                - generic [ref=e195]: HP Max
+                - generic [ref=e197] [cursor=pointer]: "10"
+              - generic [ref=e198]:
+                - generic [ref=e199]: WP Max
+                - generic [ref=e201] [cursor=pointer]: "10"
+              - generic [ref=e202]:
+                - generic [ref=e203]: STR Damage Bonus
+                - generic [ref=e205] [cursor=pointer]: "+0"
+              - generic [ref=e206]:
+                - generic [ref=e207]: AGL Damage Bonus
+                - generic [ref=e209] [cursor=pointer]: "+0"
+    - navigation "Main navigation" [ref=e23]:
+      - link "Session" [ref=e24] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e25] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [active] [ref=e26] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert

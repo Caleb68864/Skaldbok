@@ -1,0 +1,117 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: SR Test CampaignSession 1 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - main [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - button "Quick Note" [ref=e12] [cursor=pointer]
+          - button "Quick NPC" [ref=e13] [cursor=pointer]
+          - button "Location" [ref=e14] [cursor=pointer]
+          - button "Link Note" [ref=e15] [cursor=pointer]
+        - heading "NPCs 1" [level=3] [ref=e16]:
+          - text: NPCs
+          - generic [ref=e17]: "1"
+        - generic [ref=e19]:
+          - generic [ref=e20]:
+            - text: Test npc note
+            - generic [ref=e21]: 10:46 AM · npc
+          - button "Note actions" [ref=e22] [cursor=pointer]: ...
+        - heading "Notes 5" [level=3] [ref=e111]:
+          - text: Notes
+          - generic [ref=e24]: "5"
+        - generic [ref=e26]:
+          - generic [ref=e27]:
+            - text: Dragon Lair
+            - generic [ref=e28]: 10:47 AM
+          - button "Note actions" [ref=e29] [cursor=pointer]: ...
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - text: Tavern Rumors
+            - generic [ref=e33]: 10:47 AM
+          - button "Note actions" [ref=e34] [cursor=pointer]: ...
+        - generic [ref=e36]:
+          - generic [ref=e37]:
+            - text: Test generic note
+            - generic [ref=e38]: 10:46 AM
+          - button "Note actions" [ref=e39] [cursor=pointer]: ...
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - text: Mountain Pass
+            - generic [ref=e43]: 10:47 AM
+          - button "Note actions" [ref=e44] [cursor=pointer]: ...
+        - generic [ref=e113]:
+          - generic [ref=e114]:
+            - text: Attachment Test Note
+            - generic [ref=e115]: 10:52 AM
+          - button "Note actions" [ref=e116] [cursor=pointer]: ...
+        - heading "Locations 1" [level=3] [ref=e45]:
+          - text: Locations
+          - generic [ref=e46]: "1"
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - text: Test location note
+            - generic [ref=e50]: 10:46 AM · location
+          - button "Note actions" [ref=e51] [cursor=pointer]: ...
+        - heading "Combat Logs 1" [level=3] [ref=e52]:
+          - text: Combat Logs
+          - generic [ref=e53]: "1"
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - text: Test combat note
+            - generic [ref=e57]: 10:46 AM · combat
+          - button "Note actions" [ref=e58] [cursor=pointer]: ...
+        - dialog "Quick NPC" [ref=e117]:
+          - generic [ref=e118]:
+            - heading "Quick NPC" [level=3] [ref=e119]
+            - textbox "NPC name (required)" [active] [ref=e120]
+            - textbox "Role (optional)" [ref=e121]
+            - textbox "Affiliation (optional)" [ref=e122]
+            - generic [ref=e123]:
+              - paragraph [ref=e124]: Tags
+              - generic [ref=e125]:
+                - button "tense" [ref=e126] [cursor=pointer]
+                - button "funny" [ref=e127] [cursor=pointer]
+                - button "dramatic" [ref=e128] [cursor=pointer]
+                - button "sad" [ref=e129] [cursor=pointer]
+                - button "victorious" [ref=e130] [cursor=pointer]
+                - button "combat" [ref=e131] [cursor=pointer]
+                - button "exploration" [ref=e132] [cursor=pointer]
+                - button "social" [ref=e133] [cursor=pointer]
+                - button "mystery" [ref=e134] [cursor=pointer]
+                - button "travel" [ref=e135] [cursor=pointer]
+                - button "downtime" [ref=e136] [cursor=pointer]
+                - button "important" [ref=e137] [cursor=pointer]
+                - button "follow-up" [ref=e138] [cursor=pointer]
+                - button "plot-hook" [ref=e139] [cursor=pointer]
+                - button "lore" [ref=e140] [cursor=pointer]
+                - button "treasure" [ref=e141] [cursor=pointer]
+                - button "npc" [ref=e142] [cursor=pointer]
+                - button "location" [ref=e143] [cursor=pointer]
+                - button "rumor" [ref=e144] [cursor=pointer]
+                - button "quest" [ref=e145] [cursor=pointer]
+                - button "loot" [ref=e146] [cursor=pointer]
+                - button "skill-check" [ref=e147] [cursor=pointer]
+                - button "spell" [ref=e148] [cursor=pointer]
+                - button "ability" [ref=e149] [cursor=pointer]
+                - button "death" [ref=e150] [cursor=pointer]
+                - button "rest" [ref=e151] [cursor=pointer]
+            - button "📎 Attach Photo" [ref=e153] [cursor=pointer]:
+              - generic [ref=e154]: 📎
+              - text: Attach Photo
+            - textbox [ref=e157]:
+              - paragraph [ref=e158]
+            - generic [ref=e159]:
+              - button "Save NPC" [disabled] [ref=e160] [cursor=pointer]
+              - button "Cancel" [ref=e161] [cursor=pointer]
+    - navigation "Main navigation" [ref=e59]:
+      - link "Session" [ref=e60] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e61] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e62] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert

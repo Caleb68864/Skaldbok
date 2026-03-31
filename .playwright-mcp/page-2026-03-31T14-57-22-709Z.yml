@@ -1,0 +1,25 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - main [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - button "📖 Game Reference" [ref=e12] [cursor=pointer]
+          - button "📝 My Notes" [active] [ref=e13] [cursor=pointer]
+        - generic [ref=e5193]:
+          - generic [ref=e5194]:
+            - heading "Reference Notes" [level=1] [ref=e5195]
+            - button "+ Add Note" [ref=e5196] [cursor=pointer]
+          - paragraph [ref=e5198]: No reference notes yet. Add your own shorthand notes for quick reference during play.
+    - navigation "Main navigation" [ref=e1818]:
+      - link "Session" [ref=e1819] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e1820] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e1821] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert

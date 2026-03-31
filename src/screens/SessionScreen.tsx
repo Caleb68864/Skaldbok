@@ -53,7 +53,7 @@ export function SessionScreen() {
     setElapsed(formatElapsed(activeSession.startedAt));
     const interval = setInterval(() => {
       setElapsed(formatElapsed(activeSession.startedAt));
-    }, 30000); // update every 30s
+    }, 10000); // update every 10s
     return () => clearInterval(interval);
   }, [activeSession?.startedAt, formatElapsed]);
 
@@ -204,10 +204,12 @@ export function SessionScreen() {
             </button>
           </div>
 
-          {/* Quick session actions */}
-          <div style={{ marginTop: '16px' }}>
-            <SessionQuickActions />
-          </div>
+          {/* Quick session actions — hidden during combat to prevent overlay */}
+          {!showCombatView && (
+            <div style={{ marginTop: '16px' }}>
+              <SessionQuickActions />
+            </div>
+          )}
 
           {/* Combat section */}
           {showCombatView && activeCombatNoteId ? (
@@ -353,7 +355,7 @@ export function SessionScreen() {
                   <button
                     onClick={() => exportSessionMarkdown(session.id)}
                     style={{
-                      minHeight: '36px',
+                      minHeight: '44px',
                       padding: '0 8px',
                       background: 'none',
                       border: '1px solid var(--color-border)',
@@ -368,7 +370,7 @@ export function SessionScreen() {
                   <button
                     onClick={() => exportSessionBundle(session.id)}
                     style={{
-                      minHeight: '36px',
+                      minHeight: '44px',
                       padding: '0 8px',
                       background: 'none',
                       border: '1px solid var(--color-border)',

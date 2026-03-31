@@ -22,7 +22,8 @@ export function TagPicker({ selected, onToggle }: TagPickerProps) {
             key={tag}
             onClick={() => onToggle(tag)}
             style={{
-              minHeight: '30px',
+              minHeight: '44px',
+              minWidth: '44px',
               padding: '0 8px',
               borderRadius: '15px',
               border: 'none',

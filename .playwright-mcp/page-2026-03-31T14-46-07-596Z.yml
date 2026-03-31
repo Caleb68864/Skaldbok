@@ -1,0 +1,41 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - generic [ref=e891]:
+      - link "Sheet" [ref=e892] [cursor=pointer]:
+        - /url: /character/sheet
+      - link "Skills" [active] [ref=e893] [cursor=pointer]:
+        - /url: /character/skills
+      - link "Gear" [ref=e894] [cursor=pointer]:
+        - /url: /character/gear
+      - link "Magic" [ref=e895] [cursor=pointer]:
+        - /url: /character/magic
+      - link "Combat" [ref=e896] [cursor=pointer]:
+        - /url: /character/combat
+    - main [ref=e9]:
+      - generic [ref=e1462]:
+        - generic [ref=e1463]:
+          - heading "Skills" [level=1] [ref=e1464]
+          - generic [ref=e1465]:
+            - button "Relevant" [ref=e1466] [cursor=pointer]
+            - button "All" [ref=e1467] [cursor=pointer]
+        - group "Global boon/bane selector" [ref=e1468]:
+          - button "Boon" [ref=e1469] [cursor=pointer]
+          - button "Normal" [pressed] [ref=e1470] [cursor=pointer]
+          - button "Bane" [ref=e1471] [cursor=pointer]
+    - navigation "Main navigation" [ref=e23]:
+      - link "Session" [ref=e24] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e25] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e26] [cursor=pointer]:
+        - /url: /character/sheet
+    - generic [ref=e1055]:
+      - button "🎲" [ref=e1056] [cursor=pointer]
+      - button "✨" [ref=e1371] [cursor=pointer]
+      - button "⚔️" [ref=e1461] [cursor=pointer]
+  - alert

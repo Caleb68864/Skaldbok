@@ -1,9 +1,12 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
+import { DescriptorMention } from '../../features/notes/descriptorMentionExtension';
+import { useDescriptorSuggestions } from '../../features/notes/useDescriptorSuggestions';
 import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
 import { getAll as getAllCharacters } from '../../storage/repositories/characterRepository';
+import type { Note } from '../../types/note';
 
 export interface TiptapNoteEditorProps {
   initialContent: unknown; // ProseMirror JSON object (or null/undefined for empty)
@@ -12,7 +15,7 @@ export interface TiptapNoteEditorProps {
   placeholder?: string;
 }
 
-// Minimal suggestion popup renderer
+// Minimal suggestion popup renderer for @mention (items are {id, title} objects)
 function createSuggestionRenderer() {
   let container: HTMLDivElement | null = null;
 
@@ -105,6 +108,87 @@ function createSuggestionRenderer() {
   };
 }
 
+// Minimal suggestion popup renderer for #descriptor (items are strings)
+function createDescriptorRenderer() {
+  let container: HTMLDivElement | null = null;
+
+  const buildItems = (
+    items: string[],
+    command: (item: { id: string; label: string }) => void
+  ) => {
+    items.forEach(label => {
+      const btn = document.createElement('button');
+      btn.textContent = `#${label}`;
+      btn.style.cssText = [
+        'display: block',
+        'width: 100%',
+        'text-align: left',
+        'padding: 8px 12px',
+        'min-height: 44px',
+        'background: none',
+        'border: none',
+        'cursor: pointer',
+        'color: var(--color-text, #333)',
+        'font-size: 14px',
+      ].join(';');
+      btn.addEventListener('click', () => {
+        command({ id: label, label });
+      });
+      btn.addEventListener('mouseover', () => {
+        btn.style.background = 'var(--color-surface-raised, #f0f0f0)';
+      });
+      btn.addEventListener('mouseout', () => {
+        btn.style.background = 'none';
+      });
+      container!.appendChild(btn);
+    });
+  };
+
+  return {
+    onStart: (props: { items: string[]; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
+      if (!props.items.length) return;
+      container = document.createElement('div');
+      container.style.cssText = [
+        'position: fixed',
+        'z-index: 9999',
+        'background: var(--color-surface, #fff)',
+        'border: 1px solid var(--color-border, #ccc)',
+        'border-radius: 4px',
+        'box-shadow: 0 2px 12px rgba(0,0,0,0.2)',
+        'max-height: 200px',
+        'overflow-y: auto',
+        'min-width: 180px',
+      ].join(';');
+      const rect = props.clientRect?.();
+      if (rect) {
+        container.style.top = `${rect.bottom + 4}px`;
+        container.style.left = `${rect.left}px`;
+      }
+      buildItems(props.items, props.command);
+      document.body.appendChild(container);
+    },
+    onUpdate: (props: { items: string[]; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
+      if (!container) return;
+      container.innerHTML = '';
+      const rect = props.clientRect?.();
+      if (rect) {
+        container.style.top = `${rect.bottom + 4}px`;
+        container.style.left = `${rect.left}px`;
+      }
+      buildItems(props.items, props.command);
+    },
+    onKeyDown: ({ event }: { event: KeyboardEvent }) => {
+      return event.key === 'Escape';
+    },
+    onExit: () => {
+      if (container) {
+        container.remove();
+        container = null;
+      }
+    },
+  };
+}
+
 function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) => void; placeholder?: string }) {
   return (
     <textarea
@@ -129,8 +213,29 @@ function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) =
 
 export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeholder }: TiptapNoteEditorProps) {
   const [failed, setFailed] = React.useState(false);
+  const [campaignNotes, setCampaignNotes] = useState<Note[]>([]);
   const rendererRef = useRef(createSuggestionRenderer());
+  const descriptorRendererRef = useRef(createDescriptorRenderer());
   const initTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Load campaign notes for descriptor frequency map
+  useEffect(() => {
+    if (!campaignId) return;
+    let mounted = true;
+    getNotesByCampaign(campaignId).then(notes => {
+      if (mounted) setCampaignNotes(notes);
+    }).catch(() => {/* ignore */});
+    return () => { mounted = false; };
+  }, [campaignId]);
+
+  // Descriptor suggestions hook (frequency-ranked)
+  const { getSuggestions } = useDescriptorSuggestions(campaignNotes);
+
+  // Store getSuggestions in a ref so TipTap's suggestion closure can access current value
+  const getSuggestionsRef = useRef(getSuggestions);
+  useEffect(() => {
+    getSuggestionsRef.current = getSuggestions;
+  }, [getSuggestions]);
 
   const editor = useEditor(
     {
@@ -172,6 +277,17 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
               }
             },
             render: () => rendererRef.current,
+          },
+        }),
+        DescriptorMention.configure({
+          HTMLAttributes: { class: 'descriptor-mention' },
+          suggestion: {
+            char: '#',
+            items: ({ query }: { query: string }) => {
+              // Use ref to access current getSuggestions from hook
+              return getSuggestionsRef.current(query);
+            },
+            render: () => descriptorRendererRef.current,
           },
         }),
       ],

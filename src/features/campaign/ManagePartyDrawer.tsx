@@ -164,7 +164,7 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
                   onClick={() => handleSetMyCharacter(member.id)}
                   disabled={saving || activeCampaign?.activeCharacterMemberId === member.id}
                   style={{
-                    minHeight: '36px',
+                    minHeight: '44px',
                     padding: '0 10px',
                     background: 'none',
                     border: '1px solid var(--color-border)',
@@ -182,7 +182,7 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
                   onClick={() => handleRemoveMember(member.id)}
                   disabled={saving}
                   style={{
-                    minHeight: '36px',
+                    minHeight: '44px',
                     padding: '0 10px',
                     background: 'none',
                     border: '1px solid var(--color-border)',

@@ -12,7 +12,7 @@ import { getNotesByCampaign } from '../storage/repositories/noteRepository';
 import type { Note } from '../types/note';
 
 export function NotesScreen() {
-  const { activeCampaign } = useCampaignContext();
+  const { activeCampaign, activeSession } = useCampaignContext();
   const { pinNote, unpinNote, deleteNote } = useNoteActions();
   const { exportNote, copyNoteAsMarkdown } = useExportActions();
   const [notes, setNotes] = useState<Note[]>([]);
@@ -35,6 +35,13 @@ export function NotesScreen() {
     });
     return () => { mounted = false; };
   }, [activeCampaign?.id]);
+
+  // Auto-close Link Note drawer when session ends (AC6.4)
+  useEffect(() => {
+    if (!activeSession && showLinkNote) {
+      setShowLinkNote(false);
+    }
+  }, [activeSession, showLinkNote]);
 
   if (!activeCampaign) {
     return <NoCampaignPrompt />;
@@ -99,12 +106,11 @@ export function NotesScreen() {
   return (
     <div style={{ padding: '16px', position: 'relative' }}>
       {/* Action bar */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
         {[
           { label: 'Quick Note', onClick: () => setShowQuickNote(true) },
           { label: 'Quick NPC', onClick: () => setShowQuickNPC(true) },
           { label: 'Location', onClick: () => setShowQuickLocation(true) },
-          { label: 'Link Note', onClick: () => setShowLinkNote(true) },
         ].map(({ label, onClick }) => (
           <button
             key={label}
@@ -126,6 +132,43 @@ export function NotesScreen() {
             {label}
           </button>
         ))}
+        {/* Link Note — only shown when an active session exists (AC6.1, AC6.2) */}
+        {activeSession ? (
+          <button
+            onClick={() => setShowLinkNote(true)}
+            style={{
+              flex: 1,
+              minHeight: '44px',
+              minWidth: '44px',
+              padding: '0 8px',
+              background: 'var(--color-surface-raised)',
+              border: '1px solid var(--color-border)',
+              borderRadius: '8px',
+              color: 'var(--color-text)',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: 600,
+            }}
+          >
+            Link Note
+          </button>
+        ) : (
+          <span
+            style={{
+              flex: 1,
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-text-muted)',
+              fontSize: '12px',
+              padding: '0 8px',
+              textAlign: 'center',
+            }}
+          >
+            Start a session to link notes
+          </span>
+        )}
       </div>
 
       {/* Pinned section */}

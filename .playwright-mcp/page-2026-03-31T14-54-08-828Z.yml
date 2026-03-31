@@ -1,0 +1,41 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e7]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e8]: ▼
+      - button "Menu" [ref=e9] [cursor=pointer]: ☰
+    - main [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - heading "Character Library" [level=1] [ref=e13]
+          - generic [ref=e14]:
+            - button "Import Character" [ref=e15] [cursor=pointer]
+            - button "+ New Character" [ref=e16] [cursor=pointer]
+        - generic [ref=e19]:
+          - generic [ref=e20]:
+            - heading "Test Warrior(Active)" [level=2] [ref=e21]
+            - paragraph [ref=e22]: No details
+            - paragraph [ref=e23]: "Updated: 3/31/2026"
+          - generic [ref=e24]:
+            - button "Export" [ref=e25] [cursor=pointer]
+            - button "Duplicate" [ref=e26] [cursor=pointer]
+            - button "Delete" [ref=e27] [cursor=pointer]
+        - dialog "New Character" [ref=e33]:
+          - generic [ref=e34]:
+            - heading "New Character" [level=2] [ref=e35]
+            - button "Close modal" [ref=e36] [cursor=pointer]: ✕
+          - generic [ref=e37]:
+            - paragraph [ref=e38]: Enter a name for your character.
+            - textbox "Character name" [active] [ref=e39]
+          - generic [ref=e40]:
+            - button "Cancel" [ref=e41] [cursor=pointer]
+            - button "Create" [disabled] [ref=e42]
+    - navigation "Main navigation" [ref=e28]:
+      - link "Session" [ref=e29] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e30] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e31] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert

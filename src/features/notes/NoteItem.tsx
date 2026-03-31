@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Note } from '../../types/note';
+import { extractDescriptors } from '../../utils/notes/extractDescriptors';
 
 interface NoteItemProps {
   note: Note;
@@ -12,24 +13,29 @@ interface NoteItemProps {
 
 export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: NoteItemProps) {
   const [showActions, setShowActions] = useState(false);
+  const descriptors = extractDescriptors(note.body);
 
   return (
     <div
       style={{
-        display: 'flex',
-        alignItems: 'center',
         padding: '10px 0',
         borderBottom: '1px solid var(--color-border)',
-        minHeight: '44px',
       }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ color: 'var(--color-text)', fontSize: '14px' }}>{note.title}</span>
-        <span style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: '11px', marginTop: '2px' }}>
-          {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          {note.type !== 'generic' && ` · ${note.type}`}
-        </span>
-      </div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          minHeight: '44px',
+        }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span style={{ color: 'var(--color-text)', fontSize: '14px' }}>{note.title}</span>
+          <span style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: '11px', marginTop: '2px' }}>
+            {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            {note.type !== 'generic' && ` · ${note.type}`}
+          </span>
+        </div>
       <button
         onClick={() => setShowActions(v => !v)}
         aria-label="Note actions"
@@ -82,6 +88,30 @@ export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: N
             >
               {label}
             </button>
+          ))}
+        </div>
+      )}
+      </div>
+      {/* Descriptor chip row — rendered only when note has descriptors (AC5.8) */}
+      {descriptors.length > 0 && (
+        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+          {descriptors.map(label => (
+            <span
+              key={label}
+              style={{
+                display: 'inline-block',
+                padding: '2px 10px',
+                minHeight: '24px',
+                background: 'var(--color-surface-raised)',
+                border: '1px solid var(--color-border)',
+                borderRadius: '12px',
+                color: 'var(--color-accent)',
+                fontSize: '12px',
+                fontWeight: 600,
+              }}
+            >
+              #{label}
+            </span>
           ))}
         </div>
       )}

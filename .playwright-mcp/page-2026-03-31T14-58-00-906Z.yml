@@ -1,0 +1,43 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]: Test CampaignSession 2 — 2026-03-31
+        - generic [ref=e7]: ▼
+      - button "Menu" [ref=e8] [cursor=pointer]: ☰
+    - main [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - button "📖 Game Reference" [ref=e12] [cursor=pointer]
+          - button "📝 My Notes" [ref=e13] [cursor=pointer]
+        - generic [ref=e5193]:
+          - generic [ref=e5194]:
+            - heading "Reference Notes" [level=1] [ref=e5195]
+            - button "+ Add Note" [ref=e5196] [cursor=pointer]
+          - generic [ref=e5217] [cursor=pointer]:
+            - generic [ref=e5218]:
+              - heading "Initiative Rules Cheat Sheet" [level=2] [ref=e5219]
+              - paragraph [ref=e5220]: Draw initiative cards at start of each round. Lowest acts first. Swap allowed once per round.
+            - button "Delete" [ref=e5221]
+        - generic [ref=e5223]:
+          - generic [ref=e5224]:
+            - heading "Edit Note" [level=2] [ref=e5225]
+            - button "Close drawer" [ref=e5226] [cursor=pointer]: ✕
+          - generic [ref=e5228]:
+            - generic [ref=e5229]:
+              - generic [ref=e5230]: Title
+              - textbox [ref=e5231]: Initiative Rules Cheat Sheet
+            - generic [ref=e5232]:
+              - generic [ref=e5233]: Content
+              - textbox [ref=e5234]: Draw initiative cards at start of each round. Lowest acts first. Swap allowed once per round.
+            - generic [ref=e5235]:
+              - button "Cancel" [ref=e5236] [cursor=pointer]
+              - button "Save" [ref=e5237] [cursor=pointer]
+    - navigation "Main navigation" [ref=e1818]:
+      - link "Session" [ref=e1819] [cursor=pointer]:
+        - /url: /session
+      - link "Notes" [ref=e1820] [cursor=pointer]:
+        - /url: /notes
+      - link "Character" [ref=e1821] [cursor=pointer]:
+        - /url: /character/sheet
+  - alert
