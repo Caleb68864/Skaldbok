@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
+import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { getDerivedValue } from '../utils/derivedValues';
 import PrintableSheet from '../components/PrintableSheet';
@@ -17,18 +18,26 @@ interface PrintDerivedValues {
 
 export default function PrintableSheetScreen() {
   const navigate = useNavigate();
-  const { character, isLoading } = useActiveCharacter();
+  const { isLoading: settingsLoading, settings } = useAppState();
+  const { character, isLoading: characterLoading } = useActiveCharacter();
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const [colorMode, setColorMode] = useState<'color' | 'bw'>('color');
 
-  // Guard: loading
-  if (isLoading) return <div>Loading...</div>;
+  // Wait for settings to load, then wait for character to load.
+  // The character provider re-fires when activeCharacterId changes,
+  // so we must wait for both to settle before deciding "no character."
+  const stillLoading = settingsLoading || characterLoading;
+  const waitingForCharacter = !settingsLoading && !characterLoading && !!settings.activeCharacterId && !character;
 
-  // Guard: no character
-  if (!character) {
-    navigate('/library');
-    return null;
-  }
+  // Redirect to library only when fully settled with no character
+  useEffect(() => {
+    if (!stillLoading && !waitingForCharacter && !character) {
+      navigate('/library');
+    }
+  }, [stillLoading, waitingForCharacter, character, navigate]);
+
+  if (stillLoading || waitingForCharacter) return <div>Loading...</div>;
+  if (!character) return null;
 
   // Compute derived values
   const derived: PrintDerivedValues = {

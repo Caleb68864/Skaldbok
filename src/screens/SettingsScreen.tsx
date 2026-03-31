@@ -12,6 +12,7 @@ import * as characterRepository from '../storage/repositories/characterRepositor
 import type { ThemeName } from '../theme/themes';
 import { DEFAULT_BOTTOM_NAV_TABS } from '../features/settings/useAppSettings';
 import { nowISO } from '../utils/dates';
+import { usePwaInstall } from '../hooks/usePwaInstall';
 
 const BOTTOM_NAV_TAB_LABELS = ['Sheet', 'Skills', 'Gear', 'Magic', 'Combat', 'Reference', 'Profile'] as const;
 
@@ -34,6 +35,7 @@ export default function SettingsScreen() {
   const { settings, updateSettings } = useAppState();
   const { character, updateCharacter } = useActiveCharacter();
   const navigate = useNavigate();
+  const { canInstall, install: installPwa } = usePwaInstall();
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
 
@@ -63,6 +65,23 @@ export default function SettingsScreen() {
   return (
     <div style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       <h1 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text)' }}>Settings</h1>
+
+      {/* Install App */}
+      <Card>
+        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>Install App</h2>
+        {canInstall ? (
+          <>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+              Install Skaldbok to your device for offline use.
+            </p>
+            <Button variant="primary" onClick={installPwa}>Install Skaldbok</Button>
+          </>
+        ) : (
+          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            To install: open the browser menu (⋮ or share icon) and look for "Install app" or "Add to Home Screen".
+          </p>
+        )}
+      </Card>
 
       {/* Theme */}
       <Card>
@@ -246,6 +265,17 @@ export default function SettingsScreen() {
             Select a character to configure combat panels.
           </p>
         )}
+      </Card>
+
+      {/* Print Character Sheet */}
+      <Card>
+        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>Print Character Sheet</h2>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+          Open a print-friendly version of the active character sheet.
+        </p>
+        <Button variant="secondary" onClick={() => navigate('/print')} disabled={!character}>
+          Print Character Sheet
+        </Button>
       </Card>
 
       {/* Import / Export */}

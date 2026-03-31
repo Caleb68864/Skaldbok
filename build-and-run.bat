@@ -20,9 +20,15 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
-echo [3/3] Launching preview server...
-echo The app will open at http://localhost:4173
+echo [3/3] Launching HTTPS preview server...
+echo.
+echo On this PC:     https://localhost:4173
+echo On your tablet: https://YOUR_PC_IP:4173
+echo.
+echo First visit will show a certificate warning - tap Advanced then Proceed.
+echo After that you can install the app as a PWA.
+echo.
 echo Press Ctrl+C to stop.
 echo.
-call npm run preview
+call npx vite preview --host --port 4173
 pause
