@@ -7,7 +7,7 @@ import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { Drawer } from '../../components/primitives/Drawer';
 import { AbilityPicker } from './AbilityPicker';
 import { SpellPicker } from './SpellPicker';
-import type { CombatEvent, CombatTypeData } from '../../types/note';
+import type { CombatEvent, CombatTypeData } from '../../types/noteValidators';
 
 const DRAGONBANE_CONDITIONS = [
   { name: 'Exhausted', attribute: 'STR' },

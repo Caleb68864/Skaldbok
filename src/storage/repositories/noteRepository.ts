@@ -1,5 +1,5 @@
 import { db } from '../db/client';
-import { noteSchema } from '../../types/note';
+import { baseNoteSchema } from '../../types/note';
 import type { Note } from '../../types/note';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
@@ -8,7 +8,7 @@ export async function getNoteById(id: string): Promise<Note | undefined> {
   try {
     const record = await db.notes.get(id);
     if (!record) return undefined;
-    const parsed = noteSchema.safeParse(record);
+    const parsed = baseNoteSchema.safeParse(record);
     if (!parsed.success) {
       console.warn('noteRepository.getNoteById: validation failed for id', id, parsed.error);
       return undefined;
@@ -24,7 +24,7 @@ export async function getNotesByCampaign(campaignId: string): Promise<Note[]> {
     const records = await db.notes.where('campaignId').equals(campaignId).toArray();
     return records
       .map(record => {
-        const parsed = noteSchema.safeParse(record);
+        const parsed = baseNoteSchema.safeParse(record);
         if (!parsed.success) {
           console.warn('noteRepository.getNotesByCampaign: validation failed', parsed.error);
           return undefined;
@@ -42,7 +42,7 @@ export async function getNotesBySession(sessionId: string): Promise<Note[]> {
     const records = await db.notes.where('sessionId').equals(sessionId).toArray();
     return records
       .map(record => {
-        const parsed = noteSchema.safeParse(record);
+        const parsed = baseNoteSchema.safeParse(record);
         if (!parsed.success) {
           console.warn('noteRepository.getNotesBySession: validation failed', parsed.error);
           return undefined;
