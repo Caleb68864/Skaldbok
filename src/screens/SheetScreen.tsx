@@ -18,6 +18,7 @@ import { useToast } from '../context/ToastContext';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../utils/restActions';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { nowISO } from '../utils/dates';
+import { useSessionLog } from '../features/session/useSessionLog';
 import DraggableCardContainer from '../components/panels/DraggableCardContainer';
 import type { PanelItem } from '../components/panels/DraggableCardContainer';
 
@@ -28,6 +29,7 @@ export default function SheetScreen() {
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   const { showToast } = useToast();
+  const { logHPChange, logDeathRoll } = useSessionLog();
 
   const isEditMode = useIsEditMode();
   const identityEditable = useFieldEditable('identity');
@@ -72,10 +74,16 @@ export default function SheetScreen() {
 
   function updateResourceCurrent(id: string, delta: number) {
     if (!character) return;
+    const oldCurrent = character.resources[id]?.current ?? 0;
+    const maxVal = character.resources[id]?.max ?? 0;
     updateCharacter(prev => {
       const current = prev.resources[id]?.current ?? 0;
       return { resources: { ...prev.resources, [id]: { ...prev.resources[id], current: current + delta } }, updatedAt: nowISO() };
     });
+    // Auto-log HP changes to active session
+    if (id === 'hp') {
+      logHPChange(character.name, oldCurrent, oldCurrent + delta, maxVal);
+    }
   }
 
   function updateResourceMax(id: string, delta: number) {

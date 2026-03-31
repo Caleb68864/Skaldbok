@@ -4,6 +4,7 @@ import { ThemeProvider } from '../theme/ThemeProvider';
 import { AppStateProvider } from '../context/AppStateContext';
 import { ActiveCharacterProvider } from '../context/ActiveCharacterContext';
 import { ToastProvider } from '../context/ToastContext';
+import { CampaignProvider } from '../features/campaign/CampaignContext';
 
 interface AppProvidersProps {
   children: ReactNode;
@@ -16,7 +17,9 @@ export function AppProviders({ children }: AppProvidersProps) {
         <AppStateProvider>
           <ActiveCharacterProvider>
             <ToastProvider>
-              {children}
+              <CampaignProvider>
+                {children}
+              </CampaignProvider>
             </ToastProvider>
           </ActiveCharacterProvider>
         </AppStateProvider>

@@ -13,6 +13,7 @@ import { useToast } from '../context/ToastContext';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../utils/restActions';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { nowISO } from '../utils/dates';
+import { useSessionLog } from '../features/session/useSessionLog';
 
 export default function CombatScreen() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function CombatScreen() {
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   const { showToast } = useToast();
+  const { logDeathRoll } = useSessionLog();
 
   // Rest modal state
   const [roundRestOpen, setRoundRestOpen] = useState(false);
@@ -64,10 +66,18 @@ export default function CombatScreen() {
 
   function updateDeathRolls(current: number) {
     updateResourceCurrent('deathRolls', current);
+    // Auto-log death roll failure to session
+    if (character && current > deathRolls.current) {
+      logDeathRoll(character.name, current, false);
+    }
   }
 
   function updateDeathSuccesses(current: number) {
     updateResourceCurrent('deathSuccesses', current);
+    // Auto-log death roll success to session
+    if (character && current > deathSuccesses.current) {
+      logDeathRoll(character.name, current, true);
+    }
   }
 
   function resetDeathRolls() {
