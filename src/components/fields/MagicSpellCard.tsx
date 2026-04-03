@@ -12,13 +12,14 @@ interface MagicSpellCardProps {
   powerLevel: number;
   onPowerLevelChange: (lvl: number) => void;
   onTogglePrepare: () => void;
+  onCast?: (spell: Spell, wpCost: number) => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }
 
 export function MagicSpellCard({
   spell, isTrick, isGrimoireView, preparedCount, maxPrepared, currentWP, powerLevel,
-  onPowerLevelChange, onTogglePrepare, onEdit, onDelete,
+  onPowerLevelChange, onTogglePrepare, onCast, onEdit, onDelete,
 }: MagicSpellCardProps) {
   const atLimit = preparedCount >= maxPrepared;
   const isReaction = spell.castingTime === 'reaction';
@@ -130,6 +131,17 @@ export function MagicSpellCard({
             <span style={{ fontSize: 'var(--font-size-xs, 0.75rem)', color: 'var(--color-danger, #c0392b)', fontWeight: 600 }}>
               Cannot cast — must be prepared first
             </span>
+          )}
+          {onCast && !notCastable && (
+            <button
+              type="button"
+              className="prepare-button prepare-button--prepare"
+              style={{ marginLeft: 'auto' }}
+              disabled={currentWP < wpCost}
+              onClick={() => onCast(spell, wpCost)}
+            >
+              Cast ({wpCost} WP)
+            </button>
           )}
         </div>
       </div>

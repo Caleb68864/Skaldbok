@@ -6,9 +6,10 @@ import { AbilityCard } from '../components/fields/AbilityCard';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { Button } from '../components/primitives/Button';
 import { Drawer } from '../components/primitives/Drawer';
-import type { Spell, HeroicAbility } from '../types/character';
+import type { Spell, HeroicAbility, TempModifier } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
+import { useToast } from '../context/ToastContext';
 import { useIsEditMode } from '../utils/modeGuards';
 import { computeMaxPreparedSpells } from '../utils/derivedValues';
 import { isMetalEquipped } from '../utils/metalDetection';
@@ -23,6 +24,7 @@ export default function MagicScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const isEditMode = useIsEditMode();
+  const { showToast } = useToast();
 
   // Preparation filter tab
   const [filter, setFilter] = useState<PrepFilter>('prepared');
@@ -116,6 +118,42 @@ export default function MagicScreen() {
     updateCharacter({ heroicAbilities: character!.heroicAbilities.filter(a => a.id !== id), updatedAt: nowISO() });
   }
 
+  function handleCastSpell(spell: Spell, wpCost: number) {
+    if (!character) return;
+    const wp = character.resources['wp'];
+    if (!wp || wp.current < wpCost) {
+      showToast('Not enough WP to cast this spell.', 'error');
+      return;
+    }
+    // Deduct WP
+    const updates: Record<string, unknown> = {
+      resources: { ...character.resources, wp: { ...wp, current: wp.current - wpCost } },
+      updatedAt: nowISO(),
+    };
+    // Create temp modifiers from spell effects if defined
+    if (spell.effects && spell.effects.length > 0) {
+      const byDuration = new Map<string, typeof spell.effects>();
+      for (const eff of spell.effects) {
+        const arr = byDuration.get(eff.duration) ?? [];
+        arr.push(eff);
+        byDuration.set(eff.duration, arr);
+      }
+      const newModifiers: TempModifier[] = Array.from(byDuration.entries()).map(([dur, effs]) => ({
+        id: crypto.randomUUID(),
+        label: spell.name,
+        effects: effs.map(e => ({ stat: e.stat, delta: e.delta })),
+        duration: dur as TempModifier['duration'],
+        sourceSpellId: spell.id,
+        createdAt: nowISO(),
+      }));
+      updates.tempModifiers = [...(character.tempModifiers ?? []), ...newModifiers];
+      showToast(`Cast ${spell.name} (${wpCost} WP) — effects applied!`, 'success');
+    } else {
+      showToast(`Cast ${spell.name} (${wpCost} WP)`, 'success');
+    }
+    updateCharacter(updates);
+  }
+
   const inputStyle: React.CSSProperties = { width: '100%', padding: 'var(--space-sm)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-surface-alt)', color: 'var(--color-text)', fontSize: 'var(--font-size-md)', fontFamily: 'inherit' };
 
   return (
@@ -183,6 +221,7 @@ export default function MagicScreen() {
               powerLevel={powerLevels[spell.id] ?? 1}
               onPowerLevelChange={(lvl) => setPowerLevels(prev => ({ ...prev, [spell.id]: lvl }))}
               onTogglePrepare={() => handleTogglePrepare(spell)}
+              onCast={handleCastSpell}
               onEdit={isEditMode ? () => { setEditingSpell(spell); setSpellDrawerOpen(true); } : undefined}
               onDelete={isEditMode ? () => handleSpellDelete(spell.id) : undefined}
             />

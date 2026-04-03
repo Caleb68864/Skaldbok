@@ -11,7 +11,10 @@ import { ConditionToggleGroup } from '../components/fields/ConditionToggleGroup'
 import { ResourceTracker } from '../components/fields/ResourceTracker';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { DerivedFieldDisplay } from '../components/fields/DerivedFieldDisplay';
-import { getDerivedValue } from '../utils/derivedValues';
+import { getDerivedValue, getEffectiveValue } from '../utils/derivedValues';
+import { BuffChipBar } from '../components/panels/BuffChipBar';
+import { AddModifierDrawer } from '../components/panels/AddModifierDrawer';
+import type { TempModifier } from '../types/character';
 import { GameIcon } from '../components/primitives/GameIcon';
 import { Modal } from '../components/primitives/Modal';
 import { useToast } from '../context/ToastContext';
@@ -110,6 +113,13 @@ export default function SheetScreen() {
   const [stretchRestHp, setStretchRestHp] = useState('');
   const [stretchRestCondition, setStretchRestCondition] = useState('');
 
+  // Temp modifier state
+  const [addModifierOpen, setAddModifierOpen] = useState(false);
+  const [expiryCheck, setExpiryCheck] = useState<{
+    restType: 'round' | 'stretch' | 'shift';
+    expiring: TempModifier[];
+  } | null>(null);
+
   useEffect(() => {
     if (!isLoading && !character) {
       navigate('/library');
@@ -172,6 +182,93 @@ export default function SheetScreen() {
   function resetDerivedOverride(key: string) {
     if (!character) return;
     updateCharacter({ derivedOverrides: { ...character.derivedOverrides, [key]: null }, updatedAt: nowISO() });
+  }
+
+  // ---- Temp modifier handlers ----
+  function handleAddModifier(partial: Omit<TempModifier, 'id' | 'createdAt'>) {
+    if (!character) return;
+    const newMod: TempModifier = {
+      ...partial,
+      id: crypto.randomUUID(),
+      createdAt: nowISO(),
+    };
+    updateCharacter({ tempModifiers: [...(character.tempModifiers ?? []), newMod], updatedAt: nowISO() });
+  }
+
+  function handleRemoveModifier(id: string) {
+    if (!character) return;
+    updateCharacter({ tempModifiers: (character.tempModifiers ?? []).filter(m => m.id !== id), updatedAt: nowISO() });
+  }
+
+  function handleClearAllModifiers() {
+    if (!character) return;
+    updateCharacter({ tempModifiers: [], updatedAt: nowISO() });
+  }
+
+  const DURATION_TO_REST: Record<string, 'round' | 'stretch' | 'shift'> = {
+    round: 'round',
+    stretch: 'stretch',
+    shift: 'shift',
+  };
+
+  function getExpiringModifiers(restType: 'round' | 'stretch' | 'shift'): TempModifier[] {
+    if (!character) return [];
+    return (character.tempModifiers ?? []).filter(m => DURATION_TO_REST[m.duration] === restType);
+  }
+
+  function handleRestWithExpiryCheck(restType: 'round' | 'stretch' | 'shift', openRest: () => void) {
+    const expiring = getExpiringModifiers(restType);
+    if (expiring.length > 0) {
+      setExpiryCheck({ restType, expiring });
+    } else {
+      openRest();
+    }
+  }
+
+  function handleExpiryRemoveAndRest() {
+    if (!character || !expiryCheck) return;
+    const expiringIds = new Set(expiryCheck.expiring.map(m => m.id));
+    const remaining = (character.tempModifiers ?? []).filter(m => !expiringIds.has(m.id));
+    updateCharacter({ tempModifiers: remaining, updatedAt: nowISO() });
+    const names = expiryCheck.expiring.map(m => m.label).join(', ');
+    logRest(character.name, `${expiryCheck.restType.charAt(0).toUpperCase() + expiryCheck.restType.slice(1)} Rest`, `Expired modifiers: ${names}`);
+    const restType = expiryCheck.restType;
+    setExpiryCheck(null);
+    if (restType === 'round') setRoundRestOpen(true);
+    else if (restType === 'stretch') setStretchRestOpen(true);
+    else handleShiftRestDirect();
+  }
+
+  function handleExpiryKeepAndRest() {
+    if (!expiryCheck) return;
+    const restType = expiryCheck.restType;
+    setExpiryCheck(null);
+    if (restType === 'round') setRoundRestOpen(true);
+    else if (restType === 'stretch') setStretchRestOpen(true);
+    else handleShiftRestDirect();
+  }
+
+  function handleShiftRestDirect() {
+    if (!character || !system) return;
+    const result = applyShiftRest(character);
+    const updatedResources = {
+      ...character.resources,
+      hp: { ...character.resources['hp'], current: character.resources['hp']?.max ?? 0 },
+      wp: { ...character.resources['wp'], current: character.resources['wp']?.max ?? 0 },
+    };
+    const clearedConditions = Object.fromEntries(
+      Object.keys(character.conditions).map(id => [id, false])
+    );
+    updateCharacter({ resources: updatedResources, conditions: clearedConditions, updatedAt: nowISO() });
+    const parts: string[] = [];
+    parts.push(result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.');
+    parts.push(result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.');
+    if (result.conditionsCleared.length > 0) {
+      const names = result.conditionsCleared.map(id => system.conditions.find(c => c.id === id)?.name ?? id);
+      parts.push(`Cleared ${names.join(', ')}.`);
+    }
+    showToast(parts.join(' '), 'success');
+    logRest(character.name, 'Shift Rest', 'Fully recovered');
   }
 
   function confirmRoundRest() {
@@ -304,6 +401,7 @@ export default function SheetScreen() {
       <SectionPanel title={`Attributes${isPlayMode ? ' (locked in Play Mode)' : ''}`} subtitle="p. 28-29" icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', justifyContent: 'center' }}>
           {system?.attributes.map(attr => {
+            const ev = getEffectiveValue(attr.id, character);
             const linked = system.conditions
               .filter(c => c.linkedAttributeId === attr.id)
               .map(def => ({ definition: def, active: !!character.conditions[def.id] }));
@@ -312,18 +410,26 @@ export default function SheetScreen() {
                 key={attr.id}
                 attributeId={attr.id}
                 abbreviation={attr.abbreviation}
-                value={character.attributes[attr.id] ?? 10}
+                value={ev.effective}
                 min={attr.min}
                 max={attr.max}
                 onChange={v => updateAttr(attr.id, v)}
                 disabled={!attributesEditable}
                 linkedConditions={linked}
                 onConditionToggle={updateCondition}
+                modifierDelta={ev.isModified ? ev.modifiers.reduce((s, m) => s + m.delta, 0) : undefined}
               />
             );
           })}
         </div>
       </SectionPanel>
+      {/* Buff Chip Bar — active temp modifiers */}
+      <BuffChipBar
+        modifiers={character.tempModifiers ?? []}
+        onRemove={handleRemoveModifier}
+        onClearAll={handleClearAllModifiers}
+        onAdd={() => setAddModifierOpen(true)}
+      />
       {system && (() => {
         const linkedAttrIds = new Set(system.attributes.map(a => a.id));
         const orphanConditions = system.conditions.filter(c => !linkedAttrIds.has(c.linkedAttributeId));
@@ -398,42 +504,21 @@ export default function SheetScreen() {
         <button
           type="button"
           className="rest-btn rest-btn--round"
-          onClick={() => setRoundRestOpen(true)}
+          onClick={() => handleRestWithExpiryCheck('round', () => setRoundRestOpen(true))}
         >
           Round Rest
         </button>
         <button
           type="button"
           className="rest-btn rest-btn--stretch"
-          onClick={() => setStretchRestOpen(true)}
+          onClick={() => handleRestWithExpiryCheck('stretch', () => setStretchRestOpen(true))}
         >
           Stretch Rest
         </button>
         <button
           type="button"
           className="rest-btn rest-btn--stretch"
-          onClick={() => {
-            if (!character || !system) return;
-            const result = applyShiftRest(character);
-            const updatedResources = {
-              ...character.resources,
-              hp: { ...character.resources['hp'], current: character.resources['hp']?.max ?? 0 },
-              wp: { ...character.resources['wp'], current: character.resources['wp']?.max ?? 0 },
-            };
-            const clearedConditions = Object.fromEntries(
-              Object.keys(character.conditions).map(id => [id, false])
-            );
-            updateCharacter({ resources: updatedResources, conditions: clearedConditions, updatedAt: nowISO() });
-            const parts: string[] = [];
-            parts.push(result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.');
-            parts.push(result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.');
-            if (result.conditionsCleared.length > 0) {
-              const names = result.conditionsCleared.map(id => system.conditions.find(c => c.id === id)?.name ?? id);
-              parts.push(`Cleared ${names.join(', ')}.`);
-            }
-            showToast(parts.join(' '), 'success');
-            logRest(character.name, 'Shift Rest', 'Fully recovered');
-          }}
+          onClick={() => handleRestWithExpiryCheck('shift', handleShiftRestDirect)}
         >
           Shift Rest
         </button>
@@ -690,6 +775,57 @@ export default function SheetScreen() {
               placeholder="Enter 1–6"
             />
           </label>
+        </div>
+      </Modal>
+
+      {/* Add Modifier Drawer */}
+      <AddModifierDrawer
+        open={addModifierOpen}
+        onClose={() => setAddModifierOpen(false)}
+        onSave={handleAddModifier}
+      />
+
+      {/* Rest Expiry Modal */}
+      <Modal
+        open={expiryCheck !== null}
+        onClose={() => setExpiryCheck(null)}
+        title="Expiring Effects"
+        actions={
+          <>
+            <button
+              type="button"
+              className="rest-modal-btn rest-modal-btn--cancel"
+              onClick={handleExpiryKeepAndRest}
+            >
+              Keep & Rest
+            </button>
+            <button
+              type="button"
+              className="rest-modal-btn rest-modal-btn--confirm"
+              onClick={handleExpiryRemoveAndRest}
+            >
+              Remove & Rest
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+          <p style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>
+            These effects expire after a {expiryCheck?.restType} rest:
+          </p>
+          {expiryCheck?.expiring.map(m => (
+            <div key={m.id} style={{
+              padding: 'var(--space-sm)',
+              border: '1px solid var(--color-border)',
+              borderRadius: 'var(--radius-sm)',
+              backgroundColor: 'var(--color-surface-alt)',
+            }}>
+              <strong style={{ color: 'var(--color-text)' }}>{m.label}</strong>
+              <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginLeft: 'var(--space-sm)' }}>
+                {m.effects.map(e => `${e.stat.toUpperCase()} ${e.delta > 0 ? '+' : ''}${e.delta}`).join(', ')}
+              </span>
+            </div>
+          ))}
         </div>
       </Modal>
 
