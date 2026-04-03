@@ -15,9 +15,12 @@ interface AttributeFieldProps {
   disabled?: boolean;
   linkedConditions?: LinkedCondition[];
   onConditionToggle?: (conditionId: string, value: boolean) => void;
+  /** Sum of temp modifier deltas for this attribute. Shows a badge when non-zero. */
+  modifierDelta?: number;
 }
 
-export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false, linkedConditions, onConditionToggle }: AttributeFieldProps) {
+export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false, linkedConditions, onConditionToggle, modifierDelta }: AttributeFieldProps) {
+  const hasModifier = modifierDelta !== undefined && modifierDelta !== 0;
   const stepperButtonStyle: React.CSSProperties = {
     minWidth: '48px',
     minHeight: '48px',
@@ -43,7 +46,19 @@ export function AttributeField({ attributeId: _attributeId, abbreviation, value,
       gap: 'var(--space-xs)',
       minWidth: '60px',
     }}>
-      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', fontWeight: 'bold' }}>{abbreviation}</span>
+      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', fontWeight: 'bold' }}>
+        {abbreviation}
+        {hasModifier && (
+          <span style={{
+            marginLeft: '4px',
+            fontSize: 'var(--font-size-xs, 10px)',
+            color: modifierDelta! > 0 ? 'var(--color-success, #27ae60)' : 'var(--color-danger)',
+            fontWeight: 'bold',
+          }}>
+            {modifierDelta! > 0 ? `+${modifierDelta}` : modifierDelta}
+          </span>
+        )}
+      </span>
       {!disabled ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
           <button

@@ -154,6 +154,8 @@ export interface Spell {
   requirements?: string[];
   /** When the spell can be cast. */
   castingTime?: 'action' | 'reaction' | 'ritual';
+  /** Optional effect templates for auto-creating temp modifiers on cast. */
+  effects?: SpellEffect[];
 }
 
 /**
@@ -178,6 +180,36 @@ export interface HeroicAbility {
   requirementSkillId?: string | null;
   /** Minimum skill value required for {@link requirementSkillId}. */
   requirementSkillLevel?: number | null;
+}
+
+/** Flat stat key namespace resolved by getEffectiveValue(). */
+export type StatKey =
+  | 'str' | 'con' | 'agl' | 'int' | 'wil' | 'cha'
+  | 'armor' | 'helmet'
+  | 'movement' | 'hpMax' | 'wpMax'
+  | string;
+
+/** A single stat effect within a temp modifier. */
+export interface TempModifierEffect {
+  stat: StatKey;
+  delta: number;
+}
+
+/** A temporary stat modifier overlaid on the character's base values. */
+export interface TempModifier {
+  id: string;
+  label: string;
+  effects: TempModifierEffect[];
+  duration: 'round' | 'stretch' | 'shift' | 'scene' | 'permanent';
+  sourceSpellId?: string;
+  createdAt: string;
+}
+
+/** A spell effect template used for auto-creating TempModifiers on cast. */
+export interface SpellEffect {
+  stat: StatKey;
+  delta: number;
+  duration: TempModifier['duration'];
 }
 
 /**
@@ -300,6 +332,8 @@ export interface CharacterRecord extends Versioned, Timestamped {
   heroicAbilities: HeroicAbility[];
   /** Manual overrides for computed derived values. */
   derivedOverrides: DerivedOverrides;
+  /** Active temporary stat modifiers (overlaid on base values). */
+  tempModifiers?: TempModifier[];
   /** Persisted UI preferences for this character. */
   uiState: CharacterUiState;
   /** Base64 data-URL or remote URI for the character portrait image. */

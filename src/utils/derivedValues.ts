@@ -1,4 +1,4 @@
-import type { CharacterRecord } from '../types/character';
+import type { CharacterRecord, StatKey } from '../types/character';
 import type { SystemDefinition } from '../types/system';
 
 export interface DerivedValues {
@@ -129,5 +129,50 @@ export function getDerivedValue(character: CharacterRecord, key: string): Derive
     computed,
     override,
     effective: override !== null ? override : computed,
+  };
+}
+
+export interface EffectiveValueResult {
+  base: number;
+  modifiers: Array<{ label: string; delta: number }>;
+  effective: number;
+  isModified: boolean;
+}
+
+const ATTRIBUTE_KEYS = new Set(['str', 'con', 'agl', 'int', 'wil', 'cha']);
+const DERIVED_KEYS = new Set(['movement', 'hpMax', 'wpMax']);
+
+function resolveBase(stat: StatKey, character: CharacterRecord): number {
+  if (ATTRIBUTE_KEYS.has(stat)) return character.attributes[stat] ?? 0;
+  if (stat === 'armor') return character.armor?.rating ?? 0;
+  if (stat === 'helmet') return character.helmet?.rating ?? 0;
+  if (DERIVED_KEYS.has(stat)) {
+    const dv = getDerivedValue(character, stat);
+    return typeof dv.effective === 'number' ? dv.effective : 0;
+  }
+  // Skill IDs
+  if (character.skills?.[stat]) return character.skills[stat].value ?? 0;
+  console.warn('getEffectiveValue: unknown stat key', stat);
+  return 0;
+}
+
+/**
+ * Resolves a stat's effective value by summing base + all active temp modifier deltas.
+ * Pure function — no side effects, no mutations.
+ */
+export function getEffectiveValue(stat: StatKey, character: CharacterRecord): EffectiveValueResult {
+  const base = resolveBase(stat, character);
+  const active = character.tempModifiers ?? [];
+  const modifiers = active.flatMap(m =>
+    m.effects
+      .filter(e => e.stat === stat)
+      .map(e => ({ label: m.label, delta: e.delta })),
+  );
+  const sum = modifiers.reduce((acc, m) => acc + m.delta, 0);
+  return {
+    base,
+    modifiers,
+    effective: base + sum,
+    isModified: modifiers.length > 0,
   };
 }
