@@ -7,10 +7,35 @@ import { updateCampaign } from '../../storage/repositories/campaignRepository';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
 
+/**
+ * Props for the {@link ManagePartyDrawer} component.
+ */
 interface ManagePartyDrawerProps {
+  /** Called when the drawer should be closed (backdrop tap or close button). */
   onClose: () => void;
 }
 
+/**
+ * Bottom-sheet drawer for managing the active campaign's party.
+ *
+ * @remarks
+ * Allows the GM to:
+ * - Add any existing {@link CharacterRecord} to the party (creates the party on
+ *   first add if none exists yet).
+ * - Remove a member from the party.
+ * - Designate one member as "my character" (stored on the campaign as
+ *   `activeCharacterMemberId`).
+ *
+ * The component guards against a missing active campaign: if none is set it shows
+ * a toast, calls `onClose`, and renders nothing.
+ *
+ * @param props - {@link ManagePartyDrawerProps}
+ *
+ * @example
+ * ```tsx
+ * {showPartyDrawer && <ManagePartyDrawer onClose={() => setShowPartyDrawer(false)} />}
+ * ```
+ */
 export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
   const { activeCampaign, activeParty, refreshParty } = useCampaignContext();
   const { showToast } = useToast();
@@ -39,6 +64,12 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
   const memberCharacterIds = new Set(members.map(m => m.linkedCharacterId).filter(Boolean));
   const availableCharacters = allCharacters.filter(c => !memberCharacterIds.has(c.id));
 
+  /**
+   * Adds a character to the party as a new member. Lazily creates a party for
+   * the campaign if one does not yet exist.
+   *
+   * @param characterId - ID of the {@link CharacterRecord} to add.
+   */
   const handleAddMember = async (characterId: string) => {
     if (!activeCampaign) return;
     setSaving(true);
@@ -70,6 +101,11 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
     }
   };
 
+  /**
+   * Removes a member from the party by their party-member ID.
+   *
+   * @param memberId - ID of the {@link PartyMember} row to delete.
+   */
   const handleRemoveMember = async (memberId: string) => {
     setSaving(true);
     try {
@@ -83,6 +119,12 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
     }
   };
 
+  /**
+   * Sets a party member as the local user's active character for this campaign.
+   * Persists the selection to `campaign.activeCharacterMemberId`.
+   *
+   * @param memberId - ID of the {@link PartyMember} to designate as "my character".
+   */
   const handleSetMyCharacter = async (memberId: string) => {
     if (!activeCampaign) return;
     setSaving(true);

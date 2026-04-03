@@ -11,6 +11,39 @@ import { nowISO } from '../utils/dates';
 import { useToast } from '../context/ToastContext';
 import { useAppState } from '../context/AppStateContext';
 
+/**
+ * Full-screen note editor — creates or edits a single {@link Note} for the active campaign.
+ *
+ * @remarks
+ * **Route parameters:**
+ * - `/note/new` — creates a blank note and immediately redirects to
+ *   `/note/:id/edit` (replace navigation) so the browser Back button works
+ *   correctly.
+ * - `/note/:id/edit` — loads the existing note identified by `:id`.
+ *
+ * **Autosave behaviour:**
+ * - Every field change (title, body, tags, type) schedules a debounced save
+ *   with an 800 ms delay via `scheduleAutosave`.
+ * - The pending save timer is flushed on component unmount.
+ * - A "Saving…" / "Saved" indicator is shown in the header.
+ *
+ * **Fields:**
+ * - **Title** — plain text input at the top of the editor.
+ * - **Note type** — pill-button selector for all {@link NOTE_TYPES} except
+ *   system-generated types (`'skill-check'`, `'recap'`).
+ * - **Body** — rich-text editor powered by {@link TiptapNoteEditor}.
+ * - **Tags** — tag picker using campaign-scoped custom tags via
+ *   {@link TagPicker}; new tags are persisted to {@link AppSettings.customTags}.
+ *
+ * **Error handling:**
+ * - If the note ID is not found, a toast is shown and the user is navigated
+ *   back to `/session`.
+ * - If there is no active campaign when creating a new note, the user is
+ *   redirected to `/session`.
+ *
+ * @returns The note editor UI, or a loading indicator while the note is being
+ *   fetched or created.
+ */
 export default function NoteEditorScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();

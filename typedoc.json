@@ -1,0 +1,30 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["src"],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "name": "Skaldmark API Documentation",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "exclude": [
+    "src/**/*.test.*",
+    "src/**/*.spec.*",
+    "src/styles/**",
+    "src/theme/**",
+    "src/main.tsx",
+    "src/vite-env.d.ts"
+  ],
+  "tsconfig": "tsconfig.app.json",
+  "plugin": [],
+  "categorizeByGroup": true,
+  "sort": ["source-order"],
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "visibilityFilters": {
+    "protected": false,
+    "private": false
+  }
+}

@@ -16,6 +16,35 @@ import { computeEncumbranceLimit } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 
+/**
+ * The Gear screen — manages all equipment for the active character.
+ *
+ * @remarks
+ * Organises equipment into collapsible {@link SectionPanel} sections:
+ *
+ * - **Weapons** — lists {@link Weapon} entries via {@link WeaponCard}; in Edit
+ *   Mode, a {@link WeaponEditor} drawer can add or modify weapons.
+ * - **Armor & Helmet** — shows current {@link ArmorPiece} entries with equipped
+ *   toggle buttons; edit via inline {@link Drawer} forms.
+ * - **Inventory** — managed through {@link InventoryList} and
+ *   {@link InventoryItemEditor}; new and removed items are logged to the active
+ *   session via {@link useSessionLog}.
+ * - **Coins** — gold / silver / copper counters using {@link CounterControl};
+ *   coin changes are logged to the session via `logCoinChange`.
+ * - **Tiny Items** — lightweight free-carry items (do not count toward
+ *   encumbrance); add via text input in Edit Mode.
+ * - **Memento** — single free-text field; editable in Edit Mode.
+ * - **Encumbrance** — computed total weight vs. the character's encumbrance
+ *   limit; displayed in danger colour when over the limit.
+ *
+ * Armor and Helmet drawers are pre-populated from the character record when
+ * opened and cleared when the drawer closes or the character has no piece.
+ *
+ * Navigates to `/library` if no character is loaded.
+ *
+ * @returns The gear management UI, or a loading indicator, or `null` while
+ *   redirecting.
+ */
 export default function GearScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();

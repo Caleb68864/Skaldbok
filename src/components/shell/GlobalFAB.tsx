@@ -11,8 +11,21 @@ import { QuoteDrawer } from '../../features/session/actions/QuoteDrawer';
 import { RumorDrawer } from '../../features/session/actions/RumorDrawer';
 import type { ResolvedMember } from '../fields/PartyPicker';
 
+/**
+ * Union of all quick-action drawer identifiers that the FAB can open.
+ *
+ * - `'skill-check'` — Log a skill check roll for one or more party members.
+ * - `'shopping'`   — Record a shopping transaction.
+ * - `'loot'`       — Distribute loot to party members.
+ * - `'quote'`      — Save a memorable in-session quote.
+ * - `'rumor'`      — Record a rumor heard during the session.
+ */
 type ActionType = 'skill-check' | 'shopping' | 'loot' | 'quote' | 'rumor';
 
+/**
+ * Static metadata for each quick-action menu item rendered by the FAB.
+ * Keeps `id` and display `label` in sync without duplication.
+ */
 const ACTION_ITEMS: { id: ActionType; label: string }[] = [
   { id: 'skill-check', label: 'Skill Check' },
   { id: 'shopping', label: 'Shopping' },
@@ -21,6 +34,29 @@ const ACTION_ITEMS: { id: ActionType; label: string }[] = [
   { id: 'rumor', label: 'Rumor' },
 ];
 
+/**
+ * Global Floating Action Button (FAB) that surfaces quick-action drawers
+ * during an active session.
+ *
+ * @remarks
+ * The FAB is always mounted inside {@link ShellLayout} so it appears on every
+ * route. Pressing the button when no session is active shows a toast instead
+ * of opening the menu.
+ *
+ * When a session is active, pressing the FAB reveals a vertically-stacked
+ * action menu. Selecting an item closes the menu and opens the corresponding
+ * drawer component. A transparent backdrop is rendered behind the menu so a
+ * tap outside dismisses it.
+ *
+ * Party member resolution is performed once on mount (and whenever the active
+ * party changes). If the campaign has no party, the currently active character
+ * is used as the sole "member". The selection resets to the active character
+ * each time a drawer opens.
+ *
+ * @example
+ * // Rendered automatically by ShellLayout — no props required.
+ * <GlobalFAB />
+ */
 export function GlobalFAB() {
   const { activeSession, activeParty, activeCharacterInCampaign } = useCampaignContext();
   const { character } = useActiveCharacter();
@@ -75,6 +111,12 @@ export function GlobalFAB() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDrawer]);
 
+  /**
+   * Handles a press on the FAB itself.
+   *
+   * If no session is currently active, shows a toast message instructing the
+   * user to start a session first. Otherwise toggles the action menu open/closed.
+   */
   const handleFABPress = () => {
     if (!activeSession) {
       showToast('Start a session first');
@@ -83,15 +125,29 @@ export function GlobalFAB() {
     setMenuOpen(v => !v);
   };
 
+  /**
+   * Called when the user taps one of the action menu items.
+   *
+   * Closes the pop-up menu and sets the active drawer so the corresponding
+   * bottom-sheet slides in.
+   *
+   * @param id - The {@link ActionType} identifier of the selected action.
+   */
   const handleActionSelect = (id: ActionType) => {
     setMenuOpen(false);
     setActiveDrawer(id);
   };
 
+  /** Closes whichever drawer is currently open by resetting `activeDrawer` to `null`. */
   const closeDrawer = () => {
     setActiveDrawer(null);
   };
 
+  /**
+   * Props shared by every action drawer.
+   * Includes the resolved member list, the current selection, and the
+   * callbacks for updating the selection and closing the drawer on success.
+   */
   const sharedProps = {
     members: resolvedMembers,
     selectedMembers,

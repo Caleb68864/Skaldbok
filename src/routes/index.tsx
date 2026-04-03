@@ -14,6 +14,34 @@ import CharacterLibraryScreen from '../screens/CharacterLibraryScreen';
 import PrintableSheetScreen from '../screens/PrintableSheetScreen';
 import type { RouteObject } from 'react-router-dom';
 
+/**
+ * Application route configuration consumed by `createBrowserRouter` /
+ * `RouterProvider` at the entry point.
+ *
+ * @remarks
+ * The tree is structured in two layers:
+ *
+ * 1. **Shell-less routes** — rendered without the bottom navigation shell
+ *    (currently only `/print`).
+ * 2. **Shell routes** — wrapped in {@link ShellLayout} which provides the
+ *    persistent navigation bar and campaign context.
+ *
+ * Legacy top-level paths (`/sheet`, `/skills`, `/gear`, `/magic`, `/combat`)
+ * are retained as permanent redirects so that any bookmarked URLs continue to
+ * work after the restructure to `/character/*`.
+ *
+ * The catch-all `'*'` path redirects unknown URLs to the character sheet to
+ * prevent a blank screen.
+ *
+ * @example
+ * ```tsx
+ * import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+ * import { routes } from './routes';
+ *
+ * const router = createBrowserRouter(routes);
+ * <RouterProvider router={router} />
+ * ```
+ */
 export const routes: RouteObject[] = [
   { path: '/print', element: <PrintableSheetScreen /> },
   {
