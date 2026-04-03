@@ -8,11 +8,40 @@ import { useCampaignContext } from '../campaign/CampaignContext';
 import { useAppState } from '../../context/AppStateContext';
 import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
 
+/**
+ * Props for the {@link QuickNoteDrawer} component.
+ */
 interface QuickNoteDrawerProps {
+  /** Called when the drawer should be dismissed without saving. */
   onClose: () => void;
+  /** Called after a note has been successfully created and persisted. */
   onSaved: () => void;
 }
 
+/**
+ * Bottom-sheet drawer for rapidly capturing a new generic note during a session.
+ *
+ * @remarks
+ * Provides a minimal capture flow — title (required), optional tags, optional
+ * Tiptap rich-text body, and up to 10 image attachments. Attachments are saved
+ * to IndexedDB after the note record is created. Object URLs for pending file
+ * previews are revoked on unmount to prevent memory leaks.
+ *
+ * The Save button is disabled until a non-empty title is entered. Tags are
+ * persisted per-campaign in app settings (`settings.customTags`).
+ *
+ * @param props - {@link QuickNoteDrawerProps}
+ *
+ * @example
+ * ```tsx
+ * {showQuickNote && (
+ *   <QuickNoteDrawer
+ *     onClose={() => setShowQuickNote(false)}
+ *     onSaved={refreshNotes}
+ *   />
+ * )}
+ * ```
+ */
 export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState<unknown>(null);
@@ -24,6 +53,12 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
   const { settings, updateSettings } = useAppState();
   const campaignId = activeCampaign?.id ?? null;
   const customTags = campaignId ? (settings.customTags?.[campaignId] ?? []) : [];
+
+  /**
+   * Adds a new tag to the campaign's custom tag list if it is not already present.
+   *
+   * @param tag - The tag string to create.
+   */
   const handleCreateTag = (tag: string) => {
     if (!campaignId) return;
     const existing = settings.customTags?.[campaignId] ?? [];
@@ -45,12 +80,24 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
     };
   }, []);
 
+  /**
+   * Handles a file selected via {@link AttachButton}, creates an object URL
+   * for preview, and appends the file to the pending list.
+   *
+   * @param file - The image file the user selected.
+   */
   const handleFileSelected = (file: File) => {
     const url = URL.createObjectURL(file);
     pendingUrlsRef.current = [...pendingUrlsRef.current, url];
     setPendingFiles(prev => [...prev, file]);
   };
 
+  /**
+   * Removes a pending (not-yet-saved) attachment by its preview ID, revoking
+   * the corresponding object URL.
+   *
+   * @param id - The pending thumb ID in the format `"pending-<index>"`.
+   */
   const handlePendingDelete = (id: string) => {
     const index = parseInt(id.replace('pending-', ''), 10);
     const url = pendingUrlsRef.current[index];
@@ -59,6 +106,10 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
     setPendingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  /**
+   * Creates the note record and saves any pending attachments, then calls
+   * `onSaved` and `onClose`. No-op when the title field is empty.
+   */
   const handleSave = async () => {
     if (!title.trim()) return;
     const note = await createNote({

@@ -5,6 +5,10 @@ import type { ResolvedMember } from '../../../components/fields/PartyPicker';
 import { useNoteActions } from '../../notes/useNoteActions';
 import { useToast } from '../../../context/ToastContext';
 
+/**
+ * Dragonbane core skills (non-weapon) available for selection in the skill-check flow.
+ * @internal
+ */
 const CORE_SKILLS = [
   'ACROBATICS', 'AWARENESS', 'BARTERING', 'BEAST LORE', 'BLUFFING',
   'BUSHCRAFT', 'CRAFTING', 'EVADE', 'HEALING', 'HUNTING & FISHING',
@@ -13,13 +17,22 @@ const CORE_SKILLS = [
   'SPOT HIDDEN', 'SWIMMING',
 ] as const;
 
+/**
+ * Dragonbane weapon skills available for selection in the skill-check flow.
+ * @internal
+ */
 const WEAPON_SKILLS = [
   'Axes', 'Bows', 'Brawling', 'Crossbows', 'Hammers',
   'Knives', 'Slings', 'Spears', 'Staves', 'Swords',
 ] as const;
 
+/**
+ * All possible outcomes for a Dragonbane skill check roll.
+ * @internal
+ */
 const RESULTS = ['success', 'failure', 'dragon', 'demon'] as const;
 
+/** Shared inline styles for modifier toggle chips (Boon / Bane / Pushed). */
 const chipStyle = {
   minHeight: '44px',
   padding: '0 14px',
@@ -33,6 +46,7 @@ const chipStyle = {
   flexShrink: 0,
 } as const;
 
+/** Shared inline styles for skill-list row buttons. */
 const listBtnStyle = {
   display: 'block',
   width: '100%',
@@ -47,6 +61,7 @@ const listBtnStyle = {
   fontSize: '16px',
 };
 
+/** Base styles for the result outcome buttons (Success / Failure / Dragon / Demon). */
 const resultChipBase = {
   minHeight: '44px',
   minWidth: '44px',
@@ -58,6 +73,12 @@ const resultChipBase = {
   fontWeight: 600,
 } as const;
 
+/**
+ * Internal sub-component that renders the Boon / Bane / Pushed modifier toggles.
+ *
+ * @param props.mods - Current active state of each modifier.
+ * @param props.onToggle - Called with the modifier key when a chip is tapped.
+ */
 function RollModifiers({
   mods,
   onToggle,
@@ -93,6 +114,12 @@ function RollModifiers({
   );
 }
 
+/**
+ * Converts the active modifier flags to a parenthetical tag string.
+ *
+ * @param mods - Active modifier flags.
+ * @returns A string like `" (Boon, Pushed)"` or an empty string when no modifiers are active.
+ */
 function formatModTags(mods: { boon: boolean; bane: boolean; pushed: boolean }): string {
   const tags: string[] = [];
   if (mods.boon) tags.push('Boon');
@@ -101,32 +128,79 @@ function formatModTags(mods: { boon: boolean; bane: boolean; pushed: boolean }):
   return tags.length > 0 ? ` (${tags.join(', ')})` : '';
 }
 
+/**
+ * Props for the {@link SkillCheckDrawer} component.
+ */
 export interface SkillCheckDrawerProps {
+  /** Whether the drawer is currently open. */
   open: boolean;
+  /** Called when the drawer should be closed. */
   onClose: () => void;
+  /** All available party members for the {@link PartyPicker}. */
   members: ResolvedMember[];
+  /** IDs of the currently selected party members. */
   selectedMembers: string[];
+  /** Called when the member selection changes. */
   onSelectMembers: (ids: string[]) => void;
+  /** Called after a skill check result has been logged as a note. */
   onLogged: () => void;
 }
 
+/**
+ * Two-step drawer for logging a Dragonbane skill check result as a session note.
+ *
+ * @remarks
+ * **Step 1 — skill selection**: displays the character's own skills (if a single
+ * member is selected and has a linked character record with skills), followed by
+ * the full list of core and weapon skills.
+ *
+ * **Step 2 — result entry**: shows the selected skill name, {@link RollModifiers}
+ * toggles (Boon / Bane / Pushed), and four outcome buttons (Success, Failure,
+ * Dragon, Demon). Tapping an outcome creates a `skill-check` note and fires
+ * `onLogged`.
+ *
+ * Closing or logging resets both steps back to their initial state.
+ *
+ * @param props - {@link SkillCheckDrawerProps}
+ *
+ * @example
+ * ```tsx
+ * <SkillCheckDrawer
+ *   open={open}
+ *   onClose={() => setOpen(false)}
+ *   members={resolvedMembers}
+ *   selectedMembers={selectedIds}
+ *   onSelectMembers={setSelectedIds}
+ *   onLogged={refreshNotes}
+ * />
+ * ```
+ */
 export function SkillCheckDrawer({ open, onClose, members, selectedMembers, onSelectMembers, onLogged }: SkillCheckDrawerProps) {
   const { createNote } = useNoteActions();
   const { showToast } = useToast();
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
   const [rollMods, setRollMods] = useState({ boon: false, bane: false, pushed: false });
 
+  /** Returns the display label for the current member selection (single name, "Party", or "Unknown"). */
   const selectedNames = () => {
     if (selectedMembers.length === 0) return 'Unknown';
     if (selectedMembers.length === members.length && members.length > 1) return 'Party';
     return selectedMembers.map(id => members.find(m => m.id === id)?.name ?? 'Unknown').join(', ');
   };
 
+  /** Returns the character record for the first selected member, if any. */
   const selectedCharacter = () => {
     if (selectedMembers.length === 0) return null;
     return members.find(m => m.id === selectedMembers[0])?.character ?? null;
   };
 
+  /**
+   * Creates the skill-check note with the given title and type data, then
+   * shows a toast, resets state, and calls `onLogged`.
+   *
+   * @param title - Formatted title string (e.g. `"Aldric: Axes (Boon) — success"`).
+   * @param typeData - Structured metadata stored on the note's `typeData` field.
+   */
   const logEvent = async (title: string, typeData: Record<string, unknown>) => {
     const who = selectedNames();
     const fullTitle = who ? `${who}: ${title}` : title;
@@ -143,12 +217,14 @@ export function SkillCheckDrawer({ open, onClose, members, selectedMembers, onSe
     onLogged();
   };
 
+  /** Resets skill selection and modifier state, then closes the drawer. */
   const handleClose = () => {
     setSelectedSkill(null);
     setRollMods({ boon: false, bane: false, pushed: false });
     onClose();
   };
 
+  /** Renders either the skill-list view or the result-entry view depending on selection state. */
   const renderContent = () => {
     if (selectedSkill) {
       const modTag = formatModTags(rollMods);

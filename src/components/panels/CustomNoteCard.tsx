@@ -108,36 +108,3 @@ export function CustomNoteCard({ card, isEditMode, onUpdate, onDelete }: CustomN
     </div>
   );
 }
-
-// ── AddNoteCardButton ─────────────────────────────────────────────────────────
-
-interface AddNoteCardButtonProps {
-  onAdd: (card: CustomCard) => void;
-}
-
-export function AddNoteCardButton({ onAdd }: AddNoteCardButtonProps) {
-  function handleClick() {
-    const id =
-      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-        ? crypto.randomUUID()
-        : Date.now().toString(36) + Math.random().toString(36).slice(2);
-
-    const newCard: CustomCard = {
-      id,
-      title: 'New Note',
-      body: '',
-    };
-    onAdd(newCard);
-  }
-
-  return (
-    <button
-      className="add-note-button"
-      onClick={handleClick}
-      type="button"
-      aria-label="Add note card"
-    >
-      + Add Note Card
-    </button>
-  );
-}

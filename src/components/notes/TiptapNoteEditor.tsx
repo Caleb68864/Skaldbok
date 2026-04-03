@@ -9,24 +9,62 @@ import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
 import { getAll as getAllCharacters } from '../../storage/repositories/characterRepository';
 import type { Note } from '../../types/note';
 
+/**
+ * Props for the {@link TiptapNoteEditor} component.
+ */
 export interface TiptapNoteEditorProps {
+  /**
+   * The initial document to load into the editor as a ProseMirror JSON object.
+   * Pass `null` or `undefined` to start with an empty document.
+   *
+   * @remarks
+   * Typed as `unknown` because the ProseMirror JSON schema is not exposed from
+   * Tiptap's public types and callers typically store it as opaque JSON.
+   */
   initialContent: unknown; // ProseMirror JSON object (or null/undefined for empty)
+  /**
+   * Called on every document change with the updated ProseMirror JSON.
+   * Callers should debounce or persist this in a controlled fashion.
+   *
+   * @param content - The full ProseMirror document as a plain JSON object.
+   */
   onChange: (content: unknown) => void;
+  /**
+   * ID of the active campaign, used to load notes and characters for the
+   * `@mention` and `#descriptor` autocomplete suggestions.
+   * Pass `null` when there is no active campaign.
+   */
   campaignId: string | null;
+  /** Placeholder text shown while the editor is loading or empty. */
   placeholder?: string;
-  /** Show a formatting toolbar above the editor (default: false for backward compat) */
+  /** Show a formatting toolbar above the editor (default: `false` for backward compat). */
   showToolbar?: boolean;
-  /** Minimum height for the editor content area (e.g. "200px") */
+  /** Minimum height for the editor content area (e.g. `"200px"`). */
   minHeight?: string;
 }
 
-// Minimal suggestion popup renderer for @mention (items are {id, label} objects)
+/**
+ * Creates a Tiptap suggestion renderer object for `@mention` completions.
+ *
+ * @remarks
+ * The renderer builds and manages a plain DOM popup (fixed-position `<div>`)
+ * that appears below the caret when the user types `@`. Items are
+ * `{ id, label }` objects sourced from campaign notes and characters.
+ *
+ * Keyboard navigation (ArrowUp / ArrowDown / Enter / Escape) and mouse
+ * interaction are both supported. The popup is appended directly to
+ * `document.body` and removed on `onExit`.
+ *
+ * @returns A Tiptap suggestion renderer with `onStart`, `onUpdate`,
+ *   `onKeyDown`, and `onExit` lifecycle hooks.
+ */
 function createSuggestionRenderer() {
   let container: HTMLDivElement | null = null;
   let items: Array<{ id: string; label: string }> = [];
   let command: ((item: { id: string; label: string }) => void) | null = null;
   let selectedIndex = 0;
 
+  /** Applies highlight styles to the currently focused item button. */
   const highlightSelected = () => {
     if (!container) return;
     const buttons = container.querySelectorAll('button');
@@ -37,6 +75,15 @@ function createSuggestionRenderer() {
     });
   };
 
+  /**
+   * (Re-)populates the popup with a fresh list of suggestion items.
+   *
+   * Clears the container's innerHTML, creates one `<button>` per item, and
+   * resets the selected index to 0.
+   *
+   * @param newItems - The latest filtered suggestion list.
+   * @param newCommand - The Tiptap callback to invoke when an item is chosen.
+   */
   const buildItems = (
     newItems: Array<{ id: string; label: string }>,
     newCommand: (item: { id: string; label: string }) => void
@@ -74,6 +121,7 @@ function createSuggestionRenderer() {
   };
 
   return {
+    /** Called by Tiptap when the `@` trigger is first detected. Creates the popup DOM node. */
     onStart: (props: { items: Array<{ id: string; label: string }>; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
       container = document.createElement('div');
       container.style.cssText = [
@@ -97,6 +145,7 @@ function createSuggestionRenderer() {
       buildItems(props.items, props.command);
       document.body.appendChild(container);
     },
+    /** Called by Tiptap when the query text or items list changes. Repositions and repopulates the popup. */
     onUpdate: (props: { items: Array<{ id: string; label: string }>; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
       if (!container) return;
       const rect = props.clientRect?.();
@@ -106,6 +155,13 @@ function createSuggestionRenderer() {
       }
       buildItems(props.items, props.command);
     },
+    /**
+     * Called by Tiptap for each keydown event while the popup is open.
+     *
+     * Handles ArrowUp, ArrowDown, Enter (select), and Escape (dismiss).
+     *
+     * @returns `true` when the key event was consumed, `false` to let Tiptap handle it.
+     */
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
       if (event.key === 'Escape') return true;
       if (event.key === 'ArrowDown') {
@@ -126,6 +182,7 @@ function createSuggestionRenderer() {
       }
       return false;
     },
+    /** Called by Tiptap when the mention is committed or cancelled. Removes the popup from the DOM. */
     onExit: () => {
       if (container) {
         container.remove();
@@ -138,13 +195,27 @@ function createSuggestionRenderer() {
   };
 }
 
-// Minimal suggestion popup renderer for #descriptor (items are strings)
+/**
+ * Creates a Tiptap suggestion renderer object for `#descriptor` completions.
+ *
+ * @remarks
+ * Functionally identical in structure to {@link createSuggestionRenderer} but
+ * tailored for the `DescriptorMention` extension which triggers on `#`. Items
+ * are plain strings (descriptor labels) rather than `{ id, label }` objects;
+ * they are converted to the required shape when the command is invoked.
+ *
+ * The popup is not shown at all when `props.items` is empty on `onStart`.
+ *
+ * @returns A Tiptap suggestion renderer with `onStart`, `onUpdate`,
+ *   `onKeyDown`, and `onExit` lifecycle hooks.
+ */
 function createDescriptorRenderer() {
   let container: HTMLDivElement | null = null;
   let items: string[] = [];
   let command: ((item: { id: string; label: string }) => void) | null = null;
   let selectedIndex = 0;
 
+  /** Applies highlight styles to the currently focused item button. */
   const highlightSelected = () => {
     if (!container) return;
     const buttons = container.querySelectorAll('button');
@@ -155,6 +226,15 @@ function createDescriptorRenderer() {
     });
   };
 
+  /**
+   * (Re-)populates the popup with a fresh list of descriptor suggestions.
+   *
+   * Each button is prefixed with `#` to visually reinforce the descriptor
+   * trigger character.
+   *
+   * @param newItems - The latest filtered list of descriptor label strings.
+   * @param newCommand - The Tiptap callback to invoke when an item is chosen.
+   */
   const buildItems = (
     newItems: string[],
     newCommand: (item: { id: string; label: string }) => void
@@ -193,6 +273,7 @@ function createDescriptorRenderer() {
   };
 
   return {
+    /** Called by Tiptap when `#` is typed. Skips creating the popup when no items are available. */
     onStart: (props: { items: string[]; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
       if (!props.items.length) return;
       container = document.createElement('div');
@@ -215,6 +296,7 @@ function createDescriptorRenderer() {
       buildItems(props.items, props.command);
       document.body.appendChild(container);
     },
+    /** Called by Tiptap when the query changes. Repositions and repopulates the popup. */
     onUpdate: (props: { items: string[]; command: (item: { id: string; label: string }) => void; clientRect?: (() => DOMRect | null) | null }) => {
       if (!container) return;
       const rect = props.clientRect?.();
@@ -224,6 +306,13 @@ function createDescriptorRenderer() {
       }
       buildItems(props.items, props.command);
     },
+    /**
+     * Called by Tiptap for each keydown event while the descriptor popup is open.
+     *
+     * Handles ArrowUp, ArrowDown, Enter (select), and Escape (dismiss).
+     *
+     * @returns `true` when the key event was consumed, `false` otherwise.
+     */
     onKeyDown: ({ event }: { event: KeyboardEvent }) => {
       if (event.key === 'Escape') return true;
       if (event.key === 'ArrowDown') {
@@ -244,6 +333,7 @@ function createDescriptorRenderer() {
       }
       return false;
     },
+    /** Called by Tiptap when the descriptor mention is committed or cancelled. Cleans up the popup. */
     onExit: () => {
       if (container) {
         container.remove();
@@ -256,6 +346,13 @@ function createDescriptorRenderer() {
   };
 }
 
+/**
+ * Plain `<textarea>` shown as a last-resort fallback when the Tiptap editor
+ * fails to initialise within the 2-second timeout.
+ *
+ * @param onChange - Called with the raw string value on every input event.
+ * @param placeholder - Placeholder text for the textarea.
+ */
 function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) => void; placeholder?: string }) {
   return (
     <textarea
@@ -278,11 +375,62 @@ function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) =
   );
 }
 
+/**
+ * Rich-text note editor built on [Tiptap](https://tiptap.dev/) with
+ * campaign-aware `@mention` and `#descriptor` autocomplete.
+ *
+ * @remarks
+ * ### Features
+ * - **StarterKit** — bold, italic, headings (H2/H3), bullet and ordered lists,
+ *   blockquote, and code blocks out of the box.
+ * - **Link extension** — inline hyperlinks; URL is prompted via `window.prompt`
+ *   from the optional toolbar.
+ * - **`@mention`** — typing `@` opens a fixed-position dropdown populated with
+ *   notes from the active campaign (NPCs, locations, loot, etc.) and all
+ *   characters in the database, filtered by the typed query. Up to 12 results
+ *   are returned; character entries are deduplicated against notes.
+ * - **`#descriptor`** — typing `#` opens a dropdown of frequency-ranked
+ *   descriptors derived from existing campaign notes via
+ *   `useDescriptorSuggestions`.
+ *
+ * ### Resilience
+ * If Tiptap fails to initialise within 2 seconds (e.g., in environments where
+ * the ProseMirror DOM view cannot attach), the component falls back to a plain
+ * `<textarea>` via {@link TextareaFallback}. While loading, a styled
+ * placeholder box is shown instead.
+ *
+ * ### Suggestion popup lifecycle
+ * Each suggestion type uses its own renderer instance (stored in a `useRef`)
+ * so that multiple editor instances on the same page do not share popup state.
+ * The `getSuggestions` function from the descriptor hook is stored in a ref
+ * to give the Tiptap suggestion closure access to its latest value without
+ * re-creating the editor.
+ *
+ * @param initialContent - ProseMirror JSON document to pre-populate the editor.
+ * @param onChange - Called with the full ProseMirror JSON on every edit.
+ * @param campaignId - Active campaign ID for suggestion data loading.
+ * @param placeholder - Hint text shown in empty / loading states.
+ * @param showToolbar - Whether to render the formatting toolbar. Defaults to `false`.
+ * @param minHeight - CSS min-height for the editable area. Defaults to `"120px"`.
+ *
+ * @example
+ * <TiptapNoteEditor
+ *   initialContent={note.content}
+ *   onChange={content => setNote(prev => ({ ...prev, content }))}
+ *   campaignId={activeCampaignId}
+ *   placeholder="Write your session note..."
+ *   showToolbar
+ *   minHeight="200px"
+ * />
+ */
 export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeholder, showToolbar = false, minHeight }: TiptapNoteEditorProps) {
   const [failed, setFailed] = React.useState(false);
   const [campaignNotes, setCampaignNotes] = useState<Note[]>([]);
+  /** Stable renderer instance for the `@mention` suggestion popup. */
   const rendererRef = useRef(createSuggestionRenderer());
+  /** Stable renderer instance for the `#descriptor` suggestion popup. */
   const descriptorRendererRef = useRef(createDescriptorRenderer());
+  /** Timeout handle for the 2-second Tiptap initialisation guard. */
   const initTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load campaign notes for descriptor frequency map
@@ -413,6 +561,13 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
     );
   }
 
+  /**
+   * Returns inline styles for a toolbar button, reflecting the active state
+   * of the corresponding Tiptap mark or node.
+   *
+   * @param active - Whether the editor cursor is currently inside the relevant mark/node.
+   * @returns A `React.CSSProperties` object with accent or surface styling.
+   */
   const toolbarBtnStyle = (active: boolean): React.CSSProperties => ({
     minHeight: '44px',
     minWidth: '44px',

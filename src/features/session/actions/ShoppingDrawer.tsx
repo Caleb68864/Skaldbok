@@ -6,6 +6,7 @@ import { CounterControl } from '../../../components/primitives/CounterControl';
 import { useNoteActions } from '../../notes/useNoteActions';
 import { useToast } from '../../../context/ToastContext';
 
+/** Shared inline styles for the Buy / Sell action toggle chips. */
 const chipStyle = {
   minHeight: '44px',
   padding: '0 14px',
@@ -19,15 +20,51 @@ const chipStyle = {
   flexShrink: 0,
 } as const;
 
+/**
+ * Props for the {@link ShoppingDrawer} component.
+ */
 export interface ShoppingDrawerProps {
+  /** Whether the drawer is currently open. */
   open: boolean;
+  /** Called when the drawer should be closed. */
   onClose: () => void;
+  /** All available party members for the {@link PartyPicker}. */
   members: ResolvedMember[];
+  /** IDs of the currently selected party members. */
   selectedMembers: string[];
+  /** Called when the member selection changes. */
   onSelectMembers: (ids: string[]) => void;
+  /** Called after a purchase or sale has been logged as a note. */
   onLogged: () => void;
 }
 
+/**
+ * Drawer for logging a buy or sell transaction to the active session.
+ *
+ * @remarks
+ * Lets the GM record which party members were involved, the action (Buy / Sell),
+ * an optional item name, per-item costs in gold / silver / copper, and a quantity.
+ * When quantity > 1 and a cost is entered, the total cost is shown as a preview
+ * before logging.
+ *
+ * The log entry is created as a `generic` note with structured `typeData`
+ * containing the action, item, quantity, unit costs, and computed totals.
+ * Closing or logging resets all fields to their defaults.
+ *
+ * @param props - {@link ShoppingDrawerProps}
+ *
+ * @example
+ * ```tsx
+ * <ShoppingDrawer
+ *   open={open}
+ *   onClose={() => setOpen(false)}
+ *   members={resolvedMembers}
+ *   selectedMembers={selectedIds}
+ *   onSelectMembers={setSelectedIds}
+ *   onLogged={refreshNotes}
+ * />
+ * ```
+ */
 export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSelectMembers, onLogged }: ShoppingDrawerProps) {
   const { createNote } = useNoteActions();
   const { showToast } = useToast();
@@ -38,12 +75,14 @@ export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSele
   const [shopCopper, setShopCopper] = useState(0);
   const [shopQuantity, setShopQuantity] = useState(1);
 
+  /** Returns the display label for the current member selection. */
   const selectedNames = () => {
     if (selectedMembers.length === 0) return 'Unknown';
     if (selectedMembers.length === members.length && members.length > 1) return 'Party';
     return selectedMembers.map(id => members.find(m => m.id === id)?.name ?? 'Unknown').join(', ');
   };
 
+  /** Resets all form fields to their defaults and closes the drawer. */
   const handleClose = () => {
     setShopItem('');
     setShopAction('buy');
@@ -54,6 +93,11 @@ export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSele
     onClose();
   };
 
+  /**
+   * Creates a `generic` note recording the transaction, shows a toast, and
+   * resets the form. The note title is auto-formatted, e.g.:
+   * `"Party: Bought Iron Sword ×3 for 9g"`
+   */
   const handleLog = async () => {
     const totalGold = shopGold * shopQuantity;
     const totalSilver = shopSilver * shopQuantity;

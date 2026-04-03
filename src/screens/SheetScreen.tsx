@@ -22,6 +22,36 @@ import { useSessionLog } from '../features/session/useSessionLog';
 import DraggableCardContainer from '../components/panels/DraggableCardContainer';
 import type { PanelItem } from '../components/panels/DraggableCardContainer';
 
+/**
+ * The character Sheet screen — shows the full character sheet for the active character.
+ *
+ * @remarks
+ * Renders a grid of collapsible section panels covering Identity, Attributes,
+ * Resources, Derived Values, and Rest & Recovery.  The panel order is
+ * persisted per-user via {@link AppSettings.sheetPanelOrder} and can be
+ * rearranged in Edit Mode using the {@link DraggableCardContainer}.
+ *
+ * **Edit Mode** unlocks all identity, attribute, resource-max, and derived
+ * override fields and shows the "Reorder Panels" control.
+ *
+ * **Play Mode** locks attribute and identity fields; only HP/WP counters,
+ * conditions, rest buttons, and derived-value overrides remain interactive.
+ *
+ * **Death Rolls panel** — automatically inserted after the Resources panel
+ * when the character's HP reaches 0.  Tracks both failure and success pips
+ * (Dragonbane p. 55).
+ *
+ * **Rest modals** — Round Rest and Stretch Rest open modal dialogs that accept
+ * a d6 roll and apply the appropriate recovery rules.  Shift Rest is applied
+ * immediately via a single button click.  All rest events are logged to the
+ * active session log via {@link useSessionLog}.
+ *
+ * Autosaves on every character mutation via {@link useAutosave} with a 1-second
+ * debounce.  Navigates to `/library` if no character is loaded.
+ *
+ * @returns The character sheet UI, or a loading indicator, or `null` while
+ *   redirecting.
+ */
 export default function SheetScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();

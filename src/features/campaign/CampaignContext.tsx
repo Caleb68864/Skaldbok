@@ -8,12 +8,24 @@ import type { Campaign } from '../../types/campaign';
 import type { Session } from '../../types/session';
 import type { Party, PartyMember } from '../../types/party';
 
+/**
+ * Props for the internal {@link StaleSessionModal} dialog.
+ */
 interface StaleSessionModalProps {
+  /** Title of the stale session shown in the dialog body. */
   sessionTitle: string;
+  /** Called when the user chooses to end the session. */
   onEnd: () => void;
+  /** Called when the user chooses to continue the session (dismisses the dialog). */
   onContinue: () => void;
 }
 
+/**
+ * Modal dialog shown when an active session has been running for more than 24 hours.
+ * Prompts the GM to either end or continue the session.
+ *
+ * @param props - {@link StaleSessionModalProps}
+ */
 function StaleSessionModal({ sessionTitle, onEnd, onContinue }: StaleSessionModalProps) {
   return (
     <div
@@ -83,32 +95,103 @@ function StaleSessionModal({ sessionTitle, onEnd, onContinue }: StaleSessionModa
   );
 }
 
+/**
+ * A {@link Party} record hydrated with its full list of {@link PartyMember} rows.
+ *
+ * @remarks
+ * Used throughout the app wherever both party metadata and member details are
+ * needed at the same time, avoiding a separate member lookup.
+ */
 export interface ActivePartyWithMembers extends Party {
+  /** All members belonging to this party, loaded from `partyMembers`. */
   members: PartyMember[];
 }
 
+/**
+ * Shape of the value provided by {@link CampaignContext} / consumed by
+ * {@link useCampaignContext}.
+ */
 export interface CampaignContextValue {
+  /** The currently active {@link Campaign}, or `null` when none is selected. */
   activeCampaign: Campaign | null;
+  /** The currently active {@link Session}, or `null` when no session is running. */
   activeSession: Session | null;
+  /**
+   * The active party for the current campaign, hydrated with members, or `null`
+   * when no party has been created yet.
+   */
   activeParty: ActivePartyWithMembers | null;
+  /**
+   * The {@link PartyMember} that the local user has designated as "my character"
+   * for this campaign, or `null` when none is set.
+   */
   activeCharacterInCampaign: PartyMember | null;
+  /**
+   * Starts a new session for the active campaign.
+   * No-op (with toast) when no campaign is active or a session is already running.
+   */
   startSession: () => Promise<void>;
+  /**
+   * Marks the currently active session as ended.
+   * No-op when no session is running.
+   */
   endSession: () => Promise<void>;
+  /**
+   * Re-activates a previously ended session by ID.
+   * No-op (with toast) when another session is already running.
+   *
+   * @param sessionId - ID of the session to resume.
+   */
   resumeSession: (sessionId: string) => Promise<void>;
+  /**
+   * Switches the context to a different campaign, loading its active session
+   * and party in the process.
+   *
+   * @param campaignId - ID of the campaign to activate.
+   */
   setActiveCampaign: (campaignId: string) => Promise<void>;
+  /**
+   * Re-fetches the active party and its members from the database and updates
+   * context state. Call after any mutation that adds, removes, or changes party
+   * members or the active-character designation.
+   */
   refreshParty: () => Promise<void>;
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
 
+/**
+ * Returns the nearest {@link CampaignContextValue} from the React tree.
+ *
+ * @remarks
+ * Must be called inside a component that is a descendant of {@link CampaignProvider}.
+ * Throws an error if called outside of that tree, making context misconfiguration
+ * immediately obvious during development.
+ *
+ * @throws {Error} When called outside of a `CampaignProvider`.
+ *
+ * @returns The current {@link CampaignContextValue}.
+ *
+ * @example
+ * ```tsx
+ * const { activeCampaign, startSession } = useCampaignContext();
+ * ```
+ */
 export function useCampaignContext(): CampaignContextValue {
   const ctx = useContext(CampaignContext);
   if (!ctx) throw new Error('useCampaignContext must be used within CampaignProvider');
   return ctx;
 }
 
+/** Threshold in milliseconds after which an active session is considered stale (24 hours). */
 const STALE_SESSION_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * Queries the database for the party belonging to `campaignId` and joins its members.
+ *
+ * @param campaignId - Campaign whose party should be loaded.
+ * @returns The party with members, or `null` if no party exists for this campaign.
+ */
 async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyWithMembers | null> {
   const party = await db.parties.where('campaignId').equals(campaignId).first();
   if (!party) return null;
@@ -116,6 +199,26 @@ async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyW
   return { ...party, members };
 }
 
+/**
+ * Context provider that owns and exposes all active-campaign state.
+ *
+ * @remarks
+ * Place this near the root of the application (inside `ToastProvider`). On mount
+ * it hydrates from IndexedDB, picking up the most recently active campaign and
+ * any running session. When the restored session is older than 24 hours a
+ * {@link StaleSessionModal} is rendered asking the GM whether to end or continue it.
+ *
+ * @param props.children - React subtree that will have access to campaign context.
+ *
+ * @example
+ * ```tsx
+ * <ToastProvider>
+ *   <CampaignProvider>
+ *     <App />
+ *   </CampaignProvider>
+ * </ToastProvider>
+ * ```
+ */
 export function CampaignProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
   const [activeCampaign, setActiveCampaign_] = useState<Campaign | null>(null);
@@ -296,6 +399,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
   }, [activeCampaign]);
 
+  /** Ends the stale session and dismisses the modal. */
   const handleStaleEnd = useCallback(async () => {
     if (!staleSession) return;
     try {
@@ -313,6 +417,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setStaleSession(null);
   }, [staleSession, showToast]);
 
+  /** Dismisses the stale-session modal without ending the session. */
   const handleStaleContinue = useCallback(() => {
     setStaleSession(null);
   }, []);

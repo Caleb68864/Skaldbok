@@ -8,6 +8,10 @@ import { getSessionsByCampaign } from '../../storage/repositories/sessionReposit
 import type { Note, NoteType } from '../../types/note';
 import type { Session } from '../../types/session';
 
+/**
+ * Ordered list of note-type filter options rendered as pill chips above the grid.
+ * The `'all'` entry shows every type without filtering.
+ */
 const NOTE_TYPE_FILTERS: Array<{ value: NoteType | 'all'; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'generic', label: 'Generic' },
@@ -21,6 +25,7 @@ const NOTE_TYPE_FILTERS: Array<{ value: NoteType | 'all'; label: string }> = [
   { value: 'recap', label: 'Recap' },
 ];
 
+/** Shared inline styles applied to every filter-chip button. */
 const chipStyle = {
   minHeight: '44px',
   padding: '0 12px',
@@ -32,12 +37,41 @@ const chipStyle = {
   flexShrink: 0,
 } as const;
 
+/**
+ * Props for the {@link NotesGrid} component.
+ */
 interface NotesGridProps {
+  /** ID of the campaign whose notes should be displayed. */
   campaignId: string;
   /** The currently active session id, if any — used as default session filter */
   activeSessionId: string | null | undefined;
 }
 
+/**
+ * Filterable, searchable grid of notes for a campaign.
+ *
+ * @remarks
+ * Loads all notes for `campaignId` from IndexedDB on mount and polls every
+ * 2 seconds to pick up changes made by other parts of the app. Sessions are
+ * loaded once on mount and used to populate the session-filter dropdown.
+ *
+ * Filtering features:
+ * - **Session filter** — dropdown defaults to `activeSessionId` when provided.
+ *   Includes an "All Sessions" option and a "No session" option for orphaned notes.
+ * - **Type filter** — pill chips for each {@link NoteType} plus an "All" catch-all.
+ * - **Text search** — debounced (200 ms) search across note title and tags.
+ * - **Sort toggle** — switches between newest-first and oldest-first by `createdAt`.
+ *
+ * Tapping a note navigates to `/note/:id/edit`. The "+ New Note" button
+ * navigates to `/note/new`.
+ *
+ * @param props - {@link NotesGridProps}
+ *
+ * @example
+ * ```tsx
+ * <NotesGrid campaignId={campaign.id} activeSessionId={activeSession?.id} />
+ * ```
+ */
 export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
   const navigate = useNavigate();
   const { pinNote, unpinNote, deleteNote } = useNoteActions();
@@ -56,11 +90,13 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
     if (activeSessionId) setSessionFilter(activeSessionId);
   }, [activeSessionId]);
 
+  /** Re-fetches all notes for the campaign and updates local state. */
   const refreshNotes = useCallback(async () => {
     const all = await getNotesByCampaign(campaignId);
     setNotes(all.filter(Boolean) as Note[]);
   }, [campaignId]);
 
+  /** Re-fetches all sessions for the campaign (sorted newest-first) and updates local state. */
   const refreshSessions = useCallback(async () => {
     const all = await getSessionsByCampaign(campaignId);
     setSessions(all.sort((a, b) => b.date.localeCompare(a.date)));
@@ -87,6 +123,10 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
     };
   }, [searchQuery]);
 
+  /**
+   * Derived note list after applying session filter, type filter, text search,
+   * and sort order. Recomputed only when dependencies change.
+   */
   const filteredNotes = useMemo(() => {
     let result = notes;
     // Session filter
@@ -115,16 +155,19 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
     return result;
   }, [notes, typeFilter, sessionFilter, debouncedQuery, sortAsc]);
 
+  /** Pins a note and refreshes the list. */
   const handlePin = async (id: string) => {
     await pinNote(id);
     await refreshNotes();
   };
 
+  /** Unpins a note and refreshes the list. */
   const handleUnpin = async (id: string) => {
     await unpinNote(id);
     await refreshNotes();
   };
 
+  /** Deletes a note and refreshes the list. */
   const handleDelete = async (id: string) => {
     await deleteNote(id);
     await refreshNotes();

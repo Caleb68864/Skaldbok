@@ -6,6 +6,7 @@ import { useCampaignContext } from '../../campaign/CampaignContext';
 import { getNotesByCampaign } from '../../../storage/repositories/noteRepository';
 import type { Note } from '../../../types/note';
 
+/** Shared inline styles for the NPC source-selection chips. */
 const chipStyle = {
   minHeight: '44px',
   padding: '0 14px',
@@ -19,12 +20,47 @@ const chipStyle = {
   flexShrink: 0,
 } as const;
 
+/**
+ * Props for the {@link RumorDrawer} component.
+ */
 export interface RumorDrawerProps {
+  /** Whether the drawer is currently open. */
   open: boolean;
+  /** Called when the drawer should be closed. */
   onClose: () => void;
+  /** Called after the rumor has been logged as a note. */
   onLogged: () => void;
 }
 
+/**
+ * Drawer for logging a rumor heard during the session.
+ *
+ * @remarks
+ * The GM types the rumor text and optionally selects an NPC source. NPC options
+ * are loaded from the active campaign's notes (type `'npc'`) each time the drawer
+ * opens, so newly created NPCs appear without a full app refresh. Selecting
+ * "Unknown" clears the source (empty string), which is stored as `undefined`
+ * in `typeData`.
+ *
+ * A `rumor` note is created with:
+ * - `title`: `"Rumor: <rumor text>"`
+ * - `typeData.source`: NPC name or `undefined`
+ * - `typeData.threadStatus`: `'open'` (tracks whether the rumor has been resolved)
+ *
+ * The Log Rumor button is disabled until a non-empty rumor text is entered.
+ * Closing or logging resets both the rumor text and source fields.
+ *
+ * @param props - {@link RumorDrawerProps}
+ *
+ * @example
+ * ```tsx
+ * <RumorDrawer
+ *   open={open}
+ *   onClose={() => setOpen(false)}
+ *   onLogged={refreshNotes}
+ * />
+ * ```
+ */
 export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
   const { createNote } = useNoteActions();
   const { showToast } = useToast();
@@ -33,6 +69,7 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
   const [rumorSource, setRumorSource] = useState('');
   const [npcNotes, setNpcNotes] = useState<Note[]>([]);
 
+  // Load NPC notes each time the drawer opens so the list is always fresh
   useEffect(() => {
     if (!open || !activeCampaign) return;
     let mounted = true;
@@ -42,12 +79,18 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
     return () => { mounted = false; };
   }, [open, activeCampaign]);
 
+  /** Resets both form fields and closes the drawer. */
   const handleClose = () => {
     setRumorText('');
     setRumorSource('');
     onClose();
   };
 
+  /**
+   * Creates a `rumor` note with the entered text and selected source,
+   * shows a confirmation toast, resets the form, and calls `onLogged`.
+   * No-op when the rumor text field is empty.
+   */
   const handleLog = async () => {
     if (!rumorText.trim()) return;
     const src = rumorSource || undefined;

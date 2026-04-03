@@ -12,6 +12,18 @@ import { getSessionsByCampaign } from '../storage/repositories/sessionRepository
 import type { Session } from '../types/session';
 import type { Note } from '../types/note';
 
+/**
+ * Formats an ISO datetime string into a locale-aware date-and-time string.
+ *
+ * @param iso - An ISO 8601 datetime string, e.g. `"2026-03-31T18:00:00.000Z"`.
+ * @returns A locale-formatted date-time string, or the original `iso` value if
+ *   parsing fails.
+ *
+ * @example
+ * ```ts
+ * formatDateTime('2026-03-31T18:00:00.000Z'); // "3/31/2026, 6:00:00 PM" (locale-dependent)
+ * ```
+ */
 function formatDateTime(iso: string): string {
   try {
     return new Date(iso).toLocaleString();
@@ -20,6 +32,18 @@ function formatDateTime(iso: string): string {
   }
 }
 
+/**
+ * Formats an ISO date or datetime string into a locale-aware date-only string.
+ *
+ * @param iso - An ISO 8601 date or datetime string, e.g. `"2026-03-31"`.
+ * @returns A locale-formatted date string, or the original `iso` value if
+ *   parsing fails.
+ *
+ * @example
+ * ```ts
+ * formatDate('2026-03-31'); // "3/31/2026" (locale-dependent)
+ * ```
+ */
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString();
@@ -28,6 +52,35 @@ function formatDate(iso: string): string {
   }
 }
 
+/**
+ * The Session screen — the primary hub for managing the current play session.
+ *
+ * @remarks
+ * Displays the active campaign name and one of two views depending on whether
+ * a session is in progress:
+ *
+ * **Active session view:**
+ * - Session title and live elapsed-time counter (updated every 10 seconds).
+ * - End Session, Export Session (.md), and Export + Notes (.zip) actions.
+ * - {@link SessionQuickActions} panel for quick log entries.
+ * - Combat management: Start Combat / Resume Combat / {@link CombatTimeline}.
+ *
+ * **No active session view:**
+ * - Recap card showing the most recently ended session and its note count.
+ * - Start Session button.
+ *
+ * **Shared elements:**
+ * - Export All Notes (.zip) button.
+ * - Scrollable list of past (ended) sessions with per-session .md / .zip export
+ *   buttons and a Resume button.
+ * - {@link NotesGrid} for all campaign notes.
+ * - {@link EndSessionModal} confirmation dialog.
+ *
+ * The component redirects to {@link NoCampaignPrompt} if no campaign is active.
+ *
+ * @returns The session management UI, or {@link NoCampaignPrompt} when no
+ *   campaign has been selected.
+ */
 export function SessionScreen() {
   const { activeCampaign, activeSession, startSession, endSession, resumeSession } = useCampaignContext();
   const { exportSessionMarkdown, exportSessionBundle, exportAllNotes } = useExportActions();

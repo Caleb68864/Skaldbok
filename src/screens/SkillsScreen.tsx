@@ -20,6 +20,35 @@ import type { ConditionDefinition, AttributeDefinition } from '../types/system';
 import { nowISO } from '../utils/dates';
 import { computeSkillValue } from '../utils/derivedValues';
 
+/**
+ * The Skills screen — lists all skills for the active character with roll-under
+ * probability display and boon/bane modifiers.
+ *
+ * @remarks
+ * Skills are grouped by category as defined by the active game-system definition.
+ * The screen provides the following interactive controls:
+ *
+ * - **Filter chips** — toggle between "Relevant" (trained / non-zero) and "All" skills.
+ * - **Global Boon/Bane selector** — sets a campaign-wide modifier applied to
+ *   every skill's probability calculation.
+ * - **Per-skill boon/bane override** — cycles through inherit → boon → bane → inherit
+ *   for individual skills, taking precedence over the global setting.
+ * - **Trained checkbox / trained indicator** — editable in Edit Mode; shows a
+ *   shield icon in Play Mode.
+ * - **Skill value input** — numeric roll-under target, editable in Edit Mode.
+ * - **Dragon / Demon mark toggle** — cycles unmarked → dragon-marked → demon-marked →
+ *   unmarked in Play Mode to track session advancement (Dragonbane rules).
+ *
+ * Probability strings are computed from {@link calcNormalProb}, {@link calcBoonProb},
+ * and {@link calcBaneProb}, resolved through {@link resolveEffectiveBoonBane}.
+ *
+ * Conditions with a `linkedAttributeId` automatically impose a bane on skills
+ * that share that attribute (reflected in the probability display).
+ *
+ * Navigates to `/library` if no character is loaded.
+ *
+ * @returns The skills list UI, or a loading indicator, or `null` while redirecting.
+ */
 export default function SkillsScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();

@@ -14,10 +14,40 @@ import { generateFilename } from '../../utils/export/generateFilename';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
 
+/**
+ * Hook that provides all note and session export actions for the active campaign.
+ *
+ * @remarks
+ * Every action is null-safe with respect to the active campaign — calling any
+ * function when `activeCampaign` is null shows a toast and returns early.
+ * Errors are caught internally; the caller never needs to handle rejections.
+ *
+ * @returns An object containing five export helpers:
+ * - {@link exportNote} — share a single note as Markdown (or ZIP if it has attachments)
+ * - {@link exportSessionMarkdown} — share a session's index Markdown file
+ * - {@link exportSessionBundle} — share all session notes + attachments as a ZIP
+ * - {@link exportAllNotes} — share every campaign note as a ZIP
+ * - {@link copyNoteAsMarkdown} — copy a single note's Markdown to the clipboard
+ *
+ * @example
+ * ```tsx
+ * const { exportNote, copyNoteAsMarkdown } = useExportActions();
+ * <button onClick={() => exportNote(note.id)}>Export</button>
+ * ```
+ */
 export function useExportActions() {
   const { activeCampaign } = useCampaignContext();
   const { showToast } = useToast();
 
+  /**
+   * Exports a single note as a Markdown file, or as a ZIP archive when the note
+   * has one or more attachments (images are placed in an `attachments/` folder
+   * alongside auto-generated sidecar Markdown files).
+   *
+   * @param noteId - ID of the note to export.
+   * @returns A promise that resolves when the file has been handed to the share
+   * sheet / download mechanism, or immediately on early-exit conditions.
+   */
   const exportNote = useCallback(async (noteId: string): Promise<void> => {
     if (!activeCampaign) {
       showToast('No active campaign');
@@ -55,6 +85,18 @@ export function useExportActions() {
     }
   }, [activeCampaign, showToast]);
 
+  /**
+   * Exports the index Markdown file for a single session (the top-level summary
+   * document without individual note files).
+   *
+   * @remarks
+   * Notes are resolved by `sessionId` first; any additional notes linked to the
+   * session via `contains` entity-links are merged in without duplication.
+   *
+   * @param sessionId - ID of the session to export.
+   * @returns A promise that resolves when the file has been shared, or immediately
+   * on early-exit conditions.
+   */
   const exportSessionMarkdown = useCallback(async (sessionId: string): Promise<void> => {
     if (!activeCampaign) {
       showToast('No active campaign');
@@ -94,6 +136,19 @@ export function useExportActions() {
     }
   }, [activeCampaign, showToast]);
 
+  /**
+   * Exports a full session bundle as a ZIP archive: the session index, individual
+   * note Markdown files, and any attachment images with their sidecar files.
+   * Attachments are placed under `attachments/<session-slug>/`.
+   *
+   * @remarks
+   * Notes are resolved by `sessionId` first; notes linked via `contains`
+   * entity-links are merged in without duplication.
+   *
+   * @param sessionId - ID of the session to export.
+   * @returns A promise that resolves when the ZIP has been shared, or immediately
+   * on early-exit conditions.
+   */
   const exportSessionBundle = useCallback(async (sessionId: string): Promise<void> => {
     if (!activeCampaign) {
       showToast('No active campaign');
@@ -142,6 +197,14 @@ export function useExportActions() {
     }
   }, [activeCampaign, showToast]);
 
+  /**
+   * Copies the Markdown representation of a single note to the system clipboard.
+   * Shows a "Copied to clipboard" toast on success.
+   *
+   * @param noteId - ID of the note to copy.
+   * @returns A promise that resolves when the clipboard write completes, or
+   * immediately on early-exit conditions.
+   */
   const copyNoteAsMarkdown = useCallback(async (noteId: string): Promise<void> => {
     if (!activeCampaign) {
       showToast('No active campaign');
@@ -166,6 +229,18 @@ export function useExportActions() {
     }
   }, [activeCampaign, showToast]);
 
+  /**
+   * Exports every note in the active campaign as a single ZIP archive.
+   * Each note becomes a Markdown file; attachments are placed in
+   * `attachments/<session-prefix>/` (or `attachments/unsorted/` for session-less notes)
+   * alongside auto-generated sidecar files.
+   *
+   * @remarks
+   * Shows a "No notes to export" toast when the campaign has no notes yet.
+   *
+   * @returns A promise that resolves when the ZIP has been shared, or immediately
+   * on early-exit conditions.
+   */
   const exportAllNotes = useCallback(async (): Promise<void> => {
     if (!activeCampaign) {
       showToast('No active campaign');
