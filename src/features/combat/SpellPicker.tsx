@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
+import { cn } from '../../lib/utils';
 
 interface SpellPickerProps {
   onSelect: (spellName: string, characterName: string) => void;
@@ -49,32 +50,26 @@ export function SpellPicker({ onSelect, onClose }: SpellPickerProps) {
   }, [activeParty]);
 
   if (loading) {
-    return <p style={{ color: 'var(--color-text-muted)', padding: '8px 0' }}>Loading...</p>;
+    return <p className="text-[var(--color-text-muted)] py-2">Loading...</p>;
   }
 
   return (
     <div>
       {partyWithChars.length === 0 && (
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '12px' }}>
+        <p className="text-[var(--color-text-muted)] text-sm mb-3">
           No party members with linked characters.
         </p>
       )}
 
       {partyWithChars.map(({ memberId, memberName, character, remainingWP }) => (
-        <div key={memberId} style={{ marginBottom: '8px' }}>
+        <div key={memberId} className="mb-2">
           <div
-            style={{
-              padding: '8px 0',
-              color: 'var(--color-text)',
-              fontSize: '14px',
-              fontWeight: 600,
-              borderBottom: '1px solid var(--color-border)',
-            }}
+            className="py-2 text-[var(--color-text)] text-sm font-semibold border-b border-[var(--color-border)]"
           >
             {memberName} — WP: {remainingWP}
           </div>
           {character.spells.length === 0 ? (
-            <p style={{ color: 'var(--color-text-muted)', padding: '6px 0', fontSize: '14px' }}>
+            <p className="text-[var(--color-text-muted)] py-1.5 text-sm">
               No spells.
             </p>
           ) : (
@@ -82,25 +77,13 @@ export function SpellPicker({ onSelect, onClose }: SpellPickerProps) {
               <button
                 key={spell.id}
                 onClick={() => { onSelect(spell.name, memberName); onClose(); }}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '10px 0',
-                  minHeight: '44px',
-                  background: 'none',
-                  border: 'none',
-                  borderBottom: '1px solid var(--color-border)',
-                  color: 'var(--color-text)',
-                  cursor: 'pointer',
-                  fontSize: '16px',
-                  opacity: spell.wpCost > remainingWP ? 0.4 : 1,
-                }}
+                className={cn(
+                  'flex justify-between items-center w-full text-left py-2.5 px-0 min-h-11 bg-transparent border-0 border-b border-b-[var(--color-border)] text-[var(--color-text)] cursor-pointer text-base',
+                  spell.wpCost > remainingWP ? 'opacity-40' : 'opacity-100'
+                )}
               >
                 <span>{spell.name}</span>
-                <span style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+                <span className="text-[var(--color-text-muted)] text-sm">
                   {spell.wpCost} WP
                 </span>
               </button>
@@ -110,27 +93,17 @@ export function SpellPicker({ onSelect, onClose }: SpellPickerProps) {
       ))}
 
       {/* Quick-add spell not on sheet */}
-      <div style={{ paddingTop: '12px', borderTop: '2px solid var(--color-border)' }}>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '6px' }}>
+      <div className="pt-3 border-t-2 border-t-[var(--color-border)]">
+        <p className="text-[var(--color-text-muted)] text-[13px] mb-2">
           Spell not on any sheet:
         </p>
-        <div style={{ display: 'flex', gap: '6px' }}>
+        <div className="flex gap-3">
           <input
             type="text"
             placeholder="Spell name..."
             value={quickAddValue}
             onChange={e => setQuickAddValue(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '8px 12px',
-              minHeight: '44px',
-              background: 'var(--color-surface-raised)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              color: 'var(--color-text)',
-              fontSize: '16px',
-              boxSizing: 'border-box',
-            }}
+            className="flex-1 px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
           />
           <button
             onClick={() => {
@@ -140,17 +113,7 @@ export function SpellPicker({ onSelect, onClose }: SpellPickerProps) {
                 onClose();
               }
             }}
-            style={{
-              minHeight: '44px',
-              padding: '0 16px',
-              background: 'var(--color-accent)',
-              color: 'var(--color-on-accent, #fff)',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: 600,
-            }}
+            className="min-h-11 px-4 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg cursor-pointer text-base font-semibold"
           >
             Add
           </button>

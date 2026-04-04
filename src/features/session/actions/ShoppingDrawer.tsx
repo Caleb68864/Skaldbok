@@ -5,20 +5,7 @@ import type { ResolvedMember } from '../../../components/fields/PartyPicker';
 import { CounterControl } from '../../../components/primitives/CounterControl';
 import { useNoteActions } from '../../notes/useNoteActions';
 import { useToast } from '../../../context/ToastContext';
-
-/** Shared inline styles for the Buy / Sell action toggle chips. */
-const chipStyle = {
-  minHeight: '44px',
-  padding: '0 14px',
-  background: 'var(--color-surface-raised)',
-  border: '1px solid var(--color-border)',
-  borderRadius: '22px',
-  color: 'var(--color-text)',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 600,
-  flexShrink: 0,
-} as const;
+import { cn } from '../../../lib/utils';
 
 /**
  * Props for the {@link ShoppingDrawer} component.
@@ -155,26 +142,26 @@ export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSele
   return (
     <Drawer open={open} onClose={handleClose} title="Shopping">
       <PartyPicker members={members} selected={selectedMembers} onSelect={onSelectMembers} />
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+      <div className="flex gap-3 mb-3">
         <button
           onClick={() => setShopAction('buy')}
-          style={{
-            ...chipStyle,
-            flex: 1,
-            background: shopAction === 'buy' ? '#27ae60' : 'var(--color-surface-raised)',
-            color: shopAction === 'buy' ? '#fff' : 'var(--color-text)',
-          }}
+          className={cn(
+            'min-h-11 px-3.5 border border-[var(--color-border)] rounded-full cursor-pointer text-sm font-semibold shrink-0 flex-1',
+            shopAction === 'buy'
+              ? 'bg-[#27ae60] text-white'
+              : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+          )}
         >
           Buy
         </button>
         <button
           onClick={() => setShopAction('sell')}
-          style={{
-            ...chipStyle,
-            flex: 1,
-            background: shopAction === 'sell' ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-            color: shopAction === 'sell' ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-          }}
+          className={cn(
+            'min-h-11 px-3.5 border border-[var(--color-border)] rounded-full cursor-pointer text-sm font-semibold shrink-0 flex-1',
+            shopAction === 'sell'
+              ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+              : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+          )}
         >
           Sell
         </button>
@@ -185,46 +172,28 @@ export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSele
         value={shopItem}
         onChange={e => setShopItem(e.target.value)}
         autoFocus
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
       />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+      <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
         Cost per item
       </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+      <div className="flex flex-col gap-2 mb-3">
         <CounterControl label="Gold" value={shopGold} min={0} onChange={setShopGold} />
         <CounterControl label="Silver" value={shopSilver} min={0} onChange={setShopSilver} />
         <CounterControl label="Copper" value={shopCopper} min={0} onChange={setShopCopper} />
         <CounterControl label="Qty" value={shopQuantity} min={1} onChange={setShopQuantity} />
       </div>
       {hasAnyCoin && shopQuantity > 1 && (
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '12px' }}>
+        <p className="text-[var(--color-text-muted)] text-sm mb-3">
           Total: {totalStr}
         </p>
       )}
       <button
         onClick={handleLog}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: shopAction === 'buy' ? '#27ae60' : 'var(--color-accent)',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-        }}
+        className={cn(
+          'w-full min-h-11 border-none rounded-lg text-base font-semibold cursor-pointer text-white',
+          shopAction === 'buy' ? 'bg-[#27ae60]' : 'bg-[var(--color-accent)]'
+        )}
       >
         Log {shopAction === 'buy' ? 'Purchase' : 'Sale'}
       </button>

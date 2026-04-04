@@ -1,3 +1,4 @@
+import { cn } from '../../lib/utils';
 import type { SkillDefinition } from '../../types/system';
 import type { CharacterSkill } from '../../types/character';
 
@@ -13,26 +14,19 @@ export function SkillRow({ skillDef, characterSkill, onChange, disabled }: Skill
   const trained = characterSkill?.trained ?? false;
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 'var(--space-sm)',
-      padding: 'var(--space-xs) 0',
-      borderBottom: '1px solid var(--color-divider)',
-      minHeight: 'var(--touch-target-min)',
-    }}>
+    <div className="flex items-center gap-[var(--space-sm)] py-[var(--space-xs)] border-b border-[var(--color-divider)] min-h-[var(--touch-target-min)]">
       <input
         type="checkbox"
         checked={trained}
         disabled={disabled}
         onChange={e => onChange({ value, trained: e.target.checked })}
         aria-label={`${skillDef.name} trained`}
-        style={{ width: '20px', height: '20px', cursor: disabled ? 'default' : 'pointer', flexShrink: 0 }}
+        className={cn("w-5 h-5 shrink-0", disabled ? "cursor-default" : "cursor-pointer")}
       />
-      <span style={{ flex: 1, color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>
+      <span className="flex-1 text-[var(--color-text)] text-[length:var(--font-size-md)]">
         {skillDef.name}
         {skillDef.baseChance > 0 && (
-          <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginLeft: 'var(--space-xs)' }}>
+          <span className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] ml-[var(--space-xs)]">
             ({skillDef.baseChance}%)
           </span>
         )}
@@ -44,18 +38,12 @@ export function SkillRow({ skillDef, characterSkill, onChange, disabled }: Skill
         max={100}
         disabled={disabled}
         onChange={e => onChange({ value: Number(e.target.value), trained })}
-        style={{
-          width: '64px',
-          height: '40px',
-          textAlign: 'center',
-          fontSize: 'var(--font-size-md)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-sm)',
-          background: disabled ? 'var(--color-surface)' : 'var(--color-surface-alt)',
-          color: 'var(--color-text)',
-          cursor: disabled ? 'default' : 'text',
-          opacity: disabled ? 0.7 : 1,
-        }}
+        className={cn(
+          "w-16 h-10 text-center text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)]",
+          disabled
+            ? "bg-[var(--color-surface)] cursor-default opacity-70"
+            : "bg-[var(--color-surface-alt)] cursor-text opacity-100"
+        )}
       />
     </div>
   );

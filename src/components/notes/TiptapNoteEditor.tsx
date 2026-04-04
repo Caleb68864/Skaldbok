@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { cn } from '../../lib/utils';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
@@ -358,19 +359,7 @@ function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) =
     <textarea
       placeholder={placeholder ?? 'Write your note...'}
       onChange={e => onChange(e.target.value)}
-      style={{
-        width: '100%',
-        minHeight: '120px',
-        padding: '8px',
-        background: 'var(--color-surface)',
-        color: 'var(--color-text)',
-        border: '1px solid var(--color-border)',
-        borderRadius: '4px',
-        fontFamily: 'var(--font-body)',
-        fontSize: '14px',
-        resize: 'vertical',
-        boxSizing: 'border-box',
-      }}
+      className="w-full min-h-[120px] p-2 bg-[var(--color-surface)] text-[var(--color-text)] border border-[var(--color-border)] rounded font-[family-name:var(--font-body)] text-sm resize-y box-border"
     />
   );
 }
@@ -543,19 +532,7 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
   if (!editor) {
     // Show placeholder box while Tiptap initializes (not the fallback textarea)
     return (
-      <div
-        style={{
-          fontFamily: 'var(--font-body)',
-          color: 'var(--color-text-muted)',
-          background: 'var(--color-surface)',
-          padding: '8px',
-          minHeight: '120px',
-          borderRadius: '4px',
-          border: '1px solid var(--color-border)',
-          cursor: 'text',
-          fontSize: '14px',
-        }}
-      >
+      <div className="font-[family-name:var(--font-body)] text-[var(--color-text-muted)] bg-[var(--color-surface)] p-2 min-h-[120px] rounded border border-[var(--color-border)] cursor-text text-sm">
         {placeholder ?? 'Loading editor...'}
       </div>
     );
@@ -568,41 +545,24 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
    * @param active - Whether the editor cursor is currently inside the relevant mark/node.
    * @returns A `React.CSSProperties` object with accent or surface styling.
    */
-  const toolbarBtnStyle = (active: boolean): React.CSSProperties => ({
-    minHeight: '44px',
-    minWidth: '44px',
-    padding: '0 8px',
-    background: active ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-    color: active ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-    border: '1px solid var(--color-border)',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-    fontWeight: 600,
-  });
+  const toolbarBtnClass = (active: boolean) => cn(
+    "min-h-11 min-w-11 px-2 border border-[var(--color-border)] rounded cursor-pointer text-sm font-semibold",
+    active
+      ? "bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]"
+      : "bg-[var(--color-surface-raised)] text-[var(--color-text)]"
+  );
 
   return (
     <div>
       {showToolbar && (
-        <div
-          style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '4px',
-            padding: '6px',
-            background: 'var(--color-surface-raised)',
-            border: '1px solid var(--color-border)',
-            borderBottom: 'none',
-            borderRadius: '4px 4px 0 0',
-          }}
-        >
-          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} style={toolbarBtnStyle(editor.isActive('bold'))}>B</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} style={toolbarBtnStyle(editor.isActive('italic'))}><em>I</em></button>
-          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} style={toolbarBtnStyle(editor.isActive('heading', { level: 2 }))}>H2</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} style={toolbarBtnStyle(editor.isActive('heading', { level: 3 }))}>H3</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} style={toolbarBtnStyle(editor.isActive('bulletList'))}>• List</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} style={toolbarBtnStyle(editor.isActive('orderedList'))}>1. List</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} style={toolbarBtnStyle(editor.isActive('blockquote'))}>❝</button>
+        <div className="flex flex-wrap gap-2 p-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] border-b-0 rounded-t">
+          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={toolbarBtnClass(editor.isActive('bold'))}>B</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={toolbarBtnClass(editor.isActive('italic'))}><em>I</em></button>
+          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={toolbarBtnClass(editor.isActive('heading', { level: 2 }))}>H2</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={toolbarBtnClass(editor.isActive('heading', { level: 3 }))}>H3</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={toolbarBtnClass(editor.isActive('bulletList'))}>• List</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={toolbarBtnClass(editor.isActive('orderedList'))}>1. List</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} className={toolbarBtnClass(editor.isActive('blockquote'))}>❝</button>
           <button type="button" onClick={() => {
             if (editor.isActive('link')) {
               editor.chain().focus().unsetLink().run();
@@ -610,21 +570,16 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
               const url = window.prompt('URL');
               if (url) editor.chain().focus().setLink({ href: url }).run();
             }
-          }} style={toolbarBtnStyle(editor.isActive('link'))}>Link</button>
+          }} className={toolbarBtnClass(editor.isActive('link'))}>Link</button>
         </div>
       )}
       <EditorContent
         editor={editor}
-        style={{
-          fontFamily: 'var(--font-body)',
-          color: 'var(--color-text)',
-          background: 'var(--color-surface)',
-          padding: '8px',
-          minHeight: minHeight ?? '120px',
-          borderRadius: showToolbar ? '0 0 4px 4px' : '4px',
-          border: '1px solid var(--color-border)',
-          cursor: 'text',
-        }}
+        className={cn(
+          "font-[family-name:var(--font-body)] text-[var(--color-text)] bg-[var(--color-surface)] p-2 border border-[var(--color-border)] cursor-text min-h-[120px]",
+          showToolbar ? "rounded-b" : "rounded"
+        )}
+        style={minHeight ? { minHeight } : undefined}
       />
     </div>
   );

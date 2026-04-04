@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Note } from '../../types/note';
 import { extractDescriptors } from '../../utils/notes/extractDescriptors';
+import { cn } from '../../lib/utils';
 
 interface NoteItemProps {
   note: Note;
@@ -17,21 +18,14 @@ export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: N
 
   return (
     <div
-      style={{
-        padding: '10px 0',
-        borderBottom: '1px solid var(--color-border)',
-      }}
+      className="py-2.5 border-b border-[var(--color-border)]"
     >
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          minHeight: '44px',
-        }}
+        className="flex items-center min-h-11"
       >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <span style={{ color: 'var(--color-text)', fontSize: '14px' }}>{note.title}</span>
-          <span style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: '11px', marginTop: '2px' }}>
+        <div className="flex-1 min-w-0">
+          <span className="text-[var(--color-text)] text-sm">{note.title}</span>
+          <span className="block text-[var(--color-text-muted)] text-[11px] mt-0.5">
             {new Date(note.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             {note.type !== 'generic' && ` · ${note.type}`}
           </span>
@@ -39,30 +33,13 @@ export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: N
       <button
         onClick={() => setShowActions(v => !v)}
         aria-label="Note actions"
-        style={{
-          background: 'none',
-          border: 'none',
-          color: 'var(--color-text-muted)',
-          fontSize: '18px',
-          cursor: 'pointer',
-          minHeight: '44px',
-          minWidth: '44px',
-        }}
+        className="bg-transparent border-none text-[var(--color-text-muted)] text-lg cursor-pointer min-h-11 min-w-11"
       >
         ...
       </button>
       {showActions && (
         <div
-          style={{
-            position: 'absolute',
-            right: '16px',
-            background: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
-            zIndex: 100,
-            minWidth: '160px',
-          }}
+          className="absolute right-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)] z-[100] min-w-40"
         >
           {[
             { label: note.pinned ? 'Unpin' : 'Pin', action: () => { note.pinned ? onUnpin(note.id) : onPin(note.id); setShowActions(false); } },
@@ -73,18 +50,10 @@ export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: N
             <button
               key={label}
               onClick={action}
-              style={{
-                display: 'block',
-                width: '100%',
-                textAlign: 'left',
-                padding: '10px 14px',
-                minHeight: '44px',
-                background: 'none',
-                border: 'none',
-                color: label === 'Delete' ? 'var(--color-danger, #e53e3e)' : 'var(--color-text)',
-                cursor: 'pointer',
-                fontSize: '14px',
-              }}
+              className={cn(
+                'block w-full text-left px-3.5 py-2.5 min-h-11 bg-transparent border-none cursor-pointer text-sm',
+                label === 'Delete' ? 'text-[var(--color-danger,#e53e3e)]' : 'text-[var(--color-text)]'
+              )}
             >
               {label}
             </button>
@@ -94,21 +63,11 @@ export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: N
       </div>
       {/* Descriptor chip row — rendered only when note has descriptors (AC5.8) */}
       {descriptors.length > 0 && (
-        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '6px' }}>
+        <div className="flex gap-2 flex-wrap mt-2">
           {descriptors.map(label => (
             <span
               key={label}
-              style={{
-                display: 'inline-block',
-                padding: '2px 10px',
-                minHeight: '24px',
-                background: 'var(--color-surface-raised)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '12px',
-                color: 'var(--color-accent)',
-                fontSize: '12px',
-                fontWeight: 600,
-              }}
+              className="inline-block px-2.5 py-0.5 min-h-6 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-xl text-[var(--color-accent)] text-xs font-semibold"
             >
               #{label}
             </span>

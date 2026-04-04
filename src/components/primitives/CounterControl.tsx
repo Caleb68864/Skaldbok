@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+
 interface CounterControlProps {
   value: number;
   min?: number;
@@ -23,36 +25,25 @@ export function CounterControl({ value, min, max, onChange, label, disabled = fa
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', minWidth: '60px' }}>{label}</span>
+    <div className="flex items-center gap-[var(--space-sm)]">
+      <span className="text-sm text-text-muted min-w-[60px]">{label}</span>
       <button
         type="button"
         aria-label={`Decrease ${label}`}
         onClick={decrement}
         disabled={disabled || (min !== undefined && value <= min)}
-        style={{
-          minWidth: 'var(--touch-target-min)',
-          minHeight: 'var(--touch-target-min)',
-          fontSize: 'var(--font-size-xl)',
-          background: 'var(--color-surface-alt)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--color-text)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        className={cn(
+          "min-w-[44px] min-h-[44px] text-xl",
+          "bg-surface-alt border border-border rounded-[var(--radius-sm)]",
+          "text-text cursor-pointer flex items-center justify-center",
+          "hover:brightness-110 transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "disabled:pointer-events-none disabled:opacity-60",
+        )}
       >
-        −
+        &minus;
       </button>
-      <span style={{
-        minWidth: '40px',
-        textAlign: 'center',
-        fontSize: 'var(--font-size-lg)',
-        fontWeight: 'bold',
-        color: 'var(--color-text)',
-      }}>
+      <span className="min-w-[40px] text-center text-lg font-bold text-text">
         {value}
       </span>
       <button
@@ -60,19 +51,14 @@ export function CounterControl({ value, min, max, onChange, label, disabled = fa
         aria-label={`Increase ${label}`}
         onClick={increment}
         disabled={disabled || (max !== undefined && value >= max)}
-        style={{
-          minWidth: 'var(--touch-target-min)',
-          minHeight: 'var(--touch-target-min)',
-          fontSize: 'var(--font-size-xl)',
-          background: 'var(--color-surface-alt)',
-          border: '1px solid var(--color-border)',
-          borderRadius: 'var(--radius-sm)',
-          color: 'var(--color-text)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        className={cn(
+          "min-w-[44px] min-h-[44px] text-xl",
+          "bg-surface-alt border border-border rounded-[var(--radius-sm)]",
+          "text-text cursor-pointer flex items-center justify-center",
+          "hover:brightness-110 transition-colors",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+          "disabled:pointer-events-none disabled:opacity-60",
+        )}
       >
         +
       </button>

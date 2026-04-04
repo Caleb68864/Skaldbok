@@ -11,23 +11,21 @@ interface InventoryListProps {
 
 export function InventoryList({ items, onEdit, onDelete, onAdd, isEditMode }: InventoryListProps) {
   if (items.length === 0 && !isEditMode) {
-    return <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No inventory items.</p>;
+    return <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No inventory items.</p>;
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+    <div className="flex flex-col gap-[var(--space-md)]">
       {items.map(item => (
-        <div key={item.id} style={{
-          display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', padding: 'var(--space-sm) 0', borderBottom: '1px solid var(--color-divider)', flexWrap: 'wrap',
-        }}>
-          <div style={{ flex: 1 }}>
-            <span style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>{item.name}</span>
-            <span style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginLeft: 'var(--space-sm)' }}>
+        <div key={item.id} className="flex items-center gap-[var(--space-sm)] py-[var(--space-sm)] border-b border-[var(--color-divider)] flex-wrap">
+          <div className="flex-1">
+            <span className="text-[var(--color-text)] text-[length:var(--font-size-md)]">{item.name}</span>
+            <span className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] ml-[var(--space-sm)]">
               x{item.quantity} · {item.weight} wt
             </span>
           </div>
           {isEditMode && (
-            <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
+            <div className="flex gap-3">
               <Button size="sm" onClick={() => onEdit(item)}>Edit</Button>
               <Button size="sm" variant="danger" onClick={() => onDelete(item.id)}>Delete</Button>
             </div>
@@ -35,7 +33,7 @@ export function InventoryList({ items, onEdit, onDelete, onAdd, isEditMode }: In
         </div>
       ))}
       {isEditMode && (
-        <Button variant="secondary" size="sm" onClick={onAdd} style={{ marginTop: 'var(--space-sm)' }}>+ Add Item</Button>
+        <Button variant="secondary" size="sm" onClick={onAdd} className="mt-[var(--space-sm)]">+ Add Item</Button>
       )}
     </div>
   );

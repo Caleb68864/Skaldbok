@@ -8,15 +8,7 @@ export function App() {
 
   if (isLoading) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '100dvh',
-        backgroundColor: 'var(--color-bg)',
-        color: 'var(--color-text)',
-        fontSize: 'var(--font-size-lg)',
-      }}>
+      <div className="flex items-center justify-center min-h-dvh bg-bg text-text text-lg">
         Loading...
       </div>
     );

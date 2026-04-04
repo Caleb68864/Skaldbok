@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '../../lib/utils';
 
 interface DerivedFieldDisplayProps {
   label: string;
@@ -36,23 +37,12 @@ export function DerivedFieldDisplay({ label, computedValue, override, onOverride
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 'var(--space-sm)',
-      padding: 'var(--space-sm) 0',
-    }}>
-      <span style={{
-        color: 'var(--color-text-muted)',
-        fontSize: 'var(--font-size-sm)',
-        fontWeight: 'bold',
-        minWidth: '120px',
-      }}>
+    <div className="flex items-center justify-between gap-[var(--space-sm)] py-[var(--space-sm)]">
+      <span className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] font-bold min-w-[120px]">
         {label}
       </span>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+      <div className="flex items-center gap-[var(--space-sm)]">
         {editing ? (
           <input
             type="number"
@@ -61,42 +51,23 @@ export function DerivedFieldDisplay({ label, computedValue, override, onOverride
             onBlur={handleCommit}
             onKeyDown={handleKeyDown}
             autoFocus
-            style={{
-              width: '64px',
-              height: '36px',
-              textAlign: 'center',
-              fontSize: 'var(--font-size-md)',
-              border: '1px solid var(--color-primary)',
-              borderRadius: 'var(--radius-sm)',
-              background: 'var(--color-surface-alt)',
-              color: 'var(--color-text)',
-            }}
+            className="w-16 h-9 text-center text-[length:var(--font-size-md)] border border-[var(--color-primary)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
           />
         ) : (
           <span
             onClick={handleStartEdit}
-            style={{
-              fontSize: 'var(--font-size-md)',
-              fontWeight: 'bold',
-              color: isOverridden ? 'var(--color-primary)' : 'var(--color-text)',
-              cursor: editable ? 'pointer' : 'default',
-              minWidth: '48px',
-              textAlign: 'center',
-              padding: 'var(--space-xs) var(--space-sm)',
-              borderRadius: 'var(--radius-sm)',
-              border: editable ? '1px dashed var(--color-border)' : '1px solid transparent',
-            }}
+            className={cn(
+              "text-[length:var(--font-size-md)] font-bold min-w-12 text-center px-[var(--space-sm)] py-[var(--space-xs)] rounded-[var(--radius-sm)]",
+              isOverridden ? "text-[var(--color-primary)]" : "text-[var(--color-text)]",
+              editable ? "cursor-pointer border border-dashed border-[var(--color-border)]" : "cursor-default border border-transparent",
+            )}
           >
             {effectiveValue}
           </span>
         )}
 
         {isOverridden && (
-          <span style={{
-            fontSize: 'var(--font-size-xs, 10px)',
-            color: 'var(--color-primary)',
-            fontStyle: 'italic',
-          }}>
+          <span className="text-[length:var(--font-size-xs,10px)] text-[var(--color-primary)] italic">
             (overridden)
           </span>
         )}
@@ -104,17 +75,7 @@ export function DerivedFieldDisplay({ label, computedValue, override, onOverride
         {isOverridden && editable && (
           <button
             onClick={onReset}
-            style={{
-              fontSize: 'var(--font-size-xs, 10px)',
-              color: 'var(--color-text-muted)',
-              background: 'none',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '2px 6px',
-              cursor: 'pointer',
-              minHeight: '28px',
-              minWidth: '44px',
-            }}
+            className="text-[length:var(--font-size-xs,10px)] text-[var(--color-text-muted)] bg-transparent border border-[var(--color-border)] rounded-[var(--radius-sm)] px-1.5 py-0.5 cursor-pointer min-h-7 min-w-11"
           >
             Reset
           </button>

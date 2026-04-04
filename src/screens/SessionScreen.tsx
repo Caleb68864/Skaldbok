@@ -12,18 +12,6 @@ import { getSessionsByCampaign } from '../storage/repositories/sessionRepository
 import type { Session } from '../types/session';
 import type { Note } from '../types/note';
 
-/**
- * Formats an ISO datetime string into a locale-aware date-and-time string.
- *
- * @param iso - An ISO 8601 datetime string, e.g. `"2026-03-31T18:00:00.000Z"`.
- * @returns A locale-formatted date-time string, or the original `iso` value if
- *   parsing fails.
- *
- * @example
- * ```ts
- * formatDateTime('2026-03-31T18:00:00.000Z'); // "3/31/2026, 6:00:00 PM" (locale-dependent)
- * ```
- */
 function formatDateTime(iso: string): string {
   try {
     return new Date(iso).toLocaleString();
@@ -32,18 +20,6 @@ function formatDateTime(iso: string): string {
   }
 }
 
-/**
- * Formats an ISO date or datetime string into a locale-aware date-only string.
- *
- * @param iso - An ISO 8601 date or datetime string, e.g. `"2026-03-31"`.
- * @returns A locale-formatted date string, or the original `iso` value if
- *   parsing fails.
- *
- * @example
- * ```ts
- * formatDate('2026-03-31'); // "3/31/2026" (locale-dependent)
- * ```
- */
 function formatDate(iso: string): string {
   try {
     return new Date(iso).toLocaleDateString();
@@ -52,35 +28,9 @@ function formatDate(iso: string): string {
   }
 }
 
-/**
- * The Session screen — the primary hub for managing the current play session.
- *
- * @remarks
- * Displays the active campaign name and one of two views depending on whether
- * a session is in progress:
- *
- * **Active session view:**
- * - Session title and live elapsed-time counter (updated every 10 seconds).
- * - End Session, Export Session (.md), and Export + Notes (.zip) actions.
- * - {@link SessionQuickActions} panel for quick log entries.
- * - Combat management: Start Combat / Resume Combat / {@link CombatTimeline}.
- *
- * **No active session view:**
- * - Recap card showing the most recently ended session and its note count.
- * - Start Session button.
- *
- * **Shared elements:**
- * - Export All Notes (.zip) button.
- * - Scrollable list of past (ended) sessions with per-session .md / .zip export
- *   buttons and a Resume button.
- * - {@link NotesGrid} for all campaign notes.
- * - {@link EndSessionModal} confirmation dialog.
- *
- * The component redirects to {@link NoCampaignPrompt} if no campaign is active.
- *
- * @returns The session management UI, or {@link NoCampaignPrompt} when no
- *   campaign has been selected.
- */
+const actionBtnClass = "min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-medium whitespace-nowrap";
+const primaryBtnClass = "min-h-11 min-w-11 px-5 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer whitespace-nowrap";
+
 export function SessionScreen() {
   const { activeCampaign, activeSession, startSession, endSession, resumeSession } = useCampaignContext();
   const { exportSessionMarkdown, exportSessionBundle, exportAllNotes } = useExportActions();
@@ -107,7 +57,7 @@ export function SessionScreen() {
     setElapsed(formatElapsed(activeSession.startedAt));
     const interval = setInterval(() => {
       setElapsed(formatElapsed(activeSession.startedAt));
-    }, 10000); // update every 10s
+    }, 10000);
     return () => clearInterval(interval);
   }, [activeSession?.startedAt, formatElapsed]);
 
@@ -121,7 +71,6 @@ export function SessionScreen() {
         .filter(s => s.status === 'ended')
         .sort((a, b) => b.date.localeCompare(a.date));
       setPastSessions(ended);
-      // Get note count for last ended session (for recap card)
       if (ended.length > 0) {
         getNotesBySession(ended[0].id).then((notes: Note[]) => {
           if (mounted) setLastSessionNoteCount(notes.length);
@@ -134,7 +83,6 @@ export function SessionScreen() {
     return () => { mounted = false; };
   }, [activeCampaign?.id, activeSession]);
 
-  // Check for active combat note when session changes
   useEffect(() => {
     if (!activeSession) {
       setActiveCombatNoteId(null);
@@ -183,84 +131,37 @@ export function SessionScreen() {
   }
 
   return (
-    <div style={{ padding: '16px' }}>
-      <h2 style={{ color: 'var(--color-text)', marginBottom: '8px' }}>{activeCampaign.name}</h2>
+    <div className="p-4">
+      <h2 className="text-[var(--color-text)] mb-2">{activeCampaign.name}</h2>
 
       {activeSession ? (
-        <div
-          style={{
-            background: 'var(--color-surface-raised)',
-            borderRadius: '8px',
-            padding: '16px',
-            marginBottom: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '4px' }}>
-            <h3 style={{ color: 'var(--color-text)', margin: 0 }}>{activeSession.title}</h3>
+        <div className="bg-[var(--color-surface-raised)] rounded-lg p-4 mb-4">
+          <div className="flex justify-between items-baseline mb-1">
+            <h3 className="text-[var(--color-text)] m-0">{activeSession.title}</h3>
             {elapsed && (
-              <span style={{ color: 'var(--color-accent)', fontSize: '14px', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+              <span className="text-[var(--color-accent)] text-sm font-semibold tabular-nums">
                 {elapsed}
               </span>
             )}
           </div>
-          <p style={{ color: 'var(--color-text-muted)', marginBottom: '12px', fontSize: '14px' }}>
+          <p className="text-[var(--color-text-muted)] mb-3 text-sm">
             Started: {formatDateTime(activeSession.startedAt)}
           </p>
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-            <button
-              onClick={handleEndSession}
-              style={{
-                minHeight: '44px',
-                minWidth: '44px',
-                padding: '0 20px',
-                background: 'var(--color-accent)',
-                color: 'var(--color-on-accent, #fff)',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
+          <div className="flex gap-3 flex-wrap">
+            <button onClick={handleEndSession} className={primaryBtnClass}>
               End Session
             </button>
-            <button
-              onClick={() => exportSessionMarkdown(activeSession.id)}
-              style={{
-                minHeight: '44px',
-                minWidth: '44px',
-                padding: '0 12px',
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                color: 'var(--color-text)',
-                cursor: 'pointer',
-                fontSize: '14px',
-              }}
-            >
+            <button onClick={() => exportSessionMarkdown(activeSession.id)} className={actionBtnClass}>
               Export Session
             </button>
-            <button
-              onClick={() => exportSessionBundle(activeSession.id)}
-              style={{
-                minHeight: '44px',
-                minWidth: '44px',
-                padding: '0 12px',
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                color: 'var(--color-text)',
-                cursor: 'pointer',
-                fontSize: '14px',
-              }}
-            >
+            <button onClick={() => exportSessionBundle(activeSession.id)} className={actionBtnClass}>
               Export + Notes (ZIP)
             </button>
           </div>
 
           {/* Quick session actions — hidden during combat to prevent overlay */}
           {!showCombatView && (
-            <div style={{ marginTop: '16px' }}>
+            <div className="mt-4">
               <SessionQuickActions />
             </div>
           )}
@@ -275,39 +176,13 @@ export function SessionScreen() {
               }}
             />
           ) : (
-            <div style={{ marginTop: '12px' }}>
+            <div className="mt-3">
               {activeCombatNoteId ? (
-                <button
-                  onClick={() => setShowCombatView(true)}
-                  style={{
-                    minHeight: '44px',
-                    minWidth: '44px',
-                    padding: '0 16px',
-                    background: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px',
-                    color: 'var(--color-text)',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
+                <button onClick={() => setShowCombatView(true)} className={actionBtnClass}>
                   Resume Combat
                 </button>
               ) : (
-                <button
-                  onClick={handleStartCombat}
-                  style={{
-                    minHeight: '44px',
-                    minWidth: '44px',
-                    padding: '0 16px',
-                    background: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '8px',
-                    color: 'var(--color-text)',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
+                <button onClick={handleStartCombat} className={actionBtnClass}>
                   Start Combat
                 </button>
               )}
@@ -315,47 +190,26 @@ export function SessionScreen() {
           )}
         </div>
       ) : (
-        <div style={{ marginBottom: '16px' }}>
+        <div className="mb-4">
           {pastSessions.length > 0 ? (
-            <div
-              style={{
-                background: 'var(--color-surface-raised)',
-                borderRadius: '8px',
-                padding: '12px 16px',
-                marginBottom: '12px',
-              }}
-            >
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+            <div className="bg-[var(--color-surface-raised)] rounded-lg px-4 py-3 mb-3">
+              <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-[0.05em] mb-1">
                 Last Session
               </p>
-              <p style={{ color: 'var(--color-text)', fontWeight: 600, marginBottom: '2px' }}>
+              <p className="text-[var(--color-text)] font-semibold mb-0.5">
                 {pastSessions[0].title}
               </p>
-              <p style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>
+              <p className="text-[var(--color-text-muted)] text-[13px]">
                 {formatDate(pastSessions[0].date)}
                 {lastSessionNoteCount > 0 && ` · ${lastSessionNoteCount} note${lastSessionNoteCount !== 1 ? 's' : ''}`}
               </p>
             </div>
           ) : (
-            <p style={{ color: 'var(--color-text-muted)', marginBottom: '12px', fontSize: '14px' }}>
+            <p className="text-[var(--color-text-muted)] mb-3 text-sm">
               No sessions yet.
             </p>
           )}
-          <button
-            onClick={handleStartSession}
-            style={{
-              minHeight: '44px',
-              minWidth: '44px',
-              padding: '0 20px',
-              background: 'var(--color-accent)',
-              color: 'var(--color-on-accent, #fff)',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
+          <button onClick={handleStartSession} className={primaryBtnClass}>
             Start Session
           </button>
         </div>
@@ -364,20 +218,7 @@ export function SessionScreen() {
       {/* Export all notes */}
       <button
         onClick={() => exportAllNotes()}
-        style={{
-          minHeight: '44px',
-          minWidth: '44px',
-          width: '100%',
-          padding: '0 16px',
-          marginBottom: '16px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          cursor: 'pointer',
-          fontSize: '14px',
-          fontWeight: 600,
-        }}
+        className="min-h-11 min-w-11 w-full px-4 py-2 mb-4 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-semibold"
       >
         Export All Notes (.zip)
       </button>
@@ -385,72 +226,39 @@ export function SessionScreen() {
       {/* Past sessions list */}
       {!loadingPast && pastSessions.length > 0 && (
         <div>
-          <h3 style={{ color: 'var(--color-text)', marginBottom: '8px' }}>Past Sessions</h3>
+          <h3 className="text-[var(--color-text)] mb-2">Past Sessions</h3>
           {pastSessions.map(session => (
             <div
               key={session.id}
-              style={{
-                background: 'var(--color-surface-raised)',
-                borderRadius: '8px',
-                padding: '12px',
-                marginBottom: '8px',
-              }}
+              className="bg-[var(--color-surface-raised)] rounded-lg p-3 mb-2"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div className="flex justify-between items-start">
                 <div>
-                  <p style={{ color: 'var(--color-text)', fontWeight: 600, marginBottom: '2px' }}>
+                  <p className="text-[var(--color-text)] font-semibold mb-0.5">
                     {session.title}
                   </p>
-                  <p style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>
+                  <p className="text-[var(--color-text-muted)] text-xs">
                     {formatDate(session.date)}
                   </p>
                 </div>
-                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                <div className="flex gap-3 shrink-0">
                   {!activeSession && (
                     <button
                       onClick={() => resumeSession(session.id)}
-                      style={{
-                        minHeight: '44px',
-                        padding: '0 8px',
-                        background: 'var(--color-accent)',
-                        color: 'var(--color-on-accent, #fff)',
-                        border: 'none',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                      }}
+                      className="min-h-11 px-3 py-1.5 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-md cursor-pointer text-xs font-semibold"
                     >
                       Resume
                     </button>
                   )}
                   <button
                     onClick={() => exportSessionMarkdown(session.id)}
-                    style={{
-                      minHeight: '44px',
-                      padding: '0 8px',
-                      background: 'none',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '6px',
-                      color: 'var(--color-text-muted)',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
+                    className="min-h-11 px-3 py-1.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
                   >
                     .md
                   </button>
                   <button
                     onClick={() => exportSessionBundle(session.id)}
-                    style={{
-                      minHeight: '44px',
-                      padding: '0 8px',
-                      background: 'none',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: '6px',
-                      color: 'var(--color-text-muted)',
-                      cursor: 'pointer',
-                      fontSize: '12px',
-                    }}
+                    className="min-h-11 px-3 py-1.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
                   >
                     .zip
                   </button>

@@ -1,3 +1,5 @@
+import { cn } from '@/lib/utils';
+
 interface ChipProps {
   label: string;
   active?: boolean;
@@ -10,23 +12,16 @@ export function Chip({ label, active = false, onClick, disabled = false }: ChipP
     <button
       type="button"
       onClick={disabled ? undefined : onClick}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: 'var(--touch-target-min)',
-        minWidth: 'var(--touch-target-min)',
-        padding: '0 var(--space-md)',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--color-border)',
-        backgroundColor: active ? 'var(--color-primary)' : 'var(--color-surface-alt)',
-        color: active ? 'var(--color-primary-text)' : 'var(--color-text)',
-        cursor: disabled ? 'default' : 'pointer',
-        opacity: disabled ? 0.6 : 1,
-        fontFamily: 'inherit',
-        fontSize: 'var(--font-size-sm)',
-        fontWeight: active ? 'bold' : 'normal',
-      }}
+      className={cn(
+        "inline-flex items-center justify-center min-h-[44px] min-w-[44px]",
+        "px-2.5 py-1 rounded-[var(--radius-lg)] border border-border",
+        "font-inherit text-sm cursor-pointer transition-colors",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        active
+          ? "bg-accent text-bg font-bold"
+          : "bg-surface-alt text-text font-normal",
+        disabled && "pointer-events-none opacity-60",
+      )}
       disabled={disabled}
     >
       {label}

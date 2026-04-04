@@ -5,20 +5,7 @@ import { useToast } from '../../../context/ToastContext';
 import { useCampaignContext } from '../../campaign/CampaignContext';
 import { getNotesByCampaign } from '../../../storage/repositories/noteRepository';
 import type { Note } from '../../../types/note';
-
-/** Shared inline styles for the NPC source-selection chips. */
-const chipStyle = {
-  minHeight: '44px',
-  padding: '0 14px',
-  background: 'var(--color-surface-raised)',
-  border: '1px solid var(--color-border)',
-  borderRadius: '22px',
-  color: 'var(--color-text)',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 600,
-  flexShrink: 0,
-} as const;
+import { cn } from '../../../lib/utils';
 
 /**
  * Props for the {@link RumorDrawer} component.
@@ -116,30 +103,20 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
         value={rumorText}
         onChange={e => setRumorText(e.target.value)}
         autoFocus
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
       />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+      <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
         Source (optional)
       </p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+      <div className="flex gap-3 flex-wrap mb-3">
         <button
           onClick={() => setRumorSource('')}
-          style={{
-            ...chipStyle,
-            background: rumorSource === '' ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-            color: rumorSource === '' ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-          }}
+          className={cn(
+            'min-h-11 px-3.5 border border-[var(--color-border)] rounded-full cursor-pointer text-sm font-semibold shrink-0',
+            rumorSource === ''
+              ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+              : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+          )}
         >
           Unknown
         </button>
@@ -147,11 +124,12 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
           <button
             key={npc.id}
             onClick={() => setRumorSource(npc.title)}
-            style={{
-              ...chipStyle,
-              background: rumorSource === npc.title ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: rumorSource === npc.title ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-            }}
+            className={cn(
+              'min-h-11 px-3.5 border border-[var(--color-border)] rounded-full cursor-pointer text-sm font-semibold shrink-0',
+              rumorSource === npc.title
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+            )}
           >
             {npc.title}
           </button>
@@ -160,18 +138,10 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
       <button
         onClick={handleLog}
         disabled={!rumorText.trim()}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: 'var(--color-accent)',
-          color: 'var(--color-on-accent, #fff)',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          opacity: !rumorText.trim() ? 0.6 : 1,
-        }}
+        className={cn(
+          'w-full min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer',
+          !rumorText.trim() ? 'opacity-60' : 'opacity-100'
+        )}
       >
         Log Rumor
       </button>

@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { cn } from '../../lib/utils';
 import { useToast } from '../../context/ToastContext';
 
 interface CharacterPortraitProps {
@@ -104,45 +105,28 @@ export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPo
   return (
     <>
       {/* Thumbnail wrapper */}
-      <div className="portrait-thumbnail" style={{ position: 'relative', flexShrink: 0 }}>
+      <div className="portrait-thumbnail relative shrink-0">
         <div
           role="button"
           tabIndex={0}
           onClick={handleThumbnailClick}
           onKeyDown={handleKeyDown}
           aria-label={portraitUri ? `View ${characterName} portrait` : `${characterName} portrait placeholder`}
-          style={{
-            width: '64px',
-            height: '64px',
-            borderRadius: 'var(--radius-md)',
-            overflow: 'hidden',
-            cursor: portraitUri ? 'pointer' : 'default',
-            backgroundColor: 'var(--color-surface-alt)',
-            border: '2px solid var(--color-border)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className={cn(
+            "w-16 h-16 rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-surface-alt)] border-2 border-[var(--color-border)] flex items-center justify-center",
+            portraitUri ? "cursor-pointer" : "cursor-default"
+          )}
         >
           {portraitUri ? (
             <img
               src={portraitUri}
               alt={`${characterName} portrait`}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              className="w-full h-full object-cover"
             />
           ) : (
             <span
               aria-hidden="true"
-              style={{
-                fontSize: 'var(--size-xl)',
-                fontWeight: 'bold',
-                color: 'var(--color-text-muted)',
-                fontFamily: 'var(--font-display)',
-                userSelect: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+              className="text-[length:var(--size-xl)] font-bold text-[var(--color-text-muted)] font-[family-name:var(--font-display)] select-none flex items-center justify-center"
             >
               {initials || (
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -160,23 +144,7 @@ export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPo
             onClick={handleUploadClick}
             aria-label="Upload character portrait"
             title="Upload portrait"
-            style={{
-              position: 'absolute',
-              bottom: '-6px',
-              right: '-6px',
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              background: 'var(--color-accent)',
-              border: '2px solid var(--color-surface)',
-              color: '#fff',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 0,
-              minHeight: 'unset',
-            }}
+            className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-[var(--color-accent)] border-2 border-[var(--color-surface)] text-white cursor-pointer flex items-center justify-center p-0 min-h-0"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -194,7 +162,7 @@ export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPo
         accept="image/jpeg,image/png,image/gif,image/webp"
         aria-label="Choose character portrait image"
         onChange={handleFileChange}
-        style={{ display: 'none' }}
+        className="hidden"
       />
 
       {/* Lightbox modal */}
@@ -209,23 +177,7 @@ export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPo
           <button
             onClick={() => setModalOpen(false)}
             aria-label="Close portrait"
-            style={{
-              position: 'absolute',
-              top: '16px',
-              right: '16px',
-              background: 'rgba(0,0,0,0.55)',
-              border: '1px solid rgba(255,255,255,0.3)',
-              borderRadius: '50%',
-              width: '44px',
-              height: '44px',
-              color: '#fff',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '1.25rem',
-              lineHeight: 1,
-            }}
+            className="absolute top-4 right-4 bg-black/55 border border-white/30 rounded-full w-11 h-11 text-white cursor-pointer flex items-center justify-center text-[1.25rem] leading-none"
           >
             ✕
           </button>
@@ -233,13 +185,7 @@ export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPo
             src={portraitUri}
             alt={`${characterName} portrait`}
             onClick={e => e.stopPropagation()}
-            style={{
-              maxWidth: '92vw',
-              maxHeight: '92vh',
-              objectFit: 'contain',
-              borderRadius: 'var(--radius-md)',
-              display: 'block',
-            }}
+            className="max-w-[92vw] max-h-[92vh] object-contain rounded-[var(--radius-md)] block"
           />
         </div>
       )}

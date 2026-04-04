@@ -12,37 +12,23 @@ export function AbilityPicker({ onSelect, onClose }: AbilityPickerProps) {
 
   if (abilities.length === 0) {
     return (
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+      <p className="text-[var(--color-text-muted)] text-sm">
         No heroic abilities on active character.
       </p>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+    <div className="flex flex-col gap-0.5">
       {abilities.map(ability => (
         <button
           key={ability.id}
           onClick={() => { onSelect(ability.name); onClose(); }}
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            width: '100%',
-            textAlign: 'left',
-            padding: '12px',
-            minHeight: '44px',
-            background: 'none',
-            border: 'none',
-            borderBottom: '1px solid var(--color-border)',
-            color: 'var(--color-text)',
-            cursor: 'pointer',
-            fontSize: '16px',
-          }}
+          className="flex justify-between items-center w-full text-left p-3 min-h-11 bg-transparent border-0 border-b border-b-[var(--color-border)] text-[var(--color-text)] cursor-pointer text-base"
         >
           <span>{ability.name}</span>
           {ability.wpCost !== undefined && (
-            <span style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+            <span className="text-[var(--color-text-muted)] text-sm">
               {ability.wpCost} WP
             </span>
           )}

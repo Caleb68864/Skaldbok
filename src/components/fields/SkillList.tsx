@@ -38,7 +38,7 @@ export function SkillList({ categories, characterSkills, onSkillChange, disabled
               />
             ))}
             {visibleSkills.length === 0 && (
-              <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', fontStyle: 'italic' }}>
+              <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] italic">
                 No trained skills in this category.
               </p>
             )}

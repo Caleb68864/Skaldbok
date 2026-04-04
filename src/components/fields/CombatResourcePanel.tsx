@@ -1,3 +1,5 @@
+import { cn } from '../../lib/utils';
+
 interface CombatResourcePanelProps {
   label: string;
   current: number;
@@ -20,73 +22,37 @@ export function CombatResourcePanel({
   const isLow = current <= lowThreshold && current > 0;
   const isZero = current === 0;
 
-  const displayColor = isZero
-    ? 'var(--color-danger)'
-    : isLow
-      ? 'var(--color-warning)'
-      : colorVar;
-
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 'var(--space-sm)',
-      padding: 'var(--space-md)',
-      flex: 1,
-    }}>
-      <span style={{
-        fontSize: 'var(--font-size-md)',
-        fontWeight: 'bold',
-        color: 'var(--color-text-muted)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.05em',
-      }}>
+    <div className="flex flex-col items-center gap-[var(--space-sm)] p-[var(--space-md)] flex-1">
+      <span className="text-[length:var(--font-size-md)] font-bold text-[var(--color-text-muted)] uppercase tracking-[0.05em]">
         {label}
       </span>
 
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-md)',
-      }}>
+      <div className="flex items-center gap-[var(--space-md)]">
         <button
           type="button"
           aria-label={`Decrease ${label}`}
           onClick={onDecrement}
           disabled={current <= 0}
-          style={{
-            minWidth: '60px',
-            minHeight: '60px',
-            fontSize: '2rem',
-            fontWeight: 'bold',
-            background: 'var(--color-surface-alt)',
-            border: '2px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            color: 'var(--color-text)',
-            cursor: current <= 0 ? 'default' : 'pointer',
-            opacity: current <= 0 ? 0.4 : 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className={cn(
+            "min-w-[60px] min-h-[60px] text-[2rem] font-bold bg-[var(--color-surface-alt)] border-2 border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-text)] flex items-center justify-center",
+            current <= 0 ? "cursor-default opacity-40" : "cursor-pointer opacity-100"
+          )}
         >
           −
         </button>
 
-        <div style={{ textAlign: 'center' }}>
-          <span style={{
-            fontSize: '3.5rem',
-            fontWeight: 'bold',
-            color: displayColor,
-            lineHeight: 1,
-          }}>
+        <div className="text-center">
+          <span className={cn(
+              "text-[3.5rem] font-bold leading-none",
+              isZero && "text-[var(--color-danger)]",
+              isLow && !isZero && "text-[var(--color-warning)]",
+            )}
+            style={!isZero && !isLow ? { color: colorVar } : undefined}
+          >
             {current}
           </span>
-          <span style={{
-            fontSize: 'var(--font-size-lg)',
-            color: 'var(--color-text-muted)',
-          }}>
+          <span className="text-[length:var(--font-size-lg)] text-[var(--color-text-muted)]">
             {' / '}
             {max}
           </span>
@@ -97,21 +63,10 @@ export function CombatResourcePanel({
           aria-label={`Increase ${label}`}
           onClick={onIncrement}
           disabled={current >= max}
-          style={{
-            minWidth: '60px',
-            minHeight: '60px',
-            fontSize: '2rem',
-            fontWeight: 'bold',
-            background: 'var(--color-surface-alt)',
-            border: '2px solid var(--color-border)',
-            borderRadius: 'var(--radius-md)',
-            color: 'var(--color-text)',
-            cursor: current >= max ? 'default' : 'pointer',
-            opacity: current >= max ? 0.4 : 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
+          className={cn(
+            "min-w-[60px] min-h-[60px] text-[2rem] font-bold bg-[var(--color-surface-alt)] border-2 border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-text)] flex items-center justify-center",
+            current >= max ? "cursor-default opacity-40" : "cursor-pointer opacity-100"
+          )}
         >
           +
         </button>

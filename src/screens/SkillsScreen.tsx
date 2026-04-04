@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
@@ -63,7 +64,7 @@ export default function SkillsScreen() {
     }
   }, [isLoading, character, navigate]);
 
-  if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
+  if (isLoading) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
   function handleSkillChange(skillId: string, value: CharacterSkill) {
@@ -172,18 +173,11 @@ export default function SkillsScreen() {
   }
 
   return (
-    <div style={{ padding: 'var(--space-md)' }}>
+    <div className="p-[var(--space-md)]">
       {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 'var(--space-md)',
-        flexWrap: 'wrap',
-        gap: 'var(--space-sm)',
-      }}>
-        <h1 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text)' }}>Skills</h1>
-        <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+      <div className="flex justify-between items-center mb-[var(--space-md)] flex-wrap gap-[var(--space-sm)]">
+        <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)]">Skills</h1>
+        <div className="flex gap-2">
           <Chip label="Relevant" active={filter === 'relevant'} onClick={() => setFilter('relevant')} />
           <Chip label="All" active={filter === 'all'} onClick={() => setFilter('all')} />
         </div>
@@ -228,13 +222,8 @@ export default function SkillsScreen() {
             if (visibleSkills.length === 0 && filter === 'relevant') return null;
 
             return (
-              <div key={category.id} style={{ marginBottom: 'var(--space-md)' }}>
-                <h2 style={{
-                  fontSize: 'var(--font-size-md)',
-                  color: 'var(--color-text-muted)',
-                  marginBottom: 'var(--space-sm)',
-                  fontWeight: 600,
-                }}>
+              <div key={category.id} className="mb-[var(--space-md)]">
+                <h2 className="text-[length:var(--font-size-md)] text-[var(--color-text-muted)] mb-[var(--space-sm)] font-semibold">
                   {category.name}
                 </h2>
                 {visibleSkills.map(skill => {
@@ -255,14 +244,12 @@ export default function SkillsScreen() {
                   const isTrained = cs?.trained ?? false;
 
                   return (
-                    <div key={skill.id} className={[isDragonMarked ? 'dragon-marked' : '', isDemonMarked ? 'demon-marked' : '', isTrained && !skillsEditable ? 'skill-trained' : ''].filter(Boolean).join(' ')} style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-sm)',
-                      padding: 'var(--space-xs) 0',
-                      borderBottom: '1px solid var(--color-border)',
-                      minHeight: 'var(--touch-target-min)',
-                    }}>
+                    <div key={skill.id} className={cn(
+                      "flex items-center gap-[var(--space-sm)] py-[var(--space-xs)] border-b border-[var(--color-border)] min-h-[var(--touch-target-min)]",
+                      isDragonMarked && 'dragon-marked',
+                      isDemonMarked && 'demon-marked',
+                      isTrained && !skillsEditable && 'skill-trained',
+                    )}>
                       {skillsEditable ? (
                         <input
                           type="checkbox"
@@ -275,16 +262,19 @@ export default function SkillsScreen() {
                             handleSkillChange(skill.id, { value: newValue, trained: newTrained });
                           }}
                           aria-label={`${skill.name} trained`}
-                          style={{ width: '20px', height: '20px', cursor: 'pointer', flexShrink: 0 }}
+                          className="w-5 h-5 cursor-pointer shrink-0"
                         />
                       ) : (
-                        <span style={{ width: '20px', height: '20px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <span className="w-5 h-5 shrink-0 flex items-center justify-center">
                           {isTrained && <GameIcon name="checked-shield" size={18} color="var(--color-accent)" />}
                         </span>
                       )}
 
                       {/* Name + attribute tag */}
-                      <span style={{ flex: 1, color: 'var(--color-text)', fontSize: 'var(--font-size-md)', fontWeight: isTrained ? 600 : 'normal' }}>
+                      <span className={cn(
+                        "flex-1 text-[var(--color-text)] text-[length:var(--font-size-md)]",
+                        isTrained ? "font-semibold" : "font-normal"
+                      )}>
                         {skill.name}
                         {attrAbbr && (
                           <span className="attribute-tag" aria-label={`Linked attribute: ${attrAbbr}`}>
@@ -306,18 +296,12 @@ export default function SkillsScreen() {
                         max={20}
                         disabled={!skillsEditable}
                         onChange={e => handleSkillChange(skill.id, { value: Number(e.target.value), trained: cs?.trained ?? false })}
-                        style={{
-                          width: '52px',
-                          height: '40px',
-                          textAlign: 'center',
-                          fontSize: 'var(--font-size-md)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius-sm)',
-                          background: skillsEditable ? 'var(--color-surface-alt)' : 'var(--color-surface)',
-                          color: 'var(--color-text)',
-                          cursor: skillsEditable ? 'text' : 'default',
-                          opacity: skillsEditable ? 1 : 0.7,
-                        }}
+                        className={cn(
+                          "w-[52px] h-10 text-center text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)]",
+                          skillsEditable
+                            ? "bg-[var(--color-surface-alt)] cursor-text opacity-100"
+                            : "bg-[var(--color-surface)] cursor-default opacity-70"
+                        )}
                       />
 
                       {/* Per-skill boon/bane override */}
@@ -333,14 +317,15 @@ export default function SkillsScreen() {
                       {/* Skill mark cycle: unmarked -> dragon -> demon -> clear (play mode only) */}
                       {!skillsEditable && (
                         <button
-                          className={`dragon-mark-toggle${isDragonMarked ? ' dragon-mark-toggle--active' : ''}${isDemonMarked ? ' dragon-mark-toggle--demon' : ''}`}
+                          className={cn(
+                            'dragon-mark-toggle',
+                            isDragonMarked && 'dragon-mark-toggle--active',
+                            isDemonMarked && 'dragon-mark-toggle--demon',
+                            isDragonMarked ? 'bg-[var(--color-accent)] text-white' : isDemonMarked ? 'bg-[#c0392b] text-white' : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]',
+                          )}
                           onClick={() => cycleSkillMark(skill.id)}
                           title={isDragonMarked ? 'Dragon marked — tap for demon mark' : isDemonMarked ? 'Demon marked — tap to clear' : 'Tap to dragon mark'}
                           aria-label={isDragonMarked ? `Dragon mark on ${skill.name}` : isDemonMarked ? `Demon mark on ${skill.name}` : `Mark ${skill.name}`}
-                          style={{
-                            background: isDragonMarked ? 'var(--color-accent)' : isDemonMarked ? '#c0392b' : 'var(--color-surface-raised)',
-                            color: (isDragonMarked || isDemonMarked) ? '#fff' : 'var(--color-text-muted)',
-                          }}
                         >
                           {isDragonMarked ? '🐉' : isDemonMarked ? '😈' : '○'}
                         </button>
@@ -349,7 +334,7 @@ export default function SkillsScreen() {
                   );
                 })}
                 {visibleSkills.length === 0 && (
-                  <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', fontStyle: 'italic' }}>
+                  <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] italic">
                     No trained skills in this category.
                   </p>
                 )}

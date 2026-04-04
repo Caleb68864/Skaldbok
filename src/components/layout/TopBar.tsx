@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { Menu, Maximize, Minimize, Lock, Unlock, ClipboardList, Dices, Backpack, BookOpen, Swords, BookMarked, User, Settings, Drama } from 'lucide-react';
 import { useAppState } from '../../context/AppStateContext';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { GameIcon } from '../primitives/GameIcon';
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { EndOfSessionModal } from '../modals/EndOfSessionModal';
+import { cn } from '@/lib/utils';
 
 export function TopBar() {
   const { settings, toggleMode } = useAppState();
@@ -33,13 +35,10 @@ export function TopBar() {
 
   return (
     <header
-      className="top-bar"
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        borderBottom: isPlayMode
-          ? '3px solid var(--color-mode-play)'
-          : '3px solid var(--color-mode-edit)',
-      }}
+      className={cn(
+        'top-bar bg-surface',
+        isPlayMode ? 'border-b-[3px] border-b-[var(--color-mode-play)]' : 'border-b-[3px] border-b-[var(--color-mode-edit)]',
+      )}
     >
       {/* LEFT ZONE: title + character name */}
       <div className="top-bar__title-group">
@@ -68,18 +67,12 @@ export function TopBar() {
       {/* CENTER ZONE: dedicated mode toggle slot */}
       <div className="top-bar__mode-toggle">
         <button
-          className="top-bar__btn"
+          className={cn(
+            'top-bar__btn inline-flex items-center gap-2 font-bold border-none',
+            isPlayMode ? 'bg-[var(--color-mode-play)] text-bg' : 'bg-[var(--color-mode-edit)] text-bg',
+          )}
           onClick={toggleMode}
           aria-label={isPlayMode ? 'Switch to Edit Mode' : 'Switch to Play Mode'}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: isPlayMode ? 'var(--color-mode-play)' : 'var(--color-mode-edit)',
-            color: 'var(--color-bg)',
-            fontWeight: 'bold',
-            border: 'none',
-          }}
         >
           <GameIcon name={isPlayMode ? 'crossed-swords' : 'open-book'} size={16} />
           <span className="top-bar__mode-label">
@@ -97,26 +90,26 @@ export function TopBar() {
             aria-label={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
             title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
           >
-            {isFullscreen ? '⊡' : '⊞'}
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </button>
         )}
 
         {wlSupported && (
           <button
-            className="top-bar__btn"
+            className={cn(
+              'top-bar__btn',
+              wakeLockActive ? 'text-success' : 'text-text-muted',
+            )}
             onClick={toggleWakeLock}
             aria-label={wakeLockActive ? 'Disable wake lock' : 'Enable wake lock'}
             title={wakeLockActive ? 'Wake lock active' : 'Wake lock inactive'}
-            style={{
-              color: wakeLockActive ? 'var(--color-success)' : 'var(--color-text-muted)',
-            }}
           >
-            {wakeLockActive ? '🔒' : '🔓'}
+            {wakeLockActive ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
           </button>
         )}
 
         {/* Hamburger menu */}
-        <div ref={menuRef} style={{ position: 'relative' }}>
+        <div ref={menuRef} className="relative">
           <button
             className="top-bar__btn"
             onClick={() => setMenuOpen(o => !o)}
@@ -124,7 +117,7 @@ export function TopBar() {
             aria-expanded={menuOpen}
             title="More options"
           >
-            ☰
+            <Menu className="h-5 w-5" />
           </button>
 
           {menuOpen && (
@@ -136,7 +129,7 @@ export function TopBar() {
                 }
                 onClick={() => setMenuOpen(false)}
               >
-                📋 Sheet
+                <ClipboardList className="h-4 w-4 inline mr-2" /> Sheet
               </NavLink>
               <NavLink
                 to="/skills"
@@ -145,7 +138,7 @@ export function TopBar() {
                 }
                 onClick={() => setMenuOpen(false)}
               >
-                🎲 Skills
+                <Dices className="h-4 w-4 inline mr-2" /> Skills
               </NavLink>
               <NavLink
                 to="/gear"
@@ -154,7 +147,7 @@ export function TopBar() {
                 }
                 onClick={() => setMenuOpen(false)}
               >
-                🎒 Gear
+                <Backpack className="h-4 w-4 inline mr-2" /> Gear
               </NavLink>
               <NavLink
                 to="/magic"
@@ -163,7 +156,7 @@ export function TopBar() {
                 }
                 onClick={() => setMenuOpen(false)}
               >
-                📖 Magic
+                <BookOpen className="h-4 w-4 inline mr-2" /> Magic
               </NavLink>
               <NavLink
                 to="/combat"
@@ -172,7 +165,7 @@ export function TopBar() {
                 }
                 onClick={() => setMenuOpen(false)}
               >
-                ⚔️ Combat
+                <Swords className="h-4 w-4 inline mr-2" /> Combat
               </NavLink>
               <NavLink
                 to="/reference"
@@ -181,7 +174,7 @@ export function TopBar() {
                 }
                 onClick={() => setMenuOpen(false)}
               >
-                📖 Reference
+                <BookMarked className="h-4 w-4 inline mr-2" /> Reference
               </NavLink>
               <NavLink
                 to="/profile"
@@ -190,7 +183,7 @@ export function TopBar() {
                 }
                 onClick={() => setMenuOpen(false)}
               >
-                🧑 Profile
+                <User className="h-4 w-4 inline mr-2" /> Profile
               </NavLink>
               <NavLink
                 to="/settings"
@@ -199,13 +192,13 @@ export function TopBar() {
                 }
                 onClick={() => setMenuOpen(false)}
               >
-                ⚙️ Settings
+                <Settings className="h-4 w-4 inline mr-2" /> Settings
               </NavLink>
               <button
                 className="topbar-menu__item topbar-menu__item--action"
                 onClick={() => { setMenuOpen(false); setEndOfSessionOpen(true); }}
               >
-                🐉 End of Session
+                <Drama className="h-4 w-4 inline mr-2" /> End of Session
               </button>
             </nav>
           )}

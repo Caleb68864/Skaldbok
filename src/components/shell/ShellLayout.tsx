@@ -17,7 +17,7 @@ import { SessionLogOverlay } from '../../features/session/SessionLogOverlay';
  * sub-route is active. Child routes are rendered via React Router's
  * `<Outlet />` inside the scrollable `<main>` region.
  *
- * ### Structure (top → bottom)
+ * ### Structure (top -> bottom)
  * 1. **CampaignHeader** — Campaign name, active-session indicator, and action
  *    buttons that open the campaign-create modal and party-management drawer.
  * 2. **CharacterSubNav** _(conditional)_ — Secondary tab bar shown only when
@@ -30,7 +30,7 @@ import { SessionLogOverlay } from '../../features/session/SessionLogOverlay';
  * 7. **CampaignCreateModal** / **ManagePartyDrawer** — Conditionally mounted
  *    modals controlled by local boolean state.
  *
- * The outer `div` uses `height: 100dvh` with `overflow: hidden` so the shell
+ * The outer `div` uses `h-dvh` with `overflow-hidden` so the shell
  * itself never scrolls — only the `<main>` content area does.
  *
  * @example
@@ -47,26 +47,13 @@ export function ShellLayout() {
   const isCharacterTab = location.pathname.startsWith('/character');
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100dvh',
-        overflow: 'hidden',
-      }}
-    >
+    <div className="flex flex-col h-dvh overflow-hidden">
       <CampaignHeader
         onCreateCampaign={() => setShowCreateCampaign(true)}
         onManageParty={() => setShowManageParty(true)}
       />
       {isCharacterTab && <CharacterSubNav />}
-      <main
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          overflowX: 'hidden',
-        }}
-      >
+      <main className="flex-1 overflow-y-auto overflow-x-hidden">
         <Outlet />
       </main>
       <BottomNav />

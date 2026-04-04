@@ -12,6 +12,7 @@ import type { Note } from '../../types/note';
 import { PartyPicker } from '../../components/fields/PartyPicker';
 import type { ResolvedMember } from '../../components/fields/PartyPicker';
 import { CounterControl } from '../../components/primitives/CounterControl';
+import { cn } from '../../lib/utils';
 
 // ── Dragonbane Data ──────────────────────────────────────────────
 
@@ -51,45 +52,13 @@ const TAG_OPTIONS = [
   'important',
 ] as const;
 
-// ── Styles ──────────────────────────────────────────────────────
+// ── Styles (now Tailwind classes) ──────────────────────────────
 
-const chipStyle = {
-  minHeight: '44px',
-  padding: '0 14px',
-  background: 'var(--color-surface-raised)',
-  border: '1px solid var(--color-border)',
-  borderRadius: '22px',
-  color: 'var(--color-text)',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 600,
-  flexShrink: 0,
-} as const;
+const chipClasses = 'min-h-11 px-4 py-1.5 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-full text-[var(--color-text)] cursor-pointer text-sm font-semibold shrink-0';
 
-const listBtnStyle = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left' as const,
-  padding: '12px 0',
-  minHeight: '44px',
-  background: 'none',
-  border: 'none',
-  borderBottom: '1px solid var(--color-border)',
-  color: 'var(--color-text)',
-  cursor: 'pointer',
-  fontSize: '16px',
-};
+const listBtnClasses = 'block w-full text-left py-3 min-h-11 bg-transparent border-0 border-b border-b-[var(--color-border)] text-[var(--color-text)] cursor-pointer text-base';
 
-const resultChipBase = {
-  minHeight: '44px',
-  minWidth: '44px',
-  padding: '0 16px',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 600,
-} as const;
+const resultChipClasses = 'min-h-11 min-w-11 px-4 border-none rounded-lg cursor-pointer text-sm font-semibold';
 
 // ── Roll Modifiers (Boon / Bane / Push) ─────────────────────────
 
@@ -104,22 +73,23 @@ function RollModifiers({
     <button
       key={key}
       onClick={() => onToggle(key)}
-      style={{
-        ...chipStyle,
-        background: mods[key] ? activeColor : 'var(--color-surface-raised)',
-        color: mods[key] ? '#fff' : 'var(--color-text)',
-      }}
+      className={cn(
+        chipClasses,
+        mods[key]
+          ? `bg-[${activeColor}] text-white`
+          : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+      )}
     >
       {label}
     </button>
   );
 
   return (
-    <div style={{ marginBottom: '12px' }}>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+    <div className="mb-3">
+      <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
         Modifiers
       </p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+      <div className="flex gap-2 flex-wrap">
         {modChip('boon', 'Boon', '#27ae60')}
         {modChip('bane', 'Bane', '#c0392b')}
         {modChip('pushed', 'Pushed', '#8e44ad')}
@@ -136,27 +106,21 @@ function TagPicker({
   onToggle: (tag: string) => void;
 }) {
   return (
-    <div style={{ marginBottom: '10px' }}>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+    <div className="mb-2.5">
+      <p className="text-[var(--color-text-muted)] text-[11px] uppercase tracking-wide mb-1">
         Tags
       </p>
-      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+      <div className="flex gap-2 flex-wrap">
         {TAG_OPTIONS.map(tag => (
           <button
             key={tag}
             onClick={() => onToggle(tag)}
-            style={{
-              minHeight: '44px',
-              minWidth: '44px',
-              padding: '0 10px',
-              borderRadius: '16px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 600,
-              background: selected.includes(tag) ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: selected.includes(tag) ? 'var(--color-on-accent, #fff)' : 'var(--color-text-muted)',
-            }}
+            className={cn(
+              'min-h-11 min-w-11 px-2.5 py-1 rounded-2xl border-none cursor-pointer text-xs font-semibold',
+              selected.includes(tag)
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
+            )}
           >
             {tag}
           </button>
@@ -318,11 +282,11 @@ export function SessionQuickActions() {
       return (
         <div>
           <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-          <p style={{ color: 'var(--color-text)', fontWeight: 600, marginBottom: '12px', fontSize: '16px' }}>
+          <p className="text-[var(--color-text)] font-semibold mb-3 text-base">
             {selectedSkill}{modTag}
           </p>
           <RollModifiers mods={rollMods} onToggle={key => setRollMods(m => ({ ...m, [key]: !m[key] }))} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div className="grid grid-cols-2 gap-2">
             {RESULTS.map(result => (
               <button
                 key={result}
@@ -331,14 +295,13 @@ export function SessionQuickActions() {
                   result,
                   character: selectedNames(),
                 })}
-                style={{
-                  ...resultChipBase,
-                  background: result === 'dragon' ? 'var(--color-accent)'
-                    : result === 'demon' ? '#c0392b'
-                    : result === 'success' ? '#27ae60'
-                    : 'var(--color-surface-raised)',
-                  color: result === 'failure' ? 'var(--color-text)' : '#fff',
-                }}
+                className={cn(
+                  resultChipClasses,
+                  result === 'dragon' ? 'bg-[var(--color-accent)] text-white'
+                    : result === 'demon' ? 'bg-[#c0392b] text-white'
+                    : result === 'success' ? 'bg-[#27ae60] text-white'
+                    : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+                )}
               >
                 {result === 'dragon' ? 'Dragon (1)' : result === 'demon' ? 'Demon (20)' : result.charAt(0).toUpperCase() + result.slice(1)}
               </button>
@@ -356,21 +319,21 @@ export function SessionQuickActions() {
         <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
         {charSkills.length > 0 && (
           <>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+            <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
               {selectedNames()}'s Skills
             </p>
             {charSkills.map(skill => (
-              <button key={`char-${skill}`} onClick={() => setSelectedSkill(skill)} style={listBtnStyle}>
+              <button key={`char-${skill}`} onClick={() => setSelectedSkill(skill)} className={listBtnClasses}>
                 {skill}
               </button>
             ))}
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '12px 0 4px' }}>
+            <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mt-3 mb-1">
               All Skills
             </p>
           </>
         )}
         {[...CORE_SKILLS, ...WEAPON_SKILLS].map(skill => (
-          <button key={skill} onClick={() => setSelectedSkill(skill)} style={listBtnStyle}>
+          <button key={skill} onClick={() => setSelectedSkill(skill)} className={listBtnClasses}>
             {skill}
           </button>
         ))}
@@ -386,23 +349,22 @@ export function SessionQuickActions() {
       return (
         <div>
           <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-          <p style={{ color: 'var(--color-text)', fontWeight: 600, marginBottom: '12px', fontSize: '16px' }}>
+          <p className="text-[var(--color-text)] font-semibold mb-3 text-base">
             Cast: {selectedSpell}{modTag}
           </p>
           <RollModifiers mods={rollMods} onToggle={key => setRollMods(m => ({ ...m, [key]: !m[key] }))} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div className="grid grid-cols-2 gap-2">
             {RESULTS.map(result => (
               <button
                 key={result}
                 onClick={() => logEvent('generic', `Cast ${selectedSpell}${formatModTags(rollMods)} — ${result}`, {})}
-                style={{
-                  ...resultChipBase,
-                  background: result === 'dragon' ? 'var(--color-accent)'
-                    : result === 'demon' ? '#c0392b'
-                    : result === 'success' ? '#27ae60'
-                    : 'var(--color-surface-raised)',
-                  color: result === 'failure' ? 'var(--color-text)' : '#fff',
-                }}
+                className={cn(
+                  resultChipClasses,
+                  result === 'dragon' ? 'bg-[var(--color-accent)] text-white'
+                    : result === 'demon' ? 'bg-[#c0392b] text-white'
+                    : result === 'success' ? 'bg-[#27ae60] text-white'
+                    : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+                )}
               >
                 {result === 'dragon' ? 'Dragon (1)' : result === 'demon' ? 'Demon (20)' : result.charAt(0).toUpperCase() + result.slice(1)}
               </button>
@@ -419,22 +381,22 @@ export function SessionQuickActions() {
         <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
         {spells.length > 0 ? (
           spells.map(spell => (
-            <button key={spell.id} onClick={() => setSelectedSpell(spell.name)} style={listBtnStyle}>
+            <button key={spell.id} onClick={() => setSelectedSpell(spell.name)} className={listBtnClasses}>
               <span>{spell.name}</span>
-              <span style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginLeft: '8px' }}>
+              <span className="text-[var(--color-text-muted)] text-sm ml-2">
                 ({spell.wpCost} WP)
               </span>
             </button>
           ))
         ) : (
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No spells on {selectedNames() || 'active character'}.</p>
+          <p className="text-[var(--color-text-muted)] text-sm">No spells on {selectedNames() || 'active character'}.</p>
         )}
         <button
           onClick={() => {
             const name = prompt('Spell name:');
             if (name?.trim()) setSelectedSpell(name.trim());
           }}
-          style={{ ...listBtnStyle, color: 'var(--color-accent)', fontWeight: 600, borderBottom: 'none' }}
+          className={cn(listBtnClasses, 'text-[var(--color-accent)] font-semibold !border-b-0')}
         >
           + Quick-add spell
         </button>
@@ -455,18 +417,18 @@ export function SessionQuickActions() {
             <button
               key={a.id}
               onClick={() => logEvent('generic', `Used ${a.name}`, {})}
-              style={listBtnStyle}
+              className={listBtnClasses}
             >
               <span>{a.name}</span>
               {a.wpCost !== undefined && (
-                <span style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginLeft: '8px' }}>
+                <span className="text-[var(--color-text-muted)] text-sm ml-2">
                   ({a.wpCost} WP)
                 </span>
               )}
             </button>
           ))
         ) : (
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>No heroic abilities on {selectedNames() || 'active character'}.</p>
+          <p className="text-[var(--color-text-muted)] text-sm">No heroic abilities on {selectedNames() || 'active character'}.</p>
         )}
       </div>
     );
@@ -478,16 +440,16 @@ export function SessionQuickActions() {
     <div>
       <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} multiSelect />
       {CONDITIONS.map(c => (
-        <div key={c.name} style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+        <div key={c.name} className="flex gap-3 mb-2">
           <button
             onClick={() => logEvent('generic', `Gained ${c.name}`, {})}
-            style={{ ...listBtnStyle, flex: 1, color: '#c0392b', borderBottom: 'none', padding: '8px 0', fontWeight: 600 }}
+            className={cn(listBtnClasses, 'flex-1 text-[#c0392b] !border-b-0 !py-2 font-semibold')}
           >
             + {c.name} ({c.attr})
           </button>
           <button
             onClick={() => logEvent('generic', `Healed ${c.name}`, {})}
-            style={{ ...listBtnStyle, flex: 1, color: '#27ae60', borderBottom: 'none', padding: '8px 0', fontWeight: 600 }}
+            className={cn(listBtnClasses, 'flex-1 text-[#27ae60] !border-b-0 !py-2 font-semibold')}
           >
             - {c.name}
           </button>
@@ -505,11 +467,11 @@ export function SessionQuickActions() {
         <button
           key={r.name}
           onClick={() => logEvent('generic', r.name, {})}
-          style={listBtnStyle}
+          className={listBtnClasses}
         >
-          <span style={{ fontWeight: 600 }}>{r.name}</span>
+          <span className="font-semibold">{r.name}</span>
           <br />
-          <span style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{r.effect}</span>
+          <span className="text-[var(--color-text-muted)] text-[13px]">{r.effect}</span>
         </button>
       ))}
     </div>
@@ -560,37 +522,37 @@ export function SessionQuickActions() {
     return (
       <div>
         <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>Damage taken (updates HP):</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+        <p className="text-[var(--color-text-muted)] text-[13px] mb-2">Damage taken (updates HP):</p>
+        <div className="flex flex-wrap gap-3 mb-4">
           {values.map(v => (
             <button
               key={`t${v}`}
               onClick={() => applyDamage(v)}
-              style={{ ...chipStyle, background: '#c0392b', color: '#fff', minWidth: '50px' }}
+              className={cn(chipClasses, 'bg-[#c0392b] text-white min-w-[50px]')}
             >
               {v}
             </button>
           ))}
         </div>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>Healing (updates HP):</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+        <p className="text-[var(--color-text-muted)] text-[13px] mb-2">Healing (updates HP):</p>
+        <div className="flex flex-wrap gap-3 mb-4">
           {values.map(v => (
             <button
               key={`h${v}`}
               onClick={() => applyHealing(v)}
-              style={{ ...chipStyle, background: '#27ae60', color: '#fff', minWidth: '50px' }}
+              className={cn(chipClasses, 'bg-[#27ae60] text-white min-w-[50px]')}
             >
               {v}
             </button>
           ))}
         </div>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>Damage dealt (log only):</p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+        <p className="text-[var(--color-text-muted)] text-[13px] mb-2">Damage dealt (log only):</p>
+        <div className="flex flex-wrap gap-3">
           {values.map(v => (
             <button
               key={`d${v}`}
               onClick={() => logEvent('generic', `Dealt ${v} damage`, {})}
-              style={{ ...chipStyle, background: 'var(--color-surface-raised)', color: 'var(--color-text)', minWidth: '50px' }}
+              className={cn(chipClasses, 'bg-[var(--color-surface-raised)] text-[var(--color-text)] min-w-[50px]')}
             >
               {v}
             </button>
@@ -611,18 +573,7 @@ export function SessionQuickActions() {
         value={lootName}
         onChange={e => setLootName(e.target.value)}
         autoFocus
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
       />
       <button
         onClick={() => {
@@ -632,18 +583,10 @@ export function SessionQuickActions() {
           }
         }}
         disabled={!lootName.trim()}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: 'var(--color-accent)',
-          color: 'var(--color-on-accent, #fff)',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          opacity: !lootName.trim() ? 0.6 : 1,
-        }}
+        className={cn(
+          'w-full min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer',
+          !lootName.trim() ? 'opacity-60' : 'opacity-100'
+        )}
       >
         Log Loot
       </button>
@@ -655,7 +598,7 @@ export function SessionQuickActions() {
   const renderCampPicker = () => (
     <div>
       <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} multiSelect />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>
+      <p className="text-[var(--color-text-muted)] text-[13px] mb-2">
         What kind of camp?
       </p>
       {[
@@ -667,11 +610,11 @@ export function SessionQuickActions() {
         <button
           key={item.name}
           onClick={() => logEvent('generic', item.name, {})}
-          style={listBtnStyle}
+          className={listBtnClasses}
         >
-          <span style={{ fontWeight: 600 }}>{item.name}</span>
+          <span className="font-semibold">{item.name}</span>
           <br />
-          <span style={{ color: 'var(--color-text-muted)', fontSize: '13px' }}>{item.desc}</span>
+          <span className="text-[var(--color-text-muted)] text-[13px]">{item.desc}</span>
         </button>
       ))}
     </div>
@@ -684,15 +627,15 @@ export function SessionQuickActions() {
   const renderTravelPicker = () => (
     <div>
       <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} multiSelect />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>
+      <p className="text-[var(--color-text-muted)] text-[13px] mb-2">
         Shifts traveled:
       </p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+      <div className="flex gap-3 flex-wrap mb-3">
         {[1, 2, 3, 4].map(shifts => (
           <button
             key={shifts}
             onClick={() => logEvent('generic', `Traveled ${shifts} shift${shifts > 1 ? 's' : ''}`, {})}
-            style={{ ...chipStyle, minWidth: '70px' }}
+            className={cn(chipClasses, 'min-w-[70px]')}
           >
             {shifts} shift{shifts > 1 ? 's' : ''}
           </button>
@@ -703,33 +646,12 @@ export function SessionQuickActions() {
         placeholder="Destination or route (optional)"
         value={travelNote}
         onChange={e => setTravelNote(e.target.value)}
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '8px',
-          boxSizing: 'border-box',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-2 box-border"
       />
       {travelNote.trim() && (
         <button
           onClick={() => { logEvent('generic', `Traveled to ${travelNote.trim()}`, {}); setTravelNote(''); }}
-          style={{
-            width: '100%',
-            minHeight: '44px',
-            background: 'var(--color-accent)',
-            color: 'var(--color-on-accent, #fff)',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
+          className="w-full min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer"
         >
           Log Travel
         </button>
@@ -745,18 +667,7 @@ export function SessionQuickActions() {
     <div>
       <button
         onClick={() => logEvent('generic', 'Random Encounter!', {})}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: '#c0392b',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          marginBottom: '12px',
-        }}
+        className="w-full min-h-11 bg-[#c0392b] text-white border-none rounded-lg text-base font-semibold cursor-pointer mb-3"
       >
         Log Random Encounter
       </button>
@@ -765,33 +676,12 @@ export function SessionQuickActions() {
         placeholder="What was it? (optional)"
         value={encounterDesc}
         onChange={e => setEncounterDesc(e.target.value)}
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '8px',
-          boxSizing: 'border-box',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-2 box-border"
       />
       {encounterDesc.trim() && (
         <button
           onClick={() => { logEvent('generic', `Encounter: ${encounterDesc.trim()}`, {}); setEncounterDesc(''); }}
-          style={{
-            width: '100%',
-            minHeight: '44px',
-            background: 'var(--color-accent)',
-            color: 'var(--color-on-accent, #fff)',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
+          className="w-full min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer"
         >
           Log with Description
         </button>
@@ -804,31 +694,31 @@ export function SessionQuickActions() {
   const renderDeathRollPicker = () => (
     <div>
       <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>
+      <p className="text-[var(--color-text-muted)] text-[13px] mb-2">
         Death Roll result:
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+      <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => logEvent('generic', 'Death Roll — Survived', {})}
-          style={{ ...resultChipBase, background: '#27ae60', color: '#fff' }}
+          className={cn(resultChipClasses, 'bg-[#27ae60] text-white')}
         >
           Survived
         </button>
         <button
           onClick={() => logEvent('generic', 'Death Roll — Failed', {})}
-          style={{ ...resultChipBase, background: '#c0392b', color: '#fff' }}
+          className={cn(resultChipClasses, 'bg-[#c0392b] text-white')}
         >
           Failed
         </button>
         <button
           onClick={() => logEvent('generic', 'Death Roll — Dragon (1)', {})}
-          style={{ ...resultChipBase, background: 'var(--color-accent)', color: '#fff' }}
+          className={cn(resultChipClasses, 'bg-[var(--color-accent)] text-white')}
         >
           Dragon (1)
         </button>
         <button
           onClick={() => logEvent('generic', 'Death Roll — Dead', {})}
-          style={{ ...resultChipBase, background: '#2c3e50', color: '#fff' }}
+          className={cn(resultChipClasses, 'bg-[#2c3e50] text-white')}
         >
           Dead
         </button>
@@ -841,7 +731,7 @@ export function SessionQuickActions() {
   const renderQuotePicker = () => (
     <div>
       <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>
+      <p className="text-[var(--color-text-muted)] text-[13px] mb-2">
         Who said it? (selected above) — or type an NPC name:
       </p>
       <input
@@ -850,19 +740,7 @@ export function SessionQuickActions() {
         value={quoteText}
         onChange={e => setQuoteText(e.target.value)}
         autoFocus
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-          fontStyle: 'italic',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border italic"
       />
       <button
         onClick={() => {
@@ -872,18 +750,10 @@ export function SessionQuickActions() {
           }
         }}
         disabled={!quoteText.trim()}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: 'var(--color-accent)',
-          color: 'var(--color-on-accent, #fff)',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          opacity: !quoteText.trim() ? 0.6 : 1,
-        }}
+        className={cn(
+          'w-full min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer',
+          !quoteText.trim() ? 'opacity-60' : 'opacity-100'
+        )}
       >
         Log Quote
       </button>
@@ -900,30 +770,20 @@ export function SessionQuickActions() {
         value={rumorText}
         onChange={e => setRumorText(e.target.value)}
         autoFocus
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
       />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+      <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
         Source (optional)
       </p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+      <div className="flex gap-3 flex-wrap mb-3">
         <button
           onClick={() => setRumorSource('')}
-          style={{
-            ...chipStyle,
-            background: rumorSource === '' ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-            color: rumorSource === '' ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-          }}
+          className={cn(
+            chipClasses,
+            rumorSource === ''
+              ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+              : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+          )}
         >
           Unknown
         </button>
@@ -931,11 +791,12 @@ export function SessionQuickActions() {
           <button
             key={npc.id}
             onClick={() => setRumorSource(npc.title)}
-            style={{
-              ...chipStyle,
-              background: rumorSource === npc.title ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: rumorSource === npc.title ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-            }}
+            className={cn(
+              chipClasses,
+              rumorSource === npc.title
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+            )}
           >
             {npc.title}
           </button>
@@ -951,18 +812,10 @@ export function SessionQuickActions() {
           }
         }}
         disabled={!rumorText.trim()}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: 'var(--color-accent)',
-          color: 'var(--color-on-accent, #fff)',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          opacity: !rumorText.trim() ? 0.6 : 1,
-        }}
+        className={cn(
+          'w-full min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer',
+          !rumorText.trim() ? 'opacity-60' : 'opacity-100'
+        )}
       >
         Log Rumor
       </button>
@@ -987,26 +840,26 @@ export function SessionQuickActions() {
     return (
       <div>
         <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-        <div style={{ display: 'flex', gap: '6px', marginBottom: '12px' }}>
+        <div className="flex gap-3 mb-3">
           <button
             onClick={() => setShopAction('buy')}
-            style={{
-              ...chipStyle,
-              flex: 1,
-              background: shopAction === 'buy' ? '#27ae60' : 'var(--color-surface-raised)',
-              color: shopAction === 'buy' ? '#fff' : 'var(--color-text)',
-            }}
+            className={cn(
+              chipClasses, 'flex-1',
+              shopAction === 'buy'
+                ? 'bg-[#27ae60] text-white'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+            )}
           >
             Buy
           </button>
           <button
             onClick={() => setShopAction('sell')}
-            style={{
-              ...chipStyle,
-              flex: 1,
-              background: shopAction === 'sell' ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: shopAction === 'sell' ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-            }}
+            className={cn(
+              chipClasses, 'flex-1',
+              shopAction === 'sell'
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+            )}
           >
             Sell
           </button>
@@ -1017,30 +870,19 @@ export function SessionQuickActions() {
           value={shopItem}
           onChange={e => setShopItem(e.target.value)}
           autoFocus
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            minHeight: '44px',
-            background: 'var(--color-surface-raised)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            color: 'var(--color-text)',
-            fontSize: '16px',
-            marginBottom: '12px',
-            boxSizing: 'border-box',
-          }}
+          className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
         />
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+        <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
           Cost per item
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        <div className="flex flex-col gap-2 mb-3">
           <CounterControl label="Gold" value={shopGold} min={0} onChange={setShopGold} />
           <CounterControl label="Silver" value={shopSilver} min={0} onChange={setShopSilver} />
           <CounterControl label="Copper" value={shopCopper} min={0} onChange={setShopCopper} />
           <CounterControl label="Qty" value={shopQuantity} min={1} onChange={setShopQuantity} />
         </div>
         {hasAnyCoin && shopQuantity > 1 && (
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginBottom: '12px' }}>
+          <p className="text-[var(--color-text-muted)] text-sm mb-3">
             Total: {totalStr}
           </p>
         )}
@@ -1067,17 +909,10 @@ export function SessionQuickActions() {
             setShopCopper(0);
             setShopQuantity(1);
           }}
-          style={{
-            width: '100%',
-            minHeight: '44px',
-            background: shopAction === 'buy' ? '#27ae60' : 'var(--color-accent)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
+          className={cn(
+            'w-full min-h-11 border-none rounded-lg text-base font-semibold cursor-pointer text-white',
+            shopAction === 'buy' ? 'bg-[#27ae60]' : 'bg-[var(--color-accent)]'
+          )}
         >
           Log {shopAction === 'buy' ? 'Purchase' : 'Sale'}
         </button>
@@ -1123,12 +958,12 @@ export function SessionQuickActions() {
 
   return (
     <>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>
+      <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
         Quick Log
       </p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+      <div className="flex gap-2 flex-wrap mb-4">
         {actions.map(a => (
-          <button key={a.id} onClick={() => setActiveDrawer(a.id)} style={chipStyle}>
+          <button key={a.id} onClick={() => setActiveDrawer(a.id)} className={chipClasses}>
             {a.label}
           </button>
         ))}

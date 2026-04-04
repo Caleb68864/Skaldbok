@@ -1,3 +1,4 @@
+import { cn } from '../../lib/utils';
 import type { CharacterRecord } from '../../types/character';
 
 /**
@@ -18,20 +19,6 @@ export interface ResolvedMember {
    */
   character: CharacterRecord | null;
 }
-
-/** Base inline styles shared by every member chip button. */
-const chipStyle = {
-  minHeight: '44px',
-  padding: '0 14px',
-  background: 'var(--color-surface-raised)',
-  border: '1px solid var(--color-border)',
-  borderRadius: '22px',
-  color: 'var(--color-text)',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 600,
-  flexShrink: 0,
-} as const;
 
 /**
  * A sticky horizontal chip-row that lets the user pick which party member(s)
@@ -121,29 +108,20 @@ export function PartyPicker({
   });
 
   return (
-    <div
-      style={{
-        position: 'sticky',
-        top: 0,
-        background: 'var(--color-surface)',
-        paddingBottom: '8px',
-        marginBottom: '4px',
-        borderBottom: '1px solid var(--color-border)',
-        zIndex: 1,
-      }}
-    >
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px', marginTop: '0' }}>
+    <div className="sticky top-0 bg-[var(--color-surface)] pb-2 mb-1 border-b border-[var(--color-border)] z-[1]">
+      <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-[0.05em] mb-2 mt-0">
         Who?
       </p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+      <div className="flex gap-2 flex-wrap">
         {members.length > 1 && (
           <button
             onClick={() => toggle('__party__')}
-            style={{
-              ...chipStyle,
-              background: isSelected('__party__') ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: isSelected('__party__') ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-            }}
+            className={cn(
+              "min-h-11 px-3.5 border border-[var(--color-border)] rounded-[22px] cursor-pointer text-sm font-semibold shrink-0",
+              isSelected('__party__')
+                ? "bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]"
+                : "bg-[var(--color-surface-raised)] text-[var(--color-text)]"
+            )}
           >
             Party
           </button>
@@ -152,11 +130,12 @@ export function PartyPicker({
           <button
             key={m.id}
             onClick={() => toggle(m.id)}
-            style={{
-              ...chipStyle,
-              background: isSelected(m.id) ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: isSelected(m.id) ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-            }}
+            className={cn(
+              "min-h-11 px-3.5 border border-[var(--color-border)] rounded-[22px] cursor-pointer text-sm font-semibold shrink-0",
+              isSelected(m.id)
+                ? "bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]"
+                : "bg-[var(--color-surface-raised)] text-[var(--color-text)]"
+            )}
           >
             {m.displayName}
           </button>

@@ -220,8 +220,7 @@ const DraggableCardContainer: React.FC<DraggableCardContainerProps> = ({
   return (
     <div
       ref={containerRef}
-      className="draggable-card-container"
-      style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
+      className="draggable-card-container flex flex-col gap-4"
     >
       {visiblePanels.map((panel, index) => {
         const isDragging = dragState?.activeIndex === index;
@@ -255,7 +254,7 @@ const DraggableCardContainer: React.FC<DraggableCardContainerProps> = ({
                 <span aria-hidden="true">⠿</span>
               </button>
             )}
-            <div className="draggable-panel-content" style={{ flex: 1 }}>
+            <div className="draggable-panel-content flex-1">
               {panel.element}
             </div>
           </div>

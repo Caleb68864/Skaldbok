@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '../../lib/utils';
 
 /** Mood-related tags describing the emotional tone of a session moment. */
 const MOOD_TAGS = ['tense', 'funny', 'dramatic', 'sad', 'victorious'] as const;
@@ -124,67 +125,43 @@ export function TagPicker({ selected, onToggle, customTags = [], onCreateTag }: 
   };
 
   return (
-    <div style={{ marginBottom: '10px' }}>
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+    <div className="mb-2.5">
+      <p className="text-[var(--color-text-muted)] text-[11px] uppercase tracking-[0.05em] mb-1">
         Tags
       </p>
-      <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '6px' }}>
+      <div className="flex gap-2 flex-wrap mb-2">
         {allTags.map(tag => (
           <button
             key={tag}
             onClick={() => onToggle(tag)}
-            style={{
-              minHeight: '44px',
-              minWidth: '44px',
-              padding: '0 8px',
-              borderRadius: '15px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '11px',
-              fontWeight: 600,
-              background: selected.includes(tag) ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: selected.includes(tag) ? 'var(--color-on-accent, #fff)' : 'var(--color-text-muted)',
-            }}
+            className={cn(
+              "min-h-11 min-w-11 px-2 rounded-[15px] border-none cursor-pointer text-[11px] font-semibold",
+              selected.includes(tag)
+                ? "bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]"
+                : "bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]"
+            )}
           >
             {tag}
           </button>
         ))}
       </div>
       {/* Custom tag input */}
-      <div style={{ display: 'flex', gap: '6px' }}>
+      <div className="flex gap-3">
         <input
           type="text"
           placeholder="Add custom tag..."
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          style={{
-            flex: 1,
-            padding: '6px 10px',
-            minHeight: '44px',
-            background: 'var(--color-surface-raised)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            color: 'var(--color-text)',
-            fontSize: '12px',
-            boxSizing: 'border-box',
-          }}
+          className="flex-1 px-2.5 py-1.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs box-border"
         />
         <button
           onClick={handleAddCustomTag}
           disabled={!inputValue.trim()}
-          style={{
-            minHeight: '44px',
-            padding: '0 12px',
-            background: 'var(--color-accent)',
-            color: 'var(--color-on-accent, #fff)',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            opacity: !inputValue.trim() ? 0.5 : 1,
-          }}
+          className={cn(
+            "min-h-11 px-3 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-[13px] font-semibold cursor-pointer",
+            !inputValue.trim() ? "opacity-50" : "opacity-100"
+          )}
         >
           +
         </button>

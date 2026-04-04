@@ -10,6 +10,7 @@ import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { useToast } from '../context/ToastContext';
 import { useAppState } from '../context/AppStateContext';
+import { cn } from '../lib/utils';
 
 /**
  * Full-screen note editor — creates or edits a single {@link Note} for the active campaign.
@@ -178,34 +179,23 @@ export default function NoteEditorScreen() {
 
   if (loading) {
     return (
-      <div style={{ padding: '16px', color: 'var(--color-text-muted)' }}>
+      <div className="p-4 text-[var(--color-text-muted)]">
         Loading...
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '16px', paddingBottom: '32px' }}>
+    <div className="p-4 pb-8">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+      <div className="flex items-center gap-2 mb-4">
         <button
           onClick={() => navigate(-1)}
-          style={{
-            minHeight: '44px',
-            minWidth: '44px',
-            padding: '0 12px',
-            background: 'none',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            color: 'var(--color-text)',
-            cursor: 'pointer',
-            fontSize: '14px',
-            flexShrink: 0,
-          }}
+          className="min-h-11 min-w-11 px-3 bg-transparent border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm shrink-0"
         >
           Back
         </button>
-        <span style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginLeft: 'auto' }}>
+        <span className="text-[var(--color-text-muted)] text-xs ml-auto">
           {saving ? 'Saving...' : 'Saved'}
         </span>
       </div>
@@ -216,38 +206,21 @@ export default function NoteEditorScreen() {
         value={title}
         onChange={e => handleTitleChange(e.target.value)}
         placeholder="Note title"
-        style={{
-          width: '100%',
-          padding: '10px 0',
-          background: 'none',
-          border: 'none',
-          borderBottom: '2px solid var(--color-border)',
-          color: 'var(--color-text)',
-          fontSize: '20px',
-          fontWeight: 700,
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-          outline: 'none',
-        }}
+        className="w-full py-2.5 px-0 bg-transparent border-0 border-b-2 border-b-[var(--color-border)] text-[var(--color-text)] text-xl font-bold mb-3 box-border outline-none"
       />
 
       {/* Note type selector */}
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+      <div className="flex gap-2 flex-wrap mb-3">
         {NOTE_TYPES.filter(t => !['skill-check', 'recap'].includes(t)).map(t => (
           <button
             key={t}
             onClick={() => handleTypeChange(t as NoteType)}
-            style={{
-              minHeight: '36px',
-              padding: '0 10px',
-              borderRadius: '18px',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 600,
-              background: noteType === t ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: noteType === t ? 'var(--color-on-accent, #fff)' : 'var(--color-text-muted)',
-            }}
+            className={cn(
+              'min-h-9 px-2.5 rounded-full border-none cursor-pointer text-xs font-semibold',
+              noteType === t
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
+            )}
           >
             {t}
           </button>
@@ -265,7 +238,7 @@ export default function NoteEditorScreen() {
       />
 
       {/* Tags */}
-      <div style={{ marginTop: '16px' }}>
+      <div className="mt-4">
         <TagPicker
           selected={tags}
           onToggle={handleTagToggle}

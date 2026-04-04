@@ -10,60 +10,26 @@ export function EndSessionModal({ sessionTitle, onConfirm, onCancel }: EndSessio
       role="dialog"
       aria-label="End session confirmation"
       onClick={onCancel}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-      }}
+      className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4"
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{
-          background: 'var(--color-surface)',
-          borderRadius: '12px',
-          width: '100%',
-          maxWidth: 360,
-          padding: '24px 16px',
-        }}
+        className="bg-[var(--color-surface)] rounded-xl w-full max-w-[360px] px-4 py-6"
       >
-        <h3 style={{ color: 'var(--color-text)', marginBottom: '8px' }}>End this session?</h3>
-        <p style={{ color: 'var(--color-text-muted)', marginBottom: '24px' }}>
+        <h3 className="text-[var(--color-text)] mb-2">End this session?</h3>
+        <p className="text-[var(--color-text-muted)] mb-6">
           {sessionTitle}
         </p>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="flex gap-3">
           <button
             onClick={onConfirm}
-            style={{
-              flex: 1,
-              minHeight: '44px',
-              background: 'var(--color-accent)',
-              color: 'var(--color-on-accent, #fff)',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
+            className="flex-1 min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer"
           >
             Confirm
           </button>
           <button
             onClick={onCancel}
-            style={{
-              flex: 1,
-              minHeight: '44px',
-              background: 'var(--color-surface-raised)',
-              color: 'var(--color-text)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              fontSize: '16px',
-              cursor: 'pointer',
-            }}
+            className="flex-1 min-h-11 bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] rounded-lg text-base cursor-pointer"
           >
             Cancel
           </button>

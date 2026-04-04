@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { getNoteById } from '../../storage/repositories/noteRepository';
@@ -7,6 +7,7 @@ import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { Drawer } from '../../components/primitives/Drawer';
 import { AbilityPicker } from './AbilityPicker';
 import { SpellPicker } from './SpellPicker';
+import { cn } from '../../lib/utils';
 import type { CombatEvent, CombatTypeData } from '../../types/noteValidators';
 
 const DRAGONBANE_CONDITIONS = [
@@ -244,40 +245,17 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
     }
   }
 
-  const chipStyle = (_type: EventType): React.CSSProperties => ({
-    minHeight: '44px',
-    padding: '0 12px',
-    background: 'var(--color-surface-raised)',
-    border: '1px solid var(--color-border)',
-    borderRadius: '22px',
-    color: 'var(--color-text)',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: 600,
-    flexShrink: 0,
-  });
-
   return (
-    <div style={{ padding: '16px' }}>
+    <div className="p-4">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-        <h3 style={{ color: 'var(--color-text)' }}>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-[var(--color-text)]">
           Combat — Round {currentRound}
-          {saving && <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginLeft: '8px' }}>saving...</span>}
+          {saving && <span className="text-xs text-[var(--color-text-muted)] ml-2">saving...</span>}
         </h3>
         <button
           onClick={handleEndCombat}
-          style={{
-            minHeight: '44px',
-            minWidth: '44px',
-            padding: '0 12px',
-            background: 'none',
-            border: '1px solid var(--color-border)',
-            borderRadius: '6px',
-            color: 'var(--color-text-muted)',
-            cursor: 'pointer',
-            fontSize: '13px',
-          }}
+          className="min-h-11 min-w-11 px-3 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-[13px]"
         >
           End Combat
         </button>
@@ -286,31 +264,19 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
       {/* Next Round */}
       <button
         onClick={handleNextRound}
-        style={{
-          minHeight: '44px',
-          minWidth: '44px',
-          padding: '0 16px',
-          background: 'var(--color-accent)',
-          color: 'var(--color-on-accent, #fff)',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '15px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          marginBottom: '12px',
-        }}
+        className="min-h-11 min-w-11 px-4 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-[15px] font-semibold cursor-pointer mb-3"
       >
         Next Round
       </button>
 
       {/* Event type chips */}
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginBottom: '6px' }}>Quick Event:</p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+      <p className="text-[var(--color-text-muted)] text-xs mb-2">Quick Event:</p>
+      <div className="flex gap-2 flex-wrap mb-3">
         {EVENT_TYPES.map(type => (
           <button
             key={type}
             onClick={() => handleEventTypeClick(type)}
-            style={chipStyle(type)}
+            className="min-h-11 px-3 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-full text-[var(--color-text)] cursor-pointer text-[13px] font-semibold shrink-0"
           >
             {type.charAt(0).toUpperCase() + type.slice(1)}
           </button>
@@ -320,14 +286,9 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
       {/* Event form */}
       {eventForm.type && eventForm.type !== 'ability' && eventForm.type !== 'spell' && (
         <div
-          style={{
-            background: 'var(--color-surface-raised)',
-            borderRadius: '8px',
-            padding: '12px',
-            marginBottom: '12px',
-          }}
+          className="bg-[var(--color-surface-raised)] rounded-lg p-3 mb-3"
         >
-          <p style={{ color: 'var(--color-text)', fontWeight: 600, marginBottom: '8px' }}>
+          <p className="text-[var(--color-text)] font-semibold mb-2">
             {eventForm.type.charAt(0).toUpperCase() + eventForm.type.slice(1)}
           </p>
           <input
@@ -335,104 +296,39 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
             placeholder="Actor (optional)"
             value={eventForm.actorName}
             onChange={e => setEventForm(f => ({ ...f, actorName: e.target.value }))}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px',
-              minHeight: '44px',
-              marginBottom: '6px',
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              color: 'var(--color-text)',
-              fontSize: '14px',
-              boxSizing: 'border-box',
-            }}
+            className="block w-full p-2 min-h-11 mb-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md text-[var(--color-text)] text-sm box-border"
           />
           <input
             type="text"
             placeholder="Target (optional)"
             value={eventForm.targetName}
             onChange={e => setEventForm(f => ({ ...f, targetName: e.target.value }))}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px',
-              minHeight: '44px',
-              marginBottom: '6px',
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              color: 'var(--color-text)',
-              fontSize: '14px',
-              boxSizing: 'border-box',
-            }}
+            className="block w-full p-2 min-h-11 mb-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md text-[var(--color-text)] text-sm box-border"
           />
           <input
             type="text"
             placeholder="Label"
             value={eventForm.label}
             onChange={e => setEventForm(f => ({ ...f, label: e.target.value }))}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px',
-              minHeight: '44px',
-              marginBottom: '6px',
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              color: 'var(--color-text)',
-              fontSize: '14px',
-              boxSizing: 'border-box',
-            }}
+            className="block w-full p-2 min-h-11 mb-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md text-[var(--color-text)] text-sm box-border"
           />
           <input
             type="text"
             placeholder="Value (optional, e.g. damage amount)"
             value={eventForm.value}
             onChange={e => setEventForm(f => ({ ...f, value: e.target.value }))}
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px',
-              minHeight: '44px',
-              marginBottom: '8px',
-              background: 'var(--color-surface)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              color: 'var(--color-text)',
-              fontSize: '14px',
-              boxSizing: 'border-box',
-            }}
+            className="block w-full p-2 min-h-11 mb-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-md text-[var(--color-text)] text-sm box-border"
           />
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex gap-3">
             <button
               onClick={handleSubmitEvent}
-              style={{
-                flex: 1,
-                minHeight: '44px',
-                background: 'var(--color-accent)',
-                color: 'var(--color-on-accent, #fff)',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontWeight: 600,
-              }}
+              className="flex-1 min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg cursor-pointer font-semibold"
             >
               Log Event
             </button>
             <button
               onClick={() => setEventForm({ ...EMPTY_FORM, actorName: activeCharacter?.name ?? '' })}
-              style={{
-                minHeight: '44px',
-                padding: '0 12px',
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                color: 'var(--color-text)',
-                cursor: 'pointer',
-              }}
+              className="min-h-11 px-3 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer"
             >
               Cancel
             </button>
@@ -477,43 +373,34 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
       </Drawer>
 
       {/* Event log */}
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '12px', marginBottom: '6px' }}>Event Log:</p>
+      <p className="text-[var(--color-text-muted)] text-xs mb-2">Event Log:</p>
       <div
-        style={{
-          background: 'var(--color-surface-raised)',
-          borderRadius: '8px',
-          padding: '8px',
-          maxHeight: '300px',
-          overflowY: 'auto',
-        }}
+        className="bg-[var(--color-surface-raised)] rounded-lg p-2 max-h-[300px] overflow-y-auto"
       >
         {allEvents.length === 0 ? (
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', padding: '4px' }}>
+          <p className="text-[var(--color-text-muted)] text-[13px] p-1">
             No events yet.
           </p>
         ) : (
           allEvents.map(event => (
             <div
               key={event.id}
-              style={{
-                padding: '4px 0',
-                borderBottom: '1px solid var(--color-border)',
-                color: event.type === 'round-separator'
-                  ? 'var(--color-text-muted)'
-                  : 'var(--color-text)',
-                fontSize: '13px',
-                fontStyle: event.type === 'round-separator' ? 'italic' : 'normal',
-              }}
+              className={cn(
+                'py-1 border-b border-[var(--color-border)] text-[13px]',
+                event.type === 'round-separator'
+                  ? 'text-[var(--color-text-muted)] italic'
+                  : 'text-[var(--color-text)]'
+              )}
             >
               {event.type !== 'round-separator' && event.actorName && (
-                <span style={{ fontWeight: 600 }}>{event.actorName}: </span>
+                <span className="font-semibold">{event.actorName}: </span>
               )}
               {event.label}
               {event.targetName && (
-                <span style={{ color: 'var(--color-text-muted)' }}> → {event.targetName}</span>
+                <span className="text-[var(--color-text-muted)]"> → {event.targetName}</span>
               )}
               {event.value && (
-                <span style={{ color: 'var(--color-accent)', marginLeft: '6px' }}>[{event.value}]</span>
+                <span className="text-[var(--color-accent)] ml-1.5">[{event.value}]</span>
               )}
             </div>
           ))
@@ -540,43 +427,17 @@ function ConditionPicker({ onSelect, onClose }: ConditionPickerProps) {
         placeholder="Who is affected? (optional)"
         value={target}
         onChange={e => setTarget(e.target.value)}
-        style={{
-          display: 'block',
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          marginBottom: '12px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          boxSizing: 'border-box',
-        }}
+        className="block w-full px-3 py-2.5 min-h-11 mb-3 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
       />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      <div className="flex flex-col gap-0.5">
         {DRAGONBANE_CONDITIONS.map(c => (
           <button
             key={c.name}
             onClick={() => { onSelect(c.name, c.attribute, target.trim()); onClose(); }}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              width: '100%',
-              textAlign: 'left',
-              padding: '12px',
-              minHeight: '44px',
-              background: 'none',
-              border: 'none',
-              borderBottom: '1px solid var(--color-border)',
-              color: 'var(--color-text)',
-              cursor: 'pointer',
-              fontSize: '16px',
-            }}
+            className="flex justify-between items-center w-full text-left p-3 min-h-11 bg-transparent border-0 border-b border-b-[var(--color-border)] text-[var(--color-text)] cursor-pointer text-base"
           >
-            <span style={{ fontWeight: 600 }}>{c.name}</span>
-            <span style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>{c.attribute}</span>
+            <span className="font-semibold">{c.name}</span>
+            <span className="text-[var(--color-text-muted)] text-sm">{c.attribute}</span>
           </button>
         ))}
       </div>

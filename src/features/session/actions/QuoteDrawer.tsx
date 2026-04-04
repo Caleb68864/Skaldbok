@@ -4,6 +4,7 @@ import { PartyPicker } from '../../../components/fields/PartyPicker';
 import type { ResolvedMember } from '../../../components/fields/PartyPicker';
 import { useNoteActions } from '../../notes/useNoteActions';
 import { useToast } from '../../../context/ToastContext';
+import { cn } from '../../../lib/utils';
 
 /**
  * Props for the {@link QuoteDrawer} component.
@@ -90,7 +91,7 @@ export function QuoteDrawer({ open, onClose, members, selectedMembers, onSelectM
   return (
     <Drawer open={open} onClose={handleClose} title="Quick Quote">
       <PartyPicker members={members} selected={selectedMembers} onSelect={onSelectMembers} />
-      <p style={{ color: 'var(--color-text-muted)', fontSize: '13px', marginBottom: '8px' }}>
+      <p className="text-[var(--color-text-muted)] text-[13px] mb-2">
         Who said it? (selected above)
       </p>
       <input
@@ -99,35 +100,15 @@ export function QuoteDrawer({ open, onClose, members, selectedMembers, onSelectM
         value={quoteText}
         onChange={e => setQuoteText(e.target.value)}
         autoFocus
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-          fontStyle: 'italic',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border italic"
       />
       <button
         onClick={handleLog}
         disabled={!quoteText.trim()}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: 'var(--color-accent)',
-          color: 'var(--color-on-accent, #fff)',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          opacity: !quoteText.trim() ? 0.6 : 1,
-        }}
+        className={cn(
+          'w-full min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer',
+          !quoteText.trim() ? 'opacity-60' : 'opacity-100'
+        )}
       >
         Log Quote
       </button>

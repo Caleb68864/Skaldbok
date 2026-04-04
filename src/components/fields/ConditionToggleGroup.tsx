@@ -10,7 +10,7 @@ interface ConditionToggleGroupProps {
 
 export function ConditionToggleGroup({ conditions, definitions, onChange, disabled = false }: ConditionToggleGroupProps) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
+    <div className="flex flex-wrap gap-[var(--space-sm)]">
       {definitions.map(def => (
         <Chip
           key={def.id}

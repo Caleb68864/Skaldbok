@@ -4,6 +4,7 @@ import { PartyPicker } from '../../../components/fields/PartyPicker';
 import type { ResolvedMember } from '../../../components/fields/PartyPicker';
 import { useNoteActions } from '../../notes/useNoteActions';
 import { useToast } from '../../../context/ToastContext';
+import { cn } from '../../../lib/utils';
 
 /**
  * Props for the {@link LootDrawer} component.
@@ -96,34 +97,15 @@ export function LootDrawer({ open, onClose, members, selectedMembers, onSelectMe
         value={lootName}
         onChange={e => setLootName(e.target.value)}
         autoFocus
-        style={{
-          width: '100%',
-          padding: '10px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '16px',
-          marginBottom: '12px',
-          boxSizing: 'border-box',
-        }}
+        className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
       />
       <button
         onClick={handleLog}
         disabled={!lootName.trim()}
-        style={{
-          width: '100%',
-          minHeight: '44px',
-          background: 'var(--color-accent)',
-          color: 'var(--color-on-accent, #fff)',
-          border: 'none',
-          borderRadius: '8px',
-          fontSize: '16px',
-          fontWeight: 600,
-          cursor: 'pointer',
-          opacity: !lootName.trim() ? 0.6 : 1,
-        }}
+        className={cn(
+          'w-full min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer',
+          !lootName.trim() ? 'opacity-60' : 'opacity-100'
+        )}
       >
         Log Loot
       </button>

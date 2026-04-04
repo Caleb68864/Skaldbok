@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { cn } from '../../lib/utils';
 
 interface AttachButtonProps {
   onFileSelected: (file: File) => void;
@@ -31,7 +32,7 @@ export function AttachButton({ onFileSelected, disabled }: AttachButtonProps) {
         accept="image/*"
         capture="environment"
         onChange={handleChange}
-        style={{ display: 'none' }}
+        className="hidden"
         aria-hidden="true"
         tabIndex={-1}
       />
@@ -39,22 +40,12 @@ export function AttachButton({ onFileSelected, disabled }: AttachButtonProps) {
         type="button"
         onClick={handleButtonClick}
         disabled={disabled}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          minHeight: '44px',
-          padding: '0 12px',
-          borderRadius: '8px',
-          border: '1px solid var(--color-border)',
-          background: 'var(--color-surface-raised)',
-          color: 'var(--color-text-muted)',
-          cursor: disabled ? 'not-allowed' : 'pointer',
-          fontSize: '13px',
-          opacity: disabled ? 0.5 : 1,
-        }}
+        className={cn(
+          "flex items-center gap-2 min-h-11 px-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] text-[13px]",
+          disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer opacity-100"
+        )}
       >
-        <span style={{ fontSize: '16px', lineHeight: 1 }}>📎</span>
+        <span className="text-base leading-none">📎</span>
         Attach Photo
       </button>
     </>

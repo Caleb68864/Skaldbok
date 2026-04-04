@@ -1,36 +1,34 @@
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { GameIcon } from '../primitives/GameIcon';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 /**
  * Secondary navigation tabs displayed below the campaign header when the user
  * is inside the `/character` section of the app.
  *
- * Each entry maps a route `to` path to a `label` rendered in the pill chip.
+ * Each entry maps a route `to` path to a `label` rendered in the tab trigger.
  * The array is `as const` so TypeScript narrows the literal types used during
  * active-state calculation.
  */
 const CHARACTER_TABS = [
-  { to: '/character/sheet', label: 'Sheet' },
-  { to: '/character/skills', label: 'Skills' },
-  { to: '/character/gear', label: 'Gear' },
-  { to: '/character/magic', label: 'Magic' },
+  { to: '/character/sheet', label: 'Sheet', icon: 'scroll-unfurled' },
+  { to: '/character/skills', label: 'Skills', icon: 'perspective-dice-six-faces-random' },
+  { to: '/character/gear', label: 'Gear', icon: 'knapsack' },
+  { to: '/character/magic', label: 'Magic', icon: 'spell-book' },
 ] as const;
 
 /**
- * Horizontal pill-chip sub-navigation bar for the character section.
+ * Horizontal sub-navigation bar for the character section using Radix Tabs.
  *
  * @remarks
  * Rendered by {@link ShellLayout} only when the current route starts with
- * `/character`. Provides four tabs — Sheet, Skills, Gear, and Magic — as
- * React Router `<Link>` elements styled as pill-shaped chips.
+ * `/character`. Provides four tabs — Sheet, Skills, Gear, and Magic — using
+ * the shadcn Tabs component backed by Radix primitives.
  *
- * The active chip uses the accent background colour and white text. The row
- * scrolls horizontally (`overflow-x: auto`) on narrow viewports so all tabs
- * remain reachable without wrapping.
+ * The active tab uses an animated underline indicator. The row scrolls
+ * horizontally on narrow viewports so all tabs remain reachable without wrapping.
  *
- * Active-tab detection matches the exact path or any sub-route beneath it
- * (e.g., `/character/sheet/some-sub-view` keeps the "Sheet" chip active).
- *
- * All chips meet the 44 px minimum touch target height.
+ * All tabs meet the 44 px minimum touch target height.
  *
  * @example
  * // Rendered automatically by ShellLayout when on a /character/* route.
@@ -38,44 +36,32 @@ const CHARACTER_TABS = [
  */
 export function CharacterSubNav() {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const activeTab =
+    CHARACTER_TABS.find(
+      (t) =>
+        location.pathname === t.to || location.pathname.startsWith(t.to + '/'),
+    )?.to ?? CHARACTER_TABS[0].to;
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        gap: '8px',
-        padding: '8px 12px',
-        background: 'var(--color-surface)',
-        borderBottom: '1px solid var(--color-border)',
-        overflowX: 'auto',
-      }}
+    <Tabs
+      value={activeTab}
+      onValueChange={(value) => navigate(value)}
+      className="bg-surface border-b border-border"
     >
-      {CHARACTER_TABS.map(({ to, label }) => {
-        const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
-        return (
-          <Link
+      <TabsList className="w-full justify-start">
+        {CHARACTER_TABS.map(({ to, label, icon }) => (
+          <TabsTrigger
             key={to}
-            to={to}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '44px',
-              padding: '0 16px',
-              borderRadius: '22px',
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-              fontSize: '14px',
-              fontWeight: isActive ? 600 : 400,
-              background: isActive ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: isActive ? 'var(--color-on-accent, #fff)' : 'var(--color-text)',
-            }}
+            value={to}
+            className="relative after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:rounded-full after:bg-accent after:scale-x-0 after:transition-transform after:duration-200 data-[state=active]:after:scale-x-100"
           >
+            <GameIcon name={icon} size={16} />
             {label}
-          </Link>
-        );
-      })}
-    </div>
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
 }

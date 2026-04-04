@@ -1,3 +1,4 @@
+import { cn } from '../../lib/utils';
 import type { ConditionDefinition } from '../../types/system';
 
 interface QuickConditionPanelProps {
@@ -14,11 +15,7 @@ export function QuickConditionPanel({ conditions, definitions, attributes, onCha
   }
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: 'repeat(3, 1fr)',
-      gap: 'var(--space-sm)',
-    }}>
+    <div className="grid grid-cols-3 gap-[var(--space-sm)]">
       {definitions.map(def => {
         const active = !!conditions[def.id];
         const abbr = getAbbreviation(def.linkedAttributeId);
@@ -28,35 +25,21 @@ export function QuickConditionPanel({ conditions, definitions, attributes, onCha
             key={def.id}
             type="button"
             onClick={() => onChange(def.id, !active)}
-            style={{
-              minHeight: '64px',
-              minWidth: '64px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '2px',
-              borderRadius: 'var(--radius-md)',
-              border: active ? '2px solid var(--color-danger)' : '2px solid var(--color-border)',
-              backgroundColor: active ? 'var(--color-danger)' : 'var(--color-surface-alt)',
-              color: active ? 'var(--color-text-inverse)' : 'var(--color-text)',
-              cursor: 'pointer',
-              fontFamily: 'inherit',
-              padding: 'var(--space-xs)',
-            }}
+            className={cn(
+              "min-h-16 min-w-16 flex flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] cursor-pointer font-[family-name:inherit] p-[var(--space-xs)]",
+              active
+                ? "border-2 border-[var(--color-danger)] bg-[var(--color-danger)] text-[var(--color-text-inverse)]"
+                : "border-2 border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
+            )}
           >
-            <span style={{
-              fontSize: 'var(--font-size-md)',
-              fontWeight: active ? 'bold' : 'normal',
-              lineHeight: 1.2,
-            }}>
+            <span className={cn(
+              "text-[length:var(--font-size-md)] leading-[1.2]",
+              active ? "font-bold" : "font-normal"
+            )}>
               {def.name}
             </span>
             {abbr && (
-              <span style={{
-                fontSize: 'var(--font-size-sm)',
-                opacity: 0.7,
-              }}>
+              <span className="text-[length:var(--font-size-sm)] opacity-70">
                 {abbr}
               </span>
             )}

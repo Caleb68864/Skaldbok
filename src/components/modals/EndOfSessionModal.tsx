@@ -29,17 +29,7 @@ interface RollResult {
 
 const MAX_SKILL_VALUE = 18;
 
-const btnStyle: React.CSSProperties = {
-  minHeight: '44px',
-  minWidth: '44px',
-  padding: '0 var(--space-md)',
-  borderRadius: 'var(--radius-sm)',
-  border: 'none',
-  cursor: 'pointer',
-  fontFamily: 'var(--font-ui)',
-  fontSize: 'var(--size-md)',
-  fontWeight: 'var(--weight-semibold)',
-};
+const btnBaseClass = "min-h-11 min-w-11 px-[var(--space-md)] rounded-[var(--radius-sm)] border-none cursor-pointer font-[family-name:var(--font-ui)] text-[length:var(--size-md)] font-[var(--weight-semibold)]";
 
 export function EndOfSessionModal({ open, onClose }: Props) {
   const { character, updateCharacter } = useActiveCharacter();
@@ -197,8 +187,8 @@ export function EndOfSessionModal({ open, onClose }: Props) {
   if (!character) {
     return (
       <Modal open={open} onClose={onClose} title="End of Session"
-        actions={<button style={btnStyle} onClick={onClose}>Close</button>}>
-        <p style={{ color: 'var(--color-text-muted)' }}>No active character loaded.</p>
+        actions={<button className={btnBaseClass} onClick={onClose}>Close</button>}>
+        <p className="text-[var(--color-text-muted)]">No active character loaded.</p>
       </Modal>
     );
   }
@@ -289,13 +279,13 @@ export function EndOfSessionModal({ open, onClose }: Props) {
       </div>
       <div className="eos-roll-btns">
         <button
-          style={{ ...btnStyle, backgroundColor: 'var(--color-success)', color: '#fff', flex: 1 }}
+          className={`${btnBaseClass} bg-[var(--color-success)] text-white flex-1`}
           onClick={handlePass}
         >
           ✅ Pass
         </button>
         <button
-          style={{ ...btnStyle, backgroundColor: 'var(--color-danger)', color: '#fff', flex: 1 }}
+          className={`${btnBaseClass} bg-[var(--color-danger)] text-white flex-1`}
           onClick={handleFail}
         >
           ❌ Fail
@@ -339,14 +329,14 @@ export function EndOfSessionModal({ open, onClose }: Props) {
   const stepContent = step === 1 ? step1 : step === 2 ? step2 : step === 3 ? step3 : step4;
 
   const step1Actions = hasAnythingToAdvance
-    ? <button style={{ ...btnStyle, backgroundColor: 'var(--color-accent)', color: '#fff' }} onClick={handleStep1Next}>Next →</button>
-    : <button style={{ ...btnStyle, backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text)' }} onClick={onClose}>Close</button>;
+    ? <button className={`${btnBaseClass} bg-[var(--color-accent)] text-white`} onClick={handleStep1Next}>Next →</button>
+    : <button className={`${btnBaseClass} bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text)]`} onClick={onClose}>Close</button>;
 
   const stepActions =
     step === 1 ? step1Actions :
-    step === 2 ? <button style={{ ...btnStyle, backgroundColor: 'var(--color-accent)', color: '#fff' }} onClick={handleStep2Next}>Next →</button> :
+    step === 2 ? <button className={`${btnBaseClass} bg-[var(--color-accent)] text-white`} onClick={handleStep2Next}>Next →</button> :
     step === 3 ? null :
-    <button style={{ ...btnStyle, backgroundColor: 'var(--color-accent)', color: '#fff' }} onClick={handleDone}>Done</button>;
+    <button className={`${btnBaseClass} bg-[var(--color-accent)] text-white`} onClick={handleDone}>Done</button>;
 
   return (
     <Modal

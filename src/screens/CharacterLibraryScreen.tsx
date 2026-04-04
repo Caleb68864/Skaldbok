@@ -9,6 +9,7 @@ import { Card } from '../components/primitives/Card';
 import { Button } from '../components/primitives/Button';
 import { Modal } from '../components/primitives/Modal';
 import { useToast } from '../context/ToastContext';
+import { cn } from '../lib/utils';
 
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
@@ -127,10 +128,10 @@ export default function CharacterLibraryScreen() {
   }
 
   return (
-    <div style={{ padding: 'var(--space-md)' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-md)', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
-        <h1 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text)' }}>Character Library</h1>
-        <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+    <div className="p-5">
+      <div className="flex justify-between items-center mb-5 flex-wrap gap-3">
+        <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)]">Character Library</h1>
+        <div className="flex gap-3 flex-wrap">
           <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Import Character</Button>
           <Button variant="primary" onClick={handleCreate}>+ New Character</Button>
         </div>
@@ -140,29 +141,19 @@ export default function CharacterLibraryScreen() {
         ref={fileInputRef}
         type="file"
         accept=".json"
-        style={{ display: 'none' }}
+        className="hidden"
         onChange={handleImportFile}
       />
 
       {/* Set Active? banner — shown when a second+ character is created (AC3.2, AC3.3) */}
       {pendingSetActiveId && (
         <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--space-sm)',
-            background: 'var(--color-surface-raised)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            padding: '10px 16px',
-            marginBottom: 'var(--space-md)',
-          }}
+          className="flex items-center justify-between gap-[var(--space-sm)] bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 mb-[var(--space-md)]"
         >
-          <span style={{ color: 'var(--color-text)', fontSize: '14px' }}>
+          <span className="text-[var(--color-text)] text-sm">
             {pendingSetActiveName} created — Set Active?
           </span>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', flexShrink: 0 }}>
+          <div className="flex gap-3 shrink-0">
             <Button size="sm" variant="primary" onClick={handlePendingSetActive}>Set Active</Button>
             <Button size="sm" variant="secondary" onClick={dismissPendingSetActive}>Dismiss</Button>
           </div>
@@ -170,36 +161,39 @@ export default function CharacterLibraryScreen() {
       )}
 
       {characters.length === 0 && (
-        <div style={{ textAlign: 'center', color: 'var(--color-text-muted)', marginTop: 'var(--space-xl)' }}>
-          <p style={{ marginBottom: 'var(--space-md)' }}>No characters yet. Create your first character to get started.</p>
+        <div className="text-center text-[var(--color-text-muted)] mt-[var(--space-xl)]">
+          <p className="mb-[var(--space-md)]">No characters yet. Create your first character to get started.</p>
           <Button variant="primary" size="lg" onClick={handleCreate}>Create your first character</Button>
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+      <div className="flex flex-col gap-5">
         {characters.map(char => {
           const isActive = activeCharacter?.id === char.id;
           return (
             <Card
               key={char.id}
-              style={{
-                border: isActive ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-              }}
+              className={cn(
+                'p-5',
+                isActive
+                  ? 'border-2 border-[var(--color-primary)]'
+                  : 'border border-[var(--color-border)]'
+              )}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
+              <div className="flex flex-col gap-4">
                 <div>
-                  <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-xs)' }}>
+                  <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-1">
                     {char.name || 'Unnamed Character'}
-                    {isActive && <span style={{ marginLeft: 'var(--space-sm)', fontSize: 'var(--font-size-sm)', color: 'var(--color-primary)' }}>(Active)</span>}
+                    {isActive && <span className="ml-2 text-[length:var(--font-size-sm)] text-[var(--color-primary)]">(Active)</span>}
                   </h2>
-                  <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+                  <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
                     {[char.metadata.kin, char.metadata.profession].filter(Boolean).join(' · ') || 'No details'}
                   </p>
-                  <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginTop: 'var(--space-xs)' }}>
+                  <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mt-1">
                     Updated: {new Date(char.updatedAt).toLocaleDateString()}
                   </p>
                 </div>
-                <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <div className="flex gap-3 flex-wrap">
                   {!isActive && (
                     <Button size="sm" variant="primary" onClick={() => handleSetActive(char.id)}>Set Active</Button>
                   )}
@@ -230,7 +224,7 @@ export default function CharacterLibraryScreen() {
           </>
         }
       >
-        <p style={{ color: 'var(--color-text-muted)', marginBottom: '12px', fontSize: '14px' }}>
+        <p className="text-[var(--color-text-muted)] mb-3 text-sm">
           Enter a name for your character.
         </p>
         <input
@@ -240,17 +234,7 @@ export default function CharacterLibraryScreen() {
           onChange={e => setNameInput(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter' && nameInput.trim().length > 0) handleCreateConfirm(); }}
           autoFocus
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            minHeight: '44px',
-            background: 'var(--color-surface-raised)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            color: 'var(--color-text)',
-            fontSize: '16px',
-            boxSizing: 'border-box',
-          }}
+          className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
         />
       </Modal>
 
@@ -265,7 +249,7 @@ export default function CharacterLibraryScreen() {
           </>
         }
       >
-        <p style={{ color: 'var(--color-text)' }}>
+        <p className="text-[var(--color-text)]">
           Delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
         </p>
       </Modal>

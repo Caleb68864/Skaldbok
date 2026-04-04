@@ -7,6 +7,7 @@ import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
 import { getSessionsByCampaign } from '../../storage/repositories/sessionRepository';
 import type { Note, NoteType } from '../../types/note';
 import type { Session } from '../../types/session';
+import { cn } from '../../lib/utils';
 
 /**
  * Ordered list of note-type filter options rendered as pill chips above the grid.
@@ -24,18 +25,6 @@ const NOTE_TYPE_FILTERS: Array<{ value: NoteType | 'all'; label: string }> = [
   { value: 'skill-check', label: 'Skill Check' },
   { value: 'recap', label: 'Recap' },
 ];
-
-/** Shared inline styles applied to every filter-chip button. */
-const chipStyle = {
-  minHeight: '44px',
-  padding: '0 12px',
-  borderRadius: '22px',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '12px',
-  fontWeight: 600,
-  flexShrink: 0,
-} as const;
 
 /**
  * Props for the {@link NotesGrid} component.
@@ -174,41 +163,21 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
   };
 
   return (
-    <div style={{ marginTop: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <h3 style={{ color: 'var(--color-text)', margin: 0 }}>Notes</h3>
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[var(--color-text)] m-0">Notes</h3>
           <button
             onClick={() => setSortAsc(prev => !prev)}
             title={sortAsc ? 'Oldest first — click for newest first' : 'Newest first — click for oldest first'}
-            style={{
-              minHeight: '44px',
-              minWidth: '44px',
-              padding: '0 8px',
-              background: 'var(--color-surface-raised)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '6px',
-              color: 'var(--color-text-muted)',
-              cursor: 'pointer',
-              fontSize: '12px',
-            }}
+            className="min-h-11 min-w-11 px-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
           >
             {sortAsc ? 'Oldest' : 'Newest'}
           </button>
         </div>
         <button
           onClick={() => navigate('/note/new')}
-          style={{
-            minHeight: '44px',
-            padding: '0 12px',
-            background: 'var(--color-accent)',
-            color: 'var(--color-on-accent, #fff)',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '13px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
+          className="min-h-11 px-3 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-[13px] font-semibold cursor-pointer"
         >
           + New Note
         </button>
@@ -218,19 +187,7 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
       <select
         value={sessionFilter}
         onChange={e => setSessionFilter(e.target.value)}
-        style={{
-          width: '100%',
-          padding: '8px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '14px',
-          marginBottom: '10px',
-          boxSizing: 'border-box',
-          cursor: 'pointer',
-        }}
+        className="w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-2.5 box-border cursor-pointer"
       >
         <option value="all">All Sessions</option>
         {sessions.map(s => (
@@ -247,31 +204,21 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
         placeholder="Search notes..."
         value={searchQuery}
         onChange={e => setSearchQuery(e.target.value)}
-        style={{
-          width: '100%',
-          padding: '8px 12px',
-          minHeight: '44px',
-          background: 'var(--color-surface-raised)',
-          border: '1px solid var(--color-border)',
-          borderRadius: '8px',
-          color: 'var(--color-text)',
-          fontSize: '14px',
-          marginBottom: '10px',
-          boxSizing: 'border-box',
-        }}
+        className="w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-2.5 box-border"
       />
 
       {/* Type filter chips */}
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+      <div className="flex gap-2 flex-wrap mb-3">
         {NOTE_TYPE_FILTERS.map(f => (
           <button
             key={f.value}
             onClick={() => setTypeFilter(f.value)}
-            style={{
-              ...chipStyle,
-              background: typeFilter === f.value ? 'var(--color-accent)' : 'var(--color-surface-raised)',
-              color: typeFilter === f.value ? 'var(--color-on-accent, #fff)' : 'var(--color-text-muted)',
-            }}
+            className={cn(
+              'min-h-11 px-3.5 py-1.5 rounded-full border-none cursor-pointer text-xs font-semibold shrink-0',
+              typeFilter === f.value
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
+            )}
           >
             {f.label}
           </button>
@@ -280,7 +227,7 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
 
       {/* Note list */}
       {filteredNotes.length === 0 ? (
-        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+        <p className="text-[var(--color-text-muted)] text-sm">
           {notes.length === 0 ? 'No notes yet.' : 'No notes match the current filter.'}
         </p>
       ) : (
@@ -288,7 +235,7 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
           <div
             key={note.id}
             onClick={() => navigate(`/note/${note.id}/edit`)}
-            style={{ cursor: 'pointer' }}
+            className="cursor-pointer"
           >
             <NoteItem
               note={note}
