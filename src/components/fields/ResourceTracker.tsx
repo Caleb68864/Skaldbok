@@ -24,62 +24,26 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
     if (!maxDisabled && !disabled) onMaxChange?.(1);
   }
 
-  const bigButtonStyle: React.CSSProperties = {
-    minWidth: '52px',
-    minHeight: '52px',
-    fontSize: 'var(--size-2xl)',
-    fontWeight: 'bold',
-    background: 'var(--color-surface-alt)',
-    border: '2px solid var(--color-border)',
-    borderRadius: 'var(--radius-md)',
-    color: 'var(--color-text)',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    userSelect: 'none',
-    lineHeight: 1,
-  };
+  const bigBtnClass = "min-w-[52px] min-h-[52px] text-[length:var(--size-2xl)] font-bold bg-[var(--color-surface-alt)] border-2 border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-text)] cursor-pointer flex items-center justify-center select-none leading-none";
 
-  const smallButtonStyle: React.CSSProperties = {
-    minWidth: 'var(--touch-target-min)',
-    minHeight: 'var(--touch-target-min)',
-    fontSize: 'var(--size-lg)',
-    background: 'var(--color-surface-alt)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-sm)',
-    color: 'var(--color-text-muted)',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    userSelect: 'none',
-    lineHeight: 1,
-  };
+  const smallBtnClass = "min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] text-[length:var(--size-lg)] bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text-muted)] cursor-pointer flex items-center justify-center select-none leading-none";
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-      <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', fontWeight: 'bold' }}>{label}</span>
+    <div className="flex flex-col gap-2">
+      <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-bold">{label}</span>
 
       {/* Current value — big prominent +/- */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+      <div className="flex items-center gap-[var(--space-sm)]">
         <button
           type="button"
           aria-label={`Decrease ${label}`}
           onClick={decrementCurrent}
           disabled={disabled || current <= 0}
-          style={bigButtonStyle}
+          className={bigBtnClass}
         >
           −
         </button>
-        <span style={{
-          minWidth: '48px',
-          textAlign: 'center',
-          fontSize: 'var(--size-2xl)',
-          fontWeight: 'bold',
-          color: 'var(--color-text)',
-          fontFamily: 'var(--font-display)',
-        }}>
+        <span className="min-w-12 text-center text-[length:var(--size-2xl)] font-bold text-[var(--color-text)] font-[family-name:var(--font-display)]">
           {current}
         </span>
         <button
@@ -87,38 +51,28 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
           aria-label={`Increase ${label}`}
           onClick={incrementCurrent}
           disabled={disabled || current >= max}
-          style={bigButtonStyle}
+          className={bigBtnClass}
         >
           +
         </button>
 
-        <span style={{
-          fontSize: 'var(--font-size-sm)',
-          color: 'var(--color-text-muted)',
-          marginLeft: 'var(--space-xs)',
-        }}>
+        <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] ml-[var(--space-xs)]">
           /
         </span>
 
         {/* Max value — inline after slash */}
         {onMaxChange && maxEditable ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-xs)' }}>
+          <div className="flex items-center gap-[var(--space-xs)]">
             <button
               type="button"
               aria-label={`Decrease ${label} max`}
               onClick={decrementMax}
               disabled={maxDisabled || disabled || max <= 0}
-              style={smallButtonStyle}
+              className={smallBtnClass}
             >
               −
             </button>
-            <span style={{
-              minWidth: '28px',
-              textAlign: 'center',
-              fontSize: 'var(--size-lg)',
-              fontWeight: 'bold',
-              color: 'var(--color-text-muted)',
-            }}>
+            <span className="min-w-7 text-center text-[length:var(--size-lg)] font-bold text-[var(--color-text-muted)]">
               {max}
             </span>
             <button
@@ -126,17 +80,13 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
               aria-label={`Increase ${label} max`}
               onClick={incrementMax}
               disabled={maxDisabled || disabled}
-              style={smallButtonStyle}
+              className={smallBtnClass}
             >
               +
             </button>
           </div>
         ) : (
-          <span style={{
-            fontSize: 'var(--size-lg)',
-            fontWeight: 'bold',
-            color: 'var(--color-text-muted)',
-          }}>
+          <span className="text-[length:var(--size-lg)] font-bold text-[var(--color-text-muted)]">
             {max}
           </span>
         )}

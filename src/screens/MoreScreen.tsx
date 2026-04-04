@@ -6,24 +6,12 @@ export function MoreScreen() {
   const [showParty, setShowParty] = useState(false);
 
   return (
-    <div style={{ padding: '16px' }}>
-      <h2 style={{ color: 'var(--color-text)', marginBottom: '16px' }}>More</h2>
+    <div className="p-4">
+      <h2 className="text-[var(--color-text)] mb-4">More</h2>
 
       <button
         onClick={() => setShowParty(true)}
-        style={{
-          display: 'block',
-          width: '100%',
-          textAlign: 'left',
-          padding: '12px 0',
-          minHeight: '44px',
-          background: 'none',
-          border: 'none',
-          borderBottom: '1px solid var(--color-border)',
-          color: 'var(--color-text)',
-          cursor: 'pointer',
-          fontSize: '16px',
-        } as React.CSSProperties}
+        className="block w-full text-left py-3 min-h-11 bg-transparent border-0 border-b border-b-[var(--color-border)] text-[var(--color-text)] cursor-pointer text-base"
       >
         Manage Party
       </button>
@@ -37,15 +25,7 @@ export function MoreScreen() {
         <Link
           key={to}
           to={to}
-          style={{
-            display: 'block',
-            padding: '12px 0',
-            minHeight: '44px',
-            borderBottom: '1px solid var(--color-border)',
-            color: 'var(--color-text)',
-            textDecoration: 'none',
-            fontSize: '16px',
-          }}
+          className="block py-3 min-h-11 border-b border-b-[var(--color-border)] text-[var(--color-text)] no-underline text-base"
         >
           {label}
         </Link>

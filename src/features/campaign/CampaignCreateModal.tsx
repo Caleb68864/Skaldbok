@@ -4,6 +4,7 @@ import { createCampaign } from '../../storage/repositories/campaignRepository';
 import { createParty } from '../../storage/repositories/partyRepository';
 import { updateCampaign } from '../../storage/repositories/campaignRepository';
 import { useToast } from '../../context/ToastContext';
+import { cn } from '../../lib/utils';
 
 interface CampaignCreateModalProps {
   onClose: () => void;
@@ -54,30 +55,16 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
       role="dialog"
       aria-label="Create campaign"
       onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-      }}
+      className="fixed inset-0 bg-black/50 z-[300] flex items-end justify-center"
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{
-          background: 'var(--color-surface)',
-          borderRadius: '16px 16px 0 0',
-          width: '100%',
-          maxWidth: 480,
-          padding: '24px 16px 32px',
-        }}
+        className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-[480px] px-4 pt-6 pb-8"
       >
-        <h2 style={{ color: 'var(--color-text)', marginBottom: '16px' }}>Create Campaign</h2>
+        <h2 className="text-[var(--color-text)] mb-4">Create Campaign</h2>
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '4px', fontSize: '14px' }}>
+          <div className="mb-3">
+            <label className="block text-[var(--color-text-muted)] mb-1 text-sm">
               Name *
             </label>
             <input
@@ -88,73 +75,36 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
               autoFocus
               minLength={1}
               required
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                minHeight: '44px',
-                background: 'var(--color-surface-raised)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                color: 'var(--color-text)',
-                fontSize: '16px',
-                boxSizing: 'border-box',
-              }}
+              className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
             />
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', marginBottom: '4px', fontSize: '14px' }}>
+          <div className="mb-4">
+            <label className="block text-[var(--color-text-muted)] mb-1 text-sm">
               Description (optional)
             </label>
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               placeholder="Brief description..."
-              style={{
-                width: '100%',
-                padding: '10px 12px',
-                background: 'var(--color-surface-raised)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                color: 'var(--color-text)',
-                fontSize: '16px',
-                minHeight: '80px',
-                resize: 'vertical',
-                boxSizing: 'border-box',
-              }}
+              className="w-full px-3 py-2.5 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base min-h-20 resize-y box-border"
             />
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div className="flex gap-3">
             <button
               type="submit"
               disabled={saving || !name.trim()}
-              style={{
-                flex: 1,
-                minHeight: '44px',
-                background: 'var(--color-accent)',
-                color: 'var(--color-on-accent, #fff)',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '16px',
-                fontWeight: 600,
-                cursor: saving ? 'wait' : 'pointer',
-                opacity: saving || !name.trim() ? 0.6 : 1,
-              }}
+              className={cn(
+                'flex-1 min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold',
+                saving ? 'cursor-wait' : 'cursor-pointer',
+                (saving || !name.trim()) ? 'opacity-60' : 'opacity-100'
+              )}
             >
               {saving ? 'Creating...' : 'Create'}
             </button>
             <button
               type="button"
               onClick={onClose}
-              style={{
-                minHeight: '44px',
-                minWidth: '80px',
-                background: 'var(--color-surface-raised)',
-                color: 'var(--color-text)',
-                border: '1px solid var(--color-border)',
-                borderRadius: '8px',
-                fontSize: '16px',
-                cursor: 'pointer',
-              }}
+              className="min-h-11 min-w-20 bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] rounded-lg text-base cursor-pointer"
             >
               Cancel
             </button>

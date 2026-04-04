@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { WeaponCard } from '../components/fields/WeaponCard';
 import { WeaponEditor } from '../components/fields/WeaponEditor';
@@ -16,34 +17,10 @@ import { computeEncumbranceLimit } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 
+const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
+
 /**
  * The Gear screen — manages all equipment for the active character.
- *
- * @remarks
- * Organises equipment into collapsible {@link SectionPanel} sections:
- *
- * - **Weapons** — lists {@link Weapon} entries via {@link WeaponCard}; in Edit
- *   Mode, a {@link WeaponEditor} drawer can add or modify weapons.
- * - **Armor & Helmet** — shows current {@link ArmorPiece} entries with equipped
- *   toggle buttons; edit via inline {@link Drawer} forms.
- * - **Inventory** — managed through {@link InventoryList} and
- *   {@link InventoryItemEditor}; new and removed items are logged to the active
- *   session via {@link useSessionLog}.
- * - **Coins** — gold / silver / copper counters using {@link CounterControl};
- *   coin changes are logged to the session via `logCoinChange`.
- * - **Tiny Items** — lightweight free-carry items (do not count toward
- *   encumbrance); add via text input in Edit Mode.
- * - **Memento** — single free-text field; editable in Edit Mode.
- * - **Encumbrance** — computed total weight vs. the character's encumbrance
- *   limit; displayed in danger colour when over the limit.
- *
- * Armor and Helmet drawers are pre-populated from the character record when
- * opened and cleared when the drawer closes or the character has no piece.
- *
- * Navigates to `/library` if no character is loaded.
- *
- * @returns The gear management UI, or a loading indicator, or `null` while
- *   redirecting.
  */
 export default function GearScreen() {
   const navigate = useNavigate();
@@ -115,7 +92,7 @@ export default function GearScreen() {
     }
   }, [isLoading, character, navigate]);
 
-  if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
+  if (isLoading) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
   function handleWeaponSave(weapon: Weapon) {
@@ -230,25 +207,13 @@ export default function GearScreen() {
     + (character.helmet?.weight ?? 0);
   const encumbranceLimit = computeEncumbranceLimit(character);
 
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    padding: 'var(--space-sm)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-sm)',
-    background: 'var(--color-surface-alt)',
-    color: 'var(--color-text)',
-    fontSize: 'var(--font-size-md)',
-    fontFamily: 'inherit',
-    boxSizing: 'border-box',
-  };
-
   return (
-    <div style={{ padding: 'var(--space-md)' }}>
-      <h1 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text)', marginBottom: 'var(--space-md)' }}>Gear</h1>
+    <div className="p-[var(--space-md)]">
+      <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] mb-[var(--space-md)]">Gear</h1>
 
       <SectionPanel title="Weapons" subtitle="p. 73-76" collapsible defaultOpen>
-        {character.weapons.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No weapons.</p>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        {character.weapons.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No weapons.</p>}
+        <div className="flex flex-col gap-[var(--space-md)]">
           {character.weapons.map(weapon => (
             <WeaponCard
               key={weapon.id}
@@ -261,26 +226,21 @@ export default function GearScreen() {
           ))}
         </div>
         {isEditMode && (
-          <Button variant="secondary" size="sm" style={{ marginTop: 'var(--space-sm)' }} onClick={() => { setEditingWeapon(null); setWeaponDrawerOpen(true); }}>
+          <Button variant="secondary" size="sm" className="mt-[var(--space-sm)]" onClick={() => { setEditingWeapon(null); setWeaponDrawerOpen(true); }}>
             + Add Weapon
           </Button>
         )}
       </SectionPanel>
 
       <SectionPanel title="Armor &amp; Helmet" subtitle="p. 77" collapsible defaultOpen>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        <div className="flex flex-col gap-[var(--space-md)]">
           {character.armor ? (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="flex justify-between items-center">
               <button
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: isEditMode ? 'pointer' : 'default',
-                  textAlign: 'left',
-                  color: 'var(--color-text)',
-                  flex: 1,
-                }}
+                className={cn(
+                  "bg-transparent border-none p-0 text-left text-[var(--color-text)] flex-1",
+                  isEditMode ? "cursor-pointer" : "cursor-default"
+                )}
                 onClick={() => { if (isEditMode) setArmorDrawerOpen(true); }}
               >
                 Armor: {character.armor.name} (rating {character.armor.rating}){character.armor.weight ? `, ${character.armor.weight} wt` : ''}
@@ -297,21 +257,16 @@ export default function GearScreen() {
           ) : (
             isEditMode
               ? <Button size="sm" variant="secondary" onClick={handleAddArmor}>+ Add Armor</Button>
-              : <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No armor.</p>
+              : <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No armor.</p>
           )}
 
           {character.helmet ? (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div className="flex justify-between items-center">
               <button
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  padding: 0,
-                  cursor: isEditMode ? 'pointer' : 'default',
-                  textAlign: 'left',
-                  color: 'var(--color-text)',
-                  flex: 1,
-                }}
+                className={cn(
+                  "bg-transparent border-none p-0 text-left text-[var(--color-text)] flex-1",
+                  isEditMode ? "cursor-pointer" : "cursor-default"
+                )}
                 onClick={() => { if (isEditMode) setHelmetDrawerOpen(true); }}
               >
                 Helmet: {character.helmet.name} (rating {character.helmet.rating}){character.helmet.weight ? `, ${character.helmet.weight} wt` : ''}
@@ -328,7 +283,7 @@ export default function GearScreen() {
           ) : (
             isEditMode
               ? <Button size="sm" variant="secondary" onClick={handleAddHelmet}>+ Add Helmet</Button>
-              : <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No helmet.</p>
+              : <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No helmet.</p>
           )}
         </div>
       </SectionPanel>
@@ -344,7 +299,7 @@ export default function GearScreen() {
       </SectionPanel>
 
       <SectionPanel title="Coins" collapsible defaultOpen>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        <div className="flex flex-col gap-3">
           <CounterControl label="Gold" value={character.coins.gold} min={0} onChange={v => updateCoin('gold', v)} />
           <CounterControl label="Silver" value={character.coins.silver} min={0} onChange={v => updateCoin('silver', v)} />
           <CounterControl label="Copper" value={character.coins.copper} min={0} onChange={v => updateCoin('copper', v)} />
@@ -352,33 +307,24 @@ export default function GearScreen() {
       </SectionPanel>
 
       <SectionPanel title="Tiny Items" collapsible defaultOpen>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
-          {character.tinyItems.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No tiny items.</p>}
+        <div className="flex flex-col gap-3">
+          {character.tinyItems.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No tiny items.</p>}
           {character.tinyItems.map((item, index) => (
-            <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>{item}</span>
+            <div key={index} className="flex justify-between items-center">
+              <span className="text-[var(--color-text)] text-[length:var(--font-size-md)]">{item}</span>
               {isEditMode && (
                 <Button size="sm" variant="secondary" onClick={() => removeTinyItem(index)}>Remove</Button>
               )}
             </div>
           ))}
           {isEditMode && (
-            <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-sm)' }}>
+            <div className="flex gap-3 mt-[var(--space-sm)]">
               <input
                 type="text"
                 value={newTinyItem}
                 onChange={e => setNewTinyItem(e.target.value)}
                 placeholder="New tiny item..."
-                style={{
-                  flex: 1,
-                  padding: 'var(--space-sm)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--color-surface-alt)',
-                  color: 'var(--color-text)',
-                  fontSize: 'var(--font-size-md)',
-                  fontFamily: 'inherit',
-                }}
+                className="flex-1 p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]"
                 onKeyDown={e => { if (e.key === 'Enter') addTinyItem(); }}
               />
               <Button size="sm" variant="secondary" onClick={addTinyItem}>Add</Button>
@@ -394,27 +340,23 @@ export default function GearScreen() {
             value={character.memento}
             onChange={e => updateCharacter({ memento: e.target.value, updatedAt: nowISO() })}
             placeholder="Your memento..."
-            style={{
-              width: '100%',
-              padding: 'var(--space-sm)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              background: 'var(--color-surface-alt)',
-              color: 'var(--color-text)',
-              fontSize: 'var(--font-size-md)',
-              fontFamily: 'inherit',
-              boxSizing: 'border-box',
-            }}
+            className={inputClasses}
           />
         ) : (
-          <span style={{ color: character.memento ? 'var(--color-text)' : 'var(--color-text-muted)', fontSize: 'var(--font-size-md)' }}>
+          <span className={cn(
+            "text-[length:var(--font-size-md)]",
+            character.memento ? "text-[var(--color-text)]" : "text-[var(--color-text-muted)]"
+          )}>
             {character.memento || 'No memento.'}
           </span>
         )}
       </SectionPanel>
 
       <SectionPanel title="Encumbrance" subtitle="p. 32" collapsible defaultOpen>
-        <p style={{ color: totalWeight > encumbranceLimit ? 'var(--color-danger)' : 'var(--color-text)', fontSize: 'var(--font-size-md)' }}>
+        <p className={cn(
+          "text-[length:var(--font-size-md)]",
+          totalWeight > encumbranceLimit ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"
+        )}>
           {totalWeight} / {encumbranceLimit} {totalWeight > encumbranceLimit ? '(Overloaded!)' : ''}
         </p>
       </SectionPanel>
@@ -435,36 +377,36 @@ export default function GearScreen() {
 
       {/* Armor Edit Drawer */}
       <Drawer open={armorDrawerOpen} onClose={() => setArmorDrawerOpen(false)} title={character.armor ? 'Edit Armor' : 'Add Armor'}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div className="flex flex-col gap-[var(--space-md)]">
           <div>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
-            <input style={inputStyle} value={armorName} onChange={e => setArmorName(e.target.value)} placeholder="Armor name" />
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Name</label>
+            <input className={inputClasses} value={armorName} onChange={e => setArmorName(e.target.value)} placeholder="Armor name" />
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Rating / Protection</label>
-              <input type="number" style={inputStyle} value={armorRating} min={0} onChange={e => setArmorRating(Number(e.target.value))} />
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Rating / Protection</label>
+              <input type="number" className={inputClasses} value={armorRating} min={0} onChange={e => setArmorRating(Number(e.target.value))} />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Weight</label>
-              <input type="number" style={inputStyle} value={armorWeight} min={0} onChange={e => setArmorWeight(Number(e.target.value))} />
+            <div className="flex-1">
+              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Weight</label>
+              <input type="number" className={inputClasses} value={armorWeight} min={0} onChange={e => setArmorWeight(Number(e.target.value))} />
             </div>
           </div>
           <div>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Body Part</label>
-            <input style={inputStyle} value={armorBodyPart} onChange={e => setArmorBodyPart(e.target.value)} placeholder="e.g. Torso, Full Body" />
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Body Part</label>
+            <input className={inputClasses} value={armorBodyPart} onChange={e => setArmorBodyPart(e.target.value)} placeholder="e.g. Torso, Full Body" />
           </div>
           <div>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Movement Penalty</label>
-            <input type="number" style={inputStyle} value={armorMovementPenalty} min={0} onChange={e => setArmorMovementPenalty(Number(e.target.value))} />
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Movement Penalty</label>
+            <input type="number" className={inputClasses} value={armorMovementPenalty} min={0} onChange={e => setArmorMovementPenalty(Number(e.target.value))} />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            <label style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>Equipped</label>
+          <div className="flex items-center gap-[var(--space-sm)]">
+            <label className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">Equipped</label>
             <Button size="sm" variant={armorEquipped ? 'primary' : 'secondary'} onClick={() => setArmorEquipped(v => !v)}>
               {armorEquipped ? 'Yes' : 'No'}
             </Button>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end' }}>
+          <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setArmorDrawerOpen(false)}>Cancel</Button>
             <Button variant="primary" onClick={handleArmorSave}>Save</Button>
           </div>
@@ -473,28 +415,28 @@ export default function GearScreen() {
 
       {/* Helmet Edit Drawer */}
       <Drawer open={helmetDrawerOpen} onClose={() => setHelmetDrawerOpen(false)} title={character.helmet ? 'Edit Helmet' : 'Add Helmet'}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div className="flex flex-col gap-[var(--space-md)]">
           <div>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
-            <input style={inputStyle} value={helmetName} onChange={e => setHelmetName(e.target.value)} placeholder="Helmet name" />
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Name</label>
+            <input className={inputClasses} value={helmetName} onChange={e => setHelmetName(e.target.value)} placeholder="Helmet name" />
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Rating / Protection</label>
-              <input type="number" style={inputStyle} value={helmetRating} min={0} onChange={e => setHelmetRating(Number(e.target.value))} />
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Rating / Protection</label>
+              <input type="number" className={inputClasses} value={helmetRating} min={0} onChange={e => setHelmetRating(Number(e.target.value))} />
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Weight</label>
-              <input type="number" style={inputStyle} value={helmetWeight} min={0} onChange={e => setHelmetWeight(Number(e.target.value))} />
+            <div className="flex-1">
+              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Weight</label>
+              <input type="number" className={inputClasses} value={helmetWeight} min={0} onChange={e => setHelmetWeight(Number(e.target.value))} />
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-            <label style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>Equipped</label>
+          <div className="flex items-center gap-[var(--space-sm)]">
+            <label className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">Equipped</label>
             <Button size="sm" variant={helmetEquipped ? 'primary' : 'secondary'} onClick={() => setHelmetEquipped(v => !v)}>
               {helmetEquipped ? 'Yes' : 'No'}
             </Button>
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end' }}>
+          <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setHelmetDrawerOpen(false)}>Cancel</Button>
             <Button variant="primary" onClick={handleHelmetSave}>Save</Button>
           </div>

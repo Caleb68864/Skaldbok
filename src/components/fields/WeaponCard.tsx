@@ -12,16 +12,16 @@ interface WeaponCardProps {
 
 export function WeaponCard({ weapon, onEquipToggle, onEdit, onDelete, isEditMode }: WeaponCardProps) {
   return (
-    <Card style={{ borderLeft: weapon.equipped ? '3px solid var(--color-primary)' : undefined }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1 }}>
-          <h3 style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)', marginBottom: 'var(--space-xs)' }}>{weapon.name}</h3>
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+    <Card className={weapon.equipped ? 'border-l-[3px] border-l-[var(--color-primary)]' : undefined}>
+      <div className="flex justify-between items-start gap-[var(--space-sm)] flex-wrap">
+        <div className="flex-1">
+          <h3 className="text-[var(--color-text)] text-[length:var(--font-size-md)] mb-[var(--space-xs)]">{weapon.name}</h3>
+          <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
             {weapon.grip} · Range: {weapon.range} · Damage: {weapon.damage} · Dur: {weapon.durability}
           </p>
-          {weapon.features && <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>{weapon.features}</p>}
+          {weapon.features && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">{weapon.features}</p>}
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
+        <div className="flex gap-3 flex-wrap">
           <Button size="sm" variant={weapon.equipped ? 'primary' : 'secondary'} onClick={onEquipToggle}>
             {weapon.equipped ? 'Equipped' : 'Equip'}
           </Button>

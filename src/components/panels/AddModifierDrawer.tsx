@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '../../lib/utils';
 import type { TempModifier, TempModifierEffect } from '../../types/character';
 import { Drawer } from '../primitives/Drawer';
 
@@ -24,6 +25,8 @@ const DURATION_OPTIONS: { value: Duration; label: string }[] = [
 ];
 
 const EMPTY_EFFECT: EffectRow = { stat: '', delta: 0 };
+
+const inputClasses = "min-h-[var(--touch-target-min)] px-[var(--space-sm)] text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface)] text-[var(--color-text)] w-full box-border";
 
 export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerProps) {
   const [label, setLabel] = useState('');
@@ -62,37 +65,12 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
     setEffects((prev) => [...prev, { ...EMPTY_EFFECT }]);
   }
 
-  const inputStyle: React.CSSProperties = {
-    minHeight: 'var(--touch-target-min)',
-    padding: '0 var(--space-sm)',
-    fontSize: 'var(--font-size-md)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-sm)',
-    backgroundColor: 'var(--color-surface)',
-    color: 'var(--color-text)',
-    width: '100%',
-    boxSizing: 'border-box',
-  };
-
-  const selectStyle: React.CSSProperties = {
-    ...inputStyle,
-    flex: 1,
-    width: 'auto',
-  };
-
-  const numberStyle: React.CSSProperties = {
-    ...inputStyle,
-    width: '72px',
-    flex: '0 0 72px',
-    textAlign: 'center',
-  };
-
   return (
     <Drawer open={open} onClose={onClose} title="Add Modifier">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+      <div className="flex flex-col gap-[var(--space-md)]">
         {/* Label */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-          <label style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+        <div className="flex flex-col gap-2">
+          <label className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
             Label
           </label>
           <input
@@ -100,16 +78,16 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             placeholder="e.g. Power Fist, Stone Skin"
-            style={inputStyle}
+            className={inputClasses}
           />
         </div>
 
         {/* Duration */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-          <label style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+        <div className="flex flex-col gap-2">
+          <label className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
             Duration
           </label>
-          <div style={{ display: 'flex', gap: 0 }}>
+          <div className="flex gap-0">
             {DURATION_OPTIONS.map(({ value, label: optLabel }, i) => {
               const isActive = duration === value;
               const isFirst = i === 0;
@@ -119,22 +97,16 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
                   key={value}
                   type="button"
                   onClick={() => setDuration(value)}
-                  style={{
-                    flex: 1,
-                    minHeight: 'var(--touch-target-min)',
-                    border: '1px solid var(--color-border)',
-                    borderLeft: isFirst ? '1px solid var(--color-border)' : 'none',
-                    borderRadius: isFirst
-                      ? 'var(--radius-sm) 0 0 var(--radius-sm)'
-                      : isLast
-                        ? '0 var(--radius-sm) var(--radius-sm) 0'
-                        : '0',
-                    backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-surface)',
-                    color: isActive ? 'var(--color-primary-text)' : 'var(--color-text)',
-                    fontSize: 'var(--font-size-sm)',
-                    cursor: 'pointer',
-                    padding: '0 var(--space-xs)',
-                  }}
+                  className={cn(
+                    "flex-1 min-h-[var(--touch-target-min)] border border-[var(--color-border)] text-[length:var(--font-size-sm)] cursor-pointer px-[var(--space-xs)]",
+                    !isFirst && "border-l-0",
+                    isFirst && "rounded-l-[var(--radius-sm)]",
+                    isLast && "rounded-r-[var(--radius-sm)]",
+                    !isFirst && !isLast && "rounded-none",
+                    isActive
+                      ? "bg-[var(--color-primary)] text-[var(--color-primary-text)]"
+                      : "bg-[var(--color-surface)] text-[var(--color-text)]"
+                  )}
                 >
                   {optLabel}
                 </button>
@@ -144,19 +116,19 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
         </div>
 
         {/* Effects */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-xs)' }}>
-          <label style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>
+        <div className="flex flex-col gap-2">
+          <label className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
             Effects
           </label>
           {effects.map((effect, index) => (
             <div
               key={index}
-              style={{ display: 'flex', gap: 'var(--space-xs)', alignItems: 'center' }}
+              className="flex gap-2 items-center"
             >
               <select
                 value={effect.stat}
                 onChange={(e) => updateEffect(index, { stat: e.target.value })}
-                style={selectStyle}
+                className={cn(inputClasses, "flex-1 w-auto")}
               >
                 <option value="">Select stat...</option>
                 <optgroup label="Attributes">
@@ -182,7 +154,7 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
                 type="number"
                 value={effect.delta}
                 onChange={(e) => updateEffect(index, { delta: Number(e.target.value) })}
-                style={numberStyle}
+                className={cn(inputClasses, "w-[72px] flex-[0_0_72px] text-center")}
               />
 
               {effects.length > 1 && (
@@ -190,20 +162,7 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
                   type="button"
                   onClick={() => removeEffect(index)}
                   aria-label="Remove effect"
-                  style={{
-                    minWidth: 'var(--touch-target-min)',
-                    minHeight: 'var(--touch-target-min)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    backgroundColor: 'var(--color-surface)',
-                    color: 'var(--color-text-muted)',
-                    fontSize: 'var(--font-size-md)',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flex: '0 0 auto',
-                  }}
+                  className="min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface)] text-[var(--color-text-muted)] text-[length:var(--font-size-md)] cursor-pointer flex items-center justify-center flex-[0_0_auto]"
                 >
                   ✕
                 </button>
@@ -214,15 +173,7 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
           <button
             type="button"
             onClick={addEffect}
-            style={{
-              minHeight: 'var(--touch-target-min)',
-              border: '1px dashed var(--color-border)',
-              borderRadius: 'var(--radius-sm)',
-              backgroundColor: 'transparent',
-              color: 'var(--color-primary)',
-              fontSize: 'var(--font-size-sm)',
-              cursor: 'pointer',
-            }}
+            className="min-h-[var(--touch-target-min)] border border-dashed border-[var(--color-border)] rounded-[var(--radius-sm)] bg-transparent text-[var(--color-primary)] text-[length:var(--font-size-sm)] cursor-pointer"
           >
             + Add another effect
           </button>
@@ -233,17 +184,10 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
           type="button"
           disabled={!canSave}
           onClick={handleSave}
-          style={{
-            minHeight: 'var(--touch-target-min)',
-            border: 'none',
-            borderRadius: 'var(--radius-sm)',
-            backgroundColor: 'var(--color-primary)',
-            color: 'var(--color-primary-text)',
-            fontSize: 'var(--font-size-md)',
-            fontWeight: 600,
-            cursor: canSave ? 'pointer' : 'default',
-            opacity: canSave ? 1 : 0.5,
-          }}
+          className={cn(
+            "min-h-[var(--touch-target-min)] border-none rounded-[var(--radius-sm)] bg-[var(--color-primary)] text-[var(--color-primary-text)] text-[length:var(--font-size-md)] font-semibold",
+            canSave ? "cursor-pointer opacity-100" : "cursor-default opacity-50"
+          )}
         >
           Save
         </button>

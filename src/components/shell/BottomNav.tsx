@@ -1,4 +1,6 @@
 import { useLocation, Link } from 'react-router-dom';
+import { Scroll, Flame, BookOpen } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /**
  * Top-level navigation tabs rendered inside {@link BottomNav}.
@@ -8,9 +10,9 @@ import { useLocation, Link } from 'react-router-dom';
  * types when computing the active state.
  */
 const NAV_TABS = [
-  { to: '/character/sheet', label: 'Characters' },
-  { to: '/session', label: 'Session' },
-  { to: '/reference', label: 'Reference' },
+  { to: '/character/sheet', label: 'Characters', icon: Scroll },
+  { to: '/session', label: 'Session', icon: Flame },
+  { to: '/reference', label: 'Reference', icon: BookOpen },
 ] as const;
 
 /**
@@ -38,14 +40,9 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Main navigation"
-      style={{
-        display: 'flex',
-        flexDirection: 'row',
-        borderTop: '1px solid var(--color-border)',
-        background: 'var(--color-surface)',
-      }}
+      className="flex flex-row border-t border-border bg-surface/80 backdrop-blur-md"
     >
-      {NAV_TABS.map(({ to, label }) => {
+      {NAV_TABS.map(({ to, label, icon: Icon }) => {
         const isActive =
           label === 'Characters'
             ? location.pathname.startsWith('/character')
@@ -59,21 +56,17 @@ export function BottomNav() {
           <Link
             key={to}
             to={to}
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              minHeight: '44px',
-              minWidth: '44px',
-              textDecoration: 'none',
-              color: isActive ? 'var(--color-accent)' : 'var(--color-text-muted)',
-              fontWeight: isActive ? 600 : 400,
-              fontSize: '12px',
-              padding: '6px 4px',
-            }}
+            className={cn(
+              'relative flex flex-1 flex-col items-center justify-center min-h-[44px] min-w-[44px] no-underline text-xs py-1.5 px-1 transition-all',
+              isActive
+                ? 'text-accent font-semibold scale-105'
+                : 'text-text-muted font-normal',
+            )}
           >
+            {isActive && (
+              <span className="absolute top-0 left-2 right-2 h-0.5 rounded-full bg-accent" />
+            )}
+            <Icon className="h-5 w-5 mb-0.5" />
             {label}
           </Link>
         );

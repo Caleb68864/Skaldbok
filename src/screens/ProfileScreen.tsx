@@ -59,7 +59,7 @@ export default function ProfileScreen() {
   useAutosave(character, characterRepository.save, 1000);
 
   if (isLoading) {
-    return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
+    return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   }
   if (!character) {
     navigate('/library');
@@ -172,7 +172,7 @@ export default function ProfileScreen() {
         accept="image/jpeg,image/png,image/gif,image/webp"
         aria-label="Choose portrait image file"
         onChange={handleFileChange}
-        style={{ display: 'none' }}
+        className="hidden"
       />
 
       {/* Appearance text area */}

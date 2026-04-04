@@ -13,6 +13,7 @@ import type { ThemeName } from '../theme/themes';
 import { DEFAULT_BOTTOM_NAV_TABS } from '../features/settings/useAppSettings';
 import { nowISO } from '../utils/dates';
 import { usePwaInstall } from '../hooks/usePwaInstall';
+import { cn } from '../lib/utils';
 
 const BOTTOM_NAV_TAB_LABELS = ['Sheet', 'Skills', 'Gear', 'Magic', 'Combat', 'Reference', 'Profile'] as const;
 
@@ -70,21 +71,21 @@ export default function SettingsScreen() {
   }
 
   return (
-    <div style={{ padding: 'var(--space-md)', display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
-      <h1 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text)' }}>Settings</h1>
+    <div className="p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
+      <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)]">Settings</h1>
 
       {/* Install App */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>Install App</h2>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">Install App</h2>
         {canInstall ? (
           <>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
               Install Skaldbok to your device for offline use.
             </p>
             <Button variant="primary" onClick={installPwa}>Install Skaldbok</Button>
           </>
         ) : (
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+          <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
             To install: open the browser menu (⋮ or share icon) and look for "Install app" or "Add to Home Screen".
           </p>
         )}
@@ -92,27 +93,21 @@ export default function SettingsScreen() {
 
       {/* Theme */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-md)' }}>Theme</h2>
-        <div style={{ display: 'flex', gap: 'var(--space-md)', flexWrap: 'wrap' }}>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-md)]">Theme</h2>
+        <div className="flex gap-[var(--space-md)] flex-wrap">
           {THEMES.map(t => (
             <button
               key={t.value}
               onClick={() => { setTheme(t.value); updateSettings({ theme: t.value }).catch(console.error); }}
-              style={{
-                flex: 1,
-                minWidth: '120px',
-                padding: 'var(--space-md)',
-                border: theme === t.value ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                background: theme === t.value ? 'var(--color-surface-alt)' : 'transparent',
-                color: 'var(--color-text)',
-                cursor: 'pointer',
-                textAlign: 'left',
-                minHeight: 'var(--touch-target-min)',
-              }}
+              className={cn(
+                'flex-1 min-w-[120px] p-[var(--space-md)] rounded-[var(--radius-md)] text-[var(--color-text)] cursor-pointer text-left min-h-[var(--touch-target-min)]',
+                theme === t.value
+                  ? 'border-2 border-[var(--color-primary)] bg-[var(--color-surface-alt)]'
+                  : 'border border-[var(--color-border)] bg-transparent'
+              )}
             >
-              <div style={{ fontWeight: 'bold', marginBottom: 'var(--space-xs)' }}>{t.label}</div>
-              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)' }}>{t.description}</div>
+              <div className="font-bold mb-[var(--space-xs)]">{t.label}</div>
+              <div className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">{t.description}</div>
             </button>
           ))}
         </div>
@@ -120,24 +115,18 @@ export default function SettingsScreen() {
 
       {/* Mode */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-md)' }}>Default Mode</h2>
-        <div style={{ display: 'flex', gap: 'var(--space-md)' }}>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-md)]">Default Mode</h2>
+        <div className="flex gap-[var(--space-md)]">
           {(['play', 'edit'] as const).map(m => (
             <button
               key={m}
               onClick={() => updateSettings({ mode: m }).catch(console.error)}
-              style={{
-                flex: 1,
-                padding: 'var(--space-md)',
-                border: settings.mode === m ? '2px solid var(--color-primary)' : '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                background: settings.mode === m ? 'var(--color-surface-alt)' : 'transparent',
-                color: 'var(--color-text)',
-                cursor: 'pointer',
-                minHeight: 'var(--touch-target-min)',
-                fontWeight: settings.mode === m ? 'bold' : 'normal',
-                textTransform: 'uppercase',
-              }}
+              className={cn(
+                'flex-1 p-[var(--space-md)] rounded-[var(--radius-md)] text-[var(--color-text)] cursor-pointer min-h-[var(--touch-target-min)] uppercase',
+                settings.mode === m
+                  ? 'border-2 border-[var(--color-primary)] bg-[var(--color-surface-alt)] font-bold'
+                  : 'border border-[var(--color-border)] bg-transparent font-normal'
+              )}
             >
               {m}
             </button>
@@ -147,13 +136,13 @@ export default function SettingsScreen() {
 
       {/* Bottom Navigation */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">
           Bottom Navigation
         </h2>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+        <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
           Choose which tabs appear in the bottom navigation bar. Hidden tabs remain accessible via the ☰ menu.
         </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        <div className="flex flex-col gap-3">
           {BOTTOM_NAV_TAB_LABELS.map(tabLabel => {
             const key = tabLabel.toLowerCase();
             const currentTabs: Record<string, boolean> = {
@@ -164,18 +153,9 @@ export default function SettingsScreen() {
             return (
               <div
                 key={key}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: 'var(--space-sm) var(--space-md)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-sm)',
-                  background: 'var(--color-surface-alt)',
-                  minHeight: 'var(--touch-target-min)',
-                }}
+                className="flex justify-between items-center px-[var(--space-md)] py-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] min-h-[var(--touch-target-min)]"
               >
-                <span style={{ color: 'var(--color-text)', fontWeight: 'var(--weight-medium)' }}>
+                <span className="text-[var(--color-text)] font-[var(--weight-medium)]">
                   {tabLabel}
                 </span>
                 <button
@@ -185,21 +165,12 @@ export default function SettingsScreen() {
                   }}
                   aria-label={`${isVisible ? 'Hide' : 'Show'} ${tabLabel} tab in bottom navigation`}
                   aria-pressed={isVisible}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: '64px',
-                    minHeight: 'var(--touch-target-min)',
-                    padding: '0 var(--space-sm)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-sm)',
-                    background: isVisible ? 'var(--color-success)' : 'var(--color-surface)',
-                    color: isVisible ? 'var(--color-bg)' : 'var(--color-text-muted)',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    fontSize: 'var(--font-size-sm)',
-                  }}
+                  className={cn(
+                    'inline-flex items-center justify-center min-w-16 min-h-[var(--touch-target-min)] px-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] cursor-pointer font-bold text-[length:var(--font-size-sm)]',
+                    isVisible
+                      ? 'bg-[var(--color-success)] text-[var(--color-bg)]'
+                      : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
+                  )}
                 >
                   {isVisible ? 'ON' : 'OFF'}
                 </button>
@@ -211,54 +182,36 @@ export default function SettingsScreen() {
 
       {/* Combat Panels */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">
           Combat Panels
         </h2>
         {character ? (
           <>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
               Choose which panels appear on the Combat screen.
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+            <div className="flex flex-col gap-3">
               {COMBAT_PANELS.map(panel => {
                 const visibility = character.uiState.combatPanelVisibility ?? {};
                 const isOn = visibility[panel.key] !== false;
                 return (
                   <div
                     key={panel.key}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: 'var(--space-sm) var(--space-md)',
-                      border: '1px solid var(--color-border)',
-                      borderRadius: 'var(--radius-sm)',
-                      background: 'var(--color-surface-alt)',
-                      minHeight: 'var(--touch-target-min)',
-                    }}
+                    className="flex justify-between items-center px-[var(--space-md)] py-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] min-h-[var(--touch-target-min)]"
                   >
-                    <span style={{ color: 'var(--color-text)', fontWeight: 'var(--weight-medium)' }}>
+                    <span className="text-[var(--color-text)] font-[var(--weight-medium)]">
                       {panel.label}
                     </span>
                     <button
                       onClick={() => handleCombatPanelToggle(panel.key)}
                       aria-label={`${isOn ? 'Hide' : 'Show'} ${panel.label} panel in combat`}
                       aria-pressed={isOn}
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '64px',
-                        minHeight: 'var(--touch-target-min)',
-                        padding: '0 var(--space-sm)',
-                        border: '1px solid var(--color-border)',
-                        borderRadius: 'var(--radius-sm)',
-                        background: isOn ? 'var(--color-success)' : 'var(--color-surface)',
-                        color: isOn ? 'var(--color-bg)' : 'var(--color-text-muted)',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        fontSize: 'var(--font-size-sm)',
-                      }}
+                      className={cn(
+                        'inline-flex items-center justify-center min-w-16 min-h-[var(--touch-target-min)] px-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] cursor-pointer font-bold text-[length:var(--font-size-sm)]',
+                        isOn
+                          ? 'bg-[var(--color-success)] text-[var(--color-bg)]'
+                          : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
+                      )}
                     >
                       {isOn ? 'ON' : 'OFF'}
                     </button>
@@ -268,7 +221,7 @@ export default function SettingsScreen() {
             </div>
           </>
         ) : (
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+          <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
             Select a character to configure combat panels.
           </p>
         )}
@@ -276,8 +229,8 @@ export default function SettingsScreen() {
 
       {/* Print Character Sheet */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>Print Character Sheet</h2>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">Print Character Sheet</h2>
+        <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
           Open a print-friendly version of the active character sheet.
         </p>
         <Button variant="secondary" onClick={() => navigate('/print')} disabled={!character}>
@@ -287,8 +240,8 @@ export default function SettingsScreen() {
 
       {/* Import / Export */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-md)' }}>Import / Export</h2>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-md)' }}>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-md)]">Import / Export</h2>
+        <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
           Import and export characters from the Character Library.
         </p>
         <Button variant="secondary" onClick={() => navigate('/library')}>Go to Character Library</Button>
@@ -296,13 +249,13 @@ export default function SettingsScreen() {
 
       {/* About */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-text)', marginBottom: 'var(--space-sm)' }}>About</h2>
-        <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>Skaldbok v1.0 — The Adventurer's Ledger</p>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">About</h2>
+        <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">Skaldbok v1.0 — The Adventurer's Ledger</p>
       </Card>
 
       {/* Danger zone */}
       <Card>
-        <h2 style={{ fontSize: 'var(--font-size-lg)', color: 'var(--color-danger)', marginBottom: 'var(--space-md)' }}>Danger Zone</h2>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-danger)] mb-[var(--space-md)]">Danger Zone</h2>
         <Button variant="danger" onClick={() => setClearStep(1)}>Clear All Data</Button>
       </Card>
 
@@ -312,7 +265,7 @@ export default function SettingsScreen() {
           <Button variant="secondary" onClick={() => setClearStep(0)}>Cancel</Button>
           <Button variant="danger" onClick={() => setClearStep(2)}>Continue</Button>
         </>}>
-        <p style={{ color: 'var(--color-text)' }}>This will delete all characters and notes. This cannot be undone.</p>
+        <p className="text-[var(--color-text)]">This will delete all characters and notes. This cannot be undone.</p>
       </Modal>
 
       {/* Clear confirmation step 2 */}
@@ -322,11 +275,11 @@ export default function SettingsScreen() {
           <Button variant="danger" onClick={handleClearAll} disabled={confirmText !== 'DELETE'}>Delete Everything</Button>
         </>}>
         <div>
-          <p style={{ color: 'var(--color-text)', marginBottom: 'var(--space-md)' }}>Type <strong>DELETE</strong> to confirm:</p>
+          <p className="text-[var(--color-text)] mb-[var(--space-md)]">Type <strong>DELETE</strong> to confirm:</p>
           <input
             value={confirmText}
             onChange={e => setConfirmText(e.target.value)}
-            style={{ width: '100%', padding: 'var(--space-sm)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-surface-alt)', color: 'var(--color-text)', fontSize: 'var(--font-size-md)' }}
+            className="w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)]"
           />
         </div>
       </Modal>

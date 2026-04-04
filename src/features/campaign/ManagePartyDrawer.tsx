@@ -6,6 +6,7 @@ import { createParty, addPartyMember, removePartyMember } from '../../storage/re
 import { updateCampaign } from '../../storage/repositories/campaignRepository';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
+import { cn } from '../../lib/utils';
 
 /**
  * Props for the {@link ManagePartyDrawer} component.
@@ -145,69 +146,39 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
       role="dialog"
       aria-label="Manage party"
       onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-      }}
+      className="fixed inset-0 bg-black/50 z-[300] flex items-end justify-center"
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{
-          background: 'var(--color-surface)',
-          borderRadius: '16px 16px 0 0',
-          width: '100%',
-          maxWidth: 480,
-          padding: '24px 16px 32px',
-          maxHeight: '80dvh',
-          overflowY: 'auto',
-        }}
+        className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-[480px] px-4 pt-6 pb-8 max-h-[80dvh] overflow-y-auto"
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <h2 style={{ color: 'var(--color-text)' }}>Manage Party</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-[var(--color-text)]">Manage Party</h2>
           <button
             onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--color-text-muted)',
-              fontSize: '20px',
-              cursor: 'pointer',
-              minHeight: '44px',
-              minWidth: '44px',
-            }}
+            className="bg-transparent border-none text-[var(--color-text-muted)] text-xl cursor-pointer min-h-11 min-w-11"
           >
             ✕
           </button>
         </div>
 
         {/* Current members */}
-        <h3 style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>
+        <h3 className="text-[var(--color-text-muted)] text-xs uppercase mb-2">
           Current Members
         </h3>
         {members.length === 0 ? (
-          <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px' }}>No members yet.</p>
+          <p className="text-[var(--color-text-muted)] mb-4">No members yet.</p>
         ) : (
-          <div style={{ marginBottom: '16px' }}>
+          <div className="mb-4">
             {members.map(member => (
               <div
                 key={member.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '8px 0',
-                  borderBottom: '1px solid var(--color-border)',
-                  minHeight: '44px',
-                }}
+                className="flex items-center py-2 border-b border-[var(--color-border)] min-h-11"
               >
-                <span style={{ flex: 1, color: 'var(--color-text)' }}>
+                <span className="flex-1 text-[var(--color-text)]">
                   {member.name ?? 'Unknown character'}
                   {activeCampaign?.activeCharacterMemberId === member.id && (
-                    <span style={{ color: 'var(--color-accent)', marginLeft: '8px', fontSize: '12px' }}>
+                    <span className="text-[var(--color-accent)] ml-2 text-xs">
                       (my character)
                     </span>
                   )}
@@ -215,34 +186,17 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
                 <button
                   onClick={() => handleSetMyCharacter(member.id)}
                   disabled={saving || activeCampaign?.activeCharacterMemberId === member.id}
-                  style={{
-                    minHeight: '44px',
-                    padding: '0 10px',
-                    background: 'none',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '6px',
-                    color: 'var(--color-text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    marginRight: '8px',
-                    opacity: activeCampaign?.activeCharacterMemberId === member.id ? 0.4 : 1,
-                  }}
+                  className={cn(
+                    'min-h-11 px-2.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs mr-2',
+                    activeCampaign?.activeCharacterMemberId === member.id ? 'opacity-40' : 'opacity-100'
+                  )}
                 >
                   Set mine
                 </button>
                 <button
                   onClick={() => handleRemoveMember(member.id)}
                   disabled={saving}
-                  style={{
-                    minHeight: '44px',
-                    padding: '0 10px',
-                    background: 'none',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: '6px',
-                    color: 'var(--color-text-muted)',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                  }}
+                  className="min-h-11 px-2.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
                 >
                   Remove
                 </button>
@@ -252,11 +206,11 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
         )}
 
         {/* Add character */}
-        <h3 style={{ color: 'var(--color-text-muted)', fontSize: '12px', textTransform: 'uppercase', marginBottom: '8px' }}>
+        <h3 className="text-[var(--color-text-muted)] text-xs uppercase mb-2">
           Add Character
         </h3>
         {availableCharacters.length === 0 ? (
-          <p style={{ color: 'var(--color-text-muted)' }}>No characters available to add.</p>
+          <p className="text-[var(--color-text-muted)]">No characters available to add.</p>
         ) : (
           <div>
             {availableCharacters.map(char => (
@@ -264,19 +218,7 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
                 key={char.id}
                 onClick={() => handleAddMember(char.id)}
                 disabled={saving}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '10px 12px',
-                  minHeight: '44px',
-                  background: 'var(--color-surface-raised)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: '8px',
-                  color: 'var(--color-text)',
-                  cursor: 'pointer',
-                  marginBottom: '8px',
-                }}
+                className="block w-full text-left px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer mb-2"
               >
                 {char.name}
               </button>

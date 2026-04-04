@@ -3,32 +3,10 @@ import { Drawer } from '../../components/primitives/Drawer';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useSessionLog } from './useSessionLog';
 import { useToast } from '../../context/ToastContext';
+import { cn } from '../../lib/utils';
 
 const RESULTS = ['success', 'failure', 'dragon', 'demon'] as const;
 type Result = typeof RESULTS[number];
-
-const resultChipBase = {
-  minHeight: '50px',
-  minWidth: '50px',
-  padding: '0 16px',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontSize: '15px',
-  fontWeight: 600,
-} as const;
-
-const modChipStyle = (active: boolean, color: string) => ({
-  minHeight: '44px',
-  padding: '0 14px',
-  borderRadius: '22px',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '14px',
-  fontWeight: 600,
-  background: active ? color : 'var(--color-surface-raised)',
-  color: active ? '#fff' : 'var(--color-text)',
-});
 
 /**
  * Floating overlay for character screens that provides quick session logging.
@@ -76,27 +54,26 @@ export function SessionLogOverlay() {
 
   const renderResultPicker = (onSelect: (r: Result) => void) => (
     <div>
-      <p style={{ color: 'var(--color-text)', fontWeight: 600, marginBottom: '8px', fontSize: '16px' }}>
+      <p className="text-[var(--color-text)] font-semibold mb-2 text-base">
         {selectedItem}
       </p>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-        <button onClick={() => setMods(m => ({ ...m, boon: !m.boon }))} style={modChipStyle(mods.boon, '#27ae60')}>Boon</button>
-        <button onClick={() => setMods(m => ({ ...m, bane: !m.bane }))} style={modChipStyle(mods.bane, '#c0392b')}>Bane</button>
-        <button onClick={() => setMods(m => ({ ...m, pushed: !m.pushed }))} style={modChipStyle(mods.pushed, '#8e44ad')}>Pushed</button>
+      <div className="flex gap-2 flex-wrap mb-3">
+        <button onClick={() => setMods(m => ({ ...m, boon: !m.boon }))} className={cn('min-h-11 px-3.5 py-1 rounded-full border-none cursor-pointer text-sm font-semibold', mods.boon ? 'bg-[#27ae60] text-white' : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]')}>Boon</button>
+        <button onClick={() => setMods(m => ({ ...m, bane: !m.bane }))} className={cn('min-h-11 px-3.5 py-1 rounded-full border-none cursor-pointer text-sm font-semibold', mods.bane ? 'bg-[#c0392b] text-white' : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]')}>Bane</button>
+        <button onClick={() => setMods(m => ({ ...m, pushed: !m.pushed }))} className={cn('min-h-11 px-3.5 py-1 rounded-full border-none cursor-pointer text-sm font-semibold', mods.pushed ? 'bg-[#8e44ad] text-white' : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]')}>Pushed</button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+      <div className="grid grid-cols-2 gap-2">
         {RESULTS.map(result => (
           <button
             key={result}
             onClick={() => onSelect(result)}
-            style={{
-              ...resultChipBase,
-              background: result === 'dragon' ? 'var(--color-accent)'
-                : result === 'demon' ? '#c0392b'
-                : result === 'success' ? '#27ae60'
-                : 'var(--color-surface-raised)',
-              color: result === 'failure' ? 'var(--color-text)' : '#fff',
-            }}
+            className={cn(
+              'min-h-[50px] min-w-[50px] px-4 border-none rounded-lg cursor-pointer text-[15px] font-semibold',
+              result === 'dragon' ? 'bg-[var(--color-accent)] text-white'
+                : result === 'demon' ? 'bg-[#c0392b] text-white'
+                : result === 'success' ? 'bg-[#27ae60] text-white'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+            )}
           >
             {result === 'dragon' ? 'Dragon (1)' : result === 'demon' ? 'Demon (20)' : result.charAt(0).toUpperCase() + result.slice(1)}
           </button>
@@ -111,11 +88,11 @@ export function SessionLogOverlay() {
     return (
       <div>
         {skills.length > 0 ? skills.map(s => (
-          <button key={s.id} onClick={() => setSelectedItem(s.name)} style={listItemStyle}>
+          <button key={s.id} onClick={() => setSelectedItem(s.name)} className="block w-full text-left py-3 min-h-11 bg-transparent border-0 border-b border-b-[var(--color-border)] text-[var(--color-text)] cursor-pointer text-base">
             {s.name}
           </button>
         )) : (
-          <p style={{ color: 'var(--color-text-muted)' }}>No skills on this character.</p>
+          <p className="text-[var(--color-text-muted)]">No skills on this character.</p>
         )}
       </div>
     );
@@ -126,12 +103,12 @@ export function SessionLogOverlay() {
     return (
       <div>
         {character.spells.length > 0 ? character.spells.map(spell => (
-          <button key={spell.id} onClick={() => setSelectedItem(spell.name)} style={listItemStyle}>
+          <button key={spell.id} onClick={() => setSelectedItem(spell.name)} className="block w-full text-left py-3 min-h-11 bg-transparent border-0 border-b border-b-[var(--color-border)] text-[var(--color-text)] cursor-pointer text-base">
             <span>{spell.name}</span>
-            <span style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginLeft: '8px' }}>({spell.wpCost} WP)</span>
+            <span className="text-[var(--color-text-muted)] text-sm ml-2">({spell.wpCost} WP)</span>
           </button>
         )) : (
-          <p style={{ color: 'var(--color-text-muted)' }}>No spells on this character.</p>
+          <p className="text-[var(--color-text-muted)]">No spells on this character.</p>
         )}
       </div>
     );
@@ -140,14 +117,14 @@ export function SessionLogOverlay() {
   const renderAbilityList = () => (
     <div>
       {character.heroicAbilities.length > 0 ? character.heroicAbilities.map(a => (
-        <button key={a.id} onClick={() => handleAbilityUse(a.name)} style={listItemStyle}>
+        <button key={a.id} onClick={() => handleAbilityUse(a.name)} className="block w-full text-left py-3 min-h-11 bg-transparent border-0 border-b border-b-[var(--color-border)] text-[var(--color-text)] cursor-pointer text-base">
           <span>{a.name}</span>
           {a.wpCost !== undefined && (
-            <span style={{ color: 'var(--color-text-muted)', fontSize: '14px', marginLeft: '8px' }}>({a.wpCost} WP)</span>
+            <span className="text-[var(--color-text-muted)] text-sm ml-2">({a.wpCost} WP)</span>
           )}
         </button>
       )) : (
-        <p style={{ color: 'var(--color-text-muted)' }}>No heroic abilities on this character.</p>
+        <p className="text-[var(--color-text-muted)]">No heroic abilities on this character.</p>
       )}
     </div>
   );
@@ -156,26 +133,18 @@ export function SessionLogOverlay() {
     <>
       {/* Floating action buttons */}
       <div
-        style={{
-          position: 'fixed',
-          bottom: '60px',
-          right: '12px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-          zIndex: 100,
-        }}
+        className="fixed bottom-[140px] right-4 flex flex-col gap-2 z-[100]"
       >
-        <button onClick={() => setActiveDrawer('skill')} style={fabStyle} title="Log Skill Check">
+        <button onClick={() => setActiveDrawer('skill')} className="w-12 h-12 rounded-full bg-[var(--color-accent)] text-white border-none cursor-pointer text-xl flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.3)]" title="Log Skill Check">
           🎲
         </button>
         {character.spells.length > 0 && (
-          <button onClick={() => setActiveDrawer('spell')} style={fabStyle} title="Log Spell">
+          <button onClick={() => setActiveDrawer('spell')} className="w-12 h-12 rounded-full bg-[var(--color-accent)] text-white border-none cursor-pointer text-xl flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.3)]" title="Log Spell">
             ✨
           </button>
         )}
         {character.heroicAbilities.length > 0 && (
-          <button onClick={() => setActiveDrawer('ability')} style={fabStyle} title="Log Ability">
+          <button onClick={() => setActiveDrawer('ability')} className="w-12 h-12 rounded-full bg-[var(--color-accent)] text-white border-none cursor-pointer text-xl flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.3)]" title="Log Ability">
             ⚔️
           </button>
         )}
@@ -199,32 +168,3 @@ export function SessionLogOverlay() {
     </>
   );
 }
-
-const listItemStyle = {
-  display: 'block',
-  width: '100%',
-  textAlign: 'left' as const,
-  padding: '12px 0',
-  minHeight: '44px',
-  background: 'none',
-  border: 'none',
-  borderBottom: '1px solid var(--color-border)',
-  color: 'var(--color-text)',
-  cursor: 'pointer',
-  fontSize: '16px',
-};
-
-const fabStyle = {
-  width: '48px',
-  height: '48px',
-  borderRadius: '50%',
-  background: 'var(--color-accent)',
-  color: '#fff',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '20px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
-} as const;

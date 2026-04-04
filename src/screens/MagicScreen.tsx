@@ -20,6 +20,8 @@ function isMagicTrick(s: Spell): boolean {
   return s.school.toLowerCase().includes('trick');
 }
 
+const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
+
 export default function MagicScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
@@ -72,7 +74,7 @@ export default function MagicScreen() {
     }
   }, [isLoading, character, navigate]);
 
-  if (isLoading) return <div style={{ padding: 'var(--space-md)', color: 'var(--color-text)' }}>Loading...</div>;
+  if (isLoading) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
   // ── Derived values ────────────────────────────────────────────────
@@ -154,21 +156,19 @@ export default function MagicScreen() {
     updateCharacter(updates);
   }
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: 'var(--space-sm)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-sm)', background: 'var(--color-surface-alt)', color: 'var(--color-text)', fontSize: 'var(--font-size-md)', fontFamily: 'inherit' };
-
   return (
-    <div style={{ padding: 'var(--space-md)' }}>
+    <div className="p-[var(--space-md)]">
       {/* ── Page header with prepared counter ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-sm)', flexWrap: 'wrap', gap: 'var(--space-sm)' }}>
-        <h1 style={{ fontSize: 'var(--font-size-xl)', color: 'var(--color-text)', margin: 0 }}>Magic</h1>
-        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--color-text-muted)', fontWeight: 700 }}>
+      <div className="flex items-center justify-between mb-[var(--space-sm)] flex-wrap gap-[var(--space-sm)]">
+        <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] m-0">Magic</h1>
+        <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-bold">
           {preparedCount}/{maxPrepared} Prepared
         </span>
       </div>
 
       {/* ── Over-limit warning ── */}
       {overLimit && (
-        <div style={{ background: 'color-mix(in srgb, var(--color-warning, #e67e22) 15%, transparent)', border: '1px solid var(--color-warning, #e67e22)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-sm) var(--space-md)', marginBottom: 'var(--space-sm)', fontSize: 'var(--font-size-sm)', color: 'var(--color-text)' }}>
+        <div className="bg-[color-mix(in_srgb,var(--color-warning,#e67e22)_15%,transparent)] border border-[var(--color-warning,#e67e22)] rounded-[var(--radius-sm)] px-[var(--space-md)] py-[var(--space-sm)] mb-[var(--space-sm)] text-[length:var(--font-size-sm)] text-[var(--color-text)]">
           ⚠ You have {preparedCount} prepared but can only hold {maxPrepared}. Please unprepare {preparedCount - maxPrepared} spell{preparedCount - maxPrepared !== 1 ? 's' : ''}.
         </div>
       )}
@@ -181,7 +181,7 @@ export default function MagicScreen() {
       )}
 
       {/* ── Filter tabs: Prepared | Grimoire ── */}
-      <div className="magic-filter-tabs" style={{ marginBottom: 'var(--space-md)' }}>
+      <div className="magic-filter-tabs mb-[var(--space-md)]">
         <button
           type="button"
           className={['magic-filter-tab', filter === 'prepared' ? 'magic-filter-tab--active' : ''].filter(Boolean).join(' ')}
@@ -200,15 +200,15 @@ export default function MagicScreen() {
 
       {/* ── Spells section ── */}
       <SectionPanel title="Spells" subtitle="p. 63-64" collapsible defaultOpen>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-sm)' }}>
+        <div className="flex justify-end mb-[var(--space-sm)]">
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingSpell(null); setSpellDrawerOpen(true); }}>+ Add Spell</Button>}
         </div>
         {visibleSpells.length === 0 && (
-          <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+          <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
             {filter === 'prepared' ? 'No prepared spells. Switch to Grimoire to prepare spells.' : isEditMode ? 'No spells yet. Add a spell above.' : 'No spells yet. Switch to Edit Mode to add spells.'}
           </p>
         )}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        <div className="flex flex-col gap-[var(--space-md)]">
           {visibleSpells.map(spell => (
             <MagicSpellCard
               key={spell.id}
@@ -231,34 +231,34 @@ export default function MagicScreen() {
 
       {/* ── Heroic Abilities section ── */}
       <SectionPanel title="Heroic Abilities" subtitle="p. 30-31" collapsible defaultOpen>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 'var(--space-sm)' }}>
+        <div className="flex justify-end mb-[var(--space-sm)]">
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingAbility(null); setAbilityDrawerOpen(true); }}>+ Add Ability</Button>}
         </div>
-        {character.heroicAbilities.length === 0 && <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>No heroic abilities yet.</p>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+        {character.heroicAbilities.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No heroic abilities yet.</p>}
+        <div className="flex flex-col gap-[var(--space-md)]">
           {character.heroicAbilities.map(a => <AbilityCard key={a.id} ability={a} onEdit={() => { setEditingAbility(a); setAbilityDrawerOpen(true); }} onDelete={() => handleAbilityDelete(a.id)} isEditMode={isEditMode} />)}
         </div>
       </SectionPanel>
 
       {/* ── Spell edit drawer ── */}
       <Drawer open={spellDrawerOpen} onClose={() => setSpellDrawerOpen(false)} title={editingSpell ? 'Edit Spell' : 'Add Spell'}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div className="flex flex-col gap-[var(--space-md)]">
           {[['Name', sName, setSName], ['School', sSchool, setSSchool], ['Range', sRange, setSRange], ['Duration', sDuration, setSDuration]].map(([label, val, setter]) => (
             <div key={String(label)}>
-              <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>{String(label)}</label>
-              <input style={inputStyle} value={String(val)} onChange={e => (setter as (v: string) => void)(e.target.value)} />
+              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">{String(label)}</label>
+              <input className={inputClasses} value={String(val)} onChange={e => (setter as (v: string) => void)(e.target.value)} />
             </div>
           ))}
           <div>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)' }}>
+            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
               WP cost: 2 per power level (selected at cast time). Tricks always cost 1 WP.
             </p>
           </div>
           <div>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Summary</label>
-            <textarea style={{ ...inputStyle, resize: 'vertical' }} value={sSummary} rows={3} onChange={e => setSSummary(e.target.value)} />
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Summary</label>
+            <textarea className={`${inputClasses} resize-y`} value={sSummary} rows={3} onChange={e => setSSummary(e.target.value)} />
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end' }}>
+          <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setSpellDrawerOpen(false)}>Cancel</Button>
             <Button variant="primary" onClick={handleSpellSave}>Save</Button>
           </div>
@@ -267,16 +267,16 @@ export default function MagicScreen() {
 
       {/* ── Ability edit drawer ── */}
       <Drawer open={abilityDrawerOpen} onClose={() => setAbilityDrawerOpen(false)} title={editingAbility ? 'Edit Ability' : 'Add Ability'}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+        <div className="flex flex-col gap-[var(--space-md)]">
           <div>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Name</label>
-            <input style={inputStyle} value={aName} onChange={e => setAName(e.target.value)} />
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Name</label>
+            <input className={inputClasses} value={aName} onChange={e => setAName(e.target.value)} />
           </div>
           <div>
-            <label style={{ display: 'block', color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>Summary</label>
-            <textarea style={{ ...inputStyle, resize: 'vertical' }} value={aSummary} rows={3} onChange={e => setASummary(e.target.value)} />
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Summary</label>
+            <textarea className={`${inputClasses} resize-y`} value={aSummary} rows={3} onChange={e => setASummary(e.target.value)} />
           </div>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'flex-end' }}>
+          <div className="flex gap-3 justify-end">
             <Button variant="secondary" onClick={() => setAbilityDrawerOpen(false)}>Cancel</Button>
             <Button variant="primary" onClick={handleAbilitySave}>Save</Button>
           </div>

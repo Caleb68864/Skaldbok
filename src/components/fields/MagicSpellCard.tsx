@@ -1,3 +1,4 @@
+import { cn } from '../../lib/utils';
 import type { Spell } from '../../types/character';
 import { Button } from '../primitives/Button';
 import { Card } from '../primitives/Card';
@@ -26,7 +27,7 @@ export function MagicSpellCard({
   const wpCost = isTrick ? 1 : powerLevel * 2;
 
   const editButtons = (onEdit || onDelete) ? (
-    <div style={{ display: 'flex', gap: 'var(--space-xs)', flexShrink: 0 }}>
+    <div className="flex gap-3 shrink-0">
       {onEdit && <Button size="sm" onClick={onEdit}>Edit</Button>}
       {onDelete && <Button size="sm" variant="danger" onClick={onDelete}>Delete</Button>}
     </div>
@@ -36,17 +37,17 @@ export function MagicSpellCard({
   if (isTrick) {
     return (
       <Card>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)', marginBottom: 'var(--space-xs)' }}>
+        <div className="flex justify-between items-start gap-[var(--space-sm)] flex-wrap">
+          <div className="flex-1">
+            <h3 className="text-[var(--color-text)] text-[length:var(--font-size-md)] mb-[var(--space-xs)]">
               {spell.name}
-              <span style={{ color: 'var(--color-accent)', fontSize: 'var(--font-size-sm)', marginLeft: 'var(--space-sm)' }}>{spell.school}</span>
+              <span className="text-[var(--color-accent)] text-[length:var(--font-size-sm)] ml-[var(--space-sm)]">{spell.school}</span>
             </h3>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>
+            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
               1 WP · Always available · Auto-succeed
             </p>
             {spell.summary && (
-              <p style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-sm)' }}>{spell.summary}</p>
+              <p className="text-[var(--color-text)] text-[length:var(--font-size-sm)]">{spell.summary}</p>
             )}
           </div>
           {editButtons}
@@ -60,20 +61,23 @@ export function MagicSpellCard({
 
   return (
     <Card>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+      <div className="flex flex-col gap-[var(--space-sm)]">
         {/* Header row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1 }}>
-            <h3 style={{ color: 'var(--color-text)', fontSize: 'var(--font-size-md)', marginBottom: 'var(--space-xs)', display: 'flex', alignItems: 'center', gap: 'var(--space-xs)', flexWrap: 'wrap' }}>
+        <div className="flex justify-between items-start gap-[var(--space-sm)] flex-wrap">
+          <div className="flex-1">
+            <h3 className="text-[var(--color-text)] text-[length:var(--font-size-md)] mb-[var(--space-xs)] flex items-center gap-[var(--space-xs)] flex-wrap">
               {spell.name}
-              <span style={{ color: 'var(--color-accent)', fontSize: 'var(--font-size-sm)' }}>{spell.school}</span>
+              <span className="text-[var(--color-accent)] text-[length:var(--font-size-sm)]">{spell.school}</span>
               {isReaction && <span className="reaction-badge">Must be prepared</span>}
             </h3>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: 'var(--font-size-sm)', marginBottom: 'var(--space-xs)' }}>
+            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
               Range: {spell.range} · Duration: {spell.duration}
             </p>
             {spell.summary && (
-              <p style={{ color: notCastable ? 'var(--color-text-muted)' : 'var(--color-text)', fontSize: 'var(--font-size-sm)', opacity: notCastable ? 0.6 : 1 }}>
+              <p className={cn(
+                "text-[length:var(--font-size-sm)]",
+                notCastable ? "text-[var(--color-text-muted)] opacity-60" : "text-[var(--color-text)] opacity-100"
+              )}>
                 {spell.summary}
               </p>
             )}
@@ -108,7 +112,7 @@ export function MagicSpellCard({
         </div>
 
         {/* Prepare / Unprepare row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+        <div className="flex items-center gap-[var(--space-sm)] flex-wrap">
           {spell.prepared ? (
             <button type="button" className="prepare-button prepare-button--unprepare" onClick={onTogglePrepare}>
               Unprepare
@@ -118,7 +122,7 @@ export function MagicSpellCard({
               <button type="button" className="prepare-button prepare-button--disabled" disabled>
                 Prepare
               </button>
-              <span style={{ fontSize: 'var(--font-size-xs, 0.75rem)', color: 'var(--color-text-muted)' }}>
+              <span className="text-[length:var(--font-size-xs,0.75rem)] text-[var(--color-text-muted)]">
                 {preparedCount}/{maxPrepared} prepared. Unprepare a spell first.
               </span>
             </>
@@ -128,15 +132,14 @@ export function MagicSpellCard({
             </button>
           )}
           {notCastable && (
-            <span style={{ fontSize: 'var(--font-size-xs, 0.75rem)', color: 'var(--color-danger, #c0392b)', fontWeight: 600 }}>
+            <span className="text-[length:var(--font-size-xs,0.75rem)] text-[var(--color-danger,#c0392b)] font-semibold">
               Cannot cast — must be prepared first
             </span>
           )}
           {onCast && !notCastable && (
             <button
               type="button"
-              className="prepare-button prepare-button--prepare"
-              style={{ marginLeft: 'auto' }}
+              className="prepare-button prepare-button--prepare ml-auto"
               disabled={currentWP < wpCost}
               onClick={() => onCast(spell, wpCost)}
             >

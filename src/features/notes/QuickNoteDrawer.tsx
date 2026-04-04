@@ -7,6 +7,7 @@ import { useNoteActions } from './useNoteActions';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useAppState } from '../../context/AppStateContext';
 import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
+import { cn } from '../../lib/utils';
 
 /**
  * Props for the {@link QuickNoteDrawer} component.
@@ -139,48 +140,23 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
       role="dialog"
       aria-label="Quick note"
       onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'rgba(0,0,0,0.5)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'flex-end',
-        justifyContent: 'center',
-      }}
+      className="fixed inset-0 bg-black/50 z-[300] flex items-end justify-center"
     >
       <div
         onClick={e => e.stopPropagation()}
-        style={{
-          background: 'var(--color-surface)',
-          borderRadius: '16px 16px 0 0',
-          width: '100%',
-          maxWidth: 480,
-          padding: '24px 16px 32px',
-        }}
+        className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-[480px] px-4 pt-6 pb-8"
       >
-        <h3 style={{ color: 'var(--color-text)', marginBottom: '12px' }}>Quick Note</h3>
+        <h3 className="text-[var(--color-text)] mb-3">Quick Note</h3>
         <input
           type="text"
           placeholder="Note title (required)"
           value={title}
           onChange={e => setTitle(e.target.value)}
           autoFocus
-          style={{
-            width: '100%',
-            padding: '10px 12px',
-            minHeight: '44px',
-            background: 'var(--color-surface-raised)',
-            border: '1px solid var(--color-border)',
-            borderRadius: '8px',
-            color: 'var(--color-text)',
-            fontSize: '16px',
-            marginBottom: '12px',
-            boxSizing: 'border-box',
-          }}
+          className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
         />
         <TagPicker selected={tags} onToggle={tag => setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])} customTags={customTags} onCreateTag={handleCreateTag} />
-        <div style={{ marginBottom: '8px' }}>
+        <div className="mb-2">
           <AttachButton onFileSelected={handleFileSelected} disabled={pendingFiles.length >= 10} />
           <AttachmentThumbs
             attachments={pendingThumbs}
@@ -188,7 +164,7 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
             onCaptionChange={() => { /* captions saved post-creation */ }}
           />
         </div>
-        <div style={{ marginBottom: '12px' }}>
+        <div className="mb-3">
           <TiptapNoteEditor
             initialContent={null}
             onChange={setBody}
@@ -198,39 +174,20 @@ export function QuickNoteDrawer({ onClose, onSaved }: QuickNoteDrawerProps) {
             minHeight="200px"
           />
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div className="flex gap-3">
           <button
             onClick={handleSave}
             disabled={!title.trim()}
-            style={{
-              flex: 1,
-              minHeight: '44px',
-              minWidth: '44px',
-              background: 'var(--color-accent)',
-              color: 'var(--color-on-accent, #fff)',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              opacity: !title.trim() ? 0.6 : 1,
-            }}
+            className={cn(
+              'flex-1 min-h-11 min-w-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer',
+              !title.trim() ? 'opacity-60' : 'opacity-100'
+            )}
           >
             Save
           </button>
           <button
             onClick={onClose}
-            style={{
-              minHeight: '44px',
-              minWidth: '44px',
-              padding: '0 16px',
-              background: 'var(--color-surface-raised)',
-              color: 'var(--color-text)',
-              border: '1px solid var(--color-border)',
-              borderRadius: '8px',
-              fontSize: '16px',
-              cursor: 'pointer',
-            }}
+            className="min-h-11 min-w-11 px-4 bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] rounded-lg text-base cursor-pointer"
           >
             Cancel
           </button>

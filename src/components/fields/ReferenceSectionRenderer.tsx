@@ -22,22 +22,14 @@ function ReferenceTable({ section }: ReferenceSectionRendererProps) {
   const rows = section.rows ?? [];
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 'var(--font-size-sm)' }}>
+    <div className="overflow-x-auto">
+      <table className="w-full border-collapse text-[length:var(--font-size-sm)]">
         <thead>
           <tr>
             {columns.map(col => (
               <th
                 key={col}
-                style={{
-                  backgroundColor: 'var(--color-surface-alt)',
-                  color: 'var(--color-text)',
-                  fontWeight: 'bold',
-                  padding: '6px 8px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--color-border)',
-                  whiteSpace: 'nowrap',
-                }}
+                className="bg-[var(--color-surface-alt)] text-[var(--color-text)] font-bold px-2 py-1.5 text-left border-b border-[var(--color-border)] whitespace-nowrap"
               >
                 {formatColumnHeader(col)}
               </th>
@@ -48,17 +40,12 @@ function ReferenceTable({ section }: ReferenceSectionRendererProps) {
           {rows.map((row, rowIndex) => (
             <tr
               key={rowIndex}
-              style={{ backgroundColor: rowIndex % 2 === 0 ? 'var(--color-surface)' : 'var(--color-surface-alt)' }}
+              className={rowIndex % 2 === 0 ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-alt)]'}
             >
               {columns.map(col => (
                 <td
                   key={col}
-                  style={{
-                    padding: '5px 8px',
-                    color: 'var(--color-text)',
-                    verticalAlign: 'top',
-                    borderBottom: '1px solid var(--color-border)',
-                  }}
+                  className="px-2 py-[5px] text-[var(--color-text)] align-top border-b border-[var(--color-border)]"
                 >
                   {row[col] ?? '-'}
                 </td>
@@ -68,14 +55,7 @@ function ReferenceTable({ section }: ReferenceSectionRendererProps) {
         </tbody>
       </table>
       {section.footnote && (
-        <p
-          style={{
-            marginTop: '8px',
-            fontSize: 'var(--font-size-sm)',
-            color: 'var(--color-text-muted)',
-            fontStyle: 'italic',
-          }}
-        >
+        <p className="mt-2 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] italic">
           * {section.footnote}
         </p>
       )}
@@ -91,26 +71,12 @@ function ReferenceKeyValueList({ section }: ReferenceSectionRendererProps) {
       {items.map((item, index) => (
         <div
           key={index}
-          style={{
-            display: 'flex',
-            padding: '5px 0',
-            borderBottom: index < items.length - 1 ? '1px solid var(--color-border)' : 'none',
-            fontSize: 'var(--font-size-sm)',
-          }}
+          className={`flex py-[5px] text-[length:var(--font-size-sm)] ${index < items.length - 1 ? 'border-b border-[var(--color-border)]' : ''}`}
         >
-          <div
-            style={{
-              width: '20%',
-              minWidth: '120px',
-              fontWeight: 'bold',
-              color: 'var(--color-text)',
-              paddingRight: '8px',
-              flexShrink: 0,
-            }}
-          >
+          <div className="w-1/5 min-w-[120px] font-bold text-[var(--color-text)] pr-2 shrink-0">
             {item.label}
           </div>
-          <div style={{ flex: 1, color: 'var(--color-text)' }}>{item.description}</div>
+          <div className="flex-1 text-[var(--color-text)]">{item.description}</div>
         </div>
       ))}
     </div>
@@ -121,15 +87,11 @@ function ReferenceRulesText({ section }: ReferenceSectionRendererProps) {
   const paragraphs = section.paragraphs ?? [];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+    <div className="flex flex-col gap-[var(--space-sm)]">
       {paragraphs.map((para, index) => (
         <p
           key={index}
-          style={{
-            color: 'var(--color-text)',
-            fontSize: 'var(--font-size-sm)',
-            lineHeight: '1.5',
-          }}
+          className="text-[var(--color-text)] text-[length:var(--font-size-sm)] leading-[1.5]"
         >
           {para}
         </p>

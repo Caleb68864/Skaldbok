@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '../../lib/utils';
 import type { TempModifier } from '../../types/character';
 
 interface BuffChipBarProps {
@@ -13,7 +14,7 @@ const DURATION_ABBREV: Record<TempModifier['duration'], string> = {
   stretch: 'STR',
   shift: 'SHI',
   scene: 'SCN',
-  permanent: '∞',
+  permanent: '\u221E',
 };
 
 function formatDelta(n: number): string {
@@ -44,85 +45,37 @@ export function BuffChipBar({
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: 'var(--space-2)',
-        alignItems: 'flex-start',
-      }}
-    >
+    <div className="flex flex-wrap gap-[var(--space-2)] items-start">
       {modifiers.map((mod) => {
         const delta = sumDelta(mod);
         const isExpanded = expandedId === mod.id;
-        const chipColor =
-          delta >= 0 ? 'var(--color-accent)' : 'var(--color-danger)';
 
         return (
-          <div key={mod.id} style={{ display: 'flex', flexDirection: 'column' }}>
+          <div key={mod.id} className="flex flex-col">
             <button
               type="button"
               onClick={() => toggleExpanded(mod.id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 'var(--space-1)',
-                minHeight: 'var(--touch-target-min)',
-                padding: '0 var(--space-3)',
-                background: chipColor,
-                color: '#fff',
-                border: 'none',
-                borderRadius: 'var(--radius-full, 9999px)',
-                fontSize: 'var(--font-size-sm)',
-                fontWeight: 600,
-                cursor: 'pointer',
-                WebkitTapHighlightColor: 'transparent',
-              }}
+              className={cn(
+                "inline-flex items-center gap-[var(--space-1)] min-h-[var(--touch-target-min)] px-[var(--space-3)] text-white border-none rounded-[var(--radius-full,9999px)] text-[length:var(--font-size-sm)] font-semibold cursor-pointer",
+                delta >= 0 ? "bg-[var(--color-accent)]" : "bg-[var(--color-danger)]"
+              )}
             >
               <span>{mod.label}</span>
-              <span style={{ opacity: 0.85 }}>{formatDelta(delta)}</span>
-              <span
-                style={{
-                  fontSize: 'var(--font-size-xs)',
-                  opacity: 0.7,
-                  marginLeft: 'var(--space-1)',
-                  background: 'rgba(0,0,0,0.2)',
-                  borderRadius: 'var(--radius-sm)',
-                  padding: '1px var(--space-1)',
-                }}
-              >
+              <span className="opacity-85">{formatDelta(delta)}</span>
+              <span className="text-[length:var(--font-size-xs)] opacity-70 ml-[var(--space-1)] bg-black/20 rounded-[var(--radius-sm)] px-[var(--space-1)] py-px">
                 {DURATION_ABBREV[mod.duration]}
               </span>
             </button>
 
             {isExpanded && (
-              <div
-                style={{
-                  marginTop: 'var(--space-1)',
-                  padding: 'var(--space-2)',
-                  background: 'var(--color-surface, #1a1a1a)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--font-size-xs)',
-                  color: 'var(--color-text-secondary, #aaa)',
-                }}
-              >
-                <div style={{ marginBottom: 'var(--space-1)' }}>
+              <div className="mt-[var(--space-1)] p-[var(--space-2)] bg-[var(--color-surface,#1a1a1a)] rounded-[var(--radius-md)] text-[length:var(--font-size-xs)] text-[var(--color-text-secondary,#aaa)]">
+                <div className="mb-[var(--space-1)]">
                   {formatEffectsList(mod)}
                 </div>
                 <button
                   type="button"
                   onClick={() => onRemove(mod.id)}
-                  style={{
-                    minHeight: 'var(--touch-target-min)',
-                    padding: '0 var(--space-2)',
-                    background: 'var(--color-danger)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 'var(--radius-sm)',
-                    fontSize: 'var(--font-size-xs)',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
+                  className="min-h-[var(--touch-target-min)] px-[var(--space-2)] bg-[var(--color-danger)] text-white border-none rounded-[var(--radius-sm)] text-[length:var(--font-size-xs)] font-semibold cursor-pointer"
                 >
                   Remove
                 </button>
@@ -136,21 +89,7 @@ export function BuffChipBar({
       <button
         type="button"
         onClick={onAdd}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 'var(--touch-target-min)',
-          minWidth: 'var(--touch-target-min)',
-          padding: '0 var(--space-2)',
-          background: 'var(--color-surface, #2a2a2a)',
-          color: 'var(--color-text-secondary, #aaa)',
-          border: '1px dashed var(--color-text-secondary, #555)',
-          borderRadius: 'var(--radius-full, 9999px)',
-          fontSize: 'var(--font-size-lg)',
-          cursor: 'pointer',
-          WebkitTapHighlightColor: 'transparent',
-        }}
+        className="inline-flex items-center justify-center min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] px-[var(--space-2)] bg-[var(--color-surface,#2a2a2a)] text-[var(--color-text-secondary,#aaa)] border border-dashed border-[var(--color-text-secondary,#555)] rounded-[var(--radius-full,9999px)] text-[length:var(--font-size-lg)] cursor-pointer [-webkit-tap-highlight-color:transparent]"
       >
         +
       </button>
@@ -160,18 +99,7 @@ export function BuffChipBar({
         <button
           type="button"
           onClick={onClearAll}
-          style={{
-            minHeight: 'var(--touch-target-min)',
-            padding: '0 var(--space-2)',
-            background: 'transparent',
-            color: 'var(--color-danger)',
-            border: 'none',
-            fontSize: 'var(--font-size-sm)',
-            fontWeight: 600,
-            cursor: 'pointer',
-            alignSelf: 'center',
-            WebkitTapHighlightColor: 'transparent',
-          }}
+          className="min-h-[var(--touch-target-min)] px-[var(--space-2)] bg-transparent text-[var(--color-danger)] border-none text-[length:var(--font-size-sm)] font-semibold cursor-pointer self-center [-webkit-tap-highlight-color:transparent]"
         >
           Clear All
         </button>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '../../lib/utils';
 
 interface AttachmentThumb {
   id: string;
@@ -26,43 +27,26 @@ export function AttachmentThumbs({ attachments, onDelete, onCaptionChange }: Att
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        overflowX: 'auto',
-        gap: '8px',
-        padding: '8px 0',
-        // Prevent vertical scroll bleed on mobile
-        WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
-      }}
-    >
+    <div className="flex overflow-x-auto gap-2 py-2 [-webkit-overflow-scrolling:touch]">
       {attachments.map(attachment => (
         <div
           key={attachment.id}
-          style={{
-            position: 'relative',
-            flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '4px',
-          }}
+          className="relative shrink-0 flex flex-col gap-2"
         >
           {/* Thumbnail image */}
           <div
-            style={{ position: 'relative', width: '80px', height: '80px', cursor: 'pointer' }}
+            className="relative w-20 h-20 cursor-pointer"
             onClick={() => handleThumbClick(attachment.id)}
           >
             <img
               src={attachment.objectUrl}
               alt={attachment.caption ?? 'Attachment'}
-              style={{
-                width: '80px',
-                height: '80px',
-                objectFit: 'cover',
-                borderRadius: '8px',
-                border: activeId === attachment.id ? '2px solid var(--color-accent, #7c6cf2)' : '2px solid transparent',
-                display: 'block',
-              }}
+              className={cn(
+                "w-20 h-20 object-cover rounded-lg block",
+                activeId === attachment.id
+                  ? "border-2 border-[var(--color-accent,#7c6cf2)]"
+                  : "border-2 border-transparent"
+              )}
             />
             {/* Delete button */}
             <button
@@ -72,25 +56,7 @@ export function AttachmentThumbs({ attachments, onDelete, onCaptionChange }: Att
                 onDelete(attachment.id);
               }}
               aria-label="Delete attachment"
-              style={{
-                position: 'absolute',
-                top: '2px',
-                right: '2px',
-                width: '20px',
-                height: '20px',
-                minHeight: '20px',
-                borderRadius: '50%',
-                border: 'none',
-                background: 'rgba(0,0,0,0.6)',
-                color: '#fff',
-                fontSize: '11px',
-                lineHeight: 1,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: 0,
-              }}
+              className="absolute top-0.5 right-0.5 w-5 h-5 min-h-5 rounded-full border-none bg-black/60 text-white text-[11px] leading-none cursor-pointer flex items-center justify-center p-0"
             >
               ×
             </button>
@@ -104,16 +70,7 @@ export function AttachmentThumbs({ attachments, onDelete, onCaptionChange }: Att
               placeholder="Add caption..."
               onChange={e => handleCaptionChange(attachment.id, e.target.value)}
               onClick={e => e.stopPropagation()}
-              style={{
-                width: '80px',
-                fontSize: '11px',
-                padding: '2px 4px',
-                borderRadius: '4px',
-                border: '1px solid var(--color-border)',
-                background: 'var(--color-surface-raised)',
-                color: 'var(--color-text-muted)',
-                boxSizing: 'border-box',
-              }}
+              className="w-20 text-[11px] px-1 py-0.5 rounded border border-[var(--color-border)] bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] box-border"
             />
           )}
         </div>
