@@ -223,16 +223,18 @@ export default function ReferenceScreen() {
 
       {/* Two-tier floating pill bar — only visible on reference tab */}
       {activeTab === 'reference' && (
-        <div className="reference-pill-container">
+        <div className="fixed bottom-14 left-0 right-0 z-50 flex flex-col items-center gap-1.5 pb-2 pointer-events-none">
           {expandedPage && (
-            <nav className="sub-pill-row" aria-label="Jump to sub-section">
+            <nav className="flex gap-1.5 overflow-x-auto px-3 py-1.5 max-w-full pointer-events-auto" aria-label="Jump to sub-section">
               {expandedPage.sections.map(sectionId => (
                 <button
                   key={sectionId}
-                  className={
-                    'sub-pill' +
-                    (activeSubPill === sectionId ? ' sub-pill--active' : '')
-                  }
+                  className={cn(
+                    'px-3 py-1.5 rounded-full border-none cursor-pointer text-xs font-semibold whitespace-nowrap shrink-0 min-h-[36px] transition-colors',
+                    activeSubPill === sectionId
+                      ? 'bg-accent text-bg'
+                      : 'bg-surface-alt/90 text-text-muted backdrop-blur-sm'
+                  )}
                   onClick={() => handleSubPillClick(sectionId)}
                   type="button"
                 >
@@ -241,15 +243,17 @@ export default function ReferenceScreen() {
               ))}
             </nav>
           )}
-          <nav className="reference-pill-bar" aria-label="Jump to section">
+          <nav className="flex gap-2 overflow-x-auto px-3 py-1.5 pointer-events-auto" aria-label="Jump to section">
             {referencePages.map(page => (
               <button
                 key={page.title}
-                className={
-                  'reference-pill-bar__pill' +
-                  (activePage === page.title ? ' reference-pill-bar__pill--active' : '') +
-                  (expandedCategory === page.title ? ' reference-pill-bar__pill--expanded' : '')
-                }
+                className={cn(
+                  'px-4 py-2 rounded-full border border-border cursor-pointer text-sm font-semibold whitespace-nowrap shrink-0 min-h-[44px] transition-colors shadow-md',
+                  activePage === page.title
+                    ? 'bg-accent text-bg border-accent'
+                    : 'bg-surface/95 text-text backdrop-blur-sm',
+                  expandedCategory === page.title && 'ring-2 ring-accent'
+                )}
                 onClick={() => handleTopPillClick(page.title)}
                 type="button"
               >
