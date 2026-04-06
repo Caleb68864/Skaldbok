@@ -45,6 +45,7 @@ export function SessionScreen() {
   const { startImport, showPreview, parsedResult, contentHashMismatch, conflicts, executeImport, cancelImport, isImporting } = useImportActions();
   const { createNote } = useNoteActions();
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [includePrivateExport, setIncludePrivateExport] = useState(false);
   const [activeCombatNoteId, setActiveCombatNoteId] = useState<string | null>(null);
   const [showCombatView, setShowCombatView] = useState(false);
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
@@ -121,6 +122,11 @@ export function SessionScreen() {
   };
 
   const confirmEndSession = async () => {
+    // End any active encounters before ending the session
+    if (activeEncounter) {
+      await encounterRepository.end(activeEncounter.id);
+      refreshEncounters();
+    }
     await endSession();
     setShowEndConfirm(false);
   };
@@ -212,7 +218,7 @@ export function SessionScreen() {
             <button onClick={() => exportSessionBundle(activeSession.id)} className={actionBtnClass}>
               Export + Notes (ZIP)
             </button>
-            <button onClick={() => exportSessionSkaldmark(activeSession.id)} className={actionBtnClass}>
+            <button onClick={() => exportSessionSkaldmark(activeSession.id, includePrivateExport)} className={actionBtnClass}>
               Export (.skaldmark)
             </button>
           </div>
@@ -387,8 +393,12 @@ export function SessionScreen() {
         </button>
         {activeCampaign && (
           <>
+            <label className="flex items-center gap-2 text-[var(--color-text-muted)] text-xs px-1">
+              <input type="checkbox" checked={includePrivateExport} onChange={e => setIncludePrivateExport(e.target.checked)} className="w-4 h-4 accent-[var(--color-accent)]" />
+              Include private notes in exports
+            </label>
             <button
-              onClick={() => exportCampaign(activeCampaign.id)}
+              onClick={() => exportCampaign(activeCampaign.id, includePrivateExport)}
               className="min-h-11 min-w-11 w-full px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-semibold"
             >
               Export Campaign (.skaldmark.json)
@@ -471,6 +481,7 @@ export function SessionScreen() {
       {showEndConfirm && activeSession && (
         <EndSessionModal
           sessionTitle={activeSession.title}
+          hasActiveEncounter={!!activeEncounter}
           onConfirm={confirmEndSession}
           onCancel={() => setShowEndConfirm(false)}
         />

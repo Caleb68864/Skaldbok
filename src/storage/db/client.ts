@@ -107,6 +107,18 @@ class SkaldbokDatabase extends Dexie {
               schemaVersion: 1,
             };
             await tx.table('encounters').add(encounter);
+            // Create entity link from encounter to archived source note
+            await tx.table('entityLinks').add({
+              id: generateId(),
+              fromEntityId: encounter.id,
+              fromEntityType: 'encounter',
+              toEntityId: note.id,
+              toEntityType: 'note',
+              relationshipType: 'migrated_from',
+              createdAt: note.createdAt,
+              updatedAt: note.createdAt,
+              schemaVersion: 1,
+            });
             // Archive the source note — never delete
             await tx.table('notes').update(note.id, { status: 'archived' });
           }

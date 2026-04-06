@@ -3,10 +3,13 @@ import { useBestiary, type CategoryFilter } from './useBestiary';
 import { CreatureTemplateCard } from './CreatureTemplateCard';
 import { CreatureTemplateForm } from './CreatureTemplateForm';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
+import { addParticipant } from '../../storage/repositories/encounterRepository';
+import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
 
 interface BestiaryScreenProps {
   campaignId: string;
+  activeEncounterId?: string;
   onClose?: () => void;
 }
 
@@ -24,7 +27,8 @@ const actionBtnClass = 'min-h-11 px-4 py-2 bg-[var(--color-accent)] text-[var(--
  * Campaign-scoped bestiary screen. Displays creature templates with search,
  * category filtering, and CRUD operations.
  */
-export function BestiaryScreen({ campaignId, onClose }: BestiaryScreenProps) {
+export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: BestiaryScreenProps) {
+  const { showToast } = useToast();
   const {
     templates,
     search,
@@ -228,6 +232,24 @@ export function BestiaryScreen({ campaignId, onClose }: BestiaryScreenProps) {
 
             {/* Actions */}
             <div className="flex gap-3">
+              {activeEncounterId && (
+                <button
+                  onClick={async () => {
+                    await addParticipant(activeEncounterId, {
+                      name: viewingTemplate.name,
+                      type: viewingTemplate.category === 'monster' ? 'monster' : 'npc',
+                      linkedCreatureId: viewingTemplate.id,
+                      instanceState: { currentHp: viewingTemplate.stats.hp },
+                      sortOrder: 0,
+                    });
+                    showToast(`Added ${viewingTemplate.name} to encounter`, 'success');
+                    setViewingTemplate(null);
+                  }}
+                  className="min-h-11 px-4 py-2 bg-emerald-600 text-white border-none rounded-lg text-sm font-semibold cursor-pointer"
+                >
+                  Add to Encounter
+                </button>
+              )}
               <button
                 onClick={() => {
                   setEditingTemplate(viewingTemplate);

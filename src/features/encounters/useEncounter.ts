@@ -117,8 +117,11 @@ export function useEncounter(
   const quickCreateParticipant = useCallback(
     async (name: string, stats: { hp?: number; armor?: number; movement?: number }) => {
       if (!encounterId) return;
-      // Create a creature template for the quick-created participant
-      const template = await creatureTemplateRepository.create({
+      // Check if a creature template with this name already exists
+      const existing = (await creatureTemplateRepository.listByCampaign(campaignId)).find(
+        t => t.name.toLowerCase() === name.toLowerCase()
+      );
+      const template = existing ?? await creatureTemplateRepository.create({
         campaignId,
         name,
         category: 'monster',
