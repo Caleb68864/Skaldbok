@@ -1,0 +1,89 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: SR Test Campaign
+        - img [ref=e8]
+      - button "Menu" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+    - main [ref=e12]:
+      - generic [ref=e13]:
+        - heading "Settings" [level=1] [ref=e14]
+        - generic [ref=e15]:
+          - heading "Install App" [level=2] [ref=e16]
+          - paragraph [ref=e17]: "To install: open the browser menu (⋮ or share icon) and look for \"Install app\" or \"Add to Home Screen\"."
+        - generic [ref=e18]:
+          - heading "Theme" [level=2] [ref=e19]
+          - generic [ref=e20]:
+            - button "Dark Deep grays with golden accents" [ref=e21] [cursor=pointer]:
+              - generic [ref=e22]: Dark
+              - generic [ref=e23]: Deep grays with golden accents
+            - button "Parchment Warm fantasy-inspired tones" [ref=e24] [cursor=pointer]:
+              - generic [ref=e25]: Parchment
+              - generic [ref=e26]: Warm fantasy-inspired tones
+            - button "Light Clean whites and light grays" [ref=e27] [cursor=pointer]:
+              - generic [ref=e28]: Light
+              - generic [ref=e29]: Clean whites and light grays
+        - generic [ref=e30]:
+          - heading "Default Mode" [level=2] [ref=e31]
+          - generic [ref=e32]:
+            - button "play" [ref=e33] [cursor=pointer]
+            - button "edit" [ref=e34] [cursor=pointer]
+        - generic [ref=e35]:
+          - heading "Bottom Navigation" [level=2] [ref=e36]
+          - paragraph [ref=e37]: Choose which tabs appear in the bottom navigation bar. Hidden tabs remain accessible via the ☰ menu.
+          - generic [ref=e38]:
+            - generic [ref=e39]:
+              - generic [ref=e40]: Sheet
+              - button "Hide Sheet tab in bottom navigation" [pressed] [ref=e41] [cursor=pointer]: "ON"
+            - generic [ref=e42]:
+              - generic [ref=e43]: Skills
+              - button "Hide Skills tab in bottom navigation" [pressed] [ref=e44] [cursor=pointer]: "ON"
+            - generic [ref=e45]:
+              - generic [ref=e46]: Gear
+              - button "Hide Gear tab in bottom navigation" [pressed] [ref=e47] [cursor=pointer]: "ON"
+            - generic [ref=e48]:
+              - generic [ref=e49]: Magic
+              - button "Hide Magic tab in bottom navigation" [pressed] [ref=e50] [cursor=pointer]: "ON"
+            - generic [ref=e51]:
+              - generic [ref=e52]: Combat
+              - button "Hide Combat tab in bottom navigation" [pressed] [ref=e53] [cursor=pointer]: "ON"
+            - generic [ref=e54]:
+              - generic [ref=e55]: Reference
+              - button "Hide Reference tab in bottom navigation" [pressed] [ref=e56] [cursor=pointer]: "ON"
+            - generic [ref=e57]:
+              - generic [ref=e58]: Profile
+              - button "Show Profile tab in bottom navigation" [ref=e59] [cursor=pointer]: "OFF"
+        - generic [ref=e60]:
+          - heading "Combat Panels" [level=2] [ref=e61]
+          - paragraph [ref=e62]: Select a character to configure combat panels.
+        - generic [ref=e63]:
+          - heading "Print Character Sheet" [level=2] [ref=e64]
+          - paragraph [ref=e65]: Open a print-friendly version of the active character sheet.
+          - button "Print Character Sheet" [disabled]
+        - generic [ref=e66]:
+          - heading "Import / Export" [level=2] [ref=e67]
+          - paragraph [ref=e68]: Import and export characters from the Character Library.
+          - button "Go to Character Library" [ref=e69] [cursor=pointer]
+        - generic [ref=e70]:
+          - heading "About" [level=2] [ref=e71]
+          - paragraph [ref=e72]: Skaldbok v1.0 — The Adventurer's Ledger
+        - generic [ref=e73]:
+          - heading "Danger Zone" [level=2] [ref=e74]
+          - button "Clear All Data" [ref=e75] [cursor=pointer]
+    - navigation "Main navigation" [ref=e76]:
+      - link "Characters" [ref=e77] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e78]
+        - text: Characters
+      - link "Session" [ref=e81] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e82]
+        - text: Session
+      - link "Reference" [ref=e84] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e85]
+        - text: Reference
+    - button "Start a session first" [ref=e87] [cursor=pointer]:
+      - img [ref=e88]
+  - alert

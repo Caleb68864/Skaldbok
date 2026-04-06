@@ -1,0 +1,67 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e8]: No campaign
+        - img [ref=e9]
+      - button "Menu" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+    - tablist [ref=e77]:
+      - tab "Sheet" [ref=e78] [cursor=pointer]:
+        - img [ref=e79]
+        - text: Sheet
+      - tab "Skills" [ref=e81] [cursor=pointer]
+      - tab "Gear" [ref=e82] [cursor=pointer]
+      - tab "Magic" [active] [selected] [ref=e83] [cursor=pointer]:
+        - img [ref=e84]
+        - text: Magic
+    - main [ref=e13]:
+      - generic [ref=e253]:
+        - generic [ref=e254]:
+          - heading "Magic" [level=1] [ref=e255]
+          - generic [ref=e256]: 0/7 Prepared
+        - generic [ref=e257]:
+          - button "Prepared" [ref=e258]
+          - button "Grimoire" [ref=e259]
+        - generic [ref=e260]:
+          - button "Spells p. 63-64" [expanded] [ref=e261] [cursor=pointer]:
+            - heading "Spells p. 63-64" [level=3] [ref=e262]:
+              - text: Spells
+              - generic [ref=e263]: p. 63-64
+            - img [ref=e265]
+          - generic [ref=e270]:
+            - generic [ref=e273]:
+              - heading "FetchGeneral" [level=3] [ref=e274]
+              - paragraph [ref=e275]: 1 WP · Always available · Auto-succeed
+              - paragraph [ref=e276]: Make a loose object (weight 1 or less) within 10m float to you. Magic trick — succeeds automatically, requires gesture only.
+            - generic [ref=e279]:
+              - heading "Slow FallMentalism" [level=3] [ref=e280]
+              - paragraph [ref=e281]: 1 WP · Always available · Auto-succeed
+              - paragraph [ref=e282]: Slow your fall and land light as a feather, no matter the height. Magic trick — succeeds automatically, requires gesture only.
+            - generic [ref=e285]:
+              - heading "Magic StoolMentalism" [level=3] [ref=e286]
+              - paragraph [ref=e287]: 1 WP · Always available · Auto-succeed
+              - paragraph [ref=e288]: Create a round surface (~0.5m) to sit on or put things on. Lasts until you leave. Magic trick — succeeds automatically, requires gesture only.
+        - generic [ref=e289]:
+          - button "Heroic Abilities p. 30-31" [expanded] [ref=e290] [cursor=pointer]:
+            - heading "Heroic Abilities p. 30-31" [level=3] [ref=e291]:
+              - text: Heroic Abilities
+              - generic [ref=e292]: p. 30-31
+            - img [ref=e294]
+          - paragraph [ref=e299]: No heroic abilities yet.
+    - navigation "Main navigation" [ref=e31]:
+      - link "Characters" [ref=e32] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e33]
+        - text: Characters
+      - link "Session" [ref=e36] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e37]
+        - text: Session
+      - link "Reference" [ref=e39] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e40]
+        - text: Reference
+    - button "Start a session first" [ref=e42] [cursor=pointer]:
+      - img [ref=e43]
+  - alert

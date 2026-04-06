@@ -1,0 +1,42 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: No campaign
+        - img [ref=e8]
+      - button "Menu" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+    - main [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - heading "Character Library" [level=1] [ref=e15]
+          - generic [ref=e16]:
+            - button "Import Character" [active] [ref=e17] [cursor=pointer]
+            - button "+ New Character" [ref=e18] [cursor=pointer]
+        - generic [ref=e37]:
+          - generic [ref=e38]:
+            - heading "Viktor Vale" [level=2] [ref=e39]
+            - paragraph [ref=e40]: Human · Mage
+            - paragraph [ref=e41]: "Updated: 4/6/2026"
+          - generic [ref=e42]:
+            - button "Set Active" [ref=e43] [cursor=pointer]
+            - button "Export" [ref=e44] [cursor=pointer]
+            - button "Duplicate" [ref=e45] [cursor=pointer]
+            - button "Delete" [ref=e46] [cursor=pointer]
+    - navigation "Main navigation" [ref=e22]:
+      - link "Characters" [ref=e23] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e24]
+        - text: Characters
+      - link "Session" [ref=e27] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e28]
+        - text: Session
+      - link "Reference" [ref=e30] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e31]
+        - text: Reference
+    - button "Start a session first" [ref=e33] [cursor=pointer]:
+      - img [ref=e34]
+  - alert:
+    - generic [ref=e47]: Character imported successfully

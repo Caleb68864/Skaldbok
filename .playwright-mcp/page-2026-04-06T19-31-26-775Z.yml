@@ -1,0 +1,53 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e8]: No campaign
+        - img [ref=e9]
+      - button "Menu" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+    - main [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - heading "Character Library" [level=1] [ref=e16]
+          - generic [ref=e17]:
+            - button "Import Character" [active] [ref=e18] [cursor=pointer]
+            - button "+ New Character" [ref=e19] [cursor=pointer]
+        - generic [ref=e20]:
+          - generic [ref=e77]:
+            - generic [ref=e78]:
+              - heading "Keldorn the Fearless" [level=2] [ref=e79]
+              - paragraph [ref=e80]: Dwarf · Fighter
+              - paragraph [ref=e81]: "Updated: 4/6/2026"
+            - generic [ref=e82]:
+              - button "Set Active" [ref=e83] [cursor=pointer]
+              - button "Export" [ref=e84] [cursor=pointer]
+              - button "Duplicate" [ref=e85] [cursor=pointer]
+              - button "Delete" [ref=e86] [cursor=pointer]
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - heading "Viktor Vale" [level=2] [ref=e67]
+              - paragraph [ref=e68]: Human · Mage
+              - paragraph [ref=e69]: "Updated: 4/6/2026"
+            - generic [ref=e70]:
+              - button "Set Active" [ref=e71] [cursor=pointer]
+              - button "Export" [ref=e72] [cursor=pointer]
+              - button "Duplicate" [ref=e73] [cursor=pointer]
+              - button "Delete" [ref=e74] [cursor=pointer]
+    - navigation "Main navigation" [ref=e31]:
+      - link "Characters" [ref=e32] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e33]
+        - text: Characters
+      - link "Session" [ref=e36] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e37]
+        - text: Session
+      - link "Reference" [ref=e39] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e40]
+        - text: Reference
+    - button "Start a session first" [ref=e42] [cursor=pointer]:
+      - img [ref=e43]
+  - alert:
+    - generic [ref=e87]: Character imported successfully

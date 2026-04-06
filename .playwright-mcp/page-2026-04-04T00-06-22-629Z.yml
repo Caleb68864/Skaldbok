@@ -1,0 +1,47 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: SR Test Campaign
+          - generic [ref=e8]: Session 1 — 2026-03-31
+        - img [ref=e10]
+      - button "Menu" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+    - tablist [ref=e70]:
+      - tab "Sheet" [ref=e71] [cursor=pointer]:
+        - img [ref=e72]
+        - text: Sheet
+      - tab "Skills" [active] [selected] [ref=e74] [cursor=pointer]
+      - tab "Gear" [ref=e75] [cursor=pointer]
+      - tab "Magic" [ref=e76] [cursor=pointer]:
+        - img [ref=e77]
+        - text: Magic
+    - main [ref=e14]:
+      - generic [ref=e243]:
+        - generic [ref=e244]:
+          - heading "Skills" [level=1] [ref=e245]
+          - generic [ref=e246]:
+            - button "Relevant" [ref=e247] [cursor=pointer]
+            - button "All" [ref=e248] [cursor=pointer]
+        - group "Global boon/bane selector" [ref=e249]:
+          - button "Boon" [ref=e250] [cursor=pointer]
+          - button "Normal" [pressed] [ref=e251] [cursor=pointer]
+          - button "Bane" [ref=e252] [cursor=pointer]
+    - navigation "Main navigation" [ref=e54]:
+      - link "Characters" [ref=e55] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e56]
+        - text: Characters
+      - link "Session" [ref=e59] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e60]
+        - text: Session
+      - link "Reference" [ref=e62] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e63]
+        - text: Reference
+    - button "Open quick actions" [ref=e65] [cursor=pointer]:
+      - img [ref=e66]
+    - button "🎲" [ref=e242] [cursor=pointer]
+  - alert

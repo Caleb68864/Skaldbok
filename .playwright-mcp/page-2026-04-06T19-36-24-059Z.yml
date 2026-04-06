@@ -1,0 +1,120 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Dragonbane
+          - generic [ref=e8]: Session 1 — 2026-04-06
+        - img [ref=e10]
+      - button "Menu" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+    - tablist [ref=e94]:
+      - tab "Sheet" [ref=e95] [cursor=pointer]:
+        - img [ref=e96]
+        - text: Sheet
+      - tab "Skills" [ref=e98] [cursor=pointer]
+      - tab "Gear" [ref=e99] [cursor=pointer]
+      - tab "Magic" [selected] [ref=e100] [cursor=pointer]:
+        - img [ref=e101]
+        - text: Magic
+    - main [ref=e14]:
+      - generic [ref=e273]:
+        - generic [ref=e274]:
+          - heading "Magic" [level=1] [ref=e275]
+          - generic [ref=e276]: 0/7 Prepared
+        - generic [ref=e277]:
+          - button "Prepared" [ref=e278]
+          - button "Grimoire" [ref=e279]
+        - generic [ref=e280]:
+          - button "Spells p. 63-64" [expanded] [ref=e281] [cursor=pointer]:
+            - heading "Spells p. 63-64" [level=3] [ref=e282]:
+              - text: Spells
+              - generic [ref=e283]: p. 63-64
+            - img [ref=e285]
+          - generic [ref=e290]:
+            - generic [ref=e321]:
+              - generic [ref=e323]:
+                - heading "Power Fist Mentalism" [level=3] [ref=e324]:
+                  - text: Power Fist
+                  - generic [ref=e325]: Mentalism
+                - paragraph [ref=e326]: "Range: Personal · Duration: Stretch"
+                - paragraph [ref=e327]: Your unarmed attack damage increases by D6 per power level. Requires word and gesture to cast.
+              - group "Power level" [ref=e328]:
+                - button "Power level 1 — 2 WP" [ref=e329]: "1"
+                - button "Power level 2 — 4 WP" [ref=e330]: "2"
+                - button "Power level 3 — 6 WP" [active] [pressed] [ref=e331]: "3"
+                - generic [ref=e332]: 6 WP
+                - generic [ref=e333]: — +3D6 unarmed damage
+              - generic [ref=e334]:
+                - button "Prepare" [ref=e335]
+                - button "Cast (6 WP)" [ref=e371]
+            - generic [ref=e338]:
+              - generic [ref=e340]:
+                - heading "Levitate Mentalism" [level=3] [ref=e341]:
+                  - text: Levitate
+                  - generic [ref=e342]: Mentalism
+                - paragraph [ref=e343]: "Range: 6 meters · Duration: Instant"
+                - paragraph [ref=e344]: Levitate yourself, another person, or object (up to human size) and float it up to 6m in any direction, then land gently or drop. Each additional power level adds 2m of movement or levitates an additional person/object. Levitating an unwilling creature gives a bane to the roll. Requires word and gesture.
+              - group "Power level" [ref=e345]:
+                - button "Power level 1 — 2 WP" [pressed] [ref=e346]: "1"
+                - button "Power level 2 — 4 WP" [ref=e347]: "2"
+                - button "Power level 3 — 6 WP" [ref=e348]: "3"
+                - generic [ref=e349]: 2 WP
+                - generic [ref=e350]: — 6m / 1 target
+              - generic [ref=e351]:
+                - button "Prepare" [ref=e352]
+                - button "Cast (2 WP)" [ref=e353]
+            - generic [ref=e355]:
+              - generic [ref=e357]:
+                - heading "Stone Skin Mentalism" [level=3] [ref=e358]:
+                  - text: Stone Skin
+                  - generic [ref=e359]: Mentalism
+                - paragraph [ref=e360]: "Range: Touch · Duration: Stretch"
+                - paragraph [ref=e361]: The target's skin turns hard and gray, gaining armor rating 4. Each additional power level increases armor by 2. If wearing armor, only the highest armor rating counts. Requires word, gesture, and a stone as ingredient.
+              - group "Power level" [ref=e362]:
+                - button "Power level 1 — 2 WP" [pressed] [ref=e363]: "1"
+                - button "Power level 2 — 4 WP" [ref=e364]: "2"
+                - button "Power level 3 — 6 WP" [ref=e365]: "3"
+                - generic [ref=e366]: 2 WP
+                - generic [ref=e367]: — AR 4
+              - generic [ref=e368]:
+                - button "Prepare" [ref=e369]
+                - button "Cast (2 WP)" [ref=e370]
+            - generic [ref=e293]:
+              - heading "FetchGeneral" [level=3] [ref=e294]
+              - paragraph [ref=e295]: 1 WP · Always available · Auto-succeed
+              - paragraph [ref=e296]: Make a loose object (weight 1 or less) within 10m float to you. Magic trick — succeeds automatically, requires gesture only.
+            - generic [ref=e299]:
+              - heading "Slow FallMentalism" [level=3] [ref=e300]
+              - paragraph [ref=e301]: 1 WP · Always available · Auto-succeed
+              - paragraph [ref=e302]: Slow your fall and land light as a feather, no matter the height. Magic trick — succeeds automatically, requires gesture only.
+            - generic [ref=e305]:
+              - heading "Magic StoolMentalism" [level=3] [ref=e306]
+              - paragraph [ref=e307]: 1 WP · Always available · Auto-succeed
+              - paragraph [ref=e308]: Create a round surface (~0.5m) to sit on or put things on. Lasts until you leave. Magic trick — succeeds automatically, requires gesture only.
+        - generic [ref=e309]:
+          - button "Heroic Abilities p. 30-31" [expanded] [ref=e310] [cursor=pointer]:
+            - heading "Heroic Abilities p. 30-31" [level=3] [ref=e311]:
+              - text: Heroic Abilities
+              - generic [ref=e312]: p. 30-31
+            - img [ref=e314]
+          - paragraph [ref=e319]: No heroic abilities yet.
+    - navigation "Main navigation" [ref=e77]:
+      - link "Characters" [ref=e78] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e79]
+        - text: Characters
+      - link "Session" [ref=e82] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e84]
+        - text: Session
+      - link "Reference" [ref=e86] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e87]
+        - text: Reference
+    - button "Open quick actions" [ref=e89] [cursor=pointer]:
+      - img [ref=e90]
+    - generic [ref=e270]:
+      - button "🎲" [ref=e271] [cursor=pointer]
+      - button "✨" [ref=e272] [cursor=pointer]
+  - alert

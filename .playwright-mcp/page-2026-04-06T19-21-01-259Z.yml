@@ -1,0 +1,145 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: No campaign
+        - img [ref=e8]
+      - button "Menu" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+    - tablist [ref=e49]:
+      - tab "Sheet" [ref=e50] [cursor=pointer]:
+        - img [ref=e51]
+        - text: Sheet
+      - tab "Skills" [ref=e53] [cursor=pointer]
+      - tab "Gear" [ref=e54] [cursor=pointer]
+      - tab "Magic" [selected] [ref=e55] [cursor=pointer]:
+        - img [ref=e56]
+        - text: Magic
+    - main [ref=e12]:
+      - generic [ref=e620]:
+        - generic [ref=e621]:
+          - heading "Magic" [level=1] [ref=e622]
+          - generic [ref=e623]: 0/7 Prepared
+        - generic [ref=e624]:
+          - button "Prepared" [ref=e625]
+          - button "Grimoire" [active] [ref=e626]
+        - generic [ref=e627]:
+          - button "Spells p. 63-64" [expanded] [ref=e628] [cursor=pointer]:
+            - heading "Spells p. 63-64" [level=3] [ref=e629]:
+              - text: Spells
+              - generic [ref=e630]: p. 63-64
+            - img [ref=e632]
+          - generic [ref=e649]:
+            - generic [ref=e651]:
+              - generic [ref=e653]:
+                - heading "Power Fist Mentalism" [level=3] [ref=e654]:
+                  - text: Power Fist
+                  - generic [ref=e655]: Mentalism
+                - paragraph [ref=e656]: "Range: Personal · Duration: Stretch"
+                - paragraph [ref=e657]: Your unarmed attack damage increases by D6 per power level. Requires word and gesture to cast.
+              - group "Power level" [ref=e658]:
+                - button "Power level 1 — 2 WP" [pressed] [ref=e659]: "1"
+                - button "Power level 2 — 4 WP" [ref=e660]: "2"
+                - button "Power level 3 — 6 WP" [ref=e661]: "3"
+                - generic [ref=e662]: 2 WP
+              - generic [ref=e663]:
+                - button "Prepare" [ref=e664]
+                - button "Cast (2 WP)" [ref=e665]
+            - generic [ref=e667]:
+              - generic [ref=e669]:
+                - heading "Levitate Mentalism" [level=3] [ref=e670]:
+                  - text: Levitate
+                  - generic [ref=e671]: Mentalism
+                - paragraph [ref=e672]: "Range: 6 meters · Duration: Instant"
+                - paragraph [ref=e673]: Levitate yourself, another person, or object (up to human size) and float it up to 6m in any direction, then land gently or drop. Each additional power level adds 2m of movement or levitates an additional person/object. Levitating an unwilling creature gives a bane to the roll. Requires word and gesture.
+              - group "Power level" [ref=e674]:
+                - button "Power level 1 — 2 WP" [pressed] [ref=e675]: "1"
+                - button "Power level 2 — 4 WP" [ref=e676]: "2"
+                - button "Power level 3 — 6 WP" [ref=e677]: "3"
+                - generic [ref=e678]: 2 WP
+              - generic [ref=e679]:
+                - button "Prepare" [ref=e680]
+                - button "Cast (2 WP)" [ref=e681]
+            - generic [ref=e683]:
+              - generic [ref=e685]:
+                - heading "Stone Skin Mentalism" [level=3] [ref=e686]:
+                  - text: Stone Skin
+                  - generic [ref=e687]: Mentalism
+                - paragraph [ref=e688]: "Range: Touch · Duration: Stretch"
+                - paragraph [ref=e689]: The target's skin turns hard and gray, gaining armor rating 4. Each additional power level increases armor by 2. If wearing armor, only the highest armor rating counts. Requires word, gesture, and a stone as ingredient.
+              - group "Power level" [ref=e690]:
+                - button "Power level 1 — 2 WP" [pressed] [ref=e691]: "1"
+                - button "Power level 2 — 4 WP" [ref=e692]: "2"
+                - button "Power level 3 — 6 WP" [ref=e693]: "3"
+                - generic [ref=e694]: 2 WP
+              - generic [ref=e695]:
+                - button "Prepare" [ref=e696]
+                - button "Cast (2 WP)" [ref=e697]
+            - generic [ref=e699]:
+              - generic [ref=e701]:
+                - heading "Fetch General" [level=3] [ref=e702]:
+                  - text: Fetch
+                  - generic [ref=e703]: General
+                - paragraph [ref=e704]: "Range: 10 meters · Duration: Instant"
+                - paragraph [ref=e705]: Make a loose object (weight 1 or less) within 10m float to you. Magic trick — succeeds automatically, requires gesture only.
+              - group "Power level" [ref=e706]:
+                - button "Power level 1 — 2 WP" [pressed] [ref=e707]: "1"
+                - button "Power level 2 — 4 WP" [ref=e708]: "2"
+                - button "Power level 3 — 6 WP" [ref=e709]: "3"
+                - generic [ref=e710]: 2 WP
+              - generic [ref=e711]:
+                - button "Prepare" [ref=e712]
+                - button "Cast (2 WP)" [ref=e713]
+            - generic [ref=e715]:
+              - generic [ref=e717]:
+                - heading "Slow Fall Mentalism" [level=3] [ref=e718]:
+                  - text: Slow Fall
+                  - generic [ref=e719]: Mentalism
+                - paragraph [ref=e720]: "Range: Personal · Duration: Instant"
+                - paragraph [ref=e721]: Slow your fall and land light as a feather, no matter the height. Magic trick — succeeds automatically, requires gesture only.
+              - group "Power level" [ref=e722]:
+                - button "Power level 1 — 2 WP" [pressed] [ref=e723]: "1"
+                - button "Power level 2 — 4 WP" [ref=e724]: "2"
+                - button "Power level 3 — 6 WP" [ref=e725]: "3"
+                - generic [ref=e726]: 2 WP
+              - generic [ref=e727]:
+                - button "Prepare" [ref=e728]
+                - button "Cast (2 WP)" [ref=e729]
+            - generic [ref=e731]:
+              - generic [ref=e733]:
+                - heading "Magic Stool Mentalism" [level=3] [ref=e734]:
+                  - text: Magic Stool
+                  - generic [ref=e735]: Mentalism
+                - paragraph [ref=e736]: "Range: Personal · Duration: Until you leave"
+                - paragraph [ref=e737]: Create a round surface (~0.5m) to sit on or put things on. Lasts until you leave. Magic trick — succeeds automatically, requires gesture only.
+              - group "Power level" [ref=e738]:
+                - button "Power level 1 — 2 WP" [pressed] [ref=e739]: "1"
+                - button "Power level 2 — 4 WP" [ref=e740]: "2"
+                - button "Power level 3 — 6 WP" [ref=e741]: "3"
+                - generic [ref=e742]: 2 WP
+              - generic [ref=e743]:
+                - button "Prepare" [ref=e744]
+                - button "Cast (2 WP)" [ref=e745]
+        - generic [ref=e638]:
+          - button "Heroic Abilities p. 30-31" [expanded] [ref=e639] [cursor=pointer]:
+            - heading "Heroic Abilities p. 30-31" [level=3] [ref=e640]:
+              - text: Heroic Abilities
+              - generic [ref=e641]: p. 30-31
+            - img [ref=e643]
+          - paragraph [ref=e648]: No heroic abilities yet.
+    - navigation "Main navigation" [ref=e22]:
+      - link "Characters" [ref=e23] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e24]
+        - text: Characters
+      - link "Session" [ref=e27] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e28]
+        - text: Session
+      - link "Reference" [ref=e30] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e31]
+        - text: Reference
+    - button "Start a session first" [ref=e33] [cursor=pointer]:
+      - img [ref=e34]
+  - alert
