@@ -50,6 +50,7 @@ const spellSchema = z.object({
   range: z.string().describe('Spell range'),
   duration: z.string().describe('Spell duration'),
   summary: z.string().describe('Spell summary'),
+  powerScaling: z.tuple([z.string(), z.string(), z.string()]).optional().describe('Short descriptions for PL 1-3'),
 });
 
 const heroicAbilitySchema = z.object({

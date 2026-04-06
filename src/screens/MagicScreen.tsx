@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { MagicSpellCard } from '../components/fields/MagicSpellCard';
 import { AbilityCard } from '../components/fields/AbilityCard';
@@ -17,7 +18,7 @@ import { isMetalEquipped } from '../utils/metalDetection';
 type PrepFilter = 'prepared' | 'grimoire';
 
 function isMagicTrick(s: Spell): boolean {
-  return s.school.toLowerCase().includes('trick');
+  return s.powerLevel === 0 || s.school.toLowerCase().includes('trick');
 }
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
@@ -175,27 +176,28 @@ export default function MagicScreen() {
 
       {/* ── Metal warning banner ── */}
       {metalBlocked && (
-        <div className="metal-warning-banner">
+        <div className="bg-[color-mix(in_srgb,var(--color-danger)_15%,transparent)] border border-[var(--color-danger)] rounded-[var(--radius-sm)] px-[var(--space-md)] py-[var(--space-sm)] mb-[var(--space-sm)] text-[length:var(--font-size-sm)] text-[var(--color-text)]">
           ⚠ Metal equipment equipped — spellcasting is impaired!
         </div>
       )}
 
       {/* ── Filter tabs: Prepared | Grimoire ── */}
-      <div className="magic-filter-tabs mb-[var(--space-md)]">
-        <button
-          type="button"
-          className={['magic-filter-tab', filter === 'prepared' ? 'magic-filter-tab--active' : ''].filter(Boolean).join(' ')}
-          onClick={() => setFilter('prepared')}
-        >
-          Prepared
-        </button>
-        <button
-          type="button"
-          className={['magic-filter-tab', filter === 'grimoire' ? 'magic-filter-tab--active' : ''].filter(Boolean).join(' ')}
-          onClick={() => setFilter('grimoire')}
-        >
-          Grimoire
-        </button>
+      <div className="flex gap-[var(--space-1)] mb-[var(--space-md)]">
+        {(['prepared', 'grimoire'] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            className={cn(
+              "px-4 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--font-size-sm)] font-semibold transition-colors",
+              filter === tab
+                ? "bg-[var(--color-accent)] text-white"
+                : "bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+            )}
+            onClick={() => setFilter(tab)}
+          >
+            {tab === 'prepared' ? 'Prepared' : 'Grimoire'}
+          </button>
+        ))}
       </div>
 
       {/* ── Spells section ── */}

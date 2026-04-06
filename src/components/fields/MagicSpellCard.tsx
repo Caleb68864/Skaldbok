@@ -68,7 +68,7 @@ export function MagicSpellCard({
             <h3 className="text-[var(--color-text)] text-[length:var(--font-size-md)] mb-[var(--space-xs)] flex items-center gap-[var(--space-xs)] flex-wrap">
               {spell.name}
               <span className="text-[var(--color-accent)] text-[length:var(--font-size-sm)]">{spell.school}</span>
-              {isReaction && <span className="reaction-badge">Must be prepared</span>}
+              {isReaction && <span className="text-[length:var(--font-size-xs,0.75rem)] text-[var(--color-warning)] font-semibold border border-[var(--color-warning)] rounded-full px-2 py-0.5">Must be prepared</span>}
             </h3>
             <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
               Range: {spell.range} · Duration: {spell.duration}
@@ -86,7 +86,7 @@ export function MagicSpellCard({
         </div>
 
         {/* Power level selector */}
-        <div className="power-level-selector" role="group" aria-label="Power level">
+        <div className="flex items-center gap-[var(--space-2)]" role="group" aria-label="Power level">
           {([1, 2, 3] as const).map((lvl) => {
             const cost = lvl * 2;
             const insufficient = currentWP < cost;
@@ -95,11 +95,13 @@ export function MagicSpellCard({
               <button
                 key={lvl}
                 type="button"
-                className={[
-                  'power-level-btn',
-                  isActive ? 'power-level-btn--active' : '',
-                  insufficient ? 'power-level-disabled' : '',
-                ].filter(Boolean).join(' ')}
+                className={cn(
+                  "w-9 h-9 rounded-full text-[length:var(--font-size-sm)] font-semibold border transition-colors",
+                  isActive
+                    ? "bg-[var(--color-accent)] text-white border-[var(--color-accent)]"
+                    : "bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)] hover:border-[var(--color-accent)]",
+                  insufficient && !isActive && "opacity-40 cursor-not-allowed"
+                )}
                 onClick={() => onPowerLevelChange(lvl)}
                 aria-label={`Power level ${lvl} — ${cost} WP`}
                 aria-pressed={isActive}
@@ -108,18 +110,31 @@ export function MagicSpellCard({
               </button>
             );
           })}
-          <span className="power-level-cost">{wpCost} WP</span>
+          <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-semibold ml-[var(--space-1)]">{wpCost} WP</span>
+          {spell.powerScaling && spell.powerScaling[powerLevel - 1] && (
+            <span className="text-[length:var(--font-size-sm)] text-[var(--color-accent-alt)] ml-[var(--space-2)]">
+              — {spell.powerScaling[powerLevel - 1]}
+            </span>
+          )}
         </div>
 
         {/* Prepare / Unprepare row */}
         <div className="flex items-center gap-[var(--space-sm)] flex-wrap">
           {spell.prepared ? (
-            <button type="button" className="prepare-button prepare-button--unprepare" onClick={onTogglePrepare}>
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--font-size-sm)] font-semibold border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:border-[var(--color-danger)] hover:text-[var(--color-danger)] transition-colors"
+              onClick={onTogglePrepare}
+            >
               Unprepare
             </button>
           ) : atLimit ? (
             <>
-              <button type="button" className="prepare-button prepare-button--disabled" disabled>
+              <button
+                type="button"
+                className="px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--font-size-sm)] font-semibold border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] opacity-40 cursor-not-allowed"
+                disabled
+              >
                 Prepare
               </button>
               <span className="text-[length:var(--font-size-xs,0.75rem)] text-[var(--color-text-muted)]">
@@ -127,7 +142,11 @@ export function MagicSpellCard({
               </span>
             </>
           ) : (
-            <button type="button" className="prepare-button prepare-button--prepare" onClick={onTogglePrepare}>
+            <button
+              type="button"
+              className="px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--font-size-sm)] font-semibold border border-[var(--color-accent)] bg-[var(--color-accent)] text-white hover:opacity-90 transition-colors"
+              onClick={onTogglePrepare}
+            >
               Prepare
             </button>
           )}
@@ -139,7 +158,12 @@ export function MagicSpellCard({
           {onCast && !notCastable && (
             <button
               type="button"
-              className="prepare-button prepare-button--prepare ml-auto"
+              className={cn(
+                "px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--font-size-sm)] font-semibold border ml-auto transition-colors",
+                currentWP < wpCost
+                  ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] opacity-40 cursor-not-allowed"
+                  : "border-[var(--color-accent)] bg-[var(--color-accent)] text-white hover:opacity-90"
+              )}
               disabled={currentWP < wpCost}
               onClick={() => onCast(spell, wpCost)}
             >
