@@ -11,6 +11,9 @@ import { renderSessionBundle } from '../../utils/export/renderSession';
 import { bundleToZip } from '../../utils/export/bundleToZip';
 import { shareFile, copyToClipboard } from '../../utils/export/delivery';
 import { generateFilename } from '../../utils/export/generateFilename';
+import { collectCharacterBundle, collectSessionBundle, collectCampaignBundle } from '../../utils/export/collectors';
+import { applyPrivacyFilter } from '../../utils/export/privacyFilter';
+import { serializeBundle, deliverBundle } from '../../utils/export/bundleSerializer';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
 
@@ -283,5 +286,86 @@ export function useExportActions() {
     }
   }, [activeCampaign, showToast]);
 
-  return { exportNote, exportSessionMarkdown, exportSessionBundle, exportAllNotes, copyNoteAsMarkdown };
+  /**
+   * Exports a character as a `.skaldmark.json` bundle.
+   *
+   * @param characterId - ID of the character to export.
+   * @param includePrivate - If true, includes private notes in the export.
+   */
+  const exportCharacter = useCallback(async (characterId: string, includePrivate = false): Promise<void> => {
+    try {
+      const result = await collectCharacterBundle(characterId);
+      if (!result.success) {
+        showToast(`Export failed: ${result.error}`);
+        return;
+      }
+      const filtered = applyPrivacyFilter(result.contents, includePrivate);
+      const json = await serializeBundle('character', filtered);
+      const slug = `character-${characterId.slice(0, 8)}-${Date.now()}`;
+      await deliverBundle(slug, json);
+      showToast('Character exported');
+    } catch (err) {
+      showToast('Export failed. Please try again.');
+      console.error('[useExportActions] exportCharacter error', err);
+    }
+  }, [showToast]);
+
+  /**
+   * Exports a session as a `.skaldmark.json` bundle (includes encounters, templates, etc.).
+   *
+   * @param sessionId - ID of the session to export.
+   * @param includePrivate - If true, includes private notes in the export.
+   */
+  const exportSessionSkaldmark = useCallback(async (sessionId: string, includePrivate = false): Promise<void> => {
+    try {
+      const result = await collectSessionBundle(sessionId);
+      if (!result.success) {
+        showToast(`Export failed: ${result.error}`);
+        return;
+      }
+      const filtered = applyPrivacyFilter(result.contents, includePrivate);
+      const json = await serializeBundle('session', filtered);
+      const slug = `session-${sessionId.slice(0, 8)}-${Date.now()}`;
+      await deliverBundle(slug, json);
+      showToast('Session exported');
+    } catch (err) {
+      showToast('Export failed. Please try again.');
+      console.error('[useExportActions] exportSessionSkaldmark error', err);
+    }
+  }, [showToast]);
+
+  /**
+   * Exports a campaign as a `.skaldmark.json` bundle (includes all entity types).
+   *
+   * @param campaignId - ID of the campaign to export.
+   * @param includePrivate - If true, includes private notes in the export.
+   */
+  const exportCampaign = useCallback(async (campaignId: string, includePrivate = false): Promise<void> => {
+    try {
+      const result = await collectCampaignBundle(campaignId);
+      if (!result.success) {
+        showToast(`Export failed: ${result.error}`);
+        return;
+      }
+      const filtered = applyPrivacyFilter(result.contents, includePrivate);
+      const json = await serializeBundle('campaign', filtered);
+      const slug = `campaign-${campaignId.slice(0, 8)}-${Date.now()}`;
+      await deliverBundle(slug, json);
+      showToast('Campaign exported');
+    } catch (err) {
+      showToast('Export failed. Please try again.');
+      console.error('[useExportActions] exportCampaign error', err);
+    }
+  }, [showToast]);
+
+  return {
+    exportNote,
+    exportSessionMarkdown,
+    exportSessionBundle,
+    exportAllNotes,
+    copyNoteAsMarkdown,
+    exportCharacter,
+    exportSessionSkaldmark,
+    exportCampaign,
+  };
 }

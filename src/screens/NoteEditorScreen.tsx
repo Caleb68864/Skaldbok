@@ -211,7 +211,7 @@ export default function NoteEditorScreen() {
 
       {/* Note type selector */}
       <div className="flex gap-2 flex-wrap mb-3">
-        {NOTE_TYPES.filter(t => !['skill-check', 'recap'].includes(t)).map(t => (
+        {NOTE_TYPES.filter(t => !['skill-check', 'recap', 'npc'].includes(t)).map(t => (
           <button
             key={t}
             onClick={() => handleTypeChange(t as NoteType)}

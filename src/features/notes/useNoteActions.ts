@@ -4,6 +4,7 @@ import { useToast } from '../../context/ToastContext';
 import * as noteRepository from '../../storage/repositories/noteRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
 import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
+import { listBySession as listEncountersBySession } from '../../storage/repositories/encounterRepository';
 import type { Note } from '../../types/note';
 
 /**
@@ -80,6 +81,23 @@ export function useNoteActions() {
             toEntityType: 'note',
             relationshipType: 'contains',
           });
+        }
+
+        // Auto-link to active encounter (if one exists for this session)
+        try {
+          const encounters = await listEncountersBySession(activeSession.id);
+          const activeEncounter = encounters.find(e => e.status === 'active');
+          if (activeEncounter) {
+            await entityLinkRepository.createLink({
+              fromEntityId: activeEncounter.id,
+              fromEntityType: 'encounter',
+              toEntityId: note.id,
+              toEntityType: 'note',
+              relationshipType: 'contains',
+            });
+          }
+        } catch (linkErr) {
+          console.warn('useNoteActions: encounter auto-link failed', linkErr);
         }
 
         // NPC: note → session ("introduced_in")

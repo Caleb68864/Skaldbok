@@ -1,14 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { EndSessionModal } from '../features/campaign/EndSessionModal';
 import { useExportActions } from '../features/export/useExportActions';
+import { useImportActions } from '../features/import/useImportActions';
+import { ImportPreview } from '../components/import/ImportPreview';
 import { CombatTimeline } from '../features/combat/CombatTimeline';
 import { useNoteActions } from '../features/notes/useNoteActions';
 import { NotesGrid } from '../features/notes/NotesGrid';
 import { SessionQuickActions } from '../features/session/SessionQuickActions';
+import { useEncounterList } from '../features/encounters/useEncounterList';
+import { EncounterListItem } from '../features/encounters/EncounterListItem';
+import { EncounterScreen } from '../features/encounters/EncounterScreen';
 import { getNotesBySession } from '../storage/repositories/noteRepository';
 import { getSessionsByCampaign } from '../storage/repositories/sessionRepository';
+import * as encounterRepository from '../storage/repositories/encounterRepository';
 import type { Session } from '../types/session';
 import type { Note } from '../types/note';
 
@@ -32,8 +39,10 @@ const actionBtnClass = "min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] bo
 const primaryBtnClass = "min-h-11 min-w-11 px-5 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer whitespace-nowrap";
 
 export function SessionScreen() {
+  const navigate = useNavigate();
   const { activeCampaign, activeSession, startSession, endSession, resumeSession } = useCampaignContext();
-  const { exportSessionMarkdown, exportSessionBundle, exportAllNotes } = useExportActions();
+  const { exportSessionMarkdown, exportSessionBundle, exportAllNotes, exportSessionSkaldmark, exportCampaign } = useExportActions();
+  const { startImport, showPreview, parsedResult, contentHashMismatch, conflicts, executeImport, cancelImport, isImporting } = useImportActions();
   const { createNote } = useNoteActions();
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [activeCombatNoteId, setActiveCombatNoteId] = useState<string | null>(null);
@@ -42,6 +51,11 @@ export function SessionScreen() {
   const [loadingPast, setLoadingPast] = useState(false);
   const [lastSessionNoteCount, setLastSessionNoteCount] = useState(0);
   const [elapsed, setElapsed] = useState('');
+  const [viewingEncounterId, setViewingEncounterId] = useState<string | null>(null);
+  const [showStartEncounter, setShowStartEncounter] = useState(false);
+  const [newEncounterType, setNewEncounterType] = useState<'combat' | 'social' | 'exploration'>('combat');
+  const [newEncounterTitle, setNewEncounterTitle] = useState('');
+  const { encounters, activeEncounter, refresh: refreshEncounters } = useEncounterList(activeSession?.id ?? null);
 
   // Session timer
   const formatElapsed = useCallback((startedAt: string) => {
@@ -111,6 +125,24 @@ export function SessionScreen() {
     setShowEndConfirm(false);
   };
 
+  const handleStartEncounter = async () => {
+    if (!newEncounterTitle.trim()) return;
+    const now = new Date().toISOString();
+    await encounterRepository.create({
+      sessionId: activeSession!.id,
+      campaignId: activeCampaign!.id,
+      title: newEncounterTitle.trim(),
+      type: newEncounterType,
+      status: 'active',
+      startedAt: now,
+      participants: [],
+      combatData: newEncounterType === 'combat' ? { currentRound: 1, events: [] } : undefined,
+    });
+    setShowStartEncounter(false);
+    setNewEncounterTitle('');
+    refreshEncounters();
+  };
+
   const handleStartCombat = async () => {
     const note = await createNote({
       title: `Combat — Round 1`,
@@ -130,9 +162,32 @@ export function SessionScreen() {
     return <NoCampaignPrompt />;
   }
 
+  // Show full encounter screen when viewing one
+  if (viewingEncounterId && activeSession) {
+    return (
+      <EncounterScreen
+        encounterId={viewingEncounterId}
+        sessionId={activeSession.id}
+        campaignId={activeCampaign.id}
+        onClose={() => {
+          setViewingEncounterId(null);
+          refreshEncounters();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="p-4">
-      <h2 className="text-[var(--color-text)] mb-2">{activeCampaign.name}</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-[var(--color-text)] m-0">{activeCampaign.name}</h2>
+        <button
+          onClick={() => navigate('/bestiary')}
+          className={actionBtnClass}
+        >
+          Bestiary
+        </button>
+      </div>
 
       {activeSession ? (
         <div className="bg-[var(--color-surface-raised)] rounded-lg p-4 mb-4">
@@ -156,6 +211,9 @@ export function SessionScreen() {
             </button>
             <button onClick={() => exportSessionBundle(activeSession.id)} className={actionBtnClass}>
               Export + Notes (ZIP)
+            </button>
+            <button onClick={() => exportSessionSkaldmark(activeSession.id)} className={actionBtnClass}>
+              Export (.skaldmark)
             </button>
           </div>
 
@@ -215,13 +273,148 @@ export function SessionScreen() {
         </div>
       )}
 
-      {/* Export all notes */}
-      <button
-        onClick={() => exportAllNotes()}
-        className="min-h-11 min-w-11 w-full px-4 py-2 mb-4 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-semibold"
-      >
-        Export All Notes (.zip)
-      </button>
+      {/* Encounter section */}
+      {activeSession && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-[var(--color-text)] m-0 text-sm">Encounters</h3>
+            <button onClick={() => setShowStartEncounter(true)} className={actionBtnClass}>
+              Start Encounter
+            </button>
+          </div>
+
+          {/* Active encounter indicator */}
+          {activeEncounter && (
+            <button
+              onClick={() => setViewingEncounterId(activeEncounter.id)}
+              className="w-full text-left bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-3 mb-2 cursor-pointer"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[var(--color-text)] font-semibold text-sm">
+                  {activeEncounter.title}
+                </span>
+                <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 rounded-full text-[10px] font-bold uppercase">
+                  Active
+                </span>
+              </div>
+              <span className="text-[var(--color-text-muted)] text-xs capitalize">
+                {activeEncounter.type} &middot; {activeEncounter.participants.length} participants
+              </span>
+            </button>
+          )}
+
+          {/* Past encounters */}
+          {encounters.filter(e => e.status === 'ended').length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              {encounters
+                .filter(e => e.status === 'ended')
+                .map(e => (
+                  <EncounterListItem
+                    key={e.id}
+                    encounter={e}
+                    onClick={() => setViewingEncounterId(e.id)}
+                  />
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Start encounter modal */}
+      {showStartEncounter && (
+        <div
+          role="dialog"
+          aria-label="Start encounter"
+          onClick={() => setShowStartEncounter(false)}
+          className="fixed inset-0 bg-black/50 z-[300] flex items-end justify-center"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-[480px] px-4 pt-5 pb-6"
+          >
+            <h3 className="text-[var(--color-text)] mb-3">Start Encounter</h3>
+            <div className="flex gap-2 mb-3">
+              {(['combat', 'social', 'exploration'] as const).map(t => (
+                <button
+                  key={t}
+                  onClick={() => setNewEncounterType(t)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border-none cursor-pointer ${
+                    newEncounterType === t
+                      ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                      : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <input
+              type="text"
+              placeholder="Encounter title"
+              value={newEncounterTitle}
+              onChange={e => setNewEncounterTitle(e.target.value)}
+              className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleStartEncounter}
+                disabled={!newEncounterTitle.trim()}
+                className={`flex-1 min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-sm font-semibold cursor-pointer ${
+                  !newEncounterTitle.trim() ? 'opacity-60' : ''
+                }`}
+              >
+                Start
+              </button>
+              <button
+                onClick={() => setShowStartEncounter(false)}
+                className="min-h-11 px-4 bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] rounded-lg text-sm cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Export/Import section */}
+      <div className="flex flex-col gap-2 mb-4">
+        <button
+          onClick={() => exportAllNotes()}
+          className="min-h-11 min-w-11 w-full px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-semibold"
+        >
+          Export All Notes (.zip)
+        </button>
+        {activeCampaign && (
+          <>
+            <button
+              onClick={() => exportCampaign(activeCampaign.id)}
+              className="min-h-11 min-w-11 w-full px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-semibold"
+            >
+              Export Campaign (.skaldmark.json)
+            </button>
+            <button
+              onClick={startImport}
+              className="min-h-11 min-w-11 w-full px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-semibold"
+            >
+              Import (.skaldmark.json)
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Import preview modal */}
+      {showPreview && parsedResult?.success && (
+        <ImportPreview
+          bundle={parsedResult.bundle}
+          warnings={parsedResult.warnings}
+          conflicts={conflicts}
+          contentHashMismatch={contentHashMismatch}
+          onImport={executeImport}
+          onCancel={cancelImport}
+          isImporting={isImporting}
+        />
+      )}
 
       {/* Past sessions list */}
       {!loadingPast && pastSessions.length > 0 && (
