@@ -156,6 +156,8 @@ export interface Spell {
   castingTime?: 'action' | 'reaction' | 'ritual';
   /** Optional effect templates for auto-creating temp modifiers on cast. */
   effects?: SpellEffect[];
+  /** Short descriptions of what each power level does, indexed 0=PL1, 1=PL2, 2=PL3. */
+  powerScaling?: [string, string, string];
 }
 
 /**

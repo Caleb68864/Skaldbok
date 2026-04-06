@@ -1,0 +1,103 @@
+{
+  "id": "example-keldorn-the-fearless",
+  "schemaVersion": 1,
+  "systemId": "dragonbane",
+  "name": "Keldorn the Fearless",
+  "createdAt": "2026-04-06T00:00:00.000Z",
+  "updatedAt": "2026-04-06T00:00:00.000Z",
+  "metadata": {
+    "kin": "Dwarf",
+    "profession": "Fighter",
+    "age": "",
+    "weakness": "",
+    "appearance": "",
+    "notes": "Joined the party at the start of Session 2, replacing Makander of Halfbay who was lost in Session 1."
+  },
+  "attributes": {
+    "str": 10,
+    "con": 10,
+    "agl": 10,
+    "int": 10,
+    "wil": 10,
+    "cha": 10
+  },
+  "conditions": {
+    "exhausted": false,
+    "sickly": false,
+    "dazed": false,
+    "angry": false,
+    "scared": false,
+    "disheartened": false
+  },
+  "resources": {
+    "hp": { "current": 10, "max": 10 },
+    "wp": { "current": 10, "max": 10 },
+    "deathRolls": { "current": 0, "max": 3 },
+    "deathSuccesses": { "current": 0, "max": 3 }
+  },
+  "skills": {
+    "acrobatics":     { "value": 5,  "trained": false },
+    "awareness":      { "value": 5,  "trained": false },
+    "bartering":      { "value": 5,  "trained": false },
+    "beastLore":      { "value": 5,  "trained": false },
+    "bluffing":       { "value": 5,  "trained": false },
+    "bushcraft":      { "value": 5,  "trained": false },
+    "crafting":       { "value": 5,  "trained": false },
+    "evade":          { "value": 5,  "trained": false },
+    "healing":        { "value": 5,  "trained": false },
+    "huntingFishing": { "value": 5,  "trained": false },
+    "languages":      { "value": 5,  "trained": false },
+    "mythsLegends":   { "value": 5,  "trained": false },
+    "performance":    { "value": 5,  "trained": false },
+    "persuasion":     { "value": 5,  "trained": false },
+    "riding":         { "value": 5,  "trained": false },
+    "seamanship":     { "value": 5,  "trained": false },
+    "sleightOfHand":  { "value": 5,  "trained": false },
+    "sneaking":       { "value": 5,  "trained": false },
+    "spotHidden":     { "value": 5,  "trained": false },
+    "swimming":       { "value": 5,  "trained": false },
+    "axes":           { "value": 5,  "trained": false },
+    "bows":           { "value": 5,  "trained": false },
+    "brawling":       { "value": 5,  "trained": false },
+    "crossbows":      { "value": 5,  "trained": false },
+    "hammers":        { "value": 5,  "trained": false },
+    "knives":         { "value": 5,  "trained": false },
+    "slings":         { "value": 5,  "trained": false },
+    "spears":         { "value": 5,  "trained": false },
+    "staves":         { "value": 5,  "trained": false },
+    "swords":         { "value": 5,  "trained": false },
+    "animism":        { "value": 0,  "trained": false },
+    "elementalism":   { "value": 0,  "trained": false },
+    "mentalism":      { "value": 0,  "trained": false }
+  },
+  "weapons": [
+    {
+      "id": "keldorn-fiendcrusher",
+      "name": "Fiendcrusher",
+      "grip": "one-handed",
+      "range": "2m",
+      "damage": "2D6",
+      "durability": 15,
+      "features": "Magical, glows near demons, Bludgeoning",
+      "equipped": true
+    }
+  ],
+  "armor": null,
+  "helmet": null,
+  "inventory": [],
+  "tinyItems": [],
+  "memento": "",
+  "coins": {
+    "gold": 0,
+    "silver": 0,
+    "copper": 0
+  },
+  "spells": [],
+  "heroicAbilities": [],
+  "derivedOverrides": {
+    "movement": 8
+  },
+  "uiState": {
+    "expandedSections": []
+  }
+}
