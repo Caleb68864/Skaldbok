@@ -16,7 +16,6 @@ import { cn } from '../../lib/utils';
 const NOTE_TYPE_FILTERS: Array<{ value: NoteType | 'all'; label: string }> = [
   { value: 'all', label: 'All' },
   { value: 'generic', label: 'Generic' },
-  { value: 'npc', label: 'NPC' },
   { value: 'location', label: 'Location' },
   { value: 'combat', label: 'Combat' },
   { value: 'loot', label: 'Loot' },
@@ -117,7 +116,8 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
    * and sort order. Recomputed only when dependencies change.
    */
   const filteredNotes = useMemo(() => {
-    let result = notes;
+    // Exclude archived combat notes from the active grid
+    let result = notes.filter(n => !(n.type === 'combat' && n.status === 'archived'));
     // Session filter
     if (sessionFilter !== 'all') {
       if (sessionFilter === 'none') {

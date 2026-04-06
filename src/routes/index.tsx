@@ -12,6 +12,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CharacterLibraryScreen from '../screens/CharacterLibraryScreen';
 import PrintableSheetScreen from '../screens/PrintableSheetScreen';
+import { BestiaryScreenRoute } from '../features/bestiary/BestiaryScreenRoute';
 import type { RouteObject } from 'react-router-dom';
 
 /**
@@ -69,6 +70,7 @@ export const routes: RouteObject[] = [
       { path: '/gear', element: <Navigate to="/character/gear" replace /> },
       { path: '/magic', element: <Navigate to="/character/magic" replace /> },
       { path: '/combat', element: <Navigate to="/character/sheet" replace /> },
+      { path: '/bestiary', element: <BestiaryScreenRoute /> },
       { path: '/reference', element: <ReferenceScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/profile', element: <ProfileScreen /> },
