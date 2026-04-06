@@ -1,0 +1,53 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e8]: Dragonbane
+        - img [ref=e9]
+      - button "Menu" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+    - main [ref=e13]:
+      - generic [ref=e298]:
+        - heading "Dragonbane" [level=2] [ref=e299]
+        - generic [ref=e300]:
+          - paragraph [ref=e301]: No sessions yet.
+          - button "Start Session" [ref=e302] [cursor=pointer]
+        - button "Export All Notes (.zip)" [ref=e303] [cursor=pointer]
+        - generic [ref=e304]:
+          - generic [ref=e305]:
+            - generic [ref=e306]:
+              - heading "Notes" [level=3] [ref=e307]
+              - button "Newest" [ref=e308] [cursor=pointer]
+            - button "+ New Note" [ref=e309] [cursor=pointer]
+          - combobox [ref=e310] [cursor=pointer]:
+            - option "All Sessions" [selected]
+            - option "No session"
+          - textbox "Search notes..." [ref=e311]
+          - generic [ref=e312]:
+            - button "All" [ref=e313] [cursor=pointer]
+            - button "Generic" [ref=e314] [cursor=pointer]
+            - button "NPC" [ref=e315] [cursor=pointer]
+            - button "Location" [ref=e316] [cursor=pointer]
+            - button "Combat" [ref=e317] [cursor=pointer]
+            - button "Loot" [ref=e318] [cursor=pointer]
+            - button "Rumor" [ref=e319] [cursor=pointer]
+            - button "Quote" [ref=e320] [cursor=pointer]
+            - button "Skill Check" [ref=e321] [cursor=pointer]
+            - button "Recap" [ref=e322] [cursor=pointer]
+          - paragraph [ref=e323]: No notes yet.
+    - navigation "Main navigation" [ref=e31]:
+      - link "Characters" [ref=e32] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e33]
+        - text: Characters
+      - link "Session" [ref=e36] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e37]
+        - text: Session
+      - link "Reference" [ref=e39] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e40]
+        - text: Reference
+    - button "Start a session first" [ref=e42] [cursor=pointer]:
+      - img [ref=e43]
+  - alert

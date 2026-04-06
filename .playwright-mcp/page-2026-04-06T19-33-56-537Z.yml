@@ -1,0 +1,85 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Dragonbane
+          - generic [ref=e53]: Session 1 — 2026-04-06
+        - img [ref=e8]
+      - button "Menu" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+    - main [ref=e12]:
+      - generic [ref=e86]:
+        - generic [ref=e87]:
+          - button "Back" [ref=e88] [cursor=pointer]
+          - generic [ref=e89]: Saved
+        - textbox "Note title" [ref=e90]: New Note
+        - generic [ref=e91]:
+          - button "generic" [ref=e92] [cursor=pointer]
+          - button "npc" [ref=e93] [cursor=pointer]
+          - button "combat" [ref=e94] [cursor=pointer]
+          - button "location" [ref=e95] [cursor=pointer]
+          - button "loot" [ref=e96] [cursor=pointer]
+          - button "rumor" [ref=e97] [cursor=pointer]
+          - button "quote" [ref=e98] [cursor=pointer]
+        - generic [ref=e99]:
+          - generic [ref=e100]:
+            - button "B" [ref=e101] [cursor=pointer]
+            - button "I" [ref=e102] [cursor=pointer]:
+              - emphasis [ref=e103]: I
+            - button "H2" [ref=e104] [cursor=pointer]
+            - button "H3" [ref=e105] [cursor=pointer]
+            - button "• List" [ref=e106] [cursor=pointer]
+            - button "1. List" [ref=e107] [cursor=pointer]
+            - button "❝" [ref=e108] [cursor=pointer]
+            - button "Link" [ref=e109] [cursor=pointer]
+          - textbox [ref=e111]:
+            - paragraph [ref=e112]
+        - generic [ref=e114]:
+          - paragraph [ref=e115]: Tags
+          - generic [ref=e116]:
+            - button "tense" [ref=e117] [cursor=pointer]
+            - button "funny" [ref=e118] [cursor=pointer]
+            - button "dramatic" [ref=e119] [cursor=pointer]
+            - button "sad" [ref=e120] [cursor=pointer]
+            - button "victorious" [ref=e121] [cursor=pointer]
+            - button "combat" [ref=e122] [cursor=pointer]
+            - button "exploration" [ref=e123] [cursor=pointer]
+            - button "social" [ref=e124] [cursor=pointer]
+            - button "mystery" [ref=e125] [cursor=pointer]
+            - button "travel" [ref=e126] [cursor=pointer]
+            - button "downtime" [ref=e127] [cursor=pointer]
+            - button "important" [ref=e128] [cursor=pointer]
+            - button "follow-up" [ref=e129] [cursor=pointer]
+            - button "plot-hook" [ref=e130] [cursor=pointer]
+            - button "lore" [ref=e131] [cursor=pointer]
+            - button "treasure" [ref=e132] [cursor=pointer]
+            - button "npc" [ref=e133] [cursor=pointer]
+            - button "location" [ref=e134] [cursor=pointer]
+            - button "rumor" [ref=e135] [cursor=pointer]
+            - button "quest" [ref=e136] [cursor=pointer]
+            - button "loot" [ref=e137] [cursor=pointer]
+            - button "skill-check" [ref=e138] [cursor=pointer]
+            - button "spell" [ref=e139] [cursor=pointer]
+            - button "ability" [ref=e140] [cursor=pointer]
+            - button "death" [ref=e141] [cursor=pointer]
+            - button "rest" [ref=e142] [cursor=pointer]
+          - generic [ref=e143]:
+            - textbox "Add custom tag..." [ref=e144]
+            - button "+" [disabled] [ref=e145] [cursor=pointer]
+    - navigation "Main navigation" [ref=e39]:
+      - link "Characters" [ref=e40] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e41]
+        - text: Characters
+      - link "Session" [ref=e44] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e46]
+        - text: Session
+      - link "Reference" [ref=e48] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e49]
+        - text: Reference
+    - button "Open quick actions" [ref=e82] [cursor=pointer]:
+      - img [ref=e83]
+  - alert

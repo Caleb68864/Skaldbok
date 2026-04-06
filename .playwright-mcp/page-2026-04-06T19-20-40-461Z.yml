@@ -1,0 +1,140 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: No campaign
+        - img [ref=e8]
+      - button "Menu" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+    - tablist [ref=e49]:
+      - tab "Sheet" [ref=e50] [cursor=pointer]:
+        - img [ref=e51]
+        - text: Sheet
+      - tab "Skills" [ref=e53] [cursor=pointer]
+      - tab "Gear" [active] [selected] [ref=e54] [cursor=pointer]
+      - tab "Magic" [ref=e55] [cursor=pointer]:
+        - img [ref=e56]
+        - text: Magic
+    - main [ref=e12]:
+      - generic [ref=e479]:
+        - heading "Gear" [level=1] [ref=e480]
+        - generic [ref=e481]:
+          - button "Weapons p. 73-76" [expanded] [ref=e482] [cursor=pointer]:
+            - heading "Weapons p. 73-76" [level=3] [ref=e483]:
+              - text: Weapons
+              - generic [ref=e484]: p. 73-76
+            - img [ref=e486]
+          - generic [ref=e491]:
+            - generic [ref=e493]:
+              - generic [ref=e494]:
+                - heading "Staff" [level=3] [ref=e495]
+                - paragraph [ref=e496]: "two-handed · Range: 2m · Damage: D8 · Dur: 9"
+                - paragraph [ref=e497]: Bludgeoning, Toppling
+              - button "Equipped" [ref=e499] [cursor=pointer]
+            - generic [ref=e501]:
+              - generic [ref=e502]:
+                - heading "Sling" [level=3] [ref=e503]
+                - paragraph [ref=e504]: "one-handed · Range: Short · Damage: D4 · Dur: 0"
+                - paragraph [ref=e505]: Bludgeoning
+              - button "Equip" [ref=e507] [cursor=pointer]
+        - generic [ref=e508]:
+          - button "Armor & Helmet p. 77" [expanded] [ref=e509] [cursor=pointer]:
+            - heading "Armor & Helmet p. 77" [level=3] [ref=e510]:
+              - text: Armor & Helmet
+              - generic [ref=e511]: p. 77
+            - img [ref=e513]
+          - generic [ref=e518]:
+            - generic [ref=e519]:
+              - 'button "Armor: Leather Armor (rating 2)" [ref=e520]'
+              - button "Equipped" [ref=e521] [cursor=pointer]
+            - paragraph [ref=e522]: No helmet.
+        - generic [ref=e523]:
+          - button "Inventory p. 32" [expanded] [ref=e524] [cursor=pointer]:
+            - heading "Inventory p. 32" [level=3] [ref=e525]:
+              - text: Inventory
+              - generic [ref=e526]: p. 32
+            - img [ref=e528]
+          - generic [ref=e533]:
+            - generic [ref=e535]:
+              - text: Orbuculum
+              - generic [ref=e536]: x1 · 1 wt
+            - generic [ref=e538]:
+              - text: Grimoire
+              - generic [ref=e539]: x1 · 1 wt
+            - generic [ref=e541]:
+              - text: Torch
+              - generic [ref=e542]: x1 · 1 wt
+            - generic [ref=e544]:
+              - text: Flint & Tinder
+              - generic [ref=e545]: x1 · 0 wt
+            - generic [ref=e547]:
+              - text: Food Rations
+              - generic [ref=e548]: x5 · 1 wt
+            - generic [ref=e550]:
+              - text: Lamp Oil
+              - generic [ref=e551]: x1 · 1 wt
+            - generic [ref=e553]:
+              - text: Cloak
+              - generic [ref=e554]: x1 · 1 wt
+            - generic [ref=e556]:
+              - text: Furs
+              - generic [ref=e557]: x1 · 1 wt
+            - generic [ref=e559]:
+              - text: Boots
+              - generic [ref=e560]: x1 · 1 wt
+            - generic [ref=e562]:
+              - text: Blanket
+              - generic [ref=e563]: x1 · 1 wt
+        - generic [ref=e564]:
+          - button "Coins" [expanded] [ref=e565] [cursor=pointer]:
+            - heading "Coins" [level=3] [ref=e566]
+            - img [ref=e568]
+          - generic [ref=e573]:
+            - generic [ref=e574]:
+              - generic [ref=e575]: Gold
+              - button "Decrease Gold" [ref=e576] [cursor=pointer]: −
+              - generic [ref=e577]: "65"
+              - button "Increase Gold" [ref=e578] [cursor=pointer]: +
+            - generic [ref=e579]:
+              - generic [ref=e580]: Silver
+              - button "Decrease Silver" [ref=e581] [cursor=pointer]: −
+              - generic [ref=e582]: "1"
+              - button "Increase Silver" [ref=e583] [cursor=pointer]: +
+            - generic [ref=e584]:
+              - generic [ref=e585]: Copper
+              - button "Decrease Copper" [ref=e586] [cursor=pointer]: −
+              - generic [ref=e587]: "6"
+              - button "Increase Copper" [ref=e588] [cursor=pointer]: +
+        - generic [ref=e589]:
+          - button "Tiny Items" [expanded] [ref=e590] [cursor=pointer]:
+            - heading "Tiny Items" [level=3] [ref=e591]
+            - img [ref=e593]
+          - paragraph [ref=e599]: No tiny items.
+        - generic [ref=e600]:
+          - button "Memento" [expanded] [ref=e601] [cursor=pointer]:
+            - heading "Memento" [level=3] [ref=e602]
+            - img [ref=e604]
+          - generic [ref=e608]: "A smooth, holed river stone on a leather cord — a keepsake from his wandering mentor, Master Orsin. No practical use, just sentiment. Once per session: recover an extra condition during a stretch rest."
+        - generic [ref=e609]:
+          - button "Encumbrance p. 32" [expanded] [ref=e610] [cursor=pointer]:
+            - heading "Encumbrance p. 32" [level=3] [ref=e611]:
+              - text: Encumbrance
+              - generic [ref=e612]: p. 32
+            - img [ref=e614]
+          - paragraph [ref=e619]: 9 / 6 (Overloaded!)
+    - navigation "Main navigation" [ref=e22]:
+      - link "Characters" [ref=e23] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e24]
+        - text: Characters
+      - link "Session" [ref=e27] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e28]
+        - text: Session
+      - link "Reference" [ref=e30] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e31]
+        - text: Reference
+    - button "Start a session first" [ref=e33] [cursor=pointer]:
+      - img [ref=e34]
+  - alert

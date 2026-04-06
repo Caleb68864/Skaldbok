@@ -1,0 +1,155 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: SR Test Campaign
+          - generic [ref=e8]: Session 1 — 2026-03-31
+        - img [ref=e10]
+      - button "Menu" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+    - tablist [ref=e15]:
+      - tab "Sheet" [selected] [ref=e16] [cursor=pointer]:
+        - img [ref=e17]
+        - text: Sheet
+      - tab "Skills" [ref=e19] [cursor=pointer]
+      - tab "Gear" [ref=e20] [cursor=pointer]
+      - tab "Magic" [ref=e21] [cursor=pointer]:
+        - img [ref=e22]
+        - text: Magic
+    - main [ref=e24]:
+      - generic [ref=e42]:
+        - generic [ref=e44]:
+          - button "Identity" [expanded] [ref=e45] [cursor=pointer]:
+            - heading "Identity" [level=3] [ref=e46]:
+              - img [ref=e48]
+              - text: Identity
+            - img [ref=e51]
+          - generic [ref=e56]:
+            - button "Test Warrior portrait placeholder" [ref=e58]:
+              - generic [ref=e59]: TW
+            - generic [ref=e60]:
+              - generic [ref=e61]:
+                - generic [ref=e62]: Name
+                - textbox [disabled]: Test Warrior
+              - generic [ref=e63]:
+                - generic [ref=e64]:
+                  - generic [ref=e65]: Kin
+                  - textbox "Kin" [disabled]
+                - generic [ref=e66]:
+                  - generic [ref=e67]: Profession
+                  - textbox "Profession" [disabled]
+                - generic [ref=e68]:
+                  - generic [ref=e69]: Age
+                  - textbox "Age" [disabled]: Adult
+              - generic [ref=e70]:
+                - generic [ref=e71]: Weakness
+                - textbox "Weakness" [disabled]
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - button "Attributes (locked in Play Mode) p. 28-29" [expanded] [ref=e74] [cursor=pointer]:
+              - heading "Attributes (locked in Play Mode) p. 28-29" [level=3] [ref=e75]:
+                - img [ref=e77]
+                - text: Attributes (locked in Play Mode)
+                - generic [ref=e79]: p. 28-29
+              - img [ref=e81]
+            - generic [ref=e86]:
+              - generic [ref=e87]:
+                - generic [ref=e88]: STR
+                - generic [ref=e89]: "10"
+                - switch "Exhausted condition (STR)" [ref=e91] [cursor=pointer]: Exhausted
+              - generic [ref=e92]:
+                - generic [ref=e93]: CON
+                - generic [ref=e94]: "10"
+                - switch "Sickly condition (CON)" [ref=e96] [cursor=pointer]: Sickly
+              - generic [ref=e97]:
+                - generic [ref=e98]: AGL
+                - generic [ref=e99]: "10"
+                - switch "Dazed condition (AGL)" [ref=e101] [cursor=pointer]: Dazed
+              - generic [ref=e102]:
+                - generic [ref=e103]: INT
+                - generic [ref=e104]: "10"
+                - switch "Angry condition (INT)" [ref=e106] [cursor=pointer]: Angry
+              - generic [ref=e107]:
+                - generic [ref=e108]: WIL
+                - generic [ref=e109]: "10"
+                - switch "Scared condition (WIL)" [ref=e111] [cursor=pointer]: Scared
+              - generic [ref=e112]:
+                - generic [ref=e113]: CHA
+                - generic [ref=e114]: "10"
+                - switch "Disheartened condition (CHA)" [ref=e116] [cursor=pointer]: Disheartened
+          - button "+" [ref=e118] [cursor=pointer]
+        - generic [ref=e120]:
+          - button "Resources p. 55" [expanded] [ref=e121] [cursor=pointer]:
+            - heading "Resources p. 55" [level=3] [ref=e122]:
+              - img [ref=e124]
+              - text: Resources
+              - generic [ref=e126]: p. 55
+            - img [ref=e128]
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - generic [ref=e135]: Hit Points
+              - generic [ref=e136]:
+                - button "Decrease Hit Points" [ref=e137] [cursor=pointer]: −
+                - generic [ref=e138]: "10"
+                - button "Increase Hit Points" [disabled] [ref=e139]: +
+                - generic [ref=e140]: /
+                - generic [ref=e141]: "10"
+            - generic [ref=e142]:
+              - generic [ref=e143]: Willpower Points
+              - generic [ref=e144]:
+                - button "Decrease Willpower Points" [ref=e145] [cursor=pointer]: −
+                - generic [ref=e146]: "10"
+                - button "Increase Willpower Points" [disabled] [ref=e147]: +
+                - generic [ref=e148]: /
+                - generic [ref=e149]: "10"
+        - generic [ref=e151]:
+          - button "Derived Values" [expanded] [ref=e152] [cursor=pointer]:
+            - heading "Derived Values" [level=3] [ref=e153]:
+              - img [ref=e155]
+              - text: Derived Values
+            - img [ref=e158]
+          - generic [ref=e163]:
+            - generic [ref=e164]:
+              - generic [ref=e165]: Movement
+              - generic [ref=e167]: "10"
+            - generic [ref=e168]:
+              - generic [ref=e169]: HP Max
+              - generic [ref=e171]: "10"
+            - generic [ref=e172]:
+              - generic [ref=e173]: WP Max
+              - generic [ref=e175]: "10"
+            - generic [ref=e176]:
+              - generic [ref=e177]: STR Damage Bonus
+              - generic [ref=e179]: "+0"
+            - generic [ref=e180]:
+              - generic [ref=e181]: AGL Damage Bonus
+              - generic [ref=e183]: "+0"
+        - generic [ref=e185]:
+          - button "Rest & Recovery p. 55, 57" [expanded] [ref=e186] [cursor=pointer]:
+            - heading "Rest & Recovery p. 55, 57" [level=3] [ref=e187]:
+              - img [ref=e189]
+              - text: Rest & Recovery
+              - generic [ref=e191]: p. 55, 57
+            - img [ref=e193]
+          - generic [ref=e198]:
+            - button "Round Rest" [ref=e199] [cursor=pointer]
+            - button "Stretch Rest" [ref=e200] [cursor=pointer]
+            - button "Shift Rest" [ref=e201] [cursor=pointer]
+    - navigation "Main navigation" [ref=e26]:
+      - link "Characters" [ref=e27] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e29]
+        - text: Characters
+      - link "Session" [ref=e32] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e33]
+        - text: Session
+      - link "Reference" [ref=e35] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e36]
+        - text: Reference
+    - button "Open quick actions" [ref=e38] [cursor=pointer]:
+      - img [ref=e39]
+    - button "🎲" [ref=e203] [cursor=pointer]
+  - alert

@@ -1,0 +1,55 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: No campaign
+        - img [ref=e8]
+      - button "Menu" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+    - tablist [ref=e56]:
+      - tab "Sheet" [ref=e57] [cursor=pointer]:
+        - img [ref=e58]
+        - text: Sheet
+      - tab "Skills" [ref=e60] [cursor=pointer]
+      - tab "Gear" [ref=e61] [cursor=pointer]
+      - tab "Magic" [active] [selected] [ref=e62] [cursor=pointer]:
+        - img [ref=e63]
+        - text: Magic
+    - main [ref=e22]:
+      - generic [ref=e232]:
+        - generic [ref=e233]:
+          - heading "Magic" [level=1] [ref=e234]
+          - generic [ref=e235]: 0/7 Prepared
+        - generic [ref=e236]:
+          - button "Prepared" [ref=e237]
+          - button "Grimoire" [ref=e238]
+        - generic [ref=e239]:
+          - button "Spells p. 63-64" [expanded] [ref=e240] [cursor=pointer]:
+            - heading "Spells p. 63-64" [level=3] [ref=e241]:
+              - text: Spells
+              - generic [ref=e242]: p. 63-64
+            - img [ref=e244]
+          - paragraph [ref=e249]: No prepared spells. Switch to Grimoire to prepare spells.
+        - generic [ref=e250]:
+          - button "Heroic Abilities p. 30-31" [expanded] [ref=e251] [cursor=pointer]:
+            - heading "Heroic Abilities p. 30-31" [level=3] [ref=e252]:
+              - text: Heroic Abilities
+              - generic [ref=e253]: p. 30-31
+            - img [ref=e255]
+          - paragraph [ref=e260]: No heroic abilities yet.
+    - navigation "Main navigation" [ref=e24]:
+      - link "Characters" [ref=e25] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e27]
+        - text: Characters
+      - link "Session" [ref=e30] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e31]
+        - text: Session
+      - link "Reference" [ref=e33] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e34]
+        - text: Reference
+    - button "Start a session first" [ref=e36] [cursor=pointer]:
+      - img [ref=e37]
+  - alert

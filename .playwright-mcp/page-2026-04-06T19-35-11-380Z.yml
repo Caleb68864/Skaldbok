@@ -1,0 +1,89 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Dragonbane
+          - generic [ref=e8]: Session 1 — 2026-04-06
+        - img [ref=e10]
+      - button "Menu" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+    - main [ref=e14]:
+      - generic [ref=e90]:
+        - heading "Dragonbane" [level=2] [ref=e91]
+        - generic [ref=e92]:
+          - generic [ref=e93]:
+            - heading "Session 1 — 2026-04-06" [level=3] [ref=e94]
+            - generic [ref=e95]: 1m
+          - paragraph [ref=e96]: "Started: 4/6/2026, 2:33:34 PM"
+          - generic [ref=e97]:
+            - button "End Session" [ref=e98] [cursor=pointer]
+            - button "Export Session" [ref=e99] [cursor=pointer]
+            - button "Export + Notes (ZIP)" [ref=e100] [cursor=pointer]
+          - generic [ref=e101]:
+            - paragraph [ref=e102]: Quick Log
+            - generic [ref=e103]:
+              - button "Skill Check" [ref=e104] [cursor=pointer]
+              - button "Cast Spell" [ref=e105] [cursor=pointer]
+              - button "Ability" [ref=e106] [cursor=pointer]
+              - button "Condition" [ref=e107] [cursor=pointer]
+              - button "Damage" [ref=e108] [cursor=pointer]
+              - button "Death Roll" [ref=e109] [cursor=pointer]
+              - button "Rest" [ref=e110] [cursor=pointer]
+              - button "Camp" [ref=e111] [cursor=pointer]
+              - button "Travel" [ref=e112] [cursor=pointer]
+              - button "Quote" [ref=e113] [cursor=pointer]
+              - button "Rumor" [ref=e114] [cursor=pointer]
+              - button "Shopping" [ref=e115] [cursor=pointer]
+              - button "Encounter" [ref=e116] [cursor=pointer]
+              - button "Loot" [ref=e117] [cursor=pointer]
+          - button "Resume Combat" [ref=e119] [cursor=pointer]
+        - button "Export All Notes (.zip)" [ref=e120] [cursor=pointer]
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e123]:
+              - heading "Notes" [level=3] [ref=e124]
+              - button "Newest" [ref=e125] [cursor=pointer]
+            - button "+ New Note" [ref=e126] [cursor=pointer]
+          - combobox [ref=e127] [cursor=pointer]:
+            - option "All Sessions"
+            - option "Session 1 — 2026-04-06 (active)" [selected]
+            - option "No session"
+          - textbox "Search notes..." [ref=e128]
+          - generic [ref=e129]:
+            - button "All" [ref=e130] [cursor=pointer]
+            - button "Generic" [ref=e131] [cursor=pointer]
+            - button "NPC" [ref=e132] [cursor=pointer]
+            - button "Location" [ref=e133] [cursor=pointer]
+            - button "Combat" [ref=e134] [cursor=pointer]
+            - button "Loot" [ref=e135] [cursor=pointer]
+            - button "Rumor" [ref=e136] [cursor=pointer]
+            - button "Quote" [ref=e137] [cursor=pointer]
+            - button "Skill Check" [ref=e138] [cursor=pointer]
+            - button "Recap" [ref=e139] [cursor=pointer]
+          - generic [ref=e142] [cursor=pointer]:
+            - generic [ref=e143]:
+              - text: The Riddermound Cleared
+              - generic [ref=e144]: 02:33 PM · combat
+            - button "Note actions" [ref=e145]: ...
+          - generic [ref=e148] [cursor=pointer]:
+            - generic [ref=e149]:
+              - text: New Note
+              - generic [ref=e150]: 02:33 PM
+            - button "Note actions" [ref=e151]: ...
+    - navigation "Main navigation" [ref=e75]:
+      - link "Characters" [ref=e76] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e77]
+        - text: Characters
+      - link "Session" [ref=e80] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e81]
+        - text: Session
+      - link "Reference" [ref=e83] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e84]
+        - text: Reference
+    - button "Open quick actions" [ref=e86] [cursor=pointer]:
+      - img [ref=e87]
+  - alert

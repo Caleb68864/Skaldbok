@@ -1,0 +1,1779 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: SR Test Campaign
+          - generic [ref=e8]: Session 1 — 2026-03-31
+        - img [ref=e10]
+      - button "Menu" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+    - main [ref=e14]:
+      - generic [ref=e394]:
+        - generic [ref=e395]:
+          - button "📖 Game Reference" [ref=e396] [cursor=pointer]
+          - button "📝 My Notes" [ref=e397] [cursor=pointer]
+        - generic [ref=e398]:
+          - textbox "Search reference..." [ref=e399]
+          - generic [ref=e401]:
+            - button "Measuring Time p. 11" [expanded] [ref=e402] [cursor=pointer]:
+              - heading "Measuring Time p. 11" [level=3] [ref=e403]:
+                - text: Measuring Time
+                - generic [ref=e404]: p. 11
+              - img [ref=e406]
+            - table [ref=e412]:
+              - rowgroup [ref=e413]:
+                - row "Unit Of Time Duration Enough Time To" [ref=e414]:
+                  - columnheader "Unit Of Time" [ref=e415]
+                  - columnheader "Duration" [ref=e416]
+                  - columnheader "Enough Time To" [ref=e417]
+              - rowgroup [ref=e418]:
+                - row "Round 10 seconds Perform an action in combat, take a round rest" [ref=e419]:
+                  - cell "Round" [ref=e420]
+                  - cell "10 seconds" [ref=e421]
+                  - cell "Perform an action in combat, take a round rest" [ref=e422]
+                - row "Stretch 15 minutes Explore a room, take a stretch rest" [ref=e423]:
+                  - cell "Stretch" [ref=e424]
+                  - cell "15 minutes" [ref=e425]
+                  - cell "Explore a room, take a stretch rest" [ref=e426]
+                - row "Shift 6 hours Hike 15 km, take a shift rest" [ref=e427]:
+                  - cell "Shift" [ref=e428]
+                  - cell "6 hours" [ref=e429]
+                  - cell "Hike 15 km, take a shift rest" [ref=e430]
+          - generic [ref=e432]:
+            - button "Attributes p. 28-29" [expanded] [ref=e433] [cursor=pointer]:
+              - heading "Attributes p. 28-29" [level=3] [ref=e434]:
+                - text: Attributes
+                - generic [ref=e435]: p. 28-29
+              - img [ref=e437]
+            - table [ref=e443]:
+              - rowgroup [ref=e444]:
+                - row "Attribute Description Condition" [ref=e445]:
+                  - columnheader "Attribute" [ref=e446]
+                  - columnheader "Description" [ref=e447]
+                  - columnheader "Condition" [ref=e448]
+              - rowgroup [ref=e449]:
+                - row "Strength (STR) Raw muscle power. Exhausted" [ref=e450]:
+                  - cell "Strength (STR)" [ref=e451]
+                  - cell "Raw muscle power." [ref=e452]
+                  - cell "Exhausted" [ref=e453]
+                - row "Constitution (CON) Physical fitness and resilience. Sickly" [ref=e454]:
+                  - cell "Constitution (CON)" [ref=e455]
+                  - cell "Physical fitness and resilience." [ref=e456]
+                  - cell "Sickly" [ref=e457]
+                - row "Agility (AGL) Body control, speed, and fine motor skills. Dazed" [ref=e458]:
+                  - cell "Agility (AGL)" [ref=e459]
+                  - cell "Body control, speed, and fine motor skills." [ref=e460]
+                  - cell "Dazed" [ref=e461]
+                - row "Intelligence (INT) Mental acuity, intellect, and reasoning skills. Angry" [ref=e462]:
+                  - cell "Intelligence (INT)" [ref=e463]
+                  - cell "Mental acuity, intellect, and reasoning skills." [ref=e464]
+                  - cell "Angry" [ref=e465]
+                - row "Willpower (WIL) Self-discipline and focus. Scared" [ref=e466]:
+                  - cell "Willpower (WIL)" [ref=e467]
+                  - cell "Self-discipline and focus." [ref=e468]
+                  - cell "Scared" [ref=e469]
+                - row "Charisma (CHA) Force of personality and empathy. Disheartened" [ref=e470]:
+                  - cell "Charisma (CHA)" [ref=e471]
+                  - cell "Force of personality and empathy." [ref=e472]
+                  - cell "Disheartened" [ref=e473]
+          - generic [ref=e475]:
+            - button "Conditions p. 56" [expanded] [ref=e476] [cursor=pointer]:
+              - heading "Conditions p. 56" [level=3] [ref=e477]:
+                - text: Conditions
+                - generic [ref=e478]: p. 56
+              - img [ref=e480]
+            - generic [ref=e485]:
+              - table [ref=e486]:
+                - rowgroup [ref=e487]:
+                  - row "Condition Attribute" [ref=e488]:
+                    - columnheader "Condition" [ref=e489]
+                    - columnheader "Attribute" [ref=e490]
+                - rowgroup [ref=e491]:
+                  - row "Exhausted STR" [ref=e492]:
+                    - cell "Exhausted" [ref=e493]
+                    - cell "STR" [ref=e494]
+                  - row "Sickly CON" [ref=e495]:
+                    - cell "Sickly" [ref=e496]
+                    - cell "CON" [ref=e497]
+                  - row "Dazed AGL" [ref=e498]:
+                    - cell "Dazed" [ref=e499]
+                    - cell "AGL" [ref=e500]
+                  - row "Angry INT" [ref=e501]:
+                    - cell "Angry" [ref=e502]
+                    - cell "INT" [ref=e503]
+                  - row "Scared WIL" [ref=e504]:
+                    - cell "Scared" [ref=e505]
+                    - cell "WIL" [ref=e506]
+                  - row "Disheartened CHA" [ref=e507]:
+                    - cell "Disheartened" [ref=e508]
+                    - cell "CHA" [ref=e509]
+              - paragraph [ref=e510]: "* Bane on all rolls against that attribute and skill rolls based on it."
+          - generic [ref=e512]:
+            - button "Skill Base Chance p. 28-29" [expanded] [ref=e513] [cursor=pointer]:
+              - heading "Skill Base Chance p. 28-29" [level=3] [ref=e514]:
+                - text: Skill Base Chance
+                - generic [ref=e515]: p. 28-29
+              - img [ref=e517]
+            - table [ref=e523]:
+              - rowgroup [ref=e524]:
+                - row "Attribute Range Base Chance" [ref=e525]:
+                  - columnheader "Attribute Range" [ref=e526]
+                  - columnheader "Base Chance" [ref=e527]
+              - rowgroup [ref=e528]:
+                - row "1-5 3" [ref=e529]:
+                  - cell "1-5" [ref=e530]
+                  - cell "3" [ref=e531]
+                - row "6-8 4" [ref=e532]:
+                  - cell "6-8" [ref=e533]
+                  - cell "4" [ref=e534]
+                - row "9-12 5" [ref=e535]:
+                  - cell "9-12" [ref=e536]
+                  - cell "5" [ref=e537]
+                - row "13-15 6" [ref=e538]:
+                  - cell "13-15" [ref=e539]
+                  - cell "6" [ref=e540]
+                - row "16-18 7" [ref=e541]:
+                  - cell "16-18" [ref=e542]
+                  - cell "7" [ref=e543]
+          - generic [ref=e545]:
+            - button "Boons, Banes & Pushing p. 32" [expanded] [ref=e546] [cursor=pointer]:
+              - heading "Boons, Banes & Pushing p. 32" [level=3] [ref=e547]:
+                - text: Boons, Banes & Pushing
+                - generic [ref=e548]: p. 32
+              - img [ref=e550]
+            - generic [ref=e555]:
+              - paragraph [ref=e556]: "Boon: Roll 2d20, keep the lower (better) result. Bane: Roll 2d20, keep the higher (worse) result. Multiple boons/banes cancel 1:1."
+              - paragraph [ref=e557]: "Pushing: After a failed skill/attribute roll, reroll (with boon/bane = reroll both dice). New result applies. You always suffer a condition of your choice (can't pick one you already have). Cannot push a Demon (20). All 6 conditions = no more pushing. Only PCs can push."
+              - paragraph [ref=e558]: "Damage Bonus: STR 13-16 (or AGL for ranged/subtle weapons) = +D4. STR 17+ = +D6."
+          - generic [ref=e560]:
+            - button "Skills p. 33-35" [expanded] [ref=e561] [cursor=pointer]:
+              - heading "Skills p. 33-35" [level=3] [ref=e562]:
+                - text: Skills
+                - generic [ref=e563]: p. 33-35
+              - img [ref=e565]
+            - table [ref=e571]:
+              - rowgroup [ref=e572]:
+                - row "Skill Attribute Description" [ref=e573]:
+                  - columnheader "Skill" [ref=e574]
+                  - columnheader "Attribute" [ref=e575]
+                  - columnheader "Description" [ref=e576]
+              - rowgroup [ref=e577]:
+                - row "ACROBATICS AGL Jumping, climbing, balancing or performing other similar physical actions." [ref=e578]:
+                  - cell "ACROBATICS" [ref=e579]
+                  - cell "AGL" [ref=e580]
+                  - cell "Jumping, climbing, balancing or performing other similar physical actions." [ref=e581]
+                - row "AWARENESS INT Watch or listen for anyone sneaking around, notice emerging threats in time." [ref=e582]:
+                  - cell "AWARENESS" [ref=e583]
+                  - cell "INT" [ref=e584]
+                  - cell "Watch or listen for anyone sneaking around, notice emerging threats in time." [ref=e585]
+                - row "BARTERING CHA Haggling over the price when buying or selling." [ref=e586]:
+                  - cell "BARTERING" [ref=e587]
+                  - cell "CHA" [ref=e588]
+                  - cell "Haggling over the price when buying or selling." [ref=e589]
+                - row "BEAST LORE INT Identifying an animal or monster, to know its habits, abilities, and weaknesses." [ref=e590]:
+                  - cell "BEAST LORE" [ref=e591]
+                  - cell "INT" [ref=e592]
+                  - cell "Identifying an animal or monster, to know its habits, abilities, and weaknesses." [ref=e593]
+                - row "BLUFFING CHA Quickly come up with a convincing lie." [ref=e594]:
+                  - cell "BLUFFING" [ref=e595]
+                  - cell "CHA" [ref=e596]
+                  - cell "Quickly come up with a convincing lie." [ref=e597]
+                - row "BUSHCRAFT INT Lead the way through the wilderness, make camp, cook food, or stay warm in cold weather." [ref=e598]:
+                  - cell "BUSHCRAFT" [ref=e599]
+                  - cell "INT" [ref=e600]
+                  - cell "Lead the way through the wilderness, make camp, cook food, or stay warm in cold weather." [ref=e601]
+                - row "CRAFTING STR Repair gear and weapons, craft useful items." [ref=e602]:
+                  - cell "CRAFTING" [ref=e603]
+                  - cell "STR" [ref=e604]
+                  - cell "Repair gear and weapons, craft useful items." [ref=e605]
+                - row "EVADE AGL Dodge an attack or flee from combat." [ref=e606]:
+                  - cell "EVADE" [ref=e607]
+                  - cell "AGL" [ref=e608]
+                  - cell "Dodge an attack or flee from combat." [ref=e609]
+                - row "HEALING INT Get fallen companions back on their feet or even save their lives." [ref=e610]:
+                  - cell "HEALING" [ref=e611]
+                  - cell "INT" [ref=e612]
+                  - cell "Get fallen companions back on their feet or even save their lives." [ref=e613]
+                - row "HUNTING & FISHING AGL Finding and obtaining food in wilderness." [ref=e614]:
+                  - cell "HUNTING & FISHING" [ref=e615]
+                  - cell "AGL" [ref=e616]
+                  - cell "Finding and obtaining food in wilderness." [ref=e617]
+                - row "LANGUAGES INT Understanding foreign or ancient languages." [ref=e618]:
+                  - cell "LANGUAGES" [ref=e619]
+                  - cell "INT" [ref=e620]
+                  - cell "Understanding foreign or ancient languages." [ref=e621]
+                - row "MYTHS & LEGENDS INT Trying to remember stories of old times or distant lands, understand links to the past." [ref=e622]:
+                  - cell "MYTHS & LEGENDS" [ref=e623]
+                  - cell "INT" [ref=e624]
+                  - cell "Trying to remember stories of old times or distant lands, understand links to the past." [ref=e625]
+                - row "PERFORMANCE CHA Singing a song, reading a poem, making jokes or in some other way try to amuse a crowd." [ref=e626]:
+                  - cell "PERFORMANCE" [ref=e627]
+                  - cell "CHA" [ref=e628]
+                  - cell "Singing a song, reading a poem, making jokes or in some other way try to amuse a crowd." [ref=e629]
+                - row "PERSUASION CHA Charm, threats or sensible reasoning, make another person see things your way." [ref=e630]:
+                  - cell "PERSUASION" [ref=e631]
+                  - cell "CHA" [ref=e632]
+                  - cell "Charm, threats or sensible reasoning, make another person see things your way." [ref=e633]
+                - row "RIDING AGL Advanced maneuvers while mounted." [ref=e634]:
+                  - cell "RIDING" [ref=e635]
+                  - cell "AGL" [ref=e636]
+                  - cell "Advanced maneuvers while mounted." [ref=e637]
+                - row "SEAMANSHIP INT Steer a vessel over water, navigation." [ref=e638]:
+                  - cell "SEAMANSHIP" [ref=e639]
+                  - cell "INT" [ref=e640]
+                  - cell "Steer a vessel over water, navigation." [ref=e641]
+                - row "SLEIGHT OF HAND AGL Steal something unnoticed, pick a lock, or perform any other action that requires fine motor skill." [ref=e642]:
+                  - cell "SLEIGHT OF HAND" [ref=e643]
+                  - cell "AGL" [ref=e644]
+                  - cell "Steal something unnoticed, pick a lock, or perform any other action that requires fine motor skill." [ref=e645]
+                - row "SNEAKING AGL Sneak past the enemy undetected." [ref=e646]:
+                  - cell "SNEAKING" [ref=e647]
+                  - cell "AGL" [ref=e648]
+                  - cell "Sneak past the enemy undetected." [ref=e649]
+                - row "SPOT HIDDEN INT Looking for something hidden or concealed." [ref=e650]:
+                  - cell "SPOT HIDDEN" [ref=e651]
+                  - cell "INT" [ref=e652]
+                  - cell "Looking for something hidden or concealed." [ref=e653]
+                - row "SWIMMING AGL Swim in difficult situations." [ref=e654]:
+                  - cell "SWIMMING" [ref=e655]
+                  - cell "AGL" [ref=e656]
+                  - cell "Swim in difficult situations." [ref=e657]
+                - row "Axes STR Axes of all kinds, including when thrown." [ref=e658]:
+                  - cell "Axes" [ref=e659]
+                  - cell "STR" [ref=e660]
+                  - cell "Axes of all kinds, including when thrown." [ref=e661]
+                - row "Bows AGL All types of bows." [ref=e662]:
+                  - cell "Bows" [ref=e663]
+                  - cell "AGL" [ref=e664]
+                  - cell "All types of bows." [ref=e665]
+                - row "Brawling STR Unarmed combat with fists, feet, teeth or claws." [ref=e666]:
+                  - cell "Brawling" [ref=e667]
+                  - cell "STR" [ref=e668]
+                  - cell "Unarmed combat with fists, feet, teeth or claws." [ref=e669]
+                - row "Crossbows AGL Attack with crossbows of all kinds." [ref=e670]:
+                  - cell "Crossbows" [ref=e671]
+                  - cell "AGL" [ref=e672]
+                  - cell "Attack with crossbows of all kinds." [ref=e673]
+                - row "Hammers STR Warhammers and other blunt weapons such as clubs and maces." [ref=e674]:
+                  - cell "Hammers" [ref=e675]
+                  - cell "STR" [ref=e676]
+                  - cell "Warhammers and other blunt weapons such as clubs and maces." [ref=e677]
+                - row "Knives AGL Combat with knives and daggers, including when thrown." [ref=e678]:
+                  - cell "Knives" [ref=e679]
+                  - cell "AGL" [ref=e680]
+                  - cell "Combat with knives and daggers, including when thrown." [ref=e681]
+                - row "Slings AGL Attacking with slings." [ref=e682]:
+                  - cell "Slings" [ref=e683]
+                  - cell "AGL" [ref=e684]
+                  - cell "Attacking with slings." [ref=e685]
+                - row "Spears STR Combat with spears, tridents, and lances, including when thrown." [ref=e686]:
+                  - cell "Spears" [ref=e687]
+                  - cell "STR" [ref=e688]
+                  - cell "Combat with spears, tridents, and lances, including when thrown." [ref=e689]
+                - row "Staves AGL Fighting with a staff." [ref=e690]:
+                  - cell "Staves" [ref=e691]
+                  - cell "AGL" [ref=e692]
+                  - cell "Fighting with a staff." [ref=e693]
+                - row "Swords STR Combat with all types of swords." [ref=e694]:
+                  - cell "Swords" [ref=e695]
+                  - cell "STR" [ref=e696]
+                  - cell "Combat with all types of swords." [ref=e697]
+          - generic [ref=e699]:
+            - button "Healing & Rest p. 55, 57" [expanded] [ref=e700] [cursor=pointer]:
+              - heading "Healing & Rest p. 55, 57" [level=3] [ref=e701]:
+                - text: Healing & Rest
+                - generic [ref=e702]: p. 55, 57
+              - img [ref=e704]
+            - table [ref=e710]:
+              - rowgroup [ref=e711]:
+                - row "Rest Type Effect" [ref=e712]:
+                  - columnheader "Rest Type" [ref=e713]
+                  - columnheader "Effect" [ref=e714]
+              - rowgroup [ref=e715]:
+                - row "Round Rest Recover D6 WP. Once per shift." [ref=e716]:
+                  - cell "Round Rest" [ref=e717]
+                  - cell "Recover D6 WP. Once per shift." [ref=e718]
+                - row "Stretch Rest Heal D6 HP (2D6 if HEALING roll succeeds). Recover D6 WP. Heal one condition." [ref=e719]:
+                  - cell "Stretch Rest" [ref=e720]
+                  - cell "Heal D6 HP (2D6 if HEALING roll succeeds). Recover D6 WP. Heal one condition." [ref=e721]
+                - row "Shift Rest Recover all HP and WP, heal all conditions." [ref=e722]:
+                  - cell "Shift Rest" [ref=e723]
+                  - cell "Recover all HP and WP, heal all conditions." [ref=e724]
+          - generic [ref=e726]:
+            - button "Death & Dying p. 55" [expanded] [ref=e727] [cursor=pointer]:
+              - heading "Death & Dying p. 55" [level=3] [ref=e728]:
+                - text: Death & Dying
+                - generic [ref=e729]: p. 55
+              - img [ref=e731]
+            - generic [ref=e736]:
+              - paragraph [ref=e737]: "At 0 HP: Make a CON death roll each round. 3 successes = recover with D6 HP. 3 failures = death."
+              - paragraph [ref=e738]: Dragon on death roll = 2 successes. Demon on death roll = 2 failures.
+              - paragraph [ref=e739]: Taking damage at 0 HP = automatic failed death roll.
+              - paragraph [ref=e740]: "Instant death: A single attack reduces HP to negative of max HP."
+              - paragraph [ref=e741]: "After recovery: Roll CON. Failure = permanent injury (D10 table)."
+          - generic [ref=e743]:
+            - button "Encumbrance p. 28" [expanded] [ref=e744] [cursor=pointer]:
+              - heading "Encumbrance p. 28" [level=3] [ref=e745]:
+                - text: Encumbrance
+                - generic [ref=e746]: p. 28
+              - img [ref=e748]
+            - generic [ref=e753]:
+              - paragraph [ref=e754]: Carry up to STR / 2 (rounded up) items in inventory.
+              - paragraph [ref=e755]: Weapons at hand (up to 3) and worn armor/helmet don't count against slots.
+              - paragraph [ref=e756]: 4 rations = 1 slot. Under 100 coins = free, 100-199 = 1 slot.
+              - paragraph [ref=e757]: "Over-encumbered: STR roll to move each round/shift. Fail = drop items or stay put."
+          - generic [ref=e759]:
+            - button "Combat Round Structure p. 41" [expanded] [ref=e760] [cursor=pointer]:
+              - heading "Combat Round Structure p. 41" [level=3] [ref=e761]:
+                - text: Combat Round Structure
+                - generic [ref=e762]: p. 41
+              - img [ref=e764]
+            - generic [ref=e769]:
+              - paragraph [ref=e770]: 1. Draw initiative cards (1-10) — one per character. Lowest acts first.
+              - paragraph [ref=e771]: "2. Each turn: one free movement (10m) + one action."
+              - paragraph [ref=e772]: 3. After acting or reacting, flip card face-down — no further reactions allowed.
+              - paragraph [ref=e773]: "4. Wait: Swap initiative card with a later creature (they can't refuse). Monsters never wait."
+              - paragraph [ref=e774]: 5. Cards are redrawn every round.
+          - generic [ref=e776]:
+            - button "Actions p. 42" [expanded] [ref=e777] [cursor=pointer]:
+              - heading "Actions p. 42" [level=3] [ref=e778]:
+                - text: Actions
+                - generic [ref=e779]: p. 42
+              - img [ref=e781]
+            - generic [ref=e786]:
+              - generic [ref=e787]:
+                - generic [ref=e788]: Dash
+                - generic [ref=e789]: Doubles your movement rate in the round.
+              - generic [ref=e790]:
+                - generic [ref=e791]: Melee Attack
+                - generic [ref=e792]: Against enemy within 2m (4m for long weapons).
+              - generic [ref=e793]:
+                - generic [ref=e794]: Ranged Attack
+                - generic [ref=e795]: Against targets within the weapon's range.
+              - generic [ref=e796]:
+                - generic [ref=e797]: Parry
+                - generic [ref=e798]: Parry melee/ranged (ranged requires shield). Reaction, replaces your action.
+              - generic [ref=e799]:
+                - generic [ref=e800]: Dodge
+                - generic [ref=e801]: Dodge melee or ranged attacks. Also a reaction.
+              - generic [ref=e802]:
+                - generic [ref=e803]: Pick Up Item
+                - generic [ref=e804]: Pick up item within 2m, or from your inventory.
+              - generic [ref=e805]:
+                - generic [ref=e806]: Equip Armor
+                - generic [ref=e807]: Put on or remove armor/helmet.
+              - generic [ref=e808]:
+                - generic [ref=e809]: First Aid
+                - generic [ref=e810]: HEALING skill to save someone at 0 HP.
+              - generic [ref=e811]:
+                - generic [ref=e812]: Rally
+                - generic [ref=e813]: PERSUADE another PC at 0 HP to keep fighting.
+              - generic [ref=e814]:
+                - generic [ref=e815]: Break Down Door
+                - generic [ref=e816]: Doors take a certain amount of damage before breaking.
+              - generic [ref=e817]:
+                - generic [ref=e818]: Pick Lock
+                - generic [ref=e819]: SLEIGHT OF HAND roll. Bane without lockpicks.
+              - generic [ref=e820]:
+                - generic [ref=e821]: Use Item
+                - generic [ref=e822]: Use a potion or item within 2m.
+              - generic [ref=e823]:
+                - generic [ref=e824]: Activate Ability
+                - generic [ref=e825]: Use an innate or heroic ability.
+              - generic [ref=e826]:
+                - generic [ref=e827]: Cast Spell
+                - generic [ref=e828]: Most spells are actions (incl. magic tricks). Some are reactions.
+              - generic [ref=e829]:
+                - generic [ref=e830]: Helping
+                - generic [ref=e831]: Give another character a boon on a roll this round.
+              - generic [ref=e832]:
+                - generic [ref=e833]: Round Rest
+                - generic [ref=e834]: Recover D6 WP. Once per shift only.
+          - generic [ref=e836]:
+            - button "Free Actions p. 42" [expanded] [ref=e837] [cursor=pointer]:
+              - heading "Free Actions p. 42" [level=3] [ref=e838]:
+                - text: Free Actions
+                - generic [ref=e839]: p. 42
+              - img [ref=e841]
+            - generic [ref=e846]:
+              - generic [ref=e847]:
+                - generic [ref=e848]: Draw Weapon
+                - generic [ref=e849]: Draw, exchange, or put away a weapon kept at hand.
+              - generic [ref=e850]:
+                - generic [ref=e851]: Change Position
+                - generic [ref=e852]: Throw yourself to the ground or get up.
+              - generic [ref=e853]:
+                - generic [ref=e854]: Drop Item
+                - generic [ref=e855]: Drop an item on the ground.
+              - generic [ref=e856]:
+                - generic [ref=e857]: Shout
+                - generic [ref=e858]: Say or shout a few words.
+          - generic [ref=e860]:
+            - button "Movement p. 43" [expanded] [ref=e861] [cursor=pointer]:
+              - heading "Movement p. 43" [level=3] [ref=e862]:
+                - text: Movement
+                - generic [ref=e863]: p. 43
+              - img [ref=e865]
+            - generic [ref=e870]:
+              - generic [ref=e871]:
+                - generic [ref=e872]: Base
+                - generic [ref=e873]: Move up to your Movement rate in meters per turn (free).
+              - generic [ref=e874]:
+                - generic [ref=e875]: Dash
+                - generic [ref=e876]: Use your action to double movement this round.
+              - generic [ref=e877]:
+                - generic [ref=e878]: Leaping
+                - generic [ref=e879]: Horizontal leap up to half movement with ACROBATICS. Quarter or less = no roll needed.
+              - generic [ref=e880]:
+                - generic [ref=e881]: Door
+                - generic [ref=e882]: Passing through a closed unlocked door costs half movement.
+              - generic [ref=e883]:
+                - generic [ref=e884]: Enemies
+                - generic [ref=e885]: Can't move past a standing enemy (~2x2m block). Must topple or reduce to 0 HP first. Friendlies pass freely.
+              - generic [ref=e886]:
+                - generic [ref=e887]: Reaction
+                - generic [ref=e888]: Performing a reaction (parry/dodge) also loses your movement for the round.
+          - generic [ref=e890]:
+            - button "Combat Details p. 44-50" [expanded] [ref=e891] [cursor=pointer]:
+              - heading "Combat Details p. 44-50" [level=3] [ref=e892]:
+                - text: Combat Details
+                - generic [ref=e893]: p. 44-50
+              - img [ref=e895]
+            - generic [ref=e900]:
+              - generic [ref=e901]:
+                - generic [ref=e902]: Critical Hit (Dragon)
+                - generic [ref=e903]: "Choose: double damage dice, OR free second attack, OR armor no effect (piercing only)."
+              - generic [ref=e904]:
+                - generic [ref=e905]: Prone Targets
+                - generic [ref=e906]: Boon on attack + extra D6 damage.
+              - generic [ref=e907]:
+                - generic [ref=e908]: Shove
+                - generic [ref=e909]: On melee hit, if STR dmg bonus ≥ opponent's, shove 2m. Monsters can't be shoved.
+              - generic [ref=e910]:
+                - generic [ref=e911]: "Parry: Dragon"
+                - generic [ref=e912]: Counterattack — auto hit, can't dodge/parry. Not if attacker also Dragon.
+              - generic [ref=e913]:
+                - generic [ref=e914]: "Dodge: Movement"
+                - generic [ref=e915]: On success, move 2m any direction (no free attacks).
+              - generic [ref=e916]:
+                - generic [ref=e917]: STR Requirement
+                - generic [ref=e918]: Below req = bane on attacks/parries. Below half = can't use.
+              - generic [ref=e919]:
+                - generic [ref=e920]: Obscured Targets
+                - generic [ref=e921]: Partial = bane on ranged. Full = can't shoot.
+          - generic [ref=e923]:
+            - button "Terrain p. 44" [expanded] [ref=e924] [cursor=pointer]:
+              - heading "Terrain p. 44" [level=3] [ref=e925]:
+                - text: Terrain
+                - generic [ref=e926]: p. 44
+              - img [ref=e928]
+            - table [ref=e934]:
+              - rowgroup [ref=e935]:
+                - row "Type Effect" [ref=e936]:
+                  - columnheader "Type" [ref=e937]
+                  - columnheader "Effect" [ref=e938]
+              - rowgroup [ref=e939]:
+                - row "Cramped All melee except piercing & subtle weapons get a bane." [ref=e940]:
+                  - cell "Cramped" [ref=e941]
+                  - cell "All melee except piercing & subtle weapons get a bane." [ref=e942]
+                - row "Rough ACROBATICS when moving (not action). Fail = fall, lose remaining movement." [ref=e943]:
+                  - cell "Rough" [ref=e944]
+                  - cell "ACROBATICS when moving (not action). Fail = fall, lose remaining movement." [ref=e945]
+                - row "Dimly Lit Bane on all ranged attacks." [ref=e946]:
+                  - cell "Dimly Lit" [ref=e947]
+                  - cell "Bane on all ranged attacks." [ref=e948]
+          - generic [ref=e950]:
+            - button "Sneak Attacks & Ambush p. 43, 48" [expanded] [ref=e951] [cursor=pointer]:
+              - heading "Sneak Attacks & Ambush p. 43, 48" [level=3] [ref=e952]:
+                - text: Sneak Attacks & Ambush
+                - generic [ref=e953]: p. 43, 48
+              - img [ref=e955]
+            - generic [ref=e960]:
+              - paragraph [ref=e961]: "Sneak Attack: SNEAKING roll (melee within 2m = bane). Success = choose any initiative card, boon on attack, target can't dodge/parry. Subtle weapons get +1 damage die. One attacker vs one target."
+              - paragraph [ref=e962]: "Ambush: Victims roll AWARENESS (bane if ambushers prepared). Fail = bottom initiative cards (#10+)."
+          - generic [ref=e964]:
+            - button "Mounted Combat p. 50" [expanded] [ref=e965] [cursor=pointer]:
+              - heading "Mounted Combat p. 50" [level=3] [ref=e966]:
+                - text: Mounted Combat
+                - generic [ref=e967]: p. 50
+              - img [ref=e969]
+            - generic [ref=e974]:
+              - paragraph [ref=e975]: Mount must be combat trained. Move at mount's rate.
+              - paragraph [ref=e976]: Use the lowest of RIDING and weapon skill for attack rolls.
+              - paragraph [ref=e977]: RIDING replaces EVADE for dodging while mounted. No saddle = bane.
+              - paragraph [ref=e978]: Ground melee vs mounted = bane for the ground fighter.
+              - paragraph [ref=e979]: Mount at 0 HP = dead (mounts do not make death rolls).
+          - generic [ref=e981]:
+            - button "Melee Demon (Fumble) p. 46" [expanded] [ref=e982] [cursor=pointer]:
+              - heading "Melee Demon (Fumble) p. 46" [level=3] [ref=e983]:
+                - text: Melee Demon (Fumble)
+                - generic [ref=e984]: p. 46
+              - img [ref=e986]
+            - table [ref=e992]:
+              - rowgroup [ref=e993]:
+                - row "D6 Effect" [ref=e994]:
+                  - columnheader "D6" [ref=e995]
+                  - columnheader "Effect" [ref=e996]
+              - rowgroup [ref=e997]:
+                - row "1 Drop weapon. Picking up = action." [ref=e998]:
+                  - cell "1" [ref=e999]
+                  - cell "Drop weapon. Picking up = action." [ref=e1000]
+                - row "2 Expose yourself. Enemy gets a free attack (can't dodge/parry)." [ref=e1001]:
+                  - cell "2" [ref=e1002]
+                  - cell "Expose yourself. Enemy gets a free attack (can't dodge/parry)." [ref=e1003]
+                - row "3 Weapon stuck. STR roll to free (action)." [ref=e1004]:
+                  - cell "3" [ref=e1005]
+                  - cell "Weapon stuck. STR roll to free (action)." [ref=e1006]
+                - row "4 Toss weapon D3+3 meters. Move + action to retrieve." [ref=e1007]:
+                  - cell "4" [ref=e1008]
+                  - cell "Toss weapon D3+3 meters. Move + action to retrieve." [ref=e1009]
+                - row "5 Weapon damaged. Bane on attacks until repaired." [ref=e1010]:
+                  - cell "5" [ref=e1011]
+                  - cell "Weapon damaged. Bane on attacks until repaired." [ref=e1012]
+                - row "6 Hit yourself. Roll damage (no bonus)." [ref=e1013]:
+                  - cell "6" [ref=e1014]
+                  - cell "Hit yourself. Roll damage (no bonus)." [ref=e1015]
+          - generic [ref=e1017]:
+            - button "Ranged Demon (Fumble) p. 48" [expanded] [ref=e1018] [cursor=pointer]:
+              - heading "Ranged Demon (Fumble) p. 48" [level=3] [ref=e1019]:
+                - text: Ranged Demon (Fumble)
+                - generic [ref=e1020]: p. 48
+              - img [ref=e1022]
+            - table [ref=e1028]:
+              - rowgroup [ref=e1029]:
+                - row "D6 Effect" [ref=e1030]:
+                  - columnheader "D6" [ref=e1031]
+                  - columnheader "Effect" [ref=e1032]
+              - rowgroup [ref=e1033]:
+                - row "1 Drop weapon. Picking up = action." [ref=e1034]:
+                  - cell "1" [ref=e1035]
+                  - cell "Drop weapon. Picking up = action." [ref=e1036]
+                - row "2 Out of ammo. Re-roll for slings/thrown." [ref=e1037]:
+                  - cell "2" [ref=e1038]
+                  - cell "Out of ammo. Re-roll for slings/thrown." [ref=e1039]
+                - row "3 Hit valuable/important item. GM decides." [ref=e1040]:
+                  - cell "3" [ref=e1041]
+                  - cell "Hit valuable/important item. GM decides." [ref=e1042]
+                - row "4 Weapon damaged. Bane on attacks until repaired." [ref=e1043]:
+                  - cell "4" [ref=e1044]
+                  - cell "Weapon damaged. Bane on attacks until repaired." [ref=e1045]
+                - row "5 Hit random friendly PC/NPC. Roll damage with bonus." [ref=e1046]:
+                  - cell "5" [ref=e1047]
+                  - cell "Hit random friendly PC/NPC. Roll damage with bonus." [ref=e1048]
+                - row "6 Hit yourself. Roll damage (no bonus)." [ref=e1049]:
+                  - cell "6" [ref=e1050]
+                  - cell "Hit yourself. Roll damage (no bonus)." [ref=e1051]
+          - generic [ref=e1053]:
+            - button "Severe Injuries p. 56" [expanded] [ref=e1054] [cursor=pointer]:
+              - heading "Severe Injuries p. 56" [level=3] [ref=e1055]:
+                - text: Severe Injuries
+                - generic [ref=e1056]: p. 56
+              - img [ref=e1058]
+            - table [ref=e1064]:
+              - rowgroup [ref=e1065]:
+                - row "D20 Injury Effect" [ref=e1066]:
+                  - columnheader "D20" [ref=e1067]
+                  - columnheader "Injury" [ref=e1068]
+                  - columnheader "Effect" [ref=e1069]
+              - rowgroup [ref=e1070]:
+                - 'row "1-2 Broken nose Bane on AWARENESS. Heals: D6 days." [ref=e1071]':
+                  - cell "1-2" [ref=e1072]
+                  - cell "Broken nose" [ref=e1073]
+                  - 'cell "Bane on AWARENESS. Heals: D6 days." [ref=e1074]'
+                - 'row "3-4 Scarred face Bane on PERFORMANCE & PERSUASION. Heals: 2D6 days." [ref=e1075]':
+                  - cell "3-4" [ref=e1076]
+                  - cell "Scarred face" [ref=e1077]
+                  - 'cell "Bane on PERFORMANCE & PERSUASION. Heals: 2D6 days." [ref=e1078]'
+                - row "5-6 Teeth knocked out PERFORMANCE & PERSUASION permanently -2 (min 3)." [ref=e1079]:
+                  - cell "5-6" [ref=e1080]
+                  - cell "Teeth knocked out" [ref=e1081]
+                  - cell "PERFORMANCE & PERSUASION permanently -2 (min 3)." [ref=e1082]
+                - 'row "7-8 Broken ribs Bane on all STR & AGL skills. Heals: D6 days." [ref=e1083]':
+                  - cell "7-8" [ref=e1084]
+                  - cell "Broken ribs" [ref=e1085]
+                  - 'cell "Bane on all STR & AGL skills. Heals: D6 days." [ref=e1086]'
+                - 'row "9-10 Concussion Bane on all INT skills. Heals: D6 days." [ref=e1087]':
+                  - cell "9-10" [ref=e1088]
+                  - cell "Concussion" [ref=e1089]
+                  - 'cell "Bane on all INT skills. Heals: D6 days." [ref=e1090]'
+                - 'row "11-12 Deep wounds Bane on STR & AGL skills + D6 dmg per roll. Heals: 2D6 days." [ref=e1091]':
+                  - cell "11-12" [ref=e1092]
+                  - cell "Deep wounds" [ref=e1093]
+                  - 'cell "Bane on STR & AGL skills + D6 dmg per roll. Heals: 2D6 days." [ref=e1094]'
+                - 'row "13 Broken leg Movement halved. Heals: 3D6 days." [ref=e1095]':
+                  - cell "13" [ref=e1096]
+                  - cell "Broken leg" [ref=e1097]
+                  - 'cell "Movement halved. Heals: 3D6 days." [ref=e1098]'
+                - 'row "14 Broken arm No two-handed/dual wield, bane on two-arm tasks. Heals: 3D6 days." [ref=e1099]':
+                  - cell "14" [ref=e1100]
+                  - cell "Broken arm" [ref=e1101]
+                  - 'cell "No two-handed/dual wield, bane on two-arm tasks. Heals: 3D6 days." [ref=e1102]'
+                - row "15 Severed toe Movement permanently -2 (min 4)." [ref=e1103]:
+                  - cell "15" [ref=e1104]
+                  - cell "Severed toe" [ref=e1105]
+                  - cell "Movement permanently -2 (min 4)." [ref=e1106]
+                - row "16 Severed finger All weapon skill levels permanently -1 (min 3)." [ref=e1107]:
+                  - cell "16" [ref=e1108]
+                  - cell "Severed finger" [ref=e1109]
+                  - cell "All weapon skill levels permanently -1 (min 3)." [ref=e1110]
+                - row "17 Gouged eye SPOT HIDDEN permanently -2 (min 3)." [ref=e1111]:
+                  - cell "17" [ref=e1112]
+                  - cell "Gouged eye" [ref=e1113]
+                  - cell "SPOT HIDDEN permanently -2 (min 3)." [ref=e1114]
+                - 'row "18 Nightmares Fear roll each shift slept. Fail = doesn''t count. Heals: 2D6 days." [ref=e1115]':
+                  - cell "18" [ref=e1116]
+                  - cell "Nightmares" [ref=e1117]
+                  - 'cell "Fear roll each shift slept. Fail = doesn''t count. Heals: 2D6 days." [ref=e1118]'
+                - row "19 Changed personality Randomly generate a new weakness." [ref=e1119]:
+                  - cell "19" [ref=e1120]
+                  - cell "Changed personality" [ref=e1121]
+                  - cell "Randomly generate a new weakness." [ref=e1122]
+                - 'row "20 Amnesia Can''t remember identity. Must roleplay. Heals: D6 days." [ref=e1123]':
+                  - cell "20" [ref=e1124]
+                  - cell "Amnesia" [ref=e1125]
+                  - 'cell "Can''t remember identity. Must roleplay. Heals: D6 days." [ref=e1126]'
+          - generic [ref=e1128]:
+            - button "Fear (Failed WIL Roll) p. 58-59" [expanded] [ref=e1129] [cursor=pointer]:
+              - heading "Fear (Failed WIL Roll) p. 58-59" [level=3] [ref=e1130]:
+                - text: Fear (Failed WIL Roll)
+                - generic [ref=e1131]: p. 58-59
+              - img [ref=e1133]
+            - table [ref=e1139]:
+              - rowgroup [ref=e1140]:
+                - row "D8 Effect" [ref=e1141]:
+                  - columnheader "D8" [ref=e1142]
+                  - columnheader "Effect" [ref=e1143]
+              - rowgroup [ref=e1144]:
+                - row "1 Enfeebled. Lose 2D6 WP (min 0), become Disheartened." [ref=e1145]:
+                  - cell "1" [ref=e1146]
+                  - cell "Enfeebled. Lose 2D6 WP (min 0), become Disheartened." [ref=e1147]
+                - row "2 Shaken. Suffer the Scared condition." [ref=e1148]:
+                  - cell "2" [ref=e1149]
+                  - cell "Shaken. Suffer the Scared condition." [ref=e1150]
+                - row "3 Panting. Become Exhausted." [ref=e1151]:
+                  - cell "3" [ref=e1152]
+                  - cell "Panting. Become Exhausted." [ref=e1153]
+                - row "4 Pale. You and all PCs within 10m in sight become Scared." [ref=e1154]:
+                  - cell "4" [ref=e1155]
+                  - cell "Pale. You and all PCs within 10m in sight become Scared." [ref=e1156]
+                - row "5 Scream. All PCs who hear must also resist fear (one WIL roll per fear source)." [ref=e1157]:
+                  - cell "5" [ref=e1158]
+                  - cell "Scream. All PCs who hear must also resist fear (one WIL roll per fear source)." [ref=e1159]
+                - row "6 Rage. Must attack fear source next turn (melee if possible). Become Angry." [ref=e1160]:
+                  - cell "6" [ref=e1161]
+                  - cell "Rage. Must attack fear source next turn (melee if possible). Become Angry." [ref=e1162]
+                - row "7 Paralyzed. No action/movement next turn. WIL roll each turn to break free." [ref=e1163]:
+                  - cell "7" [ref=e1164]
+                  - cell "Paralyzed. No action/movement next turn. WIL roll each turn to break free." [ref=e1165]
+                - row "8 Wild Panic. Must dash away from fear source. WIL roll each turn to stop." [ref=e1166]:
+                  - cell "8" [ref=e1167]
+                  - cell "Wild Panic. Must dash away from fear source. WIL roll each turn to stop." [ref=e1168]
+          - generic [ref=e1170]:
+            - button "Travel Mishaps p. 107" [expanded] [ref=e1171] [cursor=pointer]:
+              - heading "Travel Mishaps p. 107" [level=3] [ref=e1172]:
+                - text: Travel Mishaps
+                - generic [ref=e1173]: p. 107
+              - img [ref=e1175]
+            - table [ref=e1181]:
+              - rowgroup [ref=e1182]:
+                - row "D12 Mishap" [ref=e1183]:
+                  - columnheader "D12" [ref=e1184]
+                  - columnheader "Mishap" [ref=e1185]
+              - rowgroup [ref=e1186]:
+                - row "1 Fog. Distance covered halved this shift." [ref=e1187]:
+                  - cell "1" [ref=e1188]
+                  - cell "Fog. Distance covered halved this shift." [ref=e1189]
+                - row "2 Blocking Terrain. ACROBATICS roll or no progress. Success can help others." [ref=e1190]:
+                  - cell "2" [ref=e1191]
+                  - cell "Blocking Terrain. ACROBATICS roll or no progress. Success can help others." [ref=e1192]
+                - row "3 Torn Clothes. Random PC's clothes become rags." [ref=e1193]:
+                  - cell "3" [ref=e1194]
+                  - cell "Torn Clothes. Random PC's clothes become rags." [ref=e1195]
+                - row "4 Lost. No progress. Pathfinder BUSHCRAFT to find way (no help)." [ref=e1196]:
+                  - cell "4" [ref=e1197]
+                  - cell "Lost. No progress. Pathfinder BUSHCRAFT to find way (no help)." [ref=e1198]
+                - row "5 Dropped Item. Random PC drops/breaks an item." [ref=e1199]:
+                  - cell "5" [ref=e1200]
+                  - cell "Dropped Item. Random PC drops/breaks an item." [ref=e1201]
+                - row "6 Mosquito Swarm. All PCs without cloak become Angry." [ref=e1202]:
+                  - cell "6" [ref=e1203]
+                  - cell "Mosquito Swarm. All PCs without cloak become Angry." [ref=e1204]
+                - row "7 Sprained Ankle. Random PC takes D6 dmg (boots -2, no armor)." [ref=e1205]:
+                  - cell "7" [ref=e1206]
+                  - cell "Sprained Ankle. Random PC takes D6 dmg (boots -2, no armor)." [ref=e1207]
+                - row "8 Downpour. No cloak = cold roll. Must shelter, no progress this shift." [ref=e1208]:
+                  - cell "8" [ref=e1209]
+                  - cell "Downpour. No cloak = cold roll. Must shelter, no progress this shift." [ref=e1210]
+                - row "9 Wasps. All PCs EVADE or take D6 dmg + a condition." [ref=e1211]:
+                  - cell "9" [ref=e1212]
+                  - cell "Wasps. All PCs EVADE or take D6 dmg + a condition." [ref=e1213]
+                - row "10 Landslide. All PCs EVADE or take D10 dmg." [ref=e1214]:
+                  - cell "10" [ref=e1215]
+                  - cell "Landslide. All PCs EVADE or take D10 dmg." [ref=e1216]
+                - row "11 Savage Animal. Wolf, bear, or similar attacks." [ref=e1217]:
+                  - cell "11" [ref=e1218]
+                  - cell "Savage Animal. Wolf, bear, or similar attacks." [ref=e1219]
+                - row "12 Quicksand. BUSHCRAFT or condition + reroll. Second fail = death. Others can help." [ref=e1220]:
+                  - cell "12" [ref=e1221]
+                  - cell "Quicksand. BUSHCRAFT or condition + reroll. Second fail = death. Others can help." [ref=e1222]
+          - generic [ref=e1224]:
+            - button "Spellcasting p. 63-64" [expanded] [ref=e1225] [cursor=pointer]:
+              - heading "Spellcasting p. 63-64" [level=3] [ref=e1226]:
+                - text: Spellcasting
+                - generic [ref=e1227]: p. 63-64
+              - img [ref=e1229]
+            - generic [ref=e1234]:
+              - table [ref=e1235]:
+                - rowgroup [ref=e1236]:
+                  - row "Type Wp Cost Casting Time" [ref=e1237]:
+                    - columnheader "Type" [ref=e1238]
+                    - columnheader "Wp Cost" [ref=e1239]
+                    - columnheader "Casting Time" [ref=e1240]
+                - rowgroup [ref=e1241]:
+                  - row "Magic Trick 1 WP 1 action (auto-success)" [ref=e1242]:
+                    - cell "Magic Trick" [ref=e1243]
+                    - cell "1 WP" [ref=e1244]
+                    - cell "1 action (auto-success)" [ref=e1245]
+                  - row "Spell (Power 1) 2 WP 1 action (memorized) / 2 actions (grimoire)" [ref=e1246]:
+                    - cell "Spell (Power 1)" [ref=e1247]
+                    - cell "2 WP" [ref=e1248]
+                    - cell "1 action (memorized) / 2 actions (grimoire)" [ref=e1249]
+                  - row "Spell (Power 2) 4 WP 1 action (memorized) / 2 actions (grimoire)" [ref=e1250]:
+                    - cell "Spell (Power 2)" [ref=e1251]
+                    - cell "4 WP" [ref=e1252]
+                    - cell "1 action (memorized) / 2 actions (grimoire)" [ref=e1253]
+                  - row "Spell (Power 3) 6 WP 1 action (memorized) / 2 actions (grimoire)" [ref=e1254]:
+                    - cell "Spell (Power 3)" [ref=e1255]
+                    - cell "6 WP" [ref=e1256]
+                    - cell "1 action (memorized) / 2 actions (grimoire)" [ref=e1257]
+                  - row "Reaction Spell Varies Triggered (does NOT replace your action)" [ref=e1258]:
+                    - cell "Reaction Spell" [ref=e1259]
+                    - cell "Varies" [ref=e1260]
+                    - cell "Triggered (does NOT replace your action)" [ref=e1261]
+                  - row "Ritual Varies 1 stretch or shift" [ref=e1262]:
+                    - cell "Ritual" [ref=e1263]
+                    - cell "Varies" [ref=e1264]
+                    - cell "1 stretch or shift" [ref=e1265]
+              - paragraph [ref=e1266]: "* Roll d20 ≤ school skill. Fail = no effect, WP still spent. Dragon (1): double damage/range, OR no WP cost, OR cast another spell (with bane). Demon (20): roll on Magical Mishaps table. Cannot push spell rolls. Requirements: Word (chant), Gesture (hand movements), Focus (held item), Ingredient (consumed). All listed requirements must be met."
+          - generic [ref=e1268]:
+            - button "Magical Mishaps p. 65" [expanded] [ref=e1269] [cursor=pointer]:
+              - heading "Magical Mishaps p. 65" [level=3] [ref=e1270]:
+                - text: Magical Mishaps
+                - generic [ref=e1271]: p. 65
+              - img [ref=e1273]
+            - table [ref=e1279]:
+              - rowgroup [ref=e1280]:
+                - row "D20 Mishap Effect" [ref=e1281]:
+                  - columnheader "D20" [ref=e1282]
+                  - columnheader "Mishap" [ref=e1283]
+                  - columnheader "Effect" [ref=e1284]
+              - rowgroup [ref=e1285]:
+                - row "1 Dazed You become Dazed." [ref=e1286]:
+                  - cell "1" [ref=e1287]
+                  - cell "Dazed" [ref=e1288]
+                  - cell "You become Dazed." [ref=e1289]
+                - row "2 Exhausted You become Exhausted." [ref=e1290]:
+                  - cell "2" [ref=e1291]
+                  - cell "Exhausted" [ref=e1292]
+                  - cell "You become Exhausted." [ref=e1293]
+                - row "3 Sickly You become Sickly." [ref=e1294]:
+                  - cell "3" [ref=e1295]
+                  - cell "Sickly" [ref=e1296]
+                  - cell "You become Sickly." [ref=e1297]
+                - row "4 Angry You lose control of the spell, become Angry." [ref=e1298]:
+                  - cell "4" [ref=e1299]
+                  - cell "Angry" [ref=e1300]
+                  - cell "You lose control of the spell, become Angry." [ref=e1301]
+                - row "5 Scared Demonic visions leave you Scared." [ref=e1302]:
+                  - cell "5" [ref=e1303]
+                  - cell "Scared" [ref=e1304]
+                  - cell "Demonic visions leave you Scared." [ref=e1305]
+                - row "6 Disheartened You see beyond the veil, realize your insignificance. Disheartened." [ref=e1306]:
+                  - cell "6" [ref=e1307]
+                  - cell "Disheartened" [ref=e1308]
+                  - cell "You see beyond the veil, realize your insignificance. Disheartened." [ref=e1309]
+                - 'row "7 Damage Magic ravages your body: D6 damage per power level." [ref=e1310]':
+                  - cell "7" [ref=e1311]
+                  - cell "Damage" [ref=e1312]
+                  - 'cell "Magic ravages your body: D6 damage per power level." [ref=e1313]'
+                - 'row "8 WP Drain Spell drains willpower: lose D6 WP per power level." [ref=e1314]':
+                  - cell "8" [ref=e1315]
+                  - cell "WP Drain" [ref=e1316]
+                  - 'cell "Spell drains willpower: lose D6 WP per power level." [ref=e1317]'
+                - row "9 Magical Disease Disease with Virulence 3D6. You and all contacts next shift are exposed." [ref=e1318]:
+                  - cell "9" [ref=e1319]
+                  - cell "Magical Disease" [ref=e1320]
+                  - cell "Disease with Virulence 3D6. You and all contacts next shift are exposed." [ref=e1321]
+                - row "10 Wrong Spell Random spell of yours activates instead, same target and power level." [ref=e1322]:
+                  - cell "10" [ref=e1323]
+                  - cell "Wrong Spell" [ref=e1324]
+                  - cell "Random spell of yours activates instead, same target and power level." [ref=e1325]
+                - row "11 Frog Curse Vomit a frog when you lie. D4 each morning, 1 = wears off. Dispel lifts it." [ref=e1326]:
+                  - cell "11" [ref=e1327]
+                  - cell "Frog Curse" [ref=e1328]
+                  - cell "Vomit a frog when you lie. D4 each morning, 1 = wears off. Dispel lifts it." [ref=e1329]
+                - row "12 Midas Bane Gold/silver you touch turns to dust. D4 each morning, 1 = wears off. Dispel lifts it." [ref=e1330]:
+                  - cell "12" [ref=e1331]
+                  - cell "Midas Bane" [ref=e1332]
+                  - cell "Gold/silver you touch turns to dust. D4 each morning, 1 = wears off. Dispel lifts it." [ref=e1333]
+                - row "13 Blindness Blinded (total darkness rules). D4 each morning, 1 = recover. Dispel lifts it." [ref=e1334]:
+                  - cell "13" [ref=e1335]
+                  - cell "Blindness" [ref=e1336]
+                  - cell "Blinded (total darkness rules). D4 each morning, 1 = recover. Dispel lifts it." [ref=e1337]
+                - row "14 Amnesia Forget identity. Must roleplay. D4 each morning, 1 = memory returns." [ref=e1338]:
+                  - cell "14" [ref=e1339]
+                  - cell "Amnesia" [ref=e1340]
+                  - cell "Forget identity. Must roleplay. D4 each morning, 1 = memory returns." [ref=e1341]
+                - row "15 Unintended Victim Spell also hits a friend. Healing/helping spells affect an enemy instead." [ref=e1342]:
+                  - cell "15" [ref=e1343]
+                  - cell "Unintended Victim" [ref=e1344]
+                  - cell "Spell also hits a friend. Healing/helping spells affect an enemy instead." [ref=e1345]
+                - row "16 Backfire Offensive spell hits you instead. Protect/heal spell deals damage instead." [ref=e1346]:
+                  - cell "16" [ref=e1347]
+                  - cell "Backfire" [ref=e1348]
+                  - cell "Offensive spell hits you instead. Protect/heal spell deals damage instead." [ref=e1349]
+                - 'row "17 Polymorph Turn into animal. D6: 1=cat, 2=fox, 3=goat, 4=wolf, 5=deer, 6=bear." [ref=e1350]':
+                  - cell "17" [ref=e1351]
+                  - cell "Polymorph" [ref=e1352]
+                  - 'cell "Turn into animal. D6: 1=cat, 2=fox, 3=goat, 4=wolf, 5=deer, 6=bear." [ref=e1353]'
+                - row "18 Youth Become one age category younger. Permanent (normal aging resumes)." [ref=e1354]:
+                  - cell "18" [ref=e1355]
+                  - cell "Youth" [ref=e1356]
+                  - cell "Become one age category younger. Permanent (normal aging resumes)." [ref=e1357]
+                - row "19 Aging Become one age category older. Permanent (normal aging resumes)." [ref=e1358]:
+                  - cell "19" [ref=e1359]
+                  - cell "Aging" [ref=e1360]
+                  - cell "Become one age category older. Permanent (normal aging resumes)." [ref=e1361]
+                - row "20 Demon Attracted A demon arrives within the next shift and attacks or causes trouble." [ref=e1362]:
+                  - cell "20" [ref=e1363]
+                  - cell "Demon Attracted" [ref=e1364]
+                  - cell "A demon arrives within the next shift and attacks or causes trouble." [ref=e1365]
+          - generic [ref=e1367]:
+            - button "Spell List by School p. 62-76" [expanded] [ref=e1368] [cursor=pointer]:
+              - heading "Spell List by School p. 62-76" [level=3] [ref=e1369]:
+                - text: Spell List by School
+                - generic [ref=e1370]: p. 62-76
+              - img [ref=e1372]
+            - table [ref=e1378]:
+              - rowgroup [ref=e1379]:
+                - row "School Tricks Rank 1 Rank 2 Rank 3" [ref=e1380]:
+                  - columnheader "School" [ref=e1381]
+                  - columnheader "Tricks" [ref=e1382]
+                  - columnheader "Rank 1" [ref=e1383]
+                  - columnheader "Rank 2" [ref=e1384]
+                  - columnheader "Rank 3" [ref=e1385]
+              - rowgroup [ref=e1386]:
+                - row "General Fetch, Flick, Light, Open/Close, Repair Clothes, Sense Magic Dispel, Protector Magic Shield Transfer, Magic Seal (R4), Charge (R4), Permanence (R5)" [ref=e1387]:
+                  - cell "General" [ref=e1388]
+                  - cell "Fetch, Flick, Light, Open/Close, Repair Clothes, Sense Magic" [ref=e1389]
+                  - cell "Dispel, Protector" [ref=e1390]
+                  - cell "Magic Shield" [ref=e1391]
+                  - cell "Transfer, Magic Seal (R4), Charge (R4), Permanence (R5)" [ref=e1392]
+                - row "Animism Birdsong, Clean, Cook Food, Floral Trail, Hairstyle Animal Whisperer, Banish, Ensnaring Roots, Lightning Flash, Treat Wound Engulfing Forest, Heal Wound, Lightning Bolt, Purge, Sleep Restoration, Resurrection, Thunderbolt" [ref=e1393]:
+                  - cell "Animism" [ref=e1394]
+                  - cell "Birdsong, Clean, Cook Food, Floral Trail, Hairstyle" [ref=e1395]
+                  - cell "Animal Whisperer, Banish, Ensnaring Roots, Lightning Flash, Treat Wound" [ref=e1396]
+                  - cell "Engulfing Forest, Heal Wound, Lightning Bolt, Purge, Sleep" [ref=e1397]
+                  - cell "Restoration, Resurrection, Thunderbolt" [ref=e1398]
+                - row "Elementalism Heat/Chill, Ignite, Puff of Smoke Fireball, Frost, Gust of Wind, Pillar, Shatter Fire Blast, Stone Shield, Stonewall, Tidal Wave, Whirlwind Firebird, Firestorm, Gnome, Salamander, Sylph, Undine" [ref=e1399]:
+                  - cell "Elementalism" [ref=e1400]
+                  - cell "Heat/Chill, Ignite, Puff of Smoke" [ref=e1401]
+                  - cell "Fireball, Frost, Gust of Wind, Pillar, Shatter" [ref=e1402]
+                  - cell "Fire Blast, Stone Shield, Stonewall, Tidal Wave, Whirlwind" [ref=e1403]
+                  - cell "Firebird, Firestorm, Gnome, Salamander, Sylph, Undine" [ref=e1404]
+                - row "Mentalism Lock/Unlock, Magic Stool, Slow Fall Farsight, Levitate, Longstrider, Power Fist, Stone Skin Divination, Enchant Weapon, Mental Strike, Scrying, Telepathy Dominate, Flight, Teleport" [ref=e1405]:
+                  - cell "Mentalism" [ref=e1406]
+                  - cell "Lock/Unlock, Magic Stool, Slow Fall" [ref=e1407]
+                  - cell "Farsight, Levitate, Longstrider, Power Fist, Stone Skin" [ref=e1408]
+                  - cell "Divination, Enchant Weapon, Mental Strike, Scrying, Telepathy" [ref=e1409]
+                  - cell "Dominate, Flight, Teleport" [ref=e1410]
+          - generic [ref=e1412]:
+            - button "Melee Weapons p. 73-75" [expanded] [ref=e1413] [cursor=pointer]:
+              - heading "Melee Weapons p. 73-75" [level=3] [ref=e1414]:
+                - text: Melee Weapons
+                - generic [ref=e1415]: p. 73-75
+              - img [ref=e1417]
+            - table [ref=e1423]:
+              - rowgroup [ref=e1424]:
+                - row "Weapon Grip Str Damage Durability Features Cost" [ref=e1425]:
+                  - columnheader "Weapon" [ref=e1426]
+                  - columnheader "Grip" [ref=e1427]
+                  - columnheader "Str" [ref=e1428]
+                  - columnheader "Damage" [ref=e1429]
+                  - columnheader "Durability" [ref=e1430]
+                  - columnheader "Features" [ref=e1431]
+                  - columnheader "Cost" [ref=e1432]
+              - rowgroup [ref=e1433]:
+                - row "Knife 1H - D8 6 Subtle, P, Throw 5s" [ref=e1434]:
+                  - cell "Knife" [ref=e1435]
+                  - cell "1H" [ref=e1436]
+                  - cell "-" [ref=e1437]
+                  - cell "D8" [ref=e1438]
+                  - cell "6" [ref=e1439]
+                  - cell "Subtle, P, Throw" [ref=e1440]
+                  - cell "5s" [ref=e1441]
+                - row "Dagger 1H - D8 9 Subtle, P, S, Throw 1g" [ref=e1442]:
+                  - cell "Dagger" [ref=e1443]
+                  - cell "1H" [ref=e1444]
+                  - cell "-" [ref=e1445]
+                  - cell "D8" [ref=e1446]
+                  - cell "9" [ref=e1447]
+                  - cell "Subtle, P, S, Throw" [ref=e1448]
+                  - cell "1g" [ref=e1449]
+                - row "Parrying Dagger 1H - 2D6 15 Subtle, P, S 2g" [ref=e1450]:
+                  - cell "Parrying Dagger" [ref=e1451]
+                  - cell "1H" [ref=e1452]
+                  - cell "-" [ref=e1453]
+                  - cell "2D6" [ref=e1454]
+                  - cell "15" [ref=e1455]
+                  - cell "Subtle, P, S" [ref=e1456]
+                  - cell "2g" [ref=e1457]
+                - row "Short Sword 1H 7 2D10 12 P, S 8g" [ref=e1458]:
+                  - cell "Short Sword" [ref=e1459]
+                  - cell "1H" [ref=e1460]
+                  - cell "7" [ref=e1461]
+                  - cell "2D10" [ref=e1462]
+                  - cell "12" [ref=e1463]
+                  - cell "P, S" [ref=e1464]
+                  - cell "8g" [ref=e1465]
+                - row "Broadsword 1H 10 2D6 15 P, S 12g" [ref=e1466]:
+                  - cell "Broadsword" [ref=e1467]
+                  - cell "1H" [ref=e1468]
+                  - cell "10" [ref=e1469]
+                  - cell "2D6" [ref=e1470]
+                  - cell "15" [ref=e1471]
+                  - cell "P, S" [ref=e1472]
+                  - cell "12g" [ref=e1473]
+                - row "Longsword 1H 13 2D8 15 P, S 25g" [ref=e1474]:
+                  - cell "Longsword" [ref=e1475]
+                  - cell "1H" [ref=e1476]
+                  - cell "13" [ref=e1477]
+                  - cell "2D8" [ref=e1478]
+                  - cell "15" [ref=e1479]
+                  - cell "P, S" [ref=e1480]
+                  - cell "25g" [ref=e1481]
+                - row "Greatsword 2H 16 2D10 15 P, S 50g" [ref=e1482]:
+                  - cell "Greatsword" [ref=e1483]
+                  - cell "2H" [ref=e1484]
+                  - cell "16" [ref=e1485]
+                  - cell "2D10" [ref=e1486]
+                  - cell "15" [ref=e1487]
+                  - cell "P, S" [ref=e1488]
+                  - cell "50g" [ref=e1489]
+                - row "Scimitar 1H 10 2D6 12 Top, S 10g" [ref=e1490]:
+                  - cell "Scimitar" [ref=e1491]
+                  - cell "1H" [ref=e1492]
+                  - cell "10" [ref=e1493]
+                  - cell "2D6" [ref=e1494]
+                  - cell "12" [ref=e1495]
+                  - cell "Top, S" [ref=e1496]
+                  - cell "10g" [ref=e1497]
+                - row "Handaxe 1H 7 2D6 9 Top, S, Throw 2g" [ref=e1498]:
+                  - cell "Handaxe" [ref=e1499]
+                  - cell "1H" [ref=e1500]
+                  - cell "7" [ref=e1501]
+                  - cell "2D6" [ref=e1502]
+                  - cell "9" [ref=e1503]
+                  - cell "Top, S, Throw" [ref=e1504]
+                  - cell "2g" [ref=e1505]
+                - row "Battleaxe 1H 13 2D8 9 Top, S 10g" [ref=e1506]:
+                  - cell "Battleaxe" [ref=e1507]
+                  - cell "1H" [ref=e1508]
+                  - cell "13" [ref=e1509]
+                  - cell "2D8" [ref=e1510]
+                  - cell "9" [ref=e1511]
+                  - cell "Top, S" [ref=e1512]
+                  - cell "10g" [ref=e1513]
+                - row "Two-Handed Axe 2H 16 2D10 9 Top, S 25g" [ref=e1514]:
+                  - cell "Two-Handed Axe" [ref=e1515]
+                  - cell "2H" [ref=e1516]
+                  - cell "16" [ref=e1517]
+                  - cell "2D10" [ref=e1518]
+                  - cell "9" [ref=e1519]
+                  - cell "Top, S" [ref=e1520]
+                  - cell "25g" [ref=e1521]
+                - row "Mace 1H 7 2D4 12 B 8g" [ref=e1522]:
+                  - cell "Mace" [ref=e1523]
+                  - cell "1H" [ref=e1524]
+                  - cell "7" [ref=e1525]
+                  - cell "2D4" [ref=e1526]
+                  - cell "12" [ref=e1527]
+                  - cell "B" [ref=e1528]
+                  - cell "8g" [ref=e1529]
+                - row "Morningstar 1H 13 2D8 12 B 14g" [ref=e1530]:
+                  - cell "Morningstar" [ref=e1531]
+                  - cell "1H" [ref=e1532]
+                  - cell "13" [ref=e1533]
+                  - cell "2D8" [ref=e1534]
+                  - cell "12" [ref=e1535]
+                  - cell "B" [ref=e1536]
+                  - cell "14g" [ref=e1537]
+                - row "Warhammer, Lt 1H 10 2D6 12 B, Top 10g" [ref=e1538]:
+                  - cell "Warhammer, Lt" [ref=e1539]
+                  - cell "1H" [ref=e1540]
+                  - cell "10" [ref=e1541]
+                  - cell "2D6" [ref=e1542]
+                  - cell "12" [ref=e1543]
+                  - cell "B, Top" [ref=e1544]
+                  - cell "10g" [ref=e1545]
+                - row "Warhammer, Hvy 2H 16 2D10 12 B, Top 20g" [ref=e1546]:
+                  - cell "Warhammer, Hvy" [ref=e1547]
+                  - cell "2H" [ref=e1548]
+                  - cell "16" [ref=e1549]
+                  - cell "2D10" [ref=e1550]
+                  - cell "12" [ref=e1551]
+                  - cell "B, Top" [ref=e1552]
+                  - cell "20g" [ref=e1553]
+                - row "Flail 1H 13 2D8 - B, Top, No Parry 16g" [ref=e1554]:
+                  - cell "Flail" [ref=e1555]
+                  - cell "1H" [ref=e1556]
+                  - cell "13" [ref=e1557]
+                  - cell "2D8" [ref=e1558]
+                  - cell "-" [ref=e1559]
+                  - cell "B, Top, No Parry" [ref=e1560]
+                  - cell "16g" [ref=e1561]
+                - row "Staff 2H 7 D8 9 B, Top 2s" [ref=e1562]:
+                  - cell "Staff" [ref=e1563]
+                  - cell "2H" [ref=e1564]
+                  - cell "7" [ref=e1565]
+                  - cell "D8" [ref=e1566]
+                  - cell "9" [ref=e1567]
+                  - cell "B, Top" [ref=e1568]
+                  - cell "2s" [ref=e1569]
+                - row "Short Spear 1H 7 D10 9 P, Throw 5s" [ref=e1570]:
+                  - cell "Short Spear" [ref=e1571]
+                  - cell "1H" [ref=e1572]
+                  - cell "7" [ref=e1573]
+                  - cell "D10" [ref=e1574]
+                  - cell "9" [ref=e1575]
+                  - cell "P, Throw" [ref=e1576]
+                  - cell "5s" [ref=e1577]
+                - row "Long Spear 2H 10 2D8 9 Long, P 1g" [ref=e1578]:
+                  - cell "Long Spear" [ref=e1579]
+                  - cell "2H" [ref=e1580]
+                  - cell "10" [ref=e1581]
+                  - cell "2D8" [ref=e1582]
+                  - cell "9" [ref=e1583]
+                  - cell "Long, P" [ref=e1584]
+                  - cell "1g" [ref=e1585]
+                - row "Lance 1H 13 2D10 12 Long, P, Mounted 12g" [ref=e1586]:
+                  - cell "Lance" [ref=e1587]
+                  - cell "1H" [ref=e1588]
+                  - cell "13" [ref=e1589]
+                  - cell "2D10" [ref=e1590]
+                  - cell "12" [ref=e1591]
+                  - cell "Long, P, Mounted" [ref=e1592]
+                  - cell "12g" [ref=e1593]
+                - row "Halberd 2H 13 2D8 12 Long, Top, P, S 20g" [ref=e1594]:
+                  - cell "Halberd" [ref=e1595]
+                  - cell "2H" [ref=e1596]
+                  - cell "13" [ref=e1597]
+                  - cell "2D8" [ref=e1598]
+                  - cell "12" [ref=e1599]
+                  - cell "Long, Top, P, S" [ref=e1600]
+                  - cell "20g" [ref=e1601]
+                - row "Trident 1H 10 2D6 9 Top, P, Throw 5g" [ref=e1602]:
+                  - cell "Trident" [ref=e1603]
+                  - cell "1H" [ref=e1604]
+                  - cell "10" [ref=e1605]
+                  - cell "2D6" [ref=e1606]
+                  - cell "9" [ref=e1607]
+                  - cell "Top, P, Throw" [ref=e1608]
+                  - cell "5g" [ref=e1609]
+                - row "Shield, Small 1H 7 D8 15 B 4g" [ref=e1610]:
+                  - cell "Shield, Small" [ref=e1611]
+                  - cell "1H" [ref=e1612]
+                  - cell "7" [ref=e1613]
+                  - cell "D8" [ref=e1614]
+                  - cell "15" [ref=e1615]
+                  - cell "B" [ref=e1616]
+                  - cell "4g" [ref=e1617]
+                - row "Shield, Large 1H 13 D8 18 B 12g" [ref=e1618]:
+                  - cell "Shield, Large" [ref=e1619]
+                  - cell "1H" [ref=e1620]
+                  - cell "13" [ref=e1621]
+                  - cell "D8" [ref=e1622]
+                  - cell "18" [ref=e1623]
+                  - cell "B" [ref=e1624]
+                  - cell "12g" [ref=e1625]
+          - generic [ref=e1627]:
+            - button "Ranged Weapons p. 76" [expanded] [ref=e1628] [cursor=pointer]:
+              - heading "Ranged Weapons p. 76" [level=3] [ref=e1629]:
+                - text: Ranged Weapons
+                - generic [ref=e1630]: p. 76
+              - img [ref=e1632]
+            - generic [ref=e1637]:
+              - table [ref=e1638]:
+                - rowgroup [ref=e1639]:
+                  - row "Weapon Grip Str Damage Range Cost" [ref=e1640]:
+                    - columnheader "Weapon" [ref=e1641]
+                    - columnheader "Grip" [ref=e1642]
+                    - columnheader "Str" [ref=e1643]
+                    - columnheader "Damage" [ref=e1644]
+                    - columnheader "Range" [ref=e1645]
+                    - columnheader "Cost" [ref=e1646]
+                - rowgroup [ref=e1647]:
+                  - row "Sling 1H - D8 20m 1s" [ref=e1648]:
+                    - cell "Sling" [ref=e1649]
+                    - cell "1H" [ref=e1650]
+                    - cell "-" [ref=e1651]
+                    - cell "D8" [ref=e1652]
+                    - cell "20m" [ref=e1653]
+                    - cell "1s" [ref=e1654]
+                  - row "Short Bow 2H 7 D10 30m 25g" [ref=e1655]:
+                    - cell "Short Bow" [ref=e1656]
+                    - cell "2H" [ref=e1657]
+                    - cell "7" [ref=e1658]
+                    - cell "D10" [ref=e1659]
+                    - cell "30m" [ref=e1660]
+                    - cell "25g" [ref=e1661]
+                  - row "Longbow 2H 13 D12 100m 50g" [ref=e1662]:
+                    - cell "Longbow" [ref=e1663]
+                    - cell "2H" [ref=e1664]
+                    - cell "13" [ref=e1665]
+                    - cell "D12" [ref=e1666]
+                    - cell "100m" [ref=e1667]
+                    - cell "50g" [ref=e1668]
+                  - row "Crossbow, Lt 2H 7 2D6 40m 75g" [ref=e1669]:
+                    - cell "Crossbow, Lt" [ref=e1670]
+                    - cell "2H" [ref=e1671]
+                    - cell "7" [ref=e1672]
+                    - cell "2D6" [ref=e1673]
+                    - cell "40m" [ref=e1674]
+                    - cell "75g" [ref=e1675]
+                  - row "Crossbow, Hvy 2H 13 2D8 60m 200g" [ref=e1676]:
+                    - cell "Crossbow, Hvy" [ref=e1677]
+                    - cell "2H" [ref=e1678]
+                    - cell "13" [ref=e1679]
+                    - cell "2D8" [ref=e1680]
+                    - cell "60m" [ref=e1681]
+                    - cell "200g" [ref=e1682]
+                  - row "Crossbow, Hand 1H 7 2D6 30m 90g" [ref=e1683]:
+                    - cell "Crossbow, Hand" [ref=e1684]
+                    - cell "1H" [ref=e1685]
+                    - cell "7" [ref=e1686]
+                    - cell "2D6" [ref=e1687]
+                    - cell "30m" [ref=e1688]
+                    - cell "90g" [ref=e1689]
+              - paragraph [ref=e1690]: "* All ranged = Piercing. Crossbows: no damage bonus. Beyond range (up to 2x) = bane."
+          - generic [ref=e1692]:
+            - button "Weapon Features p. 73" [expanded] [ref=e1693] [cursor=pointer]:
+              - heading "Weapon Features p. 73" [level=3] [ref=e1694]:
+                - text: Weapon Features
+                - generic [ref=e1695]: p. 73
+              - img [ref=e1697]
+            - generic [ref=e1702]:
+              - generic [ref=e1703]:
+                - generic [ref=e1704]: P = Piercing
+                - generic [ref=e1705]: Can affect armor effectiveness.
+              - generic [ref=e1706]:
+                - generic [ref=e1707]: S = Slashing
+                - generic [ref=e1708]: Choose P or S before rolling.
+              - generic [ref=e1709]:
+                - generic [ref=e1710]: B = Bludgeoning
+                - generic [ref=e1711]: Affects armor effectiveness.
+              - generic [ref=e1712]:
+                - generic [ref=e1713]: Top = Toppling
+                - generic [ref=e1714]: Boon to topple opponent.
+              - generic [ref=e1715]:
+                - generic [ref=e1716]: Subtle
+                - generic [ref=e1717]: Boon + extra damage die on sneak attacks.
+              - generic [ref=e1718]:
+                - generic [ref=e1719]: Long
+                - generic [ref=e1720]: 4m reach (2 squares).
+              - generic [ref=e1721]:
+                - generic [ref=e1722]: Throw = Throwable
+                - generic [ref=e1723]: Use as ranged attack.
+              - generic [ref=e1724]:
+                - generic [ref=e1725]: Mastercrafted
+                - generic [ref=e1726]: 10x cost, STR req -3, Durability +3.
+          - generic [ref=e1728]:
+            - button "Armor & Helmets p. 77" [expanded] [ref=e1729] [cursor=pointer]:
+              - heading "Armor & Helmets p. 77" [level=3] [ref=e1730]:
+                - text: Armor & Helmets
+                - generic [ref=e1731]: p. 77
+              - img [ref=e1733]
+            - generic [ref=e1738]:
+              - table [ref=e1739]:
+                - rowgroup [ref=e1740]:
+                  - row "Armor Rating Bane On Cost" [ref=e1741]:
+                    - columnheader "Armor" [ref=e1742]
+                    - columnheader "Rating" [ref=e1743]
+                    - columnheader "Bane On" [ref=e1744]
+                    - columnheader "Cost" [ref=e1745]
+                - rowgroup [ref=e1746]:
+                  - row "Leather 1 - 2g" [ref=e1747]:
+                    - cell "Leather" [ref=e1748]
+                    - cell "1" [ref=e1749]
+                    - cell "-" [ref=e1750]
+                    - cell "2g" [ref=e1751]
+                  - row "Studded Leather 2 Sneaking 10g" [ref=e1752]:
+                    - cell "Studded Leather" [ref=e1753]
+                    - cell "2" [ref=e1754]
+                    - cell "Sneaking" [ref=e1755]
+                    - cell "10g" [ref=e1756]
+                  - row "Chainmail 4 Evade, Sneaking 50g" [ref=e1757]:
+                    - cell "Chainmail" [ref=e1758]
+                    - cell "4" [ref=e1759]
+                    - cell "Evade, Sneaking" [ref=e1760]
+                    - cell "50g" [ref=e1761]
+                  - row "Plate Armor 6 Acrobatics, Evade, Sneaking 500g" [ref=e1762]:
+                    - cell "Plate Armor" [ref=e1763]
+                    - cell "6" [ref=e1764]
+                    - cell "Acrobatics, Evade, Sneaking" [ref=e1765]
+                    - cell "500g" [ref=e1766]
+                  - row "Open Helmet +1 Awareness 12g" [ref=e1767]:
+                    - cell "Open Helmet" [ref=e1768]
+                    - cell "+1" [ref=e1769]
+                    - cell "Awareness" [ref=e1770]
+                    - cell "12g" [ref=e1771]
+                  - row "Great Helm +2 Awareness, All ranged attacks 100g" [ref=e1772]:
+                    - cell "Great Helm" [ref=e1773]
+                    - cell "+2" [ref=e1774]
+                    - cell "Awareness, All ranged attacks" [ref=e1775]
+                    - cell "100g" [ref=e1776]
+              - paragraph [ref=e1777]: "* Helmet AR stacks with body armor. Equip/unequip = 1 action."
+          - generic [ref=e1779]:
+            - button "Environmental Hazards p. 57-59" [expanded] [ref=e1780] [cursor=pointer]:
+              - heading "Environmental Hazards p. 57-59" [level=3] [ref=e1781]:
+                - text: Environmental Hazards
+                - generic [ref=e1782]: p. 57-59
+              - img [ref=e1784]
+            - generic [ref=e1789]:
+              - generic [ref=e1790]:
+                - generic [ref=e1791]: Cold
+                - generic [ref=e1792]: BUSHCRAFT per shift (stretch/round extreme). No blanket = bane, fur = boon. Fail = D6 HP + D6 WP, no healing except magic. 0 HP = death next roll.
+              - generic [ref=e1793]:
+                - generic [ref=e1794]: Falling
+                - generic [ref=e1795]: D6 per 2m (rounded down). Under 2m = none. ACROBATICS halves dice. Armor does NOT protect.
+              - generic [ref=e1796]:
+                - generic [ref=e1797]: Drowning
+                - generic [ref=e1798]: "Half move, no ranged, bane melee. SWIMMING per stretch (per round heavy armor). Underwater: CON/round or D6 dmg. 0 HP = death."
+              - generic [ref=e1799]:
+                - generic [ref=e1800]: Fire
+                - generic [ref=e1801]: Torch as weapon = small wooden club + fire damage.
+          - generic [ref=e1803]:
+            - button "Darkness & Light p. 57" [expanded] [ref=e1804] [cursor=pointer]:
+              - heading "Darkness & Light p. 57" [level=3] [ref=e1805]:
+                - text: Darkness & Light
+                - generic [ref=e1806]: p. 57
+              - img [ref=e1808]
+            - generic [ref=e1813]:
+              - table [ref=e1814]:
+                - rowgroup [ref=e1815]:
+                  - row "Source Radius Duration Goes Out" [ref=e1816]:
+                    - columnheader "Source" [ref=e1817]
+                    - columnheader "Radius" [ref=e1818]
+                    - columnheader "Duration" [ref=e1819]
+                    - columnheader "Goes Out" [ref=e1820]
+                - rowgroup [ref=e1821]:
+                  - 'row "Torch 10m ~1 shift D6: 1 per stretch" [ref=e1822]':
+                    - cell "Torch" [ref=e1823]
+                    - cell "10m" [ref=e1824]
+                    - cell "~1 shift" [ref=e1825]
+                    - 'cell "D6: 1 per stretch" [ref=e1826]'
+                  - 'row "Lantern 10m 1 shift/oil D8: 1 per stretch" [ref=e1827]':
+                    - cell "Lantern" [ref=e1828]
+                    - cell "10m" [ref=e1829]
+                    - cell "1 shift/oil" [ref=e1830]
+                    - 'cell "D8: 1 per stretch" [ref=e1831]'
+                  - 'row "Oil Lamp 10m 1 shift/dose D6: 1 per stretch" [ref=e1832]':
+                    - cell "Oil Lamp" [ref=e1833]
+                    - cell "10m" [ref=e1834]
+                    - cell "1 shift/dose" [ref=e1835]
+                    - 'cell "D6: 1 per stretch" [ref=e1836]'
+                  - 'row "Candle 4m Variable D4: 1 per stretch" [ref=e1837]':
+                    - cell "Candle" [ref=e1838]
+                    - cell "4m" [ref=e1839]
+                    - cell "Variable" [ref=e1840]
+                    - 'cell "D4: 1 per stretch" [ref=e1841]'
+              - paragraph [ref=e1842]: "* Total darkness: No dash, no ranged attacks. Melee requires AWARENESS roll first (not an action). Fail = miss."
+          - generic [ref=e1844]:
+            - button "Poison p. 57" [expanded] [ref=e1845] [cursor=pointer]:
+              - heading "Poison p. 57" [level=3] [ref=e1846]:
+                - text: Poison
+                - generic [ref=e1847]: p. 57
+              - img [ref=e1849]
+            - generic [ref=e1854]:
+              - table [ref=e1855]:
+                - rowgroup [ref=e1856]:
+                  - row "Type Full Effect Limited Effect" [ref=e1857]:
+                    - columnheader "Type" [ref=e1858]
+                    - columnheader "Full Effect" [ref=e1859]
+                    - columnheader "Limited Effect" [ref=e1860]
+                - rowgroup [ref=e1861]:
+                  - row "Lethal D6 dmg/round until 0 HP. Antidote stops it. D6 dmg next turn only." [ref=e1862]:
+                    - cell "Lethal" [ref=e1863]
+                    - cell "D6 dmg/round until 0 HP. Antidote stops it." [ref=e1864]
+                    - cell "D6 dmg next turn only." [ref=e1865]
+                  - row "Paralyzing Exhausted + CON/round or lose all actions. Lasts 1 stretch or antidote. Exhausted only." [ref=e1866]:
+                    - cell "Paralyzing" [ref=e1867]
+                    - cell "Exhausted + CON/round or lose all actions. Lasts 1 stretch or antidote." [ref=e1868]
+                    - cell "Exhausted only." [ref=e1869]
+                  - row "Sleeping Dazed + CON/round or sleep 1 shift. Antidote or 1+ dmg wakes. Dazed only." [ref=e1870]:
+                    - cell "Sleeping" [ref=e1871]
+                    - cell "Dazed + CON/round or sleep 1 shift. Antidote or 1+ dmg wakes." [ref=e1872]
+                    - cell "Dazed only." [ref=e1873]
+              - paragraph [ref=e1874]: "* Opposed roll: poison potency vs. victim's CON. Poison has no effect on monsters."
+          - generic [ref=e1876]:
+            - button "Kin Abilities p. 9-13" [expanded] [ref=e1877] [cursor=pointer]:
+              - heading "Kin Abilities p. 9-13" [level=3] [ref=e1878]:
+                - text: Kin Abilities
+                - generic [ref=e1879]: p. 9-13
+              - img [ref=e1881]
+            - table [ref=e1887]:
+              - rowgroup [ref=e1888]:
+                - row "Kin Move Ability Wp Effect" [ref=e1889]:
+                  - columnheader "Kin" [ref=e1890]
+                  - columnheader "Move" [ref=e1891]
+                  - columnheader "Ability" [ref=e1892]
+                  - columnheader "Wp" [ref=e1893]
+                  - columnheader "Effect" [ref=e1894]
+              - rowgroup [ref=e1895]:
+                - row "Human 10 Adaptive 3 Use a different skill for a roll (GM approval)." [ref=e1896]:
+                  - cell "Human" [ref=e1897]
+                  - cell "10" [ref=e1898]
+                  - cell "Adaptive" [ref=e1899]
+                  - cell "3" [ref=e1900]
+                  - cell "Use a different skill for a roll (GM approval)." [ref=e1901]
+                - row "Dwarf 8 Unbreakable 3 Completely ignore damage from one attack." [ref=e1902]:
+                  - cell "Dwarf" [ref=e1903]
+                  - cell "8" [ref=e1904]
+                  - cell "Unbreakable" [ref=e1905]
+                  - cell "3" [ref=e1906]
+                  - cell "Completely ignore damage from one attack." [ref=e1907]
+                - 'row "Elf 10 Inner Peace - Stretch rest: +D6 HP, +D6 WP, +1 condition healed. Unresponsive during meditation." [ref=e1908]':
+                  - cell "Elf" [ref=e1909]
+                  - cell "10" [ref=e1910]
+                  - cell "Inner Peace" [ref=e1911]
+                  - cell "-" [ref=e1912]
+                  - 'cell "Stretch rest: +D6 HP, +D6 WP, +1 condition healed. Unresponsive during meditation." [ref=e1913]'
+                - row "Halfling 8 Hard to Catch 3 Boon on EVADE roll when dodging." [ref=e1914]:
+                  - cell "Halfling" [ref=e1915]
+                  - cell "8" [ref=e1916]
+                  - cell "Hard to Catch" [ref=e1917]
+                  - cell "3" [ref=e1918]
+                  - cell "Boon on EVADE roll when dodging." [ref=e1919]
+                - row "Halfling Unforgiving 3 Boon on attack vs someone who has harmed you." [ref=e1920]:
+                  - cell "Halfling" [ref=e1921]
+                  - cell [ref=e1922]
+                  - cell "Unforgiving" [ref=e1923]
+                  - cell "3" [ref=e1924]
+                  - cell "Boon on attack vs someone who has harmed you." [ref=e1925]
+                - row "Mallard 8 Ill-Tempered 3 Boon on a skill roll, but become Angry. Not INT skills." [ref=e1926]:
+                  - cell "Mallard" [ref=e1927]
+                  - cell "8" [ref=e1928]
+                  - cell "Ill-Tempered" [ref=e1929]
+                  - cell "3" [ref=e1930]
+                  - cell "Boon on a skill roll, but become Angry. Not INT skills." [ref=e1931]
+                - row "Mallard Webbed Feet - Boon on SWIMMING. Full speed in water." [ref=e1932]:
+                  - cell "Mallard" [ref=e1933]
+                  - cell [ref=e1934]
+                  - cell "Webbed Feet" [ref=e1935]
+                  - cell "-" [ref=e1936]
+                  - cell "Boon on SWIMMING. Full speed in water." [ref=e1937]
+                - row "Wolfkin 12 Hunting Instincts 3+1 Mark prey (action). Track by scent 1 day. +1 WP per attack for boon vs prey." [ref=e1938]:
+                  - cell "Wolfkin" [ref=e1939]
+                  - cell "12" [ref=e1940]
+                  - cell "Hunting Instincts" [ref=e1941]
+                  - cell "3+1" [ref=e1942]
+                  - cell "Mark prey (action). Track by scent 1 day. +1 WP per attack for boon vs prey." [ref=e1943]
+          - generic [ref=e1945]:
+            - button "Typical NPCs p. 110" [expanded] [ref=e1946] [cursor=pointer]:
+              - heading "Typical NPCs p. 110" [level=3] [ref=e1947]:
+                - text: Typical NPCs
+                - generic [ref=e1948]: p. 110
+              - img [ref=e1950]
+            - table [ref=e1956]:
+              - rowgroup [ref=e1957]:
+                - row "Type Skills Heroic Abilities Damage Bonus Hp Wp Gear" [ref=e1958]:
+                  - columnheader "Type" [ref=e1959]
+                  - columnheader "Skills" [ref=e1960]
+                  - columnheader "Heroic Abilities" [ref=e1961]
+                  - columnheader "Damage Bonus" [ref=e1962]
+                  - columnheader "Hp" [ref=e1963]
+                  - columnheader "Wp" [ref=e1964]
+                  - columnheader "Gear" [ref=e1965]
+              - rowgroup [ref=e1966]:
+                - row "Guard Awareness 10, Swords 12 - STR +D4 12 - Broadsword, studded leather" [ref=e1967]:
+                  - cell "Guard" [ref=e1968]
+                  - cell "Awareness 10, Swords 12" [ref=e1969]
+                  - cell "-" [ref=e1970]
+                  - cell "STR +D4" [ref=e1971]
+                  - cell "12" [ref=e1972]
+                  - cell "-" [ref=e1973]
+                  - cell "Broadsword, studded leather" [ref=e1974]
+                - row "Cultist Evade 14, Knives 14 - AGL +D4 12 - Dagger" [ref=e1975]:
+                  - cell "Cultist" [ref=e1976]
+                  - cell "Evade 14, Knives 14" [ref=e1977]
+                  - cell "-" [ref=e1978]
+                  - cell "AGL +D4" [ref=e1979]
+                  - cell "12" [ref=e1980]
+                  - cell "-" [ref=e1981]
+                  - cell "Dagger" [ref=e1982]
+                - row "Thief Evade 12, Knives 12 - AGL +D4 10 - Knife" [ref=e1983]:
+                  - cell "Thief" [ref=e1984]
+                  - cell "Evade 12, Knives 12" [ref=e1985]
+                  - cell "-" [ref=e1986]
+                  - cell "AGL +D4" [ref=e1987]
+                  - cell "10" [ref=e1988]
+                  - cell "-" [ref=e1989]
+                  - cell "Knife" [ref=e1990]
+                - row "Villager Brawling 8 - - 8 - Wooden club" [ref=e1991]:
+                  - cell "Villager" [ref=e1992]
+                  - cell "Brawling 8" [ref=e1993]
+                  - cell "-" [ref=e1994]
+                  - cell "-" [ref=e1995]
+                  - cell "8" [ref=e1996]
+                  - cell "-" [ref=e1997]
+                  - cell "Wooden club" [ref=e1998]
+                - row "Hunter Awareness 12, Bows 13 - AGL +D4 13 - Longbow, leather armor" [ref=e1999]:
+                  - cell "Hunter" [ref=e2000]
+                  - cell "Awareness 12, Bows 13" [ref=e2001]
+                  - cell "-" [ref=e2002]
+                  - cell "AGL +D4" [ref=e2003]
+                  - cell "13" [ref=e2004]
+                  - cell "-" [ref=e2005]
+                  - cell "Longbow, leather armor" [ref=e2006]
+                - row "Bandit Bows 12, Evade 10, Swords 12 - - 12 - Short sword, short bow" [ref=e2007]:
+                  - cell "Bandit" [ref=e2008]
+                  - cell "Bows 12, Evade 10, Swords 12" [ref=e2009]
+                  - cell "-" [ref=e2010]
+                  - cell "-" [ref=e2011]
+                  - cell "12" [ref=e2012]
+                  - cell "-" [ref=e2013]
+                  - cell "Short sword, short bow" [ref=e2014]
+                - row "Adventurer Awareness 10, Swords 12 - STR +D4 13 - Broadsword, studded leather" [ref=e2015]:
+                  - cell "Adventurer" [ref=e2016]
+                  - cell "Awareness 10, Swords 12" [ref=e2017]
+                  - cell "-" [ref=e2018]
+                  - cell "STR +D4" [ref=e2019]
+                  - cell "13" [ref=e2020]
+                  - cell "-" [ref=e2021]
+                  - cell "Broadsword, studded leather" [ref=e2022]
+                - row "Scholar Languages 13, Myths & Legends 13, Staves 8 - - 7 - A good book" [ref=e2023]:
+                  - cell "Scholar" [ref=e2024]
+                  - cell "Languages 13, Myths & Legends 13, Staves 8" [ref=e2025]
+                  - cell "-" [ref=e2026]
+                  - cell "-" [ref=e2027]
+                  - cell "7" [ref=e2028]
+                  - cell "-" [ref=e2029]
+                  - cell "A good book" [ref=e2030]
+                - row "Bandit Chief (Boss) Awareness 12, Brawling 15, Hammers 15 Berserker, Robust x6, Veteran STR +D6 30 16 Heavy warhammer, chainmail, open helm" [ref=e2031]:
+                  - cell "Bandit Chief (Boss)" [ref=e2032]
+                  - cell "Awareness 12, Brawling 15, Hammers 15" [ref=e2033]
+                  - cell "Berserker, Robust x6, Veteran" [ref=e2034]
+                  - cell "STR +D6" [ref=e2035]
+                  - cell "30" [ref=e2036]
+                  - cell "16" [ref=e2037]
+                  - cell "Heavy warhammer, chainmail, open helm" [ref=e2038]
+                - row "Knight Champion (Boss) Brawling 14, Swords 16 Defensive, Double Slash, Focused x6, Robust x6 STR +D6 28 26 Longsword, large shield, plate, great helm, horse" [ref=e2039]:
+                  - cell "Knight Champion (Boss)" [ref=e2040]
+                  - cell "Brawling 14, Swords 16" [ref=e2041]
+                  - cell "Defensive, Double Slash, Focused x6, Robust x6" [ref=e2042]
+                  - cell "STR +D6" [ref=e2043]
+                  - cell "28" [ref=e2044]
+                  - cell "26" [ref=e2045]
+                  - cell "Longsword, large shield, plate, great helm, horse" [ref=e2046]
+                - row "Archmage (Boss) Magic School 15, Staves 13 Focused x6, Master Spellcaster, Robust x4 - 22 30 Staff, grimoire" [ref=e2047]:
+                  - cell "Archmage (Boss)" [ref=e2048]
+                  - cell "Magic School 15, Staves 13" [ref=e2049]
+                  - cell "Focused x6, Master Spellcaster, Robust x4" [ref=e2050]
+                  - cell "-" [ref=e2051]
+                  - cell "22" [ref=e2052]
+                  - cell "30" [ref=e2053]
+                  - cell "Staff, grimoire" [ref=e2054]
+          - generic [ref=e2056]:
+            - button "Common Animals p. 104" [expanded] [ref=e2057] [cursor=pointer]:
+              - heading "Common Animals p. 104" [level=3] [ref=e2058]:
+                - text: Common Animals
+                - generic [ref=e2059]: p. 104
+              - img [ref=e2061]
+            - table [ref=e2067]:
+              - rowgroup [ref=e2068]:
+                - row "Animal Movement Hp Attack Skills" [ref=e2069]:
+                  - columnheader "Animal" [ref=e2070]
+                  - columnheader "Movement" [ref=e2071]
+                  - columnheader "Hp" [ref=e2072]
+                  - columnheader "Attack" [ref=e2073]
+                  - columnheader "Skills" [ref=e2074]
+              - rowgroup [ref=e2075]:
+                - row "Cat 12 4 Bite (8, D3) Awareness 12, Evade 14, Sneaking 16" [ref=e2076]:
+                  - cell "Cat" [ref=e2077]
+                  - cell "12" [ref=e2078]
+                  - cell "4" [ref=e2079]
+                  - cell "Bite (8, D3)" [ref=e2080]
+                  - cell "Awareness 12, Evade 14, Sneaking 16" [ref=e2081]
+                - row "Dog 14 8 Bite (12, D8) Awareness 14, Evade 10, Sneaking 12" [ref=e2082]:
+                  - cell "Dog" [ref=e2083]
+                  - cell "14" [ref=e2084]
+                  - cell "8" [ref=e2085]
+                  - cell "Bite (12, D8)" [ref=e2086]
+                  - cell "Awareness 14, Evade 10, Sneaking 12" [ref=e2087]
+                - row "Goat 10 6 Horns (10, D6) Awareness 10, Evade 12" [ref=e2088]:
+                  - cell "Goat" [ref=e2089]
+                  - cell "10" [ref=e2090]
+                  - cell "6" [ref=e2091]
+                  - cell "Horns (10, D6)" [ref=e2092]
+                  - cell "Awareness 10, Evade 12" [ref=e2093]
+                - row "Donkey 14 12 Kick (10, D10) Awareness 10, Evade 6" [ref=e2094]:
+                  - cell "Donkey" [ref=e2095]
+                  - cell "14" [ref=e2096]
+                  - cell "12" [ref=e2097]
+                  - cell "Kick (10, D10)" [ref=e2098]
+                  - cell "Awareness 10, Evade 6" [ref=e2099]
+                - row "Horse 20 16 Kick (10, 2D4) Awareness 12, Evade 8" [ref=e2100]:
+                  - cell "Horse" [ref=e2101]
+                  - cell "20" [ref=e2102]
+                  - cell "16" [ref=e2103]
+                  - cell "Kick (10, 2D4)" [ref=e2104]
+                  - cell "Awareness 12, Evade 8" [ref=e2105]
+                - row "Wild Boar 12 14 Tusks (12, 2D6) Awareness 10, Evade 8" [ref=e2106]:
+                  - cell "Wild Boar" [ref=e2107]
+                  - cell "12" [ref=e2108]
+                  - cell "14" [ref=e2109]
+                  - cell "Tusks (12, 2D6)" [ref=e2110]
+                  - cell "Awareness 10, Evade 8" [ref=e2111]
+                - row "Deer 18 12 Horns (10, D8) Awareness 12, Evade 12" [ref=e2112]:
+                  - cell "Deer" [ref=e2113]
+                  - cell "18" [ref=e2114]
+                  - cell "12" [ref=e2115]
+                  - cell "Horns (10, D8)" [ref=e2116]
+                  - cell "Awareness 12, Evade 12" [ref=e2117]
+                - row "Moose 16 18 Horns (10, 2D6) Awareness 10, Evade 8" [ref=e2118]:
+                  - cell "Moose" [ref=e2119]
+                  - cell "16" [ref=e2120]
+                  - cell "18" [ref=e2121]
+                  - cell "Horns (10, 2D6)" [ref=e2122]
+                  - cell "Awareness 10, Evade 8" [ref=e2123]
+                - row "Fox 10 6 Bite (12, D6) Awareness 12, Evade 10, Sneaking 14" [ref=e2124]:
+                  - cell "Fox" [ref=e2125]
+                  - cell "10" [ref=e2126]
+                  - cell "6" [ref=e2127]
+                  - cell "Bite (12, D6)" [ref=e2128]
+                  - cell "Awareness 12, Evade 10, Sneaking 14" [ref=e2129]
+                - row "Wolf 16 10 Bite (14, 2D6) Awareness 14, Evade 12, Sneaking 14" [ref=e2130]:
+                  - cell "Wolf" [ref=e2131]
+                  - cell "16" [ref=e2132]
+                  - cell "10" [ref=e2133]
+                  - cell "Bite (14, 2D6)" [ref=e2134]
+                  - cell "Awareness 14, Evade 12, Sneaking 14" [ref=e2135]
+                - row "Bear 12 20 Bite (12, 2D8) Awareness 10, Evade 8" [ref=e2136]:
+                  - cell "Bear" [ref=e2137]
+                  - cell "12" [ref=e2138]
+                  - cell "20" [ref=e2139]
+                  - cell "Bite (12, 2D8)" [ref=e2140]
+                  - cell "Awareness 10, Evade 8" [ref=e2141]
+          - generic [ref=e2143]:
+            - button "Attributes for NPCs p. 109" [expanded] [ref=e2144] [cursor=pointer]:
+              - heading "Attributes for NPCs p. 109" [level=3] [ref=e2145]:
+                - text: Attributes for NPCs
+                - generic [ref=e2146]: p. 109
+              - img [ref=e2148]
+            - generic [ref=e2153]:
+              - paragraph [ref=e2154]: "STR & AGL: Use damage bonus. +D6 = 17, +D4 = 14, none = 10."
+              - paragraph [ref=e2155]: "CON: Roll against max HP, -2 per Robust level."
+              - paragraph [ref=e2156]: "WIL: Roll against max WP (if listed), -2 per Focused level. If no WP listed, use 10."
+              - paragraph [ref=e2157]: "INT & CHA: Roll against 10."
+          - generic [ref=e2159]:
+            - button "NPC Generator p. 111" [expanded] [ref=e2160] [cursor=pointer]:
+              - heading "NPC Generator p. 111" [level=3] [ref=e2161]:
+                - text: NPC Generator
+                - generic [ref=e2162]: p. 111
+              - img [ref=e2164]
+            - table [ref=e2170]:
+              - rowgroup [ref=e2171]:
+                - row "D20 Attitude D4 Kin D6 Motivation D8 Profession D10 Trait D12 Name" [ref=e2172]:
+                  - columnheader "D20" [ref=e2173]
+                  - columnheader "Attitude D4" [ref=e2174]
+                  - columnheader "Kin D6" [ref=e2175]
+                  - columnheader "Motivation D8" [ref=e2176]
+                  - columnheader "Profession D10" [ref=e2177]
+                  - columnheader "Trait D12" [ref=e2178]
+                  - columnheader "Name" [ref=e2179]
+              - rowgroup [ref=e2180]:
+                - row "1 Hostile Human Sweet, glittering gold Bard Talks too much Agnar / Jorid / Dereios" [ref=e2181]:
+                  - cell "1" [ref=e2182]
+                  - cell "Hostile" [ref=e2183]
+                  - cell "Human" [ref=e2184]
+                  - cell "Sweet, glittering gold" [ref=e2185]
+                  - cell "Bard" [ref=e2186]
+                  - cell "Talks too much" [ref=e2187]
+                  - cell "Agnar / Jorid / Dereios" [ref=e2188]
+                - row "2 Evasive Dwarf Knowledge of the world Artisan Strange clothes Ragnfast / Ask / Euanthe" [ref=e2189]:
+                  - cell "2" [ref=e2190]
+                  - cell "Evasive" [ref=e2191]
+                  - cell "Dwarf" [ref=e2192]
+                  - cell "Knowledge of the world" [ref=e2193]
+                  - cell "Artisan" [ref=e2194]
+                  - cell "Strange clothes" [ref=e2195]
+                  - cell "Ragnfast / Ask / Euanthe" [ref=e2196]
+                - row "3 Indifferent Elf Deep and eternal love Hunter Wild-eyed Arnulf / Tyra / Xanthos" [ref=e2197]:
+                  - cell "3" [ref=e2198]
+                  - cell "Indifferent" [ref=e2199]
+                  - cell "Elf" [ref=e2200]
+                  - cell "Deep and eternal love" [ref=e2201]
+                  - cell "Hunter" [ref=e2202]
+                  - cell "Wild-eyed" [ref=e2203]
+                  - cell "Arnulf / Tyra / Xanthos" [ref=e2204]
+                - row "4 Friendly Halfling A lifelong oath Fighter Smells bad Atle / Liv / Athalia" [ref=e2205]:
+                  - cell "4" [ref=e2206]
+                  - cell "Friendly" [ref=e2207]
+                  - cell "Halfling" [ref=e2208]
+                  - cell "A lifelong oath" [ref=e2209]
+                  - cell "Fighter" [ref=e2210]
+                  - cell "Smells bad" [ref=e2211]
+                  - cell "Atle / Liv / Athalia" [ref=e2212]
+                - row "5 - Wolfkin Injustice demands retribution Scholar Joker Guthorm / Embla / Kleitos" [ref=e2213]:
+                  - cell "5" [ref=e2214]
+                  - cell "-" [ref=e2215]
+                  - cell "Wolfkin" [ref=e2216]
+                  - cell "Injustice demands retribution" [ref=e2217]
+                  - cell "Scholar" [ref=e2218]
+                  - cell "Joker" [ref=e2219]
+                  - cell "Guthorm / Embla / Kleitos" [ref=e2220]
+                - row "6 - Mallard A life of joy and song Mage Cultist Botvid / Ragna / Astara" [ref=e2221]:
+                  - cell "6" [ref=e2222]
+                  - cell "-" [ref=e2223]
+                  - cell "Mallard" [ref=e2224]
+                  - cell "A life of joy and song" [ref=e2225]
+                  - cell "Mage" [ref=e2226]
+                  - cell "Cultist" [ref=e2227]
+                  - cell "Botvid / Ragna / Astara" [ref=e2228]
+                - row "7 - - Blood ties never severed Merchant A bit childish Kale / Turid / Priamus" [ref=e2229]:
+                  - cell "7" [ref=e2230]
+                  - cell "-" [ref=e2231]
+                  - cell "-" [ref=e2232]
+                  - cell "Blood ties never severed" [ref=e2233]
+                  - cell "Merchant" [ref=e2234]
+                  - cell "A bit childish" [ref=e2235]
+                  - cell "Kale / Turid / Priamus" [ref=e2236]
+                - row "8 - - Escaping the dark past Knight Quiet and difficult Egil / Jorunn / Galyna" [ref=e2237]:
+                  - cell "8" [ref=e2238]
+                  - cell "-" [ref=e2239]
+                  - cell "-" [ref=e2240]
+                  - cell "Escaping the dark past" [ref=e2241]
+                  - cell "Knight" [ref=e2242]
+                  - cell "Quiet and difficult" [ref=e2243]
+                  - cell "Egil / Jorunn / Galyna" [ref=e2244]
+                - row "9 - - - Mariner Demon worshiper Ingemund / Borghild / Taras" [ref=e2245]:
+                  - cell "9" [ref=e2246]
+                  - cell "-" [ref=e2247]
+                  - cell "-" [ref=e2248]
+                  - cell "-" [ref=e2249]
+                  - cell "Mariner" [ref=e2250]
+                  - cell "Demon worshiper" [ref=e2251]
+                  - cell "Ingemund / Borghild / Taras" [ref=e2252]
+                - row "10 - - - Thief Obstinate Gudmund / Gylla / Zenais" [ref=e2253]:
+                  - cell "10" [ref=e2254]
+                  - cell "-" [ref=e2255]
+                  - cell "-" [ref=e2256]
+                  - cell "-" [ref=e2257]
+                  - cell "Thief" [ref=e2258]
+                  - cell "Obstinate" [ref=e2259]
+                  - cell "Gudmund / Gylla / Zenais" [ref=e2260]
+                - row "11 - - - - Very touchy Grim / Tora / Hesiod" [ref=e2261]:
+                  - cell "11" [ref=e2262]
+                  - cell "-" [ref=e2263]
+                  - cell "-" [ref=e2264]
+                  - cell "-" [ref=e2265]
+                  - cell "-" [ref=e2266]
+                  - cell "Very touchy" [ref=e2267]
+                  - cell "Grim / Tora / Hesiod" [ref=e2268]
+                - row "12 - - - - Highly romantic Brand / Edda / Liene" [ref=e2269]:
+                  - cell "12" [ref=e2270]
+                  - cell "-" [ref=e2271]
+                  - cell "-" [ref=e2272]
+                  - cell "-" [ref=e2273]
+                  - cell "-" [ref=e2274]
+                  - cell "Highly romantic" [ref=e2275]
+                  - cell "Brand / Edda / Liene" [ref=e2276]
+                - row "13 - - - - - Folkvid / Sigrun / Eupraxia" [ref=e2277]:
+                  - cell "13" [ref=e2278]
+                  - cell "-" [ref=e2279]
+                  - cell "-" [ref=e2280]
+                  - cell "-" [ref=e2281]
+                  - cell "-" [ref=e2282]
+                  - cell "-" [ref=e2283]
+                  - cell "Folkvid / Sigrun / Eupraxia" [ref=e2284]
+                - row "14 - - - - - Germund / Dagrun / Tyrus" [ref=e2285]:
+                  - cell "14" [ref=e2286]
+                  - cell "-" [ref=e2287]
+                  - cell "-" [ref=e2288]
+                  - cell "-" [ref=e2289]
+                  - cell "-" [ref=e2290]
+                  - cell "-" [ref=e2291]
+                  - cell "Germund / Dagrun / Tyrus" [ref=e2292]
+                - row "15 - - - - - Algot / Bolla / Lysandra" [ref=e2293]:
+                  - cell "15" [ref=e2294]
+                  - cell "-" [ref=e2295]
+                  - cell "-" [ref=e2296]
+                  - cell "-" [ref=e2297]
+                  - cell "-" [ref=e2298]
+                  - cell "-" [ref=e2299]
+                  - cell "Algot / Bolla / Lysandra" [ref=e2300]
+                - row "16 - - - - - Tolir / Yrsa / Kallias" [ref=e2301]:
+                  - cell "16" [ref=e2302]
+                  - cell "-" [ref=e2303]
+                  - cell "-" [ref=e2304]
+                  - cell "-" [ref=e2305]
+                  - cell "-" [ref=e2306]
+                  - cell "-" [ref=e2307]
+                  - cell "Tolir / Yrsa / Kallias" [ref=e2308]
+                - row "17 - - - - - Hjorvald / Estrid / Isidora" [ref=e2309]:
+                  - cell "17" [ref=e2310]
+                  - cell "-" [ref=e2311]
+                  - cell "-" [ref=e2312]
+                  - cell "-" [ref=e2313]
+                  - cell "-" [ref=e2314]
+                  - cell "-" [ref=e2315]
+                  - cell "Hjorvald / Estrid / Isidora" [ref=e2316]
+                - row "18 - - - - - Ambjorn / Signe / Athos" [ref=e2317]:
+                  - cell "18" [ref=e2318]
+                  - cell "-" [ref=e2319]
+                  - cell "-" [ref=e2320]
+                  - cell "-" [ref=e2321]
+                  - cell "-" [ref=e2322]
+                  - cell "-" [ref=e2323]
+                  - cell "Ambjorn / Signe / Athos" [ref=e2324]
+                - row "19 - - - - - Grunn / Tilde / Larysa" [ref=e2325]:
+                  - cell "19" [ref=e2326]
+                  - cell "-" [ref=e2327]
+                  - cell "-" [ref=e2328]
+                  - cell "-" [ref=e2329]
+                  - cell "-" [ref=e2330]
+                  - cell "-" [ref=e2331]
+                  - cell "Grunn / Tilde / Larysa" [ref=e2332]
+                - row "20 - - - - - Olgrid / Idun / Nikias" [ref=e2333]:
+                  - cell "20" [ref=e2334]
+                  - cell "-" [ref=e2335]
+                  - cell "-" [ref=e2336]
+                  - cell "-" [ref=e2337]
+                  - cell "-" [ref=e2338]
+                  - cell "-" [ref=e2339]
+                  - cell "Olgrid / Idun / Nikias" [ref=e2340]
+        - navigation "Jump to section" [ref=e2342]:
+          - button "Core Rules" [ref=e2343] [cursor=pointer]
+          - button "Combat" [ref=e2344] [cursor=pointer]
+          - button "Mishap Tables" [ref=e2345] [cursor=pointer]
+          - button "Magic" [ref=e2346] [cursor=pointer]
+          - button "Gear" [ref=e2347] [cursor=pointer]
+          - button "Hazards" [ref=e2348] [cursor=pointer]
+          - button "Kin & NPCs" [ref=e2349] [cursor=pointer]
+    - navigation "Main navigation" [ref=e54]:
+      - link "Characters" [ref=e55] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e56]
+        - text: Characters
+      - link "Session" [ref=e59] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e60]
+        - text: Session
+      - link "Reference" [active] [ref=e62] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e63]
+        - text: Reference
+    - button "Open quick actions" [ref=e65] [cursor=pointer]:
+      - img [ref=e66]
+  - alert

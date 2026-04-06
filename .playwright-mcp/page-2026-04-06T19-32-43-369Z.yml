@@ -1,0 +1,41 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [active] [ref=e6] [cursor=pointer]:
+        - generic [ref=e8]: No campaign
+        - img [ref=e9]
+      - button "Menu" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+    - main [ref=e13]:
+      - generic [ref=e277]:
+        - paragraph [ref=e278]: Create a campaign to get started
+        - paragraph [ref=e279]: Tap the campaign selector above to create or select a campaign.
+    - navigation "Main navigation" [ref=e31]:
+      - link "Characters" [ref=e32] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e33]
+        - text: Characters
+      - link "Session" [ref=e36] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e37]
+        - text: Session
+      - link "Reference" [ref=e39] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e40]
+        - text: Reference
+    - button "Start a session first" [ref=e42] [cursor=pointer]:
+      - img [ref=e43]
+    - dialog "Create campaign" [ref=e285]:
+      - generic [ref=e286]:
+        - heading "Create Campaign" [level=2] [ref=e287]
+        - generic [ref=e288]:
+          - generic [ref=e289]:
+            - generic [ref=e290]: Name *
+            - textbox "Campaign name" [ref=e291]
+          - generic [ref=e292]:
+            - generic [ref=e293]: Description (optional)
+            - textbox "Brief description..." [ref=e294]
+          - generic [ref=e295]:
+            - button "Create" [disabled] [ref=e296] [cursor=pointer]
+            - button "Cancel" [ref=e297] [cursor=pointer]
+  - alert

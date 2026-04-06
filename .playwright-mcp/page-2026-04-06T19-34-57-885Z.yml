@@ -1,0 +1,85 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Dragonbane
+          - generic [ref=e8]: Session 1 — 2026-04-06
+        - img [ref=e10]
+      - button "Menu" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+    - main [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - button "Back" [ref=e17] [cursor=pointer]
+          - generic [ref=e18]: Saved
+        - textbox "Note title" [ref=e19]: The Riddermound Cleared
+        - generic [ref=e20]:
+          - button "generic" [ref=e21] [cursor=pointer]
+          - button "npc" [ref=e22] [cursor=pointer]
+          - button "combat" [ref=e23] [cursor=pointer]
+          - button "location" [ref=e24] [cursor=pointer]
+          - button "loot" [ref=e25] [cursor=pointer]
+          - button "rumor" [ref=e26] [cursor=pointer]
+          - button "quote" [ref=e27] [cursor=pointer]
+        - generic [ref=e28]:
+          - generic [ref=e29]:
+            - button "B" [ref=e30] [cursor=pointer]
+            - button "I" [ref=e31] [cursor=pointer]:
+              - emphasis [ref=e32]: I
+            - button "H2" [ref=e33] [cursor=pointer]
+            - button "H3" [ref=e34] [cursor=pointer]
+            - button "• List" [ref=e35] [cursor=pointer]
+            - button "1. List" [ref=e36] [cursor=pointer]
+            - button "❝" [ref=e37] [cursor=pointer]
+            - button "Link" [ref=e38] [cursor=pointer]
+          - textbox [ref=e40]:
+            - paragraph [ref=e41]: Viktor cast Power Fist (PL3) and Stone Skin before entering the Lady's Hall. Used Fetch to pull Fiendcrusher off the table, triggering The Lady. Handed Fiendcrusher to Keldorn. Viktor landed the killing blow on both The Lady and The Wight with Power Fist. Party cleared the Riddermound.
+        - generic [ref=e43]:
+          - paragraph [ref=e44]: Tags
+          - generic [ref=e45]:
+            - button "tense" [ref=e46] [cursor=pointer]
+            - button "funny" [ref=e47] [cursor=pointer]
+            - button "dramatic" [ref=e48] [cursor=pointer]
+            - button "sad" [ref=e49] [cursor=pointer]
+            - button "victorious" [active] [ref=e50] [cursor=pointer]
+            - button "combat" [ref=e51] [cursor=pointer]
+            - button "exploration" [ref=e52] [cursor=pointer]
+            - button "social" [ref=e53] [cursor=pointer]
+            - button "mystery" [ref=e54] [cursor=pointer]
+            - button "travel" [ref=e55] [cursor=pointer]
+            - button "downtime" [ref=e56] [cursor=pointer]
+            - button "important" [ref=e57] [cursor=pointer]
+            - button "follow-up" [ref=e58] [cursor=pointer]
+            - button "plot-hook" [ref=e59] [cursor=pointer]
+            - button "lore" [ref=e60] [cursor=pointer]
+            - button "treasure" [ref=e61] [cursor=pointer]
+            - button "npc" [ref=e62] [cursor=pointer]
+            - button "location" [ref=e63] [cursor=pointer]
+            - button "rumor" [ref=e64] [cursor=pointer]
+            - button "quest" [ref=e65] [cursor=pointer]
+            - button "loot" [ref=e66] [cursor=pointer]
+            - button "skill-check" [ref=e67] [cursor=pointer]
+            - button "spell" [ref=e68] [cursor=pointer]
+            - button "ability" [ref=e69] [cursor=pointer]
+            - button "death" [ref=e70] [cursor=pointer]
+            - button "rest" [ref=e71] [cursor=pointer]
+          - generic [ref=e72]:
+            - textbox "Add custom tag..." [ref=e73]
+            - button "+" [disabled] [ref=e74] [cursor=pointer]
+    - navigation "Main navigation" [ref=e75]:
+      - link "Characters" [ref=e76] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e77]
+        - text: Characters
+      - link "Session" [ref=e80] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e81]
+        - text: Session
+      - link "Reference" [ref=e83] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e84]
+        - text: Reference
+    - button "Open quick actions" [ref=e86] [cursor=pointer]:
+      - img [ref=e87]
+  - alert
