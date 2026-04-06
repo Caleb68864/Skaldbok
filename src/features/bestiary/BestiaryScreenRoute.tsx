@@ -1,4 +1,5 @@
 import { useCampaignContext } from '../campaign/CampaignContext';
+import { useEncounterList } from '../encounters/useEncounterList';
 import { NoCampaignPrompt } from '../../components/shell/NoCampaignPrompt';
 import { BestiaryScreen } from './BestiaryScreen';
 
@@ -7,11 +8,17 @@ import { BestiaryScreen } from './BestiaryScreen';
  * Renders NoCampaignPrompt if no campaign is active.
  */
 export function BestiaryScreenRoute() {
-  const { activeCampaign } = useCampaignContext();
+  const { activeCampaign, activeSession } = useCampaignContext();
+  const { activeEncounter } = useEncounterList(activeSession?.id ?? null);
 
   if (!activeCampaign) {
     return <NoCampaignPrompt />;
   }
 
-  return <BestiaryScreen campaignId={activeCampaign.id} />;
+  return (
+    <BestiaryScreen
+      campaignId={activeCampaign.id}
+      activeEncounterId={activeEncounter?.id}
+    />
+  );
 }

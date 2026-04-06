@@ -118,9 +118,15 @@ export function useImportActions() {
   const executeImport = useCallback(async (options: MergeOptions) => {
     if (!parsedResult || !parsedResult.success) return;
 
+    // For campaign imports, auto-target the campaign in the bundle
+    const effectiveOptions = { ...options };
+    if (parsedResult.bundle.type === 'campaign' && parsedResult.bundle.contents.campaign && !effectiveOptions.targetCampaignId) {
+      effectiveOptions.targetCampaignId = parsedResult.bundle.contents.campaign.id;
+    }
+
     setIsImporting(true);
     try {
-      const report = await mergeBundle(parsedResult.bundle, options);
+      const report = await mergeBundle(parsedResult.bundle, effectiveOptions);
 
       if (report.errors.length > 0) {
         showToast(

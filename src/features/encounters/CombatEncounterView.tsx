@@ -92,8 +92,12 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   };
 
   const handleQuickCreate = async (name: string, stats: { hp?: number; armor?: number; movement?: number }) => {
-    const { create: createTemplate } = await import('../../storage/repositories/creatureTemplateRepository');
-    const template = await createTemplate({
+    const { create: createTemplate, listByCampaign } = await import('../../storage/repositories/creatureTemplateRepository');
+    // Check if a creature template with this name already exists
+    const existing = (await listByCampaign(encounter.campaignId)).find(
+      t => t.name.toLowerCase() === name.toLowerCase()
+    );
+    const template = existing ?? await createTemplate({
       campaignId: encounter.campaignId,
       name,
       category: 'monster',
