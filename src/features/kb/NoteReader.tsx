@@ -181,6 +181,7 @@ export function NoteReader({ noteId }: NoteReaderProps) {
           typeData: {},
           status: 'active',
           pinned: false,
+          scope: 'campaign',
         });
         navigate(`/kb/note-${newNote.id}`);
       } catch (err) {
