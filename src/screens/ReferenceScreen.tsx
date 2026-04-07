@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import * as referenceNoteRepository from '../storage/repositories/referenceNoteRepository';
 import type { ReferenceNote } from '../storage/db/client';
@@ -31,6 +32,7 @@ type ActiveTab = 'reference' | 'notes';
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] box-border";
 
 export default function ReferenceScreen() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<ActiveTab>('reference');
   const [searchQuery, setSearchQuery] = useState('');
   const [activePage, setActivePage] = useState<string>(referencePages[0].title);
@@ -171,8 +173,11 @@ export default function ReferenceScreen() {
 
   return (
     <div className="p-[var(--space-md)]">
-      {/* Tab switcher */}
-      <div className="flex gap-3 mb-[var(--space-md)]">
+      {/* Back + Tab switcher */}
+      <div className="flex items-center gap-3 mb-[var(--space-md)]">
+        <button onClick={() => navigate(-1)} className="min-h-11 min-w-11 flex items-center justify-center bg-transparent border-none cursor-pointer text-[var(--color-text)] shrink-0" aria-label="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        </button>
         <button
           className={cn(
             "px-[var(--space-md)] py-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] cursor-pointer min-h-[var(--touch-target-min)] text-[length:var(--font-size-sm)]",

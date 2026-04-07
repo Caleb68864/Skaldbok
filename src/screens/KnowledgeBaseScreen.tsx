@@ -13,25 +13,23 @@
  */
 
 import { useState, useEffect } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { KnowledgeBaseProvider } from '../features/kb/KnowledgeBaseContext';
 import { VaultBrowser } from '../features/kb/VaultBrowser';
 import { NoteReader } from '../features/kb/NoteReader';
 import { GraphView } from '../features/kb/GraphView';
-import { CommandPalette } from '../features/kb/CommandPalette';
-import { useCommandPalette } from '../features/kb/useCommandPalette';
 import { bulkRebuildGraph } from '../features/kb/linkSyncEngine';
 import { db } from '../storage/db/client';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 
 export default function KnowledgeBaseScreen() {
+  const navigate = useNavigate();
   const { nodeId } = useParams<{ nodeId?: string }>();
   const [searchParams] = useSearchParams();
   const isGraphView = searchParams.get('view') === 'graph';
   const { activeCampaign } = useCampaignContext();
   const [isBuilding, setIsBuilding] = useState(false);
   const [isReady, setIsReady] = useState(false);
-  const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
 
   // On mount: check for migration and rebuild if needed
   useEffect(() => {
@@ -74,6 +72,29 @@ export default function KnowledgeBaseScreen() {
 
   return (
     <KnowledgeBaseProvider campaignId={activeCampaign.id}>
+      {/* Header with back, title, and actions */}
+      {!isGraphView && (
+        <div className="flex items-center gap-3 p-4 pb-0">
+          <button onClick={() => navigate(-1)} className="min-h-11 min-w-11 flex items-center justify-center bg-transparent border-none cursor-pointer text-[var(--color-text)]" aria-label="Back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+          </button>
+          <h2 className="text-[var(--color-text)] m-0 flex-1">Knowledge Base</h2>
+          <button
+            onClick={() => navigate('/note/new')}
+            className="min-h-11 px-3 py-1.5 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg cursor-pointer text-xs font-semibold"
+          >
+            + Note
+          </button>
+          <button
+            onClick={() => navigate('/kb?view=graph')}
+            className="min-h-11 px-3 py-1.5 bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] rounded-lg cursor-pointer text-xs font-semibold"
+            aria-label="Graph view"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1 align-[-2px]"><circle cx="5" cy="6" r="3"/><circle cx="19" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="7.5" y1="7.5" x2="10.5" y2="16.5"/><line x1="16.5" y1="7.5" x2="13.5" y2="16.5"/></svg>
+            Graph
+          </button>
+        </div>
+      )}
       {isBuilding && (
         <div className="p-8 text-center">
           <div className="text-[var(--color-text-muted)] text-sm">
@@ -89,24 +110,6 @@ export default function KnowledgeBaseScreen() {
         ) : (
           <VaultBrowser campaignId={activeCampaign.id} />
         )
-      )}
-      <CommandPalette
-        isOpen={isPaletteOpen}
-        onClose={closePalette}
-        campaignId={activeCampaign.id}
-      />
-      {/* Search FAB — opens command palette */}
-      {!isPaletteOpen && (
-        <button
-          onClick={openPalette}
-          aria-label="Search knowledge base"
-          className="fixed bottom-[136px] right-4 z-[99] w-12 h-12 rounded-full bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] shadow-lg cursor-pointer flex items-center justify-center"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </button>
       )}
     </KnowledgeBaseProvider>
   );
