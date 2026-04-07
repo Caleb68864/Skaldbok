@@ -18,6 +18,8 @@ import { KnowledgeBaseProvider } from '../features/kb/KnowledgeBaseContext';
 import { VaultBrowser } from '../features/kb/VaultBrowser';
 import { NoteReader } from '../features/kb/NoteReader';
 import { GraphView } from '../features/kb/GraphView';
+import { CommandPalette } from '../features/kb/CommandPalette';
+import { useCommandPalette } from '../features/kb/useCommandPalette';
 import { bulkRebuildGraph } from '../features/kb/linkSyncEngine';
 import { db } from '../storage/db/client';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
@@ -29,6 +31,7 @@ export default function KnowledgeBaseScreen() {
   const { activeCampaign } = useCampaignContext();
   const [isBuilding, setIsBuilding] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const { isOpen: isPaletteOpen, open: openPalette, close: closePalette } = useCommandPalette();
 
   // On mount: check for migration and rebuild if needed
   useEffect(() => {
@@ -86,6 +89,24 @@ export default function KnowledgeBaseScreen() {
         ) : (
           <VaultBrowser campaignId={activeCampaign.id} />
         )
+      )}
+      <CommandPalette
+        isOpen={isPaletteOpen}
+        onClose={closePalette}
+        campaignId={activeCampaign.id}
+      />
+      {/* Search FAB — opens command palette */}
+      {!isPaletteOpen && (
+        <button
+          onClick={openPalette}
+          aria-label="Search knowledge base"
+          className="fixed bottom-[136px] right-4 z-[99] w-12 h-12 rounded-full bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] shadow-lg cursor-pointer flex items-center justify-center"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+        </button>
       )}
     </KnowledgeBaseProvider>
   );
