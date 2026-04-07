@@ -116,7 +116,13 @@ export default function ProfileScreen() {
   );
 
   return (
-    <div className="profile-screen">
+    <div className="profile-screen relative">
+      {/* Back button */}
+      <div className="absolute top-2 left-2 z-10">
+        <button onClick={() => navigate(-1)} className="min-h-11 min-w-11 flex items-center justify-center bg-[var(--color-surface)]/80 backdrop-blur-sm rounded-full border border-[var(--color-border)] cursor-pointer text-[var(--color-text)]" aria-label="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        </button>
+      </div>
       {/* Hero portrait area — ~40vh */}
       <div className="profile-hero">
         {character.portraitUri ? (

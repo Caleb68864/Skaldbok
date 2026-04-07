@@ -254,6 +254,16 @@ export function GraphView({ campaignId, centeredNodeId }: GraphViewProps) {
 
   return (
     <div className="w-full h-full relative" style={{ minHeight: '400px' }}>
+      {/* Back button */}
+      <button
+        onClick={() => navigate('/kb')}
+        className="absolute top-2 right-2 z-10 min-h-11 px-3 py-1.5 flex items-center gap-1.5 bg-[var(--color-surface)]/80 backdrop-blur-sm rounded-lg border border-[var(--color-border)] cursor-pointer text-[var(--color-text)] text-xs font-medium"
+        aria-label="Back to list"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        List
+      </button>
+
       {/* Filter controls */}
       <div className="absolute top-2 left-2 z-10 flex flex-wrap gap-2 p-2 bg-[var(--color-surface)]/80 rounded-lg border border-[var(--color-border)] backdrop-blur-sm">
         <label className="flex items-center gap-1 text-xs text-[var(--color-text)] cursor-pointer">

@@ -72,7 +72,12 @@ export default function SettingsScreen() {
 
   return (
     <div className="p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
-      <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)]">Settings</h1>
+      <div className="flex items-center gap-3">
+        <button onClick={() => navigate(-1)} className="min-h-11 min-w-11 flex items-center justify-center bg-transparent border-none cursor-pointer text-[var(--color-text)]" aria-label="Back">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        </button>
+        <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] m-0">Settings</h1>
+      </div>
 
       {/* Install App */}
       <Card>
