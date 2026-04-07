@@ -4,6 +4,15 @@ import type { Note } from '../../types/note';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 
+// Lazy import to avoid circular dependency — linkSyncEngine imports noteRepository
+let _syncModule: typeof import('../../features/kb/linkSyncEngine') | null = null;
+async function getSyncModule() {
+  if (!_syncModule) {
+    _syncModule = await import('../../features/kb/linkSyncEngine');
+  }
+  return _syncModule;
+}
+
 /**
  * Retrieves a single {@link Note} by its unique identifier.
  *
@@ -145,6 +154,8 @@ export async function createNote(data: Omit<Note, 'id' | 'createdAt' | 'updatedA
       updatedAt: now,
     } as Note;
     await db.notes.add(note);
+    // Fire-and-forget KB graph sync — failure must NOT affect note save
+    getSyncModule().then((m) => m.syncNote(note.id)).catch(() => {});
     return note;
   } catch (e) {
     throw new Error(`noteRepository.createNote failed: ${e}`);
@@ -177,6 +188,8 @@ export async function updateNote(id: string, data: Partial<Note>): Promise<Note>
     await db.notes.update(id, { ...data, updatedAt: now });
     const updated = await db.notes.get(id);
     if (!updated) throw new Error(`noteRepository.updateNote: note ${id} not found after update`);
+    // Fire-and-forget KB graph sync
+    getSyncModule().then((m) => m.syncNote(id)).catch(() => {});
     return updated as Note;
   } catch (e) {
     throw new Error(`noteRepository.updateNote failed: ${e}`);
@@ -202,6 +215,8 @@ export async function updateNote(id: string, data: Partial<Note>): Promise<Note>
 export async function deleteNote(id: string): Promise<void> {
   try {
     await db.notes.delete(id);
+    // Fire-and-forget KB graph cleanup
+    getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
   } catch (e) {
     throw new Error(`noteRepository.deleteNote failed: ${e}`);
   }

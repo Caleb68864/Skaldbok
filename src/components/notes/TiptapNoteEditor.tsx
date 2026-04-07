@@ -5,6 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import Link from '@tiptap/extension-link';
 import { DescriptorMention } from '../../features/notes/descriptorMentionExtension';
+import { WikiLink } from '../../features/notes/wikilinkExtension';
 import { useDescriptorSuggestions } from '../../features/notes/useDescriptorSuggestions';
 import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
 import { getAll as getAllCharacters } from '../../storage/repositories/characterRepository';
@@ -419,6 +420,8 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
   const rendererRef = useRef(createSuggestionRenderer());
   /** Stable renderer instance for the `#descriptor` suggestion popup. */
   const descriptorRendererRef = useRef(createDescriptorRenderer());
+  /** Stable renderer instance for the `[[wikilink` suggestion popup. */
+  const wikiLinkRendererRef = useRef(createSuggestionRenderer());
   /** Timeout handle for the 2-second Tiptap initialisation guard. */
   const initTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -485,6 +488,29 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
               }
             },
             render: () => rendererRef.current,
+          },
+        }),
+        WikiLink.configure({
+          suggestion: {
+            char: '[[',
+            items: async ({ query }: { query: string }) => {
+              try {
+                const results: Array<{ id: string; label: string }> = [];
+                const q = query.toLowerCase();
+                if (campaignId) {
+                  const notes = await getNotesByCampaign(campaignId);
+                  for (const n of notes) {
+                    if (n && n.title.toLowerCase().includes(q)) {
+                      results.push({ id: n.id, label: n.title });
+                    }
+                  }
+                }
+                return results.slice(0, 12);
+              } catch {
+                return [];
+              }
+            },
+            render: () => wikiLinkRendererRef.current,
           },
         }),
         DescriptorMention.configure({

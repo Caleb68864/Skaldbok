@@ -77,6 +77,13 @@ export const baseNoteSchema = z.object({
    * Legacy notes without this field are treated as `'public'` at runtime.
    */
   visibility: z.enum(['public', 'private']).optional(),
+  /**
+   * Ownership scope of the note.
+   * - `'campaign'` — belongs to a specific campaign (default).
+   * - `'shared'`   — shared across campaigns (e.g. migrated reference notes).
+   * Legacy notes without this field default to `'campaign'`.
+   */
+  scope: z.enum(['campaign', 'shared']).optional(),
 });
 
 /**

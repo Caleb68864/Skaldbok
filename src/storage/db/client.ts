@@ -21,6 +21,26 @@ export interface ReferenceNote {
   updatedAt: string;
 }
 
+export interface KBNode {
+  id: string;
+  type: 'note' | 'character' | 'location' | 'item' | 'tag' | 'unresolved';
+  label: string;
+  scope: 'campaign' | 'shared';
+  campaignId: string;
+  sourceId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface KBEdge {
+  id: string;
+  fromId: string;
+  toId: string;
+  type: 'wikilink' | 'mention' | 'descriptor';
+  campaignId: string;
+  createdAt: string;
+}
+
 class SkaldbokDatabase extends Dexie {
   characters!: Table<CharacterRecord, string>;
   systems!: Table<SystemDefinition, string>;
@@ -36,6 +56,8 @@ class SkaldbokDatabase extends Dexie {
   attachments!: Table<Attachment, string>;
   creatureTemplates!: Table<CreatureTemplate, string>;
   encounters!: Table<Encounter, string>;
+  kb_nodes!: Table<KBNode, string>;
+  kb_edges!: Table<KBEdge, string>;
 
   constructor() {
     super('skaldbok-db');
@@ -177,6 +199,43 @@ class SkaldbokDatabase extends Dexie {
             value: 'true',
           });
         }
+      });
+
+    // --- Version 7: Knowledge Base Graph ---
+    // Adds kb_nodes and kb_edges tables; extends notes index with scope.
+    this.version(7)
+      .stores({
+        notes: 'id, campaignId, sessionId, type, status, pinned, visibility, scope',
+        kb_nodes: 'id, campaignId, type, scope, label, sourceId, updatedAt, [campaignId+type]',
+        kb_edges: 'id, campaignId, fromId, toId, type',
+      })
+      .upgrade(async (tx) => {
+        const metaKey = 'migration_v7_ref_notes';
+        const alreadyRan = await tx
+          .table('metadata')
+          .where('key')
+          .equals(metaKey)
+          .first()
+          .catch(() => null);
+        if (alreadyRan) return;
+
+        const refNotes = await tx
+          .table('referenceNotes')
+          .toArray()
+          .catch(() => []);
+        for (const ref of refNotes) {
+          await tx.table('notes').put({
+            ...ref,
+            scope: 'shared',
+            type: ref.type ?? 'reference',
+          });
+        }
+
+        await tx.table('metadata').put({
+          id: metaKey,
+          key: metaKey,
+          value: 'true',
+        });
       });
   }
 }

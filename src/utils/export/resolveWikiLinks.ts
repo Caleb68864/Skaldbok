@@ -73,6 +73,14 @@ function serializeNode(node: ProseMirrorNode, allNotes: Array<{ id: string; titl
       const inner = (node.content ?? []).map(child => serializeNode(child, allNotes)).join('');
       return `\`\`\`\n${inner}\n\`\`\`\n\n`;
     }
+    case 'wikiLink': {
+      const label = node.attrs?.label as string | undefined;
+      return label ? `[[${label}]]` : '';
+    }
+    case 'descriptorMention': {
+      const label = node.attrs?.label as string | undefined;
+      return label ? `#${label}` : '';
+    }
     default: {
       // Graceful fallback: serialize content recursively
       if (node.content) {
