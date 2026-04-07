@@ -8,7 +8,9 @@ import { useImportActions } from '../features/import/useImportActions';
 import { ImportPreview } from '../components/import/ImportPreview';
 import { CombatTimeline } from '../features/combat/CombatTimeline';
 import { useNoteActions } from '../features/notes/useNoteActions';
-import { NotesGrid } from '../features/notes/NotesGrid';
+// NotesGrid kept for rollback safety — file not deleted per spec
+// import { NotesGrid } from '../features/notes/NotesGrid';
+import { VaultBrowser } from '../features/kb/VaultBrowser';
 import { SessionQuickActions } from '../features/session/SessionQuickActions';
 import { useEncounterList } from '../features/encounters/useEncounterList';
 import { EncounterListItem } from '../features/encounters/EncounterListItem';
@@ -472,10 +474,11 @@ export function SessionScreen() {
         </div>
       )}
 
-      {/* Notes Grid */}
-      <NotesGrid
+      {/* Vault Browser (compact mode — session-scoped notes) */}
+      <VaultBrowser
         campaignId={activeCampaign.id}
-        activeSessionId={activeSession?.id ?? null}
+        sessionId={activeSession?.id}
+        compact
       />
 
       {showEndConfirm && activeSession && (
