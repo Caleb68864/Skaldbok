@@ -68,9 +68,9 @@ export async function syncNote(noteId: string): Promise<void> {
       return;
     }
 
-    if (!body) return;
-
-    const { wikilinks, mentions, descriptors } = extractLinksFromTiptapJSON(body);
+    const { wikilinks, mentions, descriptors } = body
+      ? extractLinksFromTiptapJSON(body)
+      : { wikilinks: [], mentions: [], descriptors: [] };
 
     // Upsert the note's own KBNode
     const now = nowISO();

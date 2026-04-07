@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Menu } from 'lucide-react';
 import { useCampaignContext } from '../../features/campaign/CampaignContext';
+import { useExportActions } from '../../features/export/useExportActions';
+import { useImportActions } from '../../features/import/useImportActions';
+import { ImportPreview } from '../../components/import/ImportPreview';
 import { useAppState } from '../../context/AppStateContext';
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
@@ -34,7 +37,10 @@ interface CampaignHeaderProps {
 
 export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHeaderProps) {
   const { activeCampaign, activeSession, activeCharacterInCampaign, setActiveCampaign } = useCampaignContext();
+  const { exportAllNotes, exportCampaign } = useExportActions();
+  const { startImport, showPreview, parsedResult, contentHashMismatch, conflicts, executeImport, cancelImport, isImporting } = useImportActions();
   const { settings, toggleMode } = useAppState();
+  const [includePrivateExport, setIncludePrivateExport] = useState(false);
   const { isFullscreen, toggleFullscreen, isSupported: fsSupported } = useFullscreen();
   const { isActive: wakeLockActive, toggleWakeLock, isSupported: wlSupported } = useWakeLock();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -186,9 +192,53 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
                 {wakeLockActive ? 'Wake Lock On' : 'Wake Lock Off'}
               </button>
             )}
+
+            {/* Export / Import section */}
+            {activeCampaign && (
+              <>
+                <div className="px-4 pt-4 pb-1 text-text-muted text-xs uppercase tracking-widest font-semibold">
+                  Data
+                </div>
+                <button
+                  onClick={() => { exportAllNotes(); setSheetOpen(false); }}
+                  className="block w-full text-left px-4 py-3 min-h-[44px] bg-transparent border-none border-b border-border cursor-pointer text-text text-base"
+                >
+                  Export All Notes (.zip)
+                </button>
+                <button
+                  onClick={() => { exportCampaign(activeCampaign.id, includePrivateExport); setSheetOpen(false); }}
+                  className="block w-full text-left px-4 py-3 min-h-[44px] bg-transparent border-none border-b border-border cursor-pointer text-text text-base"
+                >
+                  Export Campaign (.skaldbok)
+                </button>
+                <button
+                  onClick={() => { startImport(); setSheetOpen(false); }}
+                  className="block w-full text-left px-4 py-3 min-h-[44px] bg-transparent border-none border-b border-border cursor-pointer text-text text-base"
+                >
+                  Import (.skaldbok)
+                </button>
+                <label className="flex items-center gap-2 px-4 py-2 text-text-muted text-sm">
+                  <input type="checkbox" checked={includePrivateExport} onChange={e => setIncludePrivateExport(e.target.checked)} className="w-4 h-4 accent-[var(--color-accent)]" />
+                  Include private notes
+                </label>
+              </>
+            )}
           </SheetBody>
         </SheetContent>
       </Sheet>
+
+      {/* Import preview modal */}
+      {showPreview && parsedResult?.success && (
+        <ImportPreview
+          bundle={parsedResult.bundle}
+          warnings={parsedResult.warnings}
+          conflicts={conflicts}
+          contentHashMismatch={contentHashMismatch}
+          onImport={executeImport}
+          onCancel={cancelImport}
+          isImporting={isImporting}
+        />
+      )}
     </div>
   );
 }

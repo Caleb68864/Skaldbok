@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useEncounterList } from '../encounters/useEncounterList';
 import { NoCampaignPrompt } from '../../components/shell/NoCampaignPrompt';
@@ -8,6 +9,7 @@ import { BestiaryScreen } from './BestiaryScreen';
  * Renders NoCampaignPrompt if no campaign is active.
  */
 export function BestiaryScreenRoute() {
+  const navigate = useNavigate();
   const { activeCampaign, activeSession } = useCampaignContext();
   const { activeEncounter } = useEncounterList(activeSession?.id ?? null);
 
@@ -19,6 +21,7 @@ export function BestiaryScreenRoute() {
     <BestiaryScreen
       campaignId={activeCampaign.id}
       activeEncounterId={activeEncounter?.id}
+      onClose={() => navigate(-1)}
     />
   );
 }
