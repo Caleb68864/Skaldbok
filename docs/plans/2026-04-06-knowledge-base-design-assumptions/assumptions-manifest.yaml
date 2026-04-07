@@ -1,0 +1,315 @@
+assumptions:
+  - id: ASM-1
+    title: "Tiptap Suggestion supports multi-char trigger '[['"
+    category: library_or_framework_capability
+    severity: high
+    evidence_strength: partially_supported
+    assumption_statement: "The @tiptap/suggestion utility accepts a two-character trigger string `char: '[[' ` and fires the suggestion popup correctly."
+    why_it_matters: "The entire wikilink autocomplete feature depends on this. If Suggestion only supports single-char triggers, the wikilink extension architecture must be redesigned."
+    supporting_evidence:
+      - "Plan's technical reference (kb-technical-reference.md) documents this as researched and working"
+      - "Tiptap Suggestion docs show `char` parameter accepts strings"
+    contradicting_evidence: []
+    affected_plan_sections:
+      - "Wikilink Tiptap Extension"
+      - "Phase 2: Wikilinks + Reading"
+    affected_code_areas:
+      - "src/features/notes/wikilinkExtension.ts (to be created)"
+    validation_needed: "Create a minimal Tiptap editor with Suggestion configured as `char: '[[' ` and confirm the popup fires on typing `[[`"
+    recommended_action: validate
+    can_reference_harvester_help: true
+    status: open
+
+  - id: ASM-2
+    title: "Dexie equalsIgnoreCase() available in v4.0.10"
+    category: library_or_framework_capability
+    severity: medium
+    evidence_strength: strongly_supported
+    assumption_statement: "Dexie 4.x provides equalsIgnoreCase() on WhereClause for case-insensitive label lookups without a computed index."
+    why_it_matters: "Wikilink resolution uses this for case-insensitive node lookup. If missing, need a computed lowercase index column instead."
+    supporting_evidence:
+      - "Dexie 4.0.10 is installed (package.json)"
+      - "equalsIgnoreCase() is documented in Dexie 4 API"
+      - "Plan notes 'English a-z only' limitation, suggesting awareness of scope"
+    contradicting_evidence: []
+    affected_plan_sections:
+      - "Knowledge Base Context (useResolveWikilink)"
+      - "Constraints (50ms resolution)"
+    affected_code_areas:
+      - "src/features/kb/KnowledgeBaseContext.tsx (to be created)"
+    validation_needed: "Confirm equalsIgnoreCase() is exported from dexie 4.0.10 in node_modules"
+    recommended_action: validate
+    can_reference_harvester_help: true
+    status: open
+
+  - id: ASM-3
+    title: "settings.debugMode flag exists for gating debug logs"
+    category: data_model_or_schema
+    severity: low
+    evidence_strength: unsupported
+    assumption_statement: "A `debugMode` boolean flag exists on AppSettings to gate console.debug output from the Link Sync Engine."
+    why_it_matters: "Minor — debug logging works without it, but the plan references it as the gating mechanism. Implementation would silently skip the gating or need to add the field."
+    supporting_evidence: []
+    contradicting_evidence:
+      - "AppSettings interface (src/types/settings.ts) has no debugMode field"
+      - "No existing code references debugMode"
+    affected_plan_sections:
+      - "Link Sync Engine (Debug logging)"
+    affected_code_areas:
+      - "src/types/settings.ts"
+      - "src/features/kb/linkSyncEngine.ts (to be created)"
+    validation_needed: "Decide whether to add debugMode to AppSettings or use a different gating mechanism (e.g., localStorage flag, import.meta.env)"
+    recommended_action: mitigate
+    can_reference_harvester_help: false
+    status: open
+
+  - id: ASM-4
+    title: "Tiptap InputRule regex works for [[wikilink]] conversion"
+    category: library_or_framework_capability
+    severity: medium
+    evidence_strength: partially_supported
+    assumption_statement: "The InputRule `/\\[\\[([^\\]]+)\\]\\]$/` correctly converts typed `[[Page Name]]` text into a wikilink atom node without the autocomplete popup."
+    why_it_matters: "Provides the non-autocomplete path for creating wikilinks (typed out manually). If the regex doesn't work with Tiptap's InputRule system for atom nodes, this path is broken."
+    supporting_evidence:
+      - "Plan's technical reference documents this as researched"
+      - "Tiptap InputRule system supports regex-based node creation"
+    contradicting_evidence: []
+    affected_plan_sections:
+      - "Wikilink Tiptap Extension"
+    affected_code_areas:
+      - "src/features/notes/wikilinkExtension.ts (to be created)"
+    validation_needed: "Test InputRule with atom node creation — some Tiptap InputRules only work with marks or wrapping nodes"
+    recommended_action: validate
+    can_reference_harvester_help: true
+    status: open
+
+  - id: ASM-5
+    title: "renderNoteToMarkdown handles new wikiLink node type"
+    category: architecture_or_design
+    severity: medium
+    evidence_strength: partially_supported
+    assumption_statement: "The export pipeline (resolveWikiLinks.ts) will correctly serialize the new `wikiLink` Tiptap node type to `[[Page Name]]` markdown syntax."
+    why_it_matters: "Obsidian markdown export is a hard constraint. Without updating the serializer, wikiLink nodes would fall through to the default case, which recursively serializes content — but atom nodes have no content, so wikilinks would silently disappear from exports."
+    supporting_evidence:
+      - "Plan explicitly identifies this as needing an update"
+      - "resolveWikiLinks.ts has a clear switch/case structure easy to extend"
+    contradicting_evidence:
+      - "Current code has no wikiLink case — atom nodes with no content/text would serialize to empty string via default case"
+    affected_plan_sections:
+      - "Constraints (Backward compatibility)"
+    affected_code_areas:
+      - "src/utils/export/resolveWikiLinks.ts"
+    validation_needed: "Confirm that adding a `case 'wikiLink'` to resolveWikiLinks.ts produces `[[label]]` output using node.attrs.label"
+    recommended_action: accept
+    can_reference_harvester_help: false
+    status: open
+
+  - id: ASM-6
+    title: "Tiptap version mismatch in package.json"
+    category: version_or_dependency
+    severity: medium
+    evidence_strength: partially_supported
+    assumption_statement: "The Tiptap packages work correctly together despite pinned version mismatches in package.json (@tiptap/extension-link at ^2.27.2 vs others at ^2.11.7)."
+    why_it_matters: "Adding @tiptap/suggestion explicitly could install a version that conflicts with the core packages. The caret ranges should resolve compatibly, but explicit version management would be safer."
+    supporting_evidence:
+      - "package-lock.json shows @tiptap/suggestion resolved to 2.27.2 (transitive)"
+      - "Caret ranges (^2.11.7) allow resolution up to <3.0.0"
+      - "App currently works, so transitive resolution is stable"
+    contradicting_evidence:
+      - "package.json pins vary: @tiptap/extension-link at ^2.27.2, others at ^2.11.7"
+    affected_plan_sections:
+      - "Wikilink Tiptap Extension"
+      - "Constraints (New dependencies)"
+    affected_code_areas:
+      - "package.json"
+    validation_needed: "Align all @tiptap/* packages to the same version range before adding @tiptap/suggestion"
+    recommended_action: mitigate
+    can_reference_harvester_help: false
+    status: open
+
+  - id: ASM-7
+    title: "baseNoteSchema modification for scope field"
+    category: data_model_or_schema
+    severity: high
+    evidence_strength: partially_supported
+    assumption_statement: "The Note type can be extended with a `scope` field ('campaign' | 'shared') to support cross-campaign shared notes and reference note migration."
+    why_it_matters: "This is a core data model change. The plan correctly flags baseNoteSchema modification as an escalation point, but it's central to the reference note migration and cross-campaign graph queries."
+    supporting_evidence:
+      - "Plan explicitly addresses this addition"
+      - "baseNoteSchema is a Zod schema that can be extended"
+      - "Dexie v7 schema change can add the index"
+    contradicting_evidence:
+      - "baseNoteSchema currently has no scope field"
+      - "Note type has `visibility` (public/private) which is similar but distinct from scope"
+      - "All existing queries filter by campaignId — adding OR scope='shared' requires touching many query sites"
+    affected_plan_sections:
+      - "Graph Store (Dexie tables)"
+      - "Open Questions #5 (Reference Notes)"
+      - "Flow 5: Dexie Migration"
+    affected_code_areas:
+      - "src/types/note.ts"
+      - "src/storage/db/client.ts"
+      - "src/storage/repositories/noteRepository.ts"
+      - "All components that query notes by campaignId"
+    validation_needed: "Audit all note query sites to determine how many need updating for scope='shared' support"
+    recommended_action: validate
+    can_reference_harvester_help: false
+    status: open
+
+  - id: ASM-8
+    title: "ReferenceNote migration is small and fast enough for Dexie upgrade"
+    category: performance_or_scale
+    severity: medium
+    evidence_strength: weakly_supported
+    assumption_statement: "Migrating existing referenceNotes to the notes table in a Dexie .upgrade() block is fast enough not to noticeably delay app startup."
+    why_it_matters: "Dexie upgrade blocks are synchronous and block the entire app. If users have many reference notes with large content, the migration could cause a noticeable startup delay."
+    supporting_evidence:
+      - "Reference notes are user-created personal notes — typically 10-50 records"
+      - "Migration is a simple copy + property addition, not content transformation"
+    contradicting_evidence:
+      - "No telemetry or evidence of typical referenceNote counts"
+      - "referenceNotes store content as string (potentially large)"
+    affected_plan_sections:
+      - "Flow 5: Dexie Migration"
+    affected_code_areas:
+      - "src/storage/db/client.ts"
+    validation_needed: "Check max referenceNote content size in test data; consider adding a size guard or making migration lazy like graph population"
+    recommended_action: research
+    can_reference_harvester_help: false
+    status: open
+
+  - id: ASM-9
+    title: "NotesGrid can be fully replaced by VaultBrowser"
+    category: architecture_or_design
+    severity: medium
+    evidence_strength: partially_supported
+    assumption_statement: "The VaultBrowser component can fully replace NotesGrid on the Session screen with equivalent functionality via filter props."
+    why_it_matters: "NotesGrid is embedded in SessionScreen and has session-specific behavior. Replacing it requires the VaultBrowser to support all current filtering, sorting, and interaction patterns."
+    supporting_evidence:
+      - "Plan describes VaultBrowser accepting sessionId, typeFilter, compact props"
+      - "NotesGrid.tsx exists as a separate component that can be studied"
+    contradicting_evidence:
+      - "NotesGrid may have session-specific features not yet audited"
+      - "Plan flags this as 'pending discussion on session-scoped filtering'"
+    affected_plan_sections:
+      - "Vault Browser"
+      - "Phase 3: Discovery"
+    affected_code_areas:
+      - "src/features/notes/NotesGrid.tsx"
+      - "src/screens/SessionScreen.tsx"
+    validation_needed: "Audit NotesGrid.tsx for all props, state, and interactions to confirm VaultBrowser spec covers them"
+    recommended_action: validate
+    can_reference_harvester_help: false
+    status: open
+
+  - id: ASM-10
+    title: "d3-force/d3-zoom/d3-selection are not yet installed"
+    category: version_or_dependency
+    severity: low
+    evidence_strength: confirmed
+    assumption_statement: "d3-force, d3-zoom, d3-selection and their @types/* packages need to be added as new dependencies."
+    why_it_matters: "Plan correctly identifies these as new deps. Bundle size claim (~12-15 KB gzipped) needs verification after install."
+    supporting_evidence:
+      - "package.json contains no d3-* dependencies"
+      - "Plan explicitly lists these as new dependencies in Constraints section"
+    contradicting_evidence: []
+    affected_plan_sections:
+      - "Graph View"
+      - "Constraints (New dependencies)"
+      - "Phase 4: Visualization"
+    affected_code_areas:
+      - "package.json"
+    validation_needed: "Install and verify bundle size impact after tree-shaking"
+    recommended_action: accept
+    can_reference_harvester_help: false
+    status: open
+
+  - id: ASM-11
+    title: "Wikilink extension uses Node.create() vs Mention.extend()"
+    category: architecture_or_design
+    severity: medium
+    evidence_strength: partially_supported
+    assumption_statement: "Building the wikilink extension with Node.create() + @tiptap/suggestion is better than extending Mention (the pattern used by descriptorMentionExtension.ts)."
+    why_it_matters: "The existing codebase uses Mention.extend() for the descriptor extension. Using a different pattern (Node.create()) means the wikilink extension won't inherit Mention's built-in behaviors and may need more manual implementation."
+    supporting_evidence:
+      - "Plan's technical reference recommends this approach based on research"
+      - "Node.create() gives full control over node schema, avoiding Mention's assumptions"
+      - "Plan explicitly says NOT to use the community tiptap-wikilink-extension"
+    contradicting_evidence:
+      - "descriptorMentionExtension.ts uses Mention.extend() successfully with custom trigger"
+      - "Mention.extend() provides more built-in behavior with less code"
+    affected_plan_sections:
+      - "Wikilink Tiptap Extension"
+      - "Shortcuts"
+    affected_code_areas:
+      - "src/features/notes/wikilinkExtension.ts (to be created)"
+    validation_needed: "Confirm Node.create() + Suggestion gives sufficient control for [[double bracket]] syntax without losing features Mention provides"
+    recommended_action: accept
+    can_reference_harvester_help: true
+    status: open
+
+  - id: ASM-12
+    title: "MiniSearch extractField handles heterogeneous node types"
+    category: library_or_framework_capability
+    severity: low
+    evidence_strength: strongly_supported
+    assumption_statement: "MiniSearch's extractField option can handle a unified index across notes, characters, NPCs, locations, items, and tags with different field structures."
+    why_it_matters: "If extractField doesn't gracefully handle missing fields across types, the search index will error or return poor results."
+    supporting_evidence:
+      - "MiniSearch 7.2.0 is installed"
+      - "extractField is documented for exactly this use case"
+      - "Plan's tech reference confirms this works"
+    contradicting_evidence: []
+    affected_plan_sections:
+      - "Command Palette"
+      - "Vault Browser"
+    affected_code_areas:
+      - "src/features/kb/useKBSearch.ts (to be created)"
+    validation_needed: "None — well-documented MiniSearch feature"
+    recommended_action: accept
+    can_reference_harvester_help: false
+    status: open
+
+  - id: ASM-13
+    title: "Graph queries use WHERE campaignId OR scope='shared'"
+    category: architecture_or_design
+    severity: medium
+    evidence_strength: weakly_supported
+    assumption_statement: "Extending graph queries from `WHERE campaignId = X` to `WHERE campaignId = X OR scope = 'shared'` is straightforward and performant."
+    why_it_matters: "Dexie doesn't natively support OR queries on different indexed fields efficiently. This may require two separate queries merged in JS, or a compound index design."
+    supporting_evidence:
+      - "Plan acknowledges this query pattern change"
+    contradicting_evidence:
+      - "Dexie WhereClause doesn't support OR across different index fields"
+      - "Would need two queries: one by campaignId, one by scope, then merge"
+      - "Could impact performance for large datasets"
+    affected_plan_sections:
+      - "Graph Store (Dexie tables)"
+      - "Open Questions #5"
+    affected_code_areas:
+      - "src/features/kb/KnowledgeBaseContext.tsx (to be created)"
+      - "src/storage/repositories/ (all KB repositories)"
+    validation_needed: "Design the Dexie query pattern — likely two .where() calls + Promise.all + dedup. Confirm this meets the 50ms constraint"
+    recommended_action: validate
+    can_reference_harvester_help: true
+    status: open
+
+  - id: ASM-14
+    title: "Service worker caches new KB screens automatically"
+    category: environment_or_infrastructure
+    severity: low
+    evidence_strength: strongly_supported
+    assumption_statement: "The existing PWA service worker (via vite-plugin-pwa) will automatically cache new screen routes and assets."
+    why_it_matters: "If the service worker uses a static precache list, new routes need to be explicitly added."
+    supporting_evidence:
+      - "vite-plugin-pwa 0.21.1 is installed"
+      - "Vite PWA plugin typically auto-generates precache manifest from build output"
+    contradicting_evidence: []
+    affected_plan_sections:
+      - "Offline / PWA"
+    affected_code_areas:
+      - "vite.config.ts"
+    validation_needed: "Verify vite-plugin-pwa config uses generateSW or injectManifest with auto glob"
+    recommended_action: accept
+    can_reference_harvester_help: false
+    status: open
