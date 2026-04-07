@@ -287,7 +287,7 @@ export function useExportActions() {
   }, [activeCampaign, showToast]);
 
   /**
-   * Exports a character as a `.skaldmark.json` bundle.
+   * Exports a character as a `.skaldbok.json` bundle.
    *
    * @param characterId - ID of the character to export.
    * @param includePrivate - If true, includes private notes in the export.
@@ -311,7 +311,7 @@ export function useExportActions() {
   }, [showToast]);
 
   /**
-   * Exports a session as a `.skaldmark.json` bundle (includes encounters, templates, etc.).
+   * Exports a session as a `.skaldbok.json` bundle (includes encounters, templates, etc.).
    *
    * @param sessionId - ID of the session to export.
    * @param includePrivate - If true, includes private notes in the export.
@@ -335,7 +335,7 @@ export function useExportActions() {
   }, [showToast]);
 
   /**
-   * Exports a campaign as a `.skaldmark.json` bundle (includes all entity types).
+   * Exports a campaign as a `.skaldbok.json` bundle (includes all entity types).
    *
    * @param campaignId - ID of the campaign to export.
    * @param includePrivate - If true, includes private notes in the export.

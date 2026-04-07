@@ -221,7 +221,7 @@ export function SessionScreen() {
               Export + Notes (ZIP)
             </button>
             <button onClick={() => exportSessionSkaldmark(activeSession.id, includePrivateExport)} className={actionBtnClass}>
-              Export (.skaldmark)
+              Export (.skaldbok)
             </button>
           </div>
 
@@ -403,13 +403,13 @@ export function SessionScreen() {
               onClick={() => exportCampaign(activeCampaign.id, includePrivateExport)}
               className="min-h-11 min-w-11 w-full px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-semibold"
             >
-              Export Campaign (.skaldmark.json)
+              Export Campaign (.skaldbok.json)
             </button>
             <button
               onClick={startImport}
               className="min-h-11 min-w-11 w-full px-4 py-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-semibold"
             >
-              Import (.skaldmark.json)
+              Import (.skaldbok.json)
             </button>
           </>
         )}

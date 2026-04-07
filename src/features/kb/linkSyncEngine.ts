@@ -27,6 +27,20 @@ import { db } from '../../storage/db/client';
 import type { KBNode, KBEdge } from '../../storage/db/client';
 
 /**
+ * Maps a note's type to the corresponding KB node type.
+ * NPC notes become 'character' nodes, location/loot notes keep their type,
+ * and everything else (generic, combat, rumor, quote, etc.) becomes 'note'.
+ */
+function noteTypeToKBNodeType(noteType: string): KBNode['type'] {
+  switch (noteType) {
+    case 'npc': return 'character';
+    case 'location': return 'location';
+    case 'loot': return 'item';
+    default: return 'note';
+  }
+}
+
+/**
  * Syncs a single note's KB graph data. Creates/updates the note's KBNode and
  * all outgoing edges based on the current Tiptap JSON body.
  *
@@ -63,7 +77,7 @@ export async function syncNote(noteId: string): Promise<void> {
     const noteNodeId = `note-${noteId}`;
     const noteNode: KBNode = {
       id: noteNodeId,
-      type: 'note',
+      type: noteTypeToKBNodeType(note.type),
       label: note.title,
       scope: note.scope ?? 'campaign',
       campaignId: note.campaignId,

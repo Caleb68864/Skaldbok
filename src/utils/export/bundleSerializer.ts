@@ -54,13 +54,13 @@ export async function serializeBundle(
 }
 
 /**
- * Delivers a serialized bundle as a downloadable `.skaldmark.json` file.
+ * Delivers a serialized bundle as a downloadable `.skaldbok.json` file.
  *
  * @param slug - Base name for the file (e.g. "campaign-abc-1234").
  * @param json - The serialized JSON string from {@link serializeBundle}.
  */
 export async function deliverBundle(slug: string, json: string): Promise<void> {
-  const filename = `${slug}.skaldmark.json`;
+  const filename = `${slug}.skaldbok.json`;
   const blob = new Blob([json], { type: 'application/json' });
   await shareFile(blob, filename);
 }

@@ -1,5 +1,5 @@
 {
-  "project_name": "Skaldmark",
+  "project_name": "Skaldbok",
   "start_command": "C:\\Users\\CalebBennett\\Documents\\GitHub\\Skaldmark\\build-and-run.bat",
   "app_url": "https://localhost:4173",
   "test_tool": "playwright"
