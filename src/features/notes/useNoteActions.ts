@@ -13,7 +13,7 @@ import type { Note } from '../../types/note';
  * `updatedAt`, `schemaVersion`) and those injected from context (`campaignId`,
  * `sessionId`).
  */
-type CreateNoteData = Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'campaignId' | 'sessionId'>;
+type CreateNoteData = Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'campaignId' | 'sessionId' | 'scope'> & { scope?: Note['scope'] };
 
 /**
  * Hook providing CRUD and linking operations for notes, scoped to the active
@@ -63,6 +63,7 @@ export function useNoteActions() {
     }
     try {
       const note = await noteRepository.createNote({
+        scope: 'campaign',
         ...data,
         campaignId: activeCampaign.id,
         sessionId: activeSession?.id,

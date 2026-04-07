@@ -89,6 +89,7 @@ export default function NoteEditorScreen() {
         typeData: {},
         status: 'active',
         pinned: false,
+        scope: 'campaign',
         schemaVersion: 1,
         createdAt: now,
         updatedAt: now,
@@ -102,6 +103,7 @@ export default function NoteEditorScreen() {
         typeData: newNote.typeData,
         status: newNote.status,
         pinned: newNote.pinned,
+        scope: newNote.scope,
       }).then(created => {
         if (mounted) {
           navigate(`/note/${created.id}/edit`, { replace: true });

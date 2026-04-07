@@ -19,7 +19,6 @@ interface BacklinksPanelProps {
 }
 
 export function BacklinksPanel({ nodeId, onPeek }: BacklinksPanelProps) {
-  const navigate = useNavigate();
   const backlinks = useBacklinks(nodeId);
   const [sourceNodes, setSourceNodes] = useState<KBNode[]>([]);
 
