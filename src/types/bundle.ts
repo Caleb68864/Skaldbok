@@ -54,7 +54,7 @@ export const bundleContentsSchema = z.object({
  * Zod schema for the top-level bundle envelope.
  *
  * @remarks
- * Every `.skaldmark.json` file is a `BundleEnvelope`. The `version` field
+ * Every `.skaldbok.json` file is a `BundleEnvelope`. The `version` field
  * enables forward-compatible migrations on import. The `contentHash` is an
  * optional SHA-256 hex digest of `JSON.stringify(contents)` for integrity
  * verification.

@@ -88,10 +88,10 @@ export function useImportActions() {
 
   /**
    * Opens a file picker, parses the selected file, and shows the import preview.
-   * Accepts `.skaldmark.json` and `.skaldbok.json`.
+   * Accepts `.skaldbok.json` and legacy `.skaldmark.json`.
    */
   const startImport = useCallback(async () => {
-    const file = await pickFile(['.skaldmark.json', '.skaldbok.json', '.json']);
+    const file = await pickFile(['.skaldbok.json', '.skaldmark.json', '.json']);
     if (!file) return;
 
     const json = await file.text();

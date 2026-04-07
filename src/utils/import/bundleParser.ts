@@ -29,7 +29,7 @@ export type ParsedBundleResult =
   | { success: false; error: string; partialBundle?: Partial<BundleEnvelope> };
 
 /**
- * Parses and validates a `.skaldmark.json` or legacy `.skaldbok.json` file.
+ * Parses and validates a `.skaldbok.json` (or legacy `.skaldmark.json`) file.
  *
  * @remarks
  * This function is **synchronous**. Content hash verification is async and

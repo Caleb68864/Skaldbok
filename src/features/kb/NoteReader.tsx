@@ -208,6 +208,17 @@ export function NoteReader({ noteId }: NoteReaderProps) {
 
   return (
     <div className="flex flex-col gap-4 p-4">
+      {/* Back button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-1 text-sm text-[var(--color-text-muted)] bg-transparent border-none cursor-pointer p-0 self-start"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+        Back
+      </button>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-[var(--color-text)]">
