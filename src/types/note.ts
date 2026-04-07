@@ -83,7 +83,7 @@ export const baseNoteSchema = z.object({
    * - `'shared'`   — shared across campaigns (e.g. migrated reference notes).
    * Legacy notes without this field default to `'campaign'`.
    */
-  scope: z.enum(['campaign', 'shared']).optional(),
+  scope: z.enum(['campaign', 'shared']).optional().default('campaign'),
 });
 
 /**

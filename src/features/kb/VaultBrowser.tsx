@@ -15,7 +15,7 @@ import {
   getNodesByCampaign,
   getSharedNodes,
 } from '../../storage/repositories/kbNodeRepository';
-import { getEdgesFromNode } from '../../storage/repositories/kbEdgeRepository';
+import { getEdgesFromNode, getEdgesToNode } from '../../storage/repositories/kbEdgeRepository';
 import { getNotesBySession } from '../../storage/repositories/noteRepository';
 import { useKBSearch } from './useKBSearch';
 import { VaultCard } from './VaultCard';
@@ -49,6 +49,7 @@ export function VaultBrowser({
   const [linkCounts, setLinkCounts] = useState<Record<string, number>>({});
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
   const [allTags, setAllTags] = useState<string[]>([]);
+  const [tagLinkedNodeIds, setTagLinkedNodeIds] = useState<Set<string>>(new Set());
   const [displayCount, setDisplayCount] = useState(50);
   const searchResults = useKBSearch(debouncedQuery, campaignId);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -136,6 +137,33 @@ export function VaultBrowser({
     };
   }, [nodes]);
 
+  // Load node IDs linked to selected tags via edges
+  useEffect(() => {
+    if (activeTags.size === 0) {
+      setTagLinkedNodeIds(new Set());
+      return;
+    }
+    let mounted = true;
+    async function loadTagEdges() {
+      const linkedIds = new Set<string>();
+      const tagNodes = nodes.filter((n) => n.type === 'tag' && activeTags.has(n.label));
+      for (const tagNode of tagNodes) {
+        linkedIds.add(tagNode.id);
+        try {
+          const [fromEdges, toEdges] = await Promise.all([
+            getEdgesFromNode(tagNode.id),
+            getEdgesToNode(tagNode.id),
+          ]);
+          for (const e of fromEdges) linkedIds.add(e.toId);
+          for (const e of toEdges) linkedIds.add(e.fromId);
+        } catch { /* ignore */ }
+      }
+      if (mounted) setTagLinkedNodeIds(linkedIds);
+    }
+    loadTagEdges();
+    return () => { mounted = false; };
+  }, [activeTags, nodes]);
+
   // Filter nodes by tab, search, and tags
   const filteredNodes = useMemo(() => {
     const source = debouncedQuery.trim() ? searchResults : nodes;
@@ -146,24 +174,13 @@ export function VaultBrowser({
       filtered = filtered.filter((n) => n.type === activeTab);
     }
 
-    // Apply tag filter — show only nodes whose label matches an active tag
-    // (tag nodes themselves are excluded from display unless "all" tab)
+    // Apply tag filter — only show nodes linked to selected tag nodes
     if (activeTags.size > 0) {
-      // Get IDs of selected tag nodes
-      const tagNodeIds = new Set(
-        nodes
-          .filter((n) => n.type === 'tag' && activeTags.has(n.label))
-          .map((n) => n.id)
-      );
-      // Keep nodes that have edges from any selected tag (approximate: match by label containment for now)
-      // For a proper implementation we'd need edge lookups, but for tag chips we filter tag-type nodes
-      filtered = filtered.filter(
-        (n) => n.type === 'tag' ? activeTags.has(n.label) : true
-      );
+      filtered = filtered.filter((n) => tagLinkedNodeIds.has(n.id));
     }
 
     return filtered;
-  }, [nodes, searchResults, debouncedQuery, activeTab, activeTags]);
+  }, [nodes, searchResults, debouncedQuery, activeTab, activeTags, tagLinkedNodeIds]);
 
   // Infinite scroll: load more on scroll
   const handleScroll = useCallback(
