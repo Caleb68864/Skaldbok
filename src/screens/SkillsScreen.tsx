@@ -191,15 +191,19 @@ export default function SkillsScreen() {
       )}
 
       {/* Global Boon/Bane Selector */}
-      <div className="boon-bane-selector" aria-label="Global boon/bane selector" role="group">
+      <div className="flex rounded-lg overflow-hidden border border-[var(--color-border)]" aria-label="Global boon/bane selector" role="group">
         {(['boon', 'none', 'bane'] as BoonBaneState[]).map(seg => (
           <button
             key={seg}
-            className={[
-              'boon-bane-segment',
-              `boon-bane-segment--${seg}`,
-              sessionState.globalBoonBane === seg ? 'boon-bane-segment--active' : '',
-            ].join(' ').trim()}
+            className={`flex-1 px-4 py-2 min-h-[44px] text-sm font-semibold border-none cursor-pointer transition-colors ${
+              sessionState.globalBoonBane === seg
+                ? seg === 'boon'
+                  ? 'bg-emerald-600 text-white'
+                  : seg === 'bane'
+                    ? 'bg-red-600 text-white'
+                    : 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
+            }`}
             onClick={() => setGlobalBoonBane(seg)}
             aria-pressed={sessionState.globalBoonBane === seg}
           >
@@ -246,9 +250,9 @@ export default function SkillsScreen() {
                   return (
                     <div key={skill.id} className={cn(
                       "flex items-center gap-[var(--space-sm)] py-[var(--space-xs)] border-b border-[var(--color-border)] min-h-[var(--touch-target-min)]",
-                      isDragonMarked && 'dragon-marked',
-                      isDemonMarked && 'demon-marked',
-                      isTrained && !skillsEditable && 'skill-trained',
+                      isDragonMarked && 'bg-amber-900/20 border-l-2 !border-l-amber-500',
+                      isDemonMarked && 'bg-purple-900/20 border-l-2 !border-l-purple-500',
+                      isTrained && !skillsEditable && 'bg-[var(--color-surface-raised)]/30',
                     )}>
                       {skillsEditable ? (
                         <input
@@ -277,14 +281,14 @@ export default function SkillsScreen() {
                       )}>
                         {skill.name}
                         {attrAbbr && (
-                          <span className="attribute-tag" aria-label={`Linked attribute: ${attrAbbr}`}>
+                          <span className="ml-1.5 text-xs font-normal text-[var(--color-text-muted)] opacity-70" aria-label={`Linked attribute: ${attrAbbr}`}>
                             {attrAbbr}
                           </span>
                         )}
                       </span>
 
                       {/* Probability display */}
-                      <span className="probability-display">
+                      <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap shrink-0">
                         {probDisplay}
                       </span>
 
@@ -306,7 +310,13 @@ export default function SkillsScreen() {
 
                       {/* Per-skill boon/bane override */}
                       <button
-                        className={`skill-override-btn skill-override-btn--${sessionState.skillOverrides[skill.id] ?? 'inherit'}`}
+                        className={`w-8 h-8 shrink-0 flex items-center justify-center rounded border-none cursor-pointer text-sm font-bold ${
+                          (sessionState.skillOverrides[skill.id] ?? 'inherit') === 'boon'
+                            ? 'bg-emerald-600/20 text-emerald-400'
+                            : (sessionState.skillOverrides[skill.id] ?? 'inherit') === 'bane'
+                              ? 'bg-red-600/20 text-red-400'
+                              : 'bg-transparent text-[var(--color-text-muted)] opacity-40'
+                        }`}
                         onClick={() => cycleSkillOverride(skill.id)}
                         title={overrideTitle}
                         aria-label={overrideTitle}
