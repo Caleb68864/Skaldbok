@@ -3,8 +3,9 @@ import { campaignSchema } from '../../types/campaign';
 import type { Campaign } from '../../types/campaign';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
+import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 
-export async function getCampaignById(id: string): Promise<Campaign | undefined> {
+export async function getCampaignById(id: string, options?: { includeDeleted?: boolean }): Promise<Campaign | undefined> {
   try {
     const record = await db.campaigns.get(id);
     if (!record) return undefined;
@@ -13,25 +14,27 @@ export async function getCampaignById(id: string): Promise<Campaign | undefined>
       console.warn('campaignRepository.getCampaignById: validation failed', parsed.error);
       return undefined;
     }
+    if (!options?.includeDeleted && parsed.data.deletedAt) return undefined;
     return parsed.data;
   } catch (e) {
     throw new Error(`campaignRepository.getCampaignById failed: ${e}`);
   }
 }
 
-export async function getAllCampaigns(): Promise<Campaign[]> {
+export async function getAllCampaigns(options?: { includeDeleted?: boolean }): Promise<Campaign[]> {
   try {
     const records = await db.campaigns.toArray();
-    return records
+    const parsed = records
       .map(r => {
-        const parsed = campaignSchema.safeParse(r);
-        if (!parsed.success) {
-          console.warn('campaignRepository.getAllCampaigns: validation failed', parsed.error);
+        const result = campaignSchema.safeParse(r);
+        if (!result.success) {
+          console.warn('campaignRepository.getAllCampaigns: validation failed', result.error);
           return undefined;
         }
-        return parsed.data;
+        return result.data;
       })
       .filter((c): c is Campaign => c !== undefined);
+    return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
     throw new Error(`campaignRepository.getAllCampaigns failed: ${e}`);
   }
@@ -63,5 +66,45 @@ export async function updateCampaign(id: string, data: Partial<Campaign>): Promi
     return updated as Campaign;
   } catch (e) {
     throw new Error(`campaignRepository.updateCampaign failed: ${e}`);
+  }
+}
+
+export async function softDelete(id: string, txId?: string): Promise<void> {
+  try {
+    const row = await db.campaigns.get(id);
+    if (!row) return;
+    if ((row as Campaign).deletedAt) return;
+    const finalTxId = txId ?? generateSoftDeleteTxId();
+    const now = nowISO();
+    await db.campaigns.update(id, {
+      deletedAt: now,
+      softDeletedBy: finalTxId,
+      updatedAt: now,
+    });
+  } catch (e) {
+    throw new Error(`campaignRepository.softDelete failed: ${e}`);
+  }
+}
+
+export async function restore(id: string): Promise<void> {
+  try {
+    const row = await db.campaigns.get(id);
+    if (!row) return;
+    if (!(row as Campaign).deletedAt) return;
+    await db.campaigns.update(id, {
+      deletedAt: undefined,
+      softDeletedBy: undefined,
+      updatedAt: nowISO(),
+    });
+  } catch (e) {
+    throw new Error(`campaignRepository.restore failed: ${e}`);
+  }
+}
+
+export async function hardDelete(id: string): Promise<void> {
+  try {
+    await db.campaigns.delete(id);
+  } catch (e) {
+    throw new Error(`campaignRepository.hardDelete failed: ${e}`);
   }
 }

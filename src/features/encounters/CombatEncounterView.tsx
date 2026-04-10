@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Encounter, EncounterParticipant } from '../../types/encounter';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
+import * as creatureTemplateRepository from '../../storage/repositories/creatureTemplateRepository';
 import { getById as getCreatureTemplateById } from '../../storage/repositories/creatureTemplateRepository';
+import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
+import { db } from '../../storage/db/client';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { ParticipantDrawer } from './ParticipantDrawer';
 import { QuickCreateParticipantFlow } from './QuickCreateParticipantFlow';
 import { generateId } from '../../utils/ids';
+import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
 
 interface CombatEncounterViewProps {
@@ -28,28 +32,49 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   const [encounter, setEncounter] = useState<Encounter>(initialEncounter);
   const [selectedParticipant, setSelectedParticipant] = useState<EncounterParticipant | null>(null);
   const [templateCache, setTemplateCache] = useState<Record<string, CreatureTemplate>>({});
+  // Map of participant.id -> creatureTemplate.id, sourced from `represents` edges.
+  const [participantTemplateMap, setParticipantTemplateMap] = useState<Record<string, string>>({});
   const [showQuickCreate, setShowQuickCreate] = useState(false);
 
   const currentRound = encounter.combatData?.currentRound ?? 1;
   const events = encounter.combatData?.events ?? [];
   const participants = encounter.participants;
 
-  // Load creature templates for all participants
+  // Walk `represents` edges to map participants -> creature templates, then
+  // fetch any templates we haven't loaded yet. Runs whenever the participant
+  // list changes (add / remove / refresh).
   useEffect(() => {
-    const creatureIds = participants
-      .map((p) => p.linkedCreatureId)
-      .filter((id): id is string => id !== undefined);
-
-    const uniqueIds = [...new Set(creatureIds)].filter((id) => !templateCache[id]);
-    if (uniqueIds.length === 0) return;
-
-    Promise.all(uniqueIds.map((id) => getCreatureTemplateById(id))).then((templates) => {
-      const newCache: Record<string, CreatureTemplate> = { ...templateCache };
-      for (const t of templates) {
-        if (t) newCache[t.id] = t;
+    let cancelled = false;
+    (async () => {
+      const entries = await Promise.all(
+        participants.map(async (p) => {
+          const links = await entityLinkRepository.getLinksFrom(p.id, 'represents');
+          const creatureEdge = links.find((l) => l.toEntityType === 'creature');
+          return [p.id, creatureEdge?.toEntityId] as const;
+        }),
+      );
+      if (cancelled) return;
+      const nextMap: Record<string, string> = {};
+      for (const [pid, tid] of entries) {
+        if (tid) nextMap[pid] = tid;
       }
-      setTemplateCache(newCache);
-    });
+      setParticipantTemplateMap(nextMap);
+
+      const needed = [...new Set(Object.values(nextMap))].filter((id) => !templateCache[id]);
+      if (needed.length === 0) return;
+      const templates = await Promise.all(needed.map((id) => getCreatureTemplateById(id)));
+      if (cancelled) return;
+      setTemplateCache((prev) => {
+        const next = { ...prev };
+        for (const t of templates) {
+          if (t) next[t.id] = t;
+        }
+        return next;
+      });
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [participants, templateCache]);
 
   const refresh = useCallback(async () => {
@@ -92,12 +117,11 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   };
 
   const handleQuickCreate = async (name: string, stats: { hp?: number; armor?: number; movement?: number }) => {
-    const { create: createTemplate, listByCampaign } = await import('../../storage/repositories/creatureTemplateRepository');
     // Check if a creature template with this name already exists
-    const existing = (await listByCampaign(encounter.campaignId)).find(
-      t => t.name.toLowerCase() === name.toLowerCase()
+    const existing = (await creatureTemplateRepository.listByCampaign(encounter.campaignId)).find(
+      (t) => t.name.toLowerCase() === name.toLowerCase(),
     );
-    const template = existing ?? await createTemplate({
+    const template = existing ?? await creatureTemplateRepository.create({
       campaignId: encounter.campaignId,
       name,
       category: 'monster',
@@ -109,12 +133,32 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       status: 'active',
     });
     if (!template) return;
-    await encounterRepository.addParticipant(encounter.id, {
-      name: template.name,
-      type: 'monster',
-      linkedCreatureId: template.id,
-      instanceState: { currentHp: template.stats.hp },
-      sortOrder: participants.length + 1,
+
+    // Create participant + represents edge in one transaction so the
+    // relationship is observable by the rest of the app atomically.
+    const now = nowISO();
+    const participantId = generateId();
+    await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
+      const enc = await db.encounters.get(encounter.id);
+      if (!enc) throw new Error(`encounter ${encounter.id} not found`);
+      const newParticipant: EncounterParticipant = {
+        id: participantId,
+        name: template.name,
+        type: 'monster',
+        instanceState: { currentHp: template.stats.hp },
+        sortOrder: (enc.participants?.length ?? 0) + 1,
+      };
+      await db.encounters.update(encounter.id, {
+        participants: [...(enc.participants ?? []), newParticipant],
+        updatedAt: now,
+      });
+      await entityLinkRepository.createLink({
+        fromEntityId: participantId,
+        fromEntityType: 'encounterParticipant',
+        toEntityId: template.id,
+        toEntityType: 'creature',
+        relationshipType: 'represents',
+      });
     });
     setShowQuickCreate(false);
     await refresh();
@@ -165,7 +209,8 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
           {participants
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((p) => {
-              const template = p.linkedCreatureId ? templateCache[p.linkedCreatureId] : undefined;
+              const linkedCreatureId = participantTemplateMap[p.id];
+              const template = linkedCreatureId ? templateCache[linkedCreatureId] : undefined;
               return (
                 <button
                   key={p.id}

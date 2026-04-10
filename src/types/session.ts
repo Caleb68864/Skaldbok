@@ -43,6 +43,10 @@ export const sessionSchema = z.object({
   createdAt: z.string(),
   /** ISO datetime of the most recent update to this record. */
   updatedAt: z.string(),
+  /** ISO datetime when this record was soft-deleted; absent while active. */
+  deletedAt: z.string().optional(),
+  /** Transaction UUID identifying the cascade that soft-deleted this record. */
+  softDeletedBy: z.string().optional(),
 });
 
 /**

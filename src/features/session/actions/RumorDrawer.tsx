@@ -5,6 +5,8 @@ import { useToast } from '../../../context/ToastContext';
 import { useCampaignContext } from '../../campaign/CampaignContext';
 import { getNotesByCampaign } from '../../../storage/repositories/noteRepository';
 import type { Note } from '../../../types/note';
+import { useSessionEncounterContextSafe } from '../SessionEncounterContext';
+import { AttachToControl, resolveAttach, type AttachToValue } from '../quickActions/AttachToControl';
 import { cn } from '../../../lib/utils';
 
 /**
@@ -52,9 +54,11 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
   const { createNote } = useNoteActions();
   const { showToast } = useToast();
   const { activeCampaign } = useCampaignContext();
+  const sessionEncounterCtx = useSessionEncounterContextSafe();
   const [rumorText, setRumorText] = useState('');
   const [rumorSource, setRumorSource] = useState('');
   const [npcNotes, setNpcNotes] = useState<Note[]>([]);
+  const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
 
   // Load NPC notes each time the drawer opens so the list is always fresh
   useEffect(() => {
@@ -70,6 +74,7 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
   const handleClose = () => {
     setRumorText('');
     setRumorSource('');
+    setAttachTo('auto');
     onClose();
   };
 
@@ -82,15 +87,29 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
     if (!rumorText.trim()) return;
     const src = rumorSource || undefined;
     const fullTitle = `Rumor: ${rumorText.trim()}`;
-    await createNote({
-      title: fullTitle,
-      type: 'rumor',
-      body: null,
-      pinned: false,
-      status: 'active',
-      typeData: { source: src, threadStatus: 'open' },
-    });
-    showToast(`Logged: ${fullTitle}`);
+    const currentAttach = attachTo;
+    await createNote(
+      {
+        title: fullTitle,
+        type: 'rumor',
+        body: null,
+        pinned: false,
+        status: 'active',
+        typeData: { source: src, threadStatus: 'open' },
+      },
+      { targetEncounterId: resolveAttach(currentAttach) },
+    );
+    let encounterTitle: string | null = null;
+    if (currentAttach === 'auto') {
+      encounterTitle = sessionEncounterCtx?.activeEncounter?.title ?? null;
+    } else if (typeof currentAttach === 'string') {
+      encounterTitle = 'encounter';
+    }
+    if (encounterTitle) {
+      showToast(`Logged to ${encounterTitle}`, 'success', 2000);
+    } else {
+      showToast('Logged to session', 'success', 2000);
+    }
     handleClose();
     onLogged();
   };
@@ -135,6 +154,7 @@ export function RumorDrawer({ open, onClose, onLogged }: RumorDrawerProps) {
           </button>
         ))}
       </div>
+      <AttachToControl value={attachTo} onChange={setAttachTo} />
       <button
         onClick={handleLog}
         disabled={!rumorText.trim()}

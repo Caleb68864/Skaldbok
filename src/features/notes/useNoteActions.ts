@@ -16,6 +16,19 @@ import type { Note } from '../../types/note';
 type CreateNoteData = Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'campaignId' | 'sessionId' | 'scope'> & { scope?: Note['scope'] };
 
 /**
+ * Options accepted by {@link useNoteActions.createNote} that control the
+ * automatic encounter-attach behavior.
+ *
+ * - `undefined` (or omitted) — auto-attach to the currently-active encounter,
+ *   matching legacy behavior.
+ * - `null` — do NOT attach to any encounter (session-level log).
+ * - `string` — attach to the specified encounter id.
+ */
+export interface CreateNoteOptions {
+  targetEncounterId?: string | null;
+}
+
+/**
  * Hook providing CRUD and linking operations for notes, scoped to the active
  * campaign and session.
  *
@@ -56,7 +69,10 @@ export function useNoteActions() {
    * injected from context and must not be provided.
    * @returns The newly created {@link Note}, or `undefined` on failure.
    */
-  const createNote = useCallback(async (data: CreateNoteData): Promise<Note | undefined> => {
+  const createNote = useCallback(async (
+    data: CreateNoteData,
+    options?: CreateNoteOptions,
+  ): Promise<Note | undefined> => {
     if (!activeCampaign) {
       showToast('No active campaign');
       return undefined;
@@ -84,13 +100,23 @@ export function useNoteActions() {
           });
         }
 
-        // Auto-link to active encounter (if one exists for this session)
+        // Encounter linkage: honor an explicit targetEncounterId override if
+        // provided (Sub-Spec 8), otherwise fall back to the legacy
+        // auto-attach-to-active-encounter behavior.
         try {
-          const encounters = await listEncountersBySession(activeSession.id);
-          const activeEncounter = encounters.find(e => e.status === 'active');
-          if (activeEncounter) {
+          let attachEncounterId: string | null = null;
+          if (options && options.targetEncounterId === null) {
+            attachEncounterId = null;
+          } else if (options && typeof options.targetEncounterId === 'string') {
+            attachEncounterId = options.targetEncounterId;
+          } else {
+            const encounters = await listEncountersBySession(activeSession.id);
+            const activeEncounter = encounters.find(e => e.status === 'active');
+            attachEncounterId = activeEncounter?.id ?? null;
+          }
+          if (attachEncounterId) {
             await entityLinkRepository.createLink({
-              fromEntityId: activeEncounter.id,
+              fromEntityId: attachEncounterId,
               fromEntityType: 'encounter',
               toEntityId: note.id,
               toEntityType: 'note',

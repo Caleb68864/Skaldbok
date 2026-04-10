@@ -3,6 +3,7 @@ import { sessionSchema } from '../../types/session';
 import type { Session } from '../../types/session';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
+import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 
 /**
  * Retrieves a single {@link Session} by its unique identifier.
@@ -22,7 +23,7 @@ import { nowISO } from '../../utils/dates';
  * if (!session) console.warn('Session not found');
  * ```
  */
-export async function getSessionById(id: string): Promise<Session | undefined> {
+export async function getSessionById(id: string, options?: { includeDeleted?: boolean }): Promise<Session | undefined> {
   try {
     const record = await db.sessions.get(id);
     if (!record) return undefined;
@@ -31,6 +32,7 @@ export async function getSessionById(id: string): Promise<Session | undefined> {
       console.warn('sessionRepository.getSessionById: validation failed', parsed.error);
       return undefined;
     }
+    if (!options?.includeDeleted && parsed.data.deletedAt) return undefined;
     return parsed.data;
   } catch (e) {
     throw new Error(`sessionRepository.getSessionById failed: ${e}`);
@@ -55,19 +57,20 @@ export async function getSessionById(id: string): Promise<Session | undefined> {
  * const ended = sessions.filter(s => s.status === 'ended');
  * ```
  */
-export async function getSessionsByCampaign(campaignId: string): Promise<Session[]> {
+export async function getSessionsByCampaign(campaignId: string, options?: { includeDeleted?: boolean }): Promise<Session[]> {
   try {
     const records = await db.sessions.where('campaignId').equals(campaignId).toArray();
-    return records
+    const parsed = records
       .map(r => {
-        const parsed = sessionSchema.safeParse(r);
-        if (!parsed.success) {
-          console.warn('sessionRepository.getSessionsByCampaign: validation failed', parsed.error);
+        const result = sessionSchema.safeParse(r);
+        if (!result.success) {
+          console.warn('sessionRepository.getSessionsByCampaign: validation failed', result.error);
           return undefined;
         }
-        return parsed.data;
+        return result.data;
       })
       .filter((s): s is Session => s !== undefined);
+    return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
     throw new Error(`sessionRepository.getSessionsByCampaign failed: ${e}`);
   }
@@ -93,16 +96,19 @@ export async function getSessionsByCampaign(campaignId: string): Promise<Session
  */
 export async function getActiveSession(campaignId: string): Promise<Session | undefined> {
   try {
-    const record = await db.sessions
+    const records = await db.sessions
       .where({ campaignId, status: 'active' })
-      .first();
-    if (!record) return undefined;
-    const parsed = sessionSchema.safeParse(record);
-    if (!parsed.success) {
-      console.warn('sessionRepository.getActiveSession: validation failed', parsed.error);
-      return undefined;
+      .toArray();
+    for (const record of records) {
+      const parsed = sessionSchema.safeParse(record);
+      if (!parsed.success) {
+        console.warn('sessionRepository.getActiveSession: validation failed', parsed.error);
+        continue;
+      }
+      if (parsed.data.deletedAt) continue;
+      return parsed.data;
     }
-    return parsed.data;
+    return undefined;
   } catch (e) {
     throw new Error(`sessionRepository.getActiveSession failed: ${e}`);
   }
@@ -180,5 +186,45 @@ export async function updateSession(id: string, data: Partial<Session>): Promise
     return updated as Session;
   } catch (e) {
     throw new Error(`sessionRepository.updateSession failed: ${e}`);
+  }
+}
+
+export async function softDelete(id: string, txId?: string): Promise<void> {
+  try {
+    const row = await db.sessions.get(id);
+    if (!row) return;
+    if ((row as Session).deletedAt) return;
+    const finalTxId = txId ?? generateSoftDeleteTxId();
+    const now = nowISO();
+    await db.sessions.update(id, {
+      deletedAt: now,
+      softDeletedBy: finalTxId,
+      updatedAt: now,
+    });
+  } catch (e) {
+    throw new Error(`sessionRepository.softDelete failed: ${e}`);
+  }
+}
+
+export async function restore(id: string): Promise<void> {
+  try {
+    const row = await db.sessions.get(id);
+    if (!row) return;
+    if (!(row as Session).deletedAt) return;
+    await db.sessions.update(id, {
+      deletedAt: undefined,
+      softDeletedBy: undefined,
+      updatedAt: nowISO(),
+    });
+  } catch (e) {
+    throw new Error(`sessionRepository.restore failed: ${e}`);
+  }
+}
+
+export async function hardDelete(id: string): Promise<void> {
+  try {
+    await db.sessions.delete(id);
+  } catch (e) {
+    throw new Error(`sessionRepository.hardDelete failed: ${e}`);
   }
 }

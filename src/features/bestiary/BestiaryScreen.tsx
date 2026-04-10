@@ -3,7 +3,11 @@ import { useBestiary, type CategoryFilter } from './useBestiary';
 import { CreatureTemplateCard } from './CreatureTemplateCard';
 import { CreatureTemplateForm } from './CreatureTemplateForm';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
-import { addParticipant } from '../../storage/repositories/encounterRepository';
+import type { EncounterParticipant } from '../../types/encounter';
+import { db } from '../../storage/db/client';
+import { createLink } from '../../storage/repositories/entityLinkRepository';
+import { generateId } from '../../utils/ids';
+import { nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
 
@@ -235,14 +239,37 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
               {activeEncounterId && (
                 <button
                   onClick={async () => {
-                    await addParticipant(activeEncounterId, {
-                      name: viewingTemplate.name,
-                      type: viewingTemplate.category === 'monster' ? 'monster' : 'npc',
-                      linkedCreatureId: viewingTemplate.id,
-                      instanceState: { currentHp: viewingTemplate.stats.hp },
-                      sortOrder: 0,
+                    // Create the participant and its `represents` edge in a
+                    // single transaction so the two rows land atomically.
+                    const now = nowISO();
+                    const participantId = generateId();
+                    const templateId = viewingTemplate.id;
+                    const templateName = viewingTemplate.name;
+                    const templateCategory = viewingTemplate.category;
+                    const templateHp = viewingTemplate.stats.hp;
+                    await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
+                      const enc = await db.encounters.get(activeEncounterId);
+                      if (!enc) throw new Error(`encounter ${activeEncounterId} not found`);
+                      const newParticipant: EncounterParticipant = {
+                        id: participantId,
+                        name: templateName,
+                        type: templateCategory === 'monster' ? 'monster' : 'npc',
+                        instanceState: { currentHp: templateHp },
+                        sortOrder: (enc.participants?.length ?? 0) + 1,
+                      };
+                      await db.encounters.update(activeEncounterId, {
+                        participants: [...(enc.participants ?? []), newParticipant],
+                        updatedAt: now,
+                      });
+                      await createLink({
+                        fromEntityId: participantId,
+                        fromEntityType: 'encounterParticipant',
+                        toEntityId: templateId,
+                        toEntityType: 'creature',
+                        relationshipType: 'represents',
+                      });
                     });
-                    showToast(`Added ${viewingTemplate.name} to encounter`, 'success');
+                    showToast(`Added ${templateName} to encounter`, 'success');
                     setViewingTemplate(null);
                   }}
                   className="min-h-11 px-4 py-2 bg-emerald-600 text-white border-none rounded-lg text-sm font-semibold cursor-pointer"

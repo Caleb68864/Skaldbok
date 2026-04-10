@@ -14,12 +14,31 @@ export const participantInstanceStateSchema = z.object({
 });
 
 /**
+ * Zod schema for a single encounter segment.
+ *
+ * @remarks
+ * Segments replace the old scalar `startedAt`/`endedAt` pair on an encounter.
+ * An encounter may have multiple segments if it is paused and resumed. The
+ * invariant is that at most one segment at a time may be "open" (no
+ * `endedAt`). Use `encounterRepository.pushSegment` / `endActiveSegment` to
+ * manipulate this list.
+ */
+export const segmentSchema = z.object({
+  /** ISO datetime when this segment started. */
+  startedAt: z.string(),
+  /** ISO datetime when this segment ended; absent while the segment is open. */
+  endedAt: z.string().optional(),
+});
+
+/**
  * Zod schema for a single encounter participant.
  *
  * @remarks
- * A participant links to either a creature template (via `linkedCreatureId`)
- * or a player character (via `linkedCharacterId`). The `type` discriminator
- * identifies whether the participant is a PC, NPC, or monster.
+ * A participant's link back to a creature template or player character is
+ * expressed via an `entityLink` edge of type `represents` rather than a
+ * direct foreign-key column. This keeps the participant table shape
+ * uniform and lets the same row represent a PC, a named NPC, or an
+ * on-the-fly monster without schema churn.
  */
 export const encounterParticipantSchema = z.object({
   /** Unique identifier for this participant entry. */
@@ -28,10 +47,6 @@ export const encounterParticipantSchema = z.object({
   name: z.string(),
   /** Participant type discriminator. */
   type: z.enum(['pc', 'npc', 'monster']),
-  /** ID of the linked creature template, if any. */
-  linkedCreatureId: z.string().optional(),
-  /** ID of the linked player character, if any. */
-  linkedCharacterId: z.string().optional(),
   /** Mutable per-encounter state for this participant. */
   instanceState: participantInstanceStateSchema,
   /** Sort order for display in participant lists. */
@@ -51,7 +66,9 @@ export const combatDataSchema = z.object({
  *
  * @remarks
  * Encounters are session-scoped events (combat, social, exploration) that
- * track participants, linked notes, and optional combat timeline data.
+ * track participants, linked notes, optional combat timeline data, and now
+ * carry narrative fields (description / body / summary) and a `segments[]`
+ * array for pause/resume lifecycle.
  */
 export const encounterSchema = z.object({
   /** Unique identifier for the encounter. */
@@ -66,10 +83,18 @@ export const encounterSchema = z.object({
   type: z.enum(['combat', 'social', 'exploration']),
   /** Lifecycle status. */
   status: z.enum(['active', 'ended']),
-  /** ISO datetime when the encounter started. */
-  startedAt: z.string(),
-  /** ISO datetime when the encounter ended; absent while still active. */
-  endedAt: z.string().optional(),
+  /** Optional prep / setup notes (ProseMirror JSON). */
+  description: z.any().optional(),
+  /** Optional main body of narrative content (ProseMirror JSON). */
+  body: z.any().optional(),
+  /** Optional post-encounter wrap-up (ProseMirror JSON). */
+  summary: z.any().optional(),
+  /** Free-form tags for filtering and search. */
+  tags: z.array(z.string()).default([]),
+  /** Optional location string (room, biome, landmark). */
+  location: z.string().optional(),
+  /** Ordered list of segments; last entry is the current segment. */
+  segments: z.array(segmentSchema).default([]),
   /** List of participants in this encounter. */
   participants: z.array(encounterParticipantSchema),
   /** Combat-specific data (rounds, events); present only for combat encounters. */
@@ -80,6 +105,10 @@ export const encounterSchema = z.object({
   updatedAt: z.string(),
   /** Schema version for forward-compatibility migrations. */
   schemaVersion: z.number(),
+  /** ISO datetime when this encounter was soft-deleted; absent while active. */
+  deletedAt: z.string().optional(),
+  /** Transaction UUID identifying the cascade that soft-deleted this encounter. */
+  softDeletedBy: z.string().optional(),
 });
 
 /**
@@ -91,3 +120,8 @@ export type Encounter = z.infer<typeof encounterSchema>;
  * An encounter participant inferred from {@link encounterParticipantSchema}.
  */
 export type EncounterParticipant = z.infer<typeof encounterParticipantSchema>;
+
+/**
+ * A single encounter segment inferred from {@link segmentSchema}.
+ */
+export type Segment = z.infer<typeof segmentSchema>;

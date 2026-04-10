@@ -354,4 +354,8 @@ export interface CharacterRecord extends Versioned, Timestamped {
     /** Heroic ability advancement track triggered. */
     heroic?: boolean;
   };
+  /** ISO datetime when this character was soft-deleted; absent while active. */
+  deletedAt?: string;
+  /** Transaction UUID identifying the cascade that soft-deleted this character. */
+  softDeletedBy?: string;
 }

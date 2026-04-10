@@ -48,8 +48,8 @@ export function EncounterListItem({ encounter, onClick }: EncounterListItemProps
       </div>
       <div className="text-[var(--color-text-muted)] text-xs">
         {encounter.participants.length} participant{encounter.participants.length !== 1 ? 's' : ''}
-        {encounter.startedAt && (
-          <span> &middot; {new Date(encounter.startedAt).toLocaleTimeString()}</span>
+        {encounter.segments[0]?.startedAt && (
+          <span> &middot; {new Date(encounter.segments[0].startedAt).toLocaleTimeString()}</span>
         )}
       </div>
     </button>

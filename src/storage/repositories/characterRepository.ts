@@ -1,5 +1,7 @@
 import { db } from '../db/client';
 import type { CharacterRecord } from '../../types/character';
+import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
+import { nowISO } from '../../utils/dates';
 
 /**
  * Retrieves all {@link CharacterRecord} entries stored in IndexedDB.
@@ -17,8 +19,9 @@ import type { CharacterRecord } from '../../types/character';
  * console.log(`${characters.length} characters found.`);
  * ```
  */
-export async function getAll(): Promise<CharacterRecord[]> {
-  return db.characters.toArray();
+export async function getAll(options?: { includeDeleted?: boolean }): Promise<CharacterRecord[]> {
+  const rows = await db.characters.toArray();
+  return options?.includeDeleted ? rows : excludeDeleted(rows);
 }
 
 /**
@@ -33,8 +36,11 @@ export async function getAll(): Promise<CharacterRecord[]> {
  * if (!character) navigate('/library');
  * ```
  */
-export async function getById(id: string): Promise<CharacterRecord | undefined> {
-  return db.characters.get(id);
+export async function getById(id: string, options?: { includeDeleted?: boolean }): Promise<CharacterRecord | undefined> {
+  const row = await db.characters.get(id);
+  if (!row) return undefined;
+  if (!options?.includeDeleted && row.deletedAt) return undefined;
+  return row;
 }
 
 /**
@@ -89,5 +95,45 @@ export async function remove(id: string): Promise<void> {
     await db.characters.delete(id);
   } catch (err) {
     throw new Error(`Failed to delete character: ${String(err)}`);
+  }
+}
+
+export async function softDelete(id: string, txId?: string): Promise<void> {
+  try {
+    const row = await db.characters.get(id);
+    if (!row) return;
+    if (row.deletedAt) return;
+    const finalTxId = txId ?? generateSoftDeleteTxId();
+    const now = nowISO();
+    await db.characters.update(id, {
+      deletedAt: now,
+      softDeletedBy: finalTxId,
+      updatedAt: now,
+    });
+  } catch (e) {
+    throw new Error(`characterRepository.softDelete failed: ${e}`);
+  }
+}
+
+export async function restore(id: string): Promise<void> {
+  try {
+    const row = await db.characters.get(id);
+    if (!row) return;
+    if (!row.deletedAt) return;
+    await db.characters.update(id, {
+      deletedAt: undefined,
+      softDeletedBy: undefined,
+      updatedAt: nowISO(),
+    });
+  } catch (e) {
+    throw new Error(`characterRepository.restore failed: ${e}`);
+  }
+}
+
+export async function hardDelete(id: string): Promise<void> {
+  try {
+    await db.characters.delete(id);
+  } catch (e) {
+    throw new Error(`characterRepository.hardDelete failed: ${e}`);
   }
 }

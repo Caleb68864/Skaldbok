@@ -5,6 +5,7 @@ dist/
 tests/screenshots/
 docs/tests/screenshots/
 bash.exe.stackdump
+tmp-backup/
 *.log
 *.png
 !public/**/*.png

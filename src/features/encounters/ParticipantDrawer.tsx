@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { EncounterParticipant } from '../../types/encounter';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { getById } from '../../storage/repositories/creatureTemplateRepository';
+import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
 
 interface ParticipantDrawerProps {
   participant: EncounterParticipant;
@@ -25,10 +26,21 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
   );
 
   useEffect(() => {
-    if (participant.linkedCreatureId) {
-      getById(participant.linkedCreatureId).then((t) => setTemplate(t ?? null));
-    }
-  }, [participant.linkedCreatureId]);
+    let cancelled = false;
+    (async () => {
+      const links = await getLinksFrom(participant.id, 'represents');
+      const creatureEdge = links.find((l) => l.toEntityType === 'creature');
+      if (!creatureEdge) {
+        if (!cancelled) setTemplate(null);
+        return;
+      }
+      const t = await getById(creatureEdge.toEntityId);
+      if (!cancelled) setTemplate(t ?? null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [participant]);
 
   const handleHpBlur = () => {
     const hp = currentHp === '' ? undefined : Number(currentHp);

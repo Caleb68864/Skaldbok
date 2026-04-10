@@ -4,6 +4,10 @@ import { useNoteActions } from '../notes/useNoteActions';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
+import { useSessionEncounterContextSafe } from './SessionEncounterContext';
+import { AttachToControl, resolveAttach, type AttachToValue } from './quickActions/AttachToControl';
+import { QuickNoteAction } from './quickActions/QuickNoteAction';
+import { QuickNpcAction } from './quickActions/QuickNpcAction';
 import { getById as getCharacterById, save as saveCharacter } from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
@@ -145,8 +149,10 @@ export function SessionQuickActions() {
   const { character } = useActiveCharacter();
   const { activeCampaign, activeParty, activeCharacterInCampaign } = useCampaignContext();
   const { showToast } = useToast();
+  const sessionEncounterCtx = useSessionEncounterContextSafe();
 
   const [activeDrawer, setActiveDrawer] = useState<string | null>(null);
+  const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
   const [selectedSpell, setSelectedSpell] = useState<string | null>(null);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -240,6 +246,26 @@ export function SessionQuickActions() {
     setShopSilver(0);
     setShopCopper(0);
     setShopQuantity(1);
+    setAttachTo('auto');
+  };
+
+  /**
+   * Fires the Sub-Spec 8 success toast: "Logged to {encounter}" when attached
+   * to a specific encounter (auto + active, or explicit id), or "Logged to
+   * session" when session-only.
+   */
+  const fireQuickLogToast = (currentAttach: AttachToValue) => {
+    let encounterTitle: string | null = null;
+    if (currentAttach === 'auto') {
+      encounterTitle = sessionEncounterCtx?.activeEncounter?.title ?? null;
+    } else if (typeof currentAttach === 'string') {
+      encounterTitle = 'encounter';
+    }
+    if (encounterTitle) {
+      showToast(`Logged to ${encounterTitle}`, 'success', 2000);
+    } else {
+      showToast('Logged to session', 'success', 2000);
+    }
   };
 
   // Get display name for selected members
@@ -261,16 +287,20 @@ export function SessionQuickActions() {
   const logEvent = async (type: string, title: string, typeData: Record<string, unknown>) => {
     const who = selectedNames();
     const fullTitle = who ? `${who}: ${title}` : title;
-    await createNote({
-      title: fullTitle,
-      type: type as 'skill-check' | 'generic' | 'loot' | 'quote' | 'rumor',
-      body: null,
-      pinned: false,
-      status: 'active',
-      tags: selectedTags.length > 0 ? selectedTags : undefined,
-      typeData,
-    });
-    showToast(`Logged: ${fullTitle}`);
+    const currentAttach = attachTo;
+    await createNote(
+      {
+        title: fullTitle,
+        type: type as 'skill-check' | 'generic' | 'loot' | 'quote' | 'rumor',
+        body: null,
+        pinned: false,
+        status: 'active',
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        typeData,
+      },
+      { targetEncounterId: resolveAttach(currentAttach) },
+    );
+    fireQuickLogToast(currentAttach);
     close();
   };
 
@@ -937,6 +967,8 @@ export function SessionQuickActions() {
     { id: 'shopping', label: 'Shopping' },
     { id: 'encounter', label: 'Encounter' },
     { id: 'loot', label: 'Loot' },
+    { id: 'note', label: 'Note' },
+    { id: 'npc', label: 'NPC / Monster' },
   ];
 
   const drawerContent: Record<string, { title: string; render: () => React.JSX.Element }> = {
@@ -955,6 +987,11 @@ export function SessionQuickActions() {
     encounter: { title: 'Random Encounter', render: renderEncounterPicker },
     loot: { title: 'Loot Found', render: renderLootPicker },
   };
+
+  // The Note / NPC drawers render their own self-contained forms (including
+  // AttachToControl and the save/cancel footer) so they are routed separately
+  // from the shared drawer content above.
+  const isSelfContainedDrawer = activeDrawer === 'note' || activeDrawer === 'npc';
 
   return (
     <>
@@ -976,12 +1013,30 @@ export function SessionQuickActions() {
           title={drawerContent[activeDrawer].title}
         >
           {drawerContent[activeDrawer].render()}
+          <AttachToControl value={attachTo} onChange={setAttachTo} />
           <TagPicker
             selected={selectedTags}
             onToggle={tag => setSelectedTags(prev =>
               prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
             )}
           />
+        </Drawer>
+      )}
+
+      {isSelfContainedDrawer && (
+        <Drawer
+          open={true}
+          onClose={close}
+          title={activeDrawer === 'note' ? 'Quick Note' : 'NPC / Monster'}
+        >
+          {activeDrawer === 'note' ? (
+            <QuickNoteAction
+              campaignId={activeCampaign?.id ?? null}
+              onClose={close}
+            />
+          ) : (
+            <QuickNpcAction onClose={close} />
+          )}
         </Drawer>
       )}
     </>

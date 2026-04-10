@@ -74,6 +74,10 @@ export const creatureTemplateSchema = z.object({
   updatedAt: z.string(),
   /** Schema version for forward-compatibility migrations. */
   schemaVersion: z.number(),
+  /** ISO datetime when this template was soft-deleted; absent while active. */
+  deletedAt: z.string().optional(),
+  /** Transaction UUID identifying the cascade that soft-deleted this template. */
+  softDeletedBy: z.string().optional(),
 });
 
 /**

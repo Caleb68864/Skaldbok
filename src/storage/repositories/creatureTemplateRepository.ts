@@ -3,6 +3,7 @@ import { creatureTemplateSchema } from '../../types/creatureTemplate';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
+import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 
 /**
  * Creates a new creature template in IndexedDB.
@@ -36,7 +37,7 @@ export async function create(
  * @param id - The unique ID of the template to fetch.
  * @returns The validated template, or `undefined` if not found or validation fails.
  */
-export async function getById(id: string): Promise<CreatureTemplate | undefined> {
+export async function getById(id: string, options?: { includeDeleted?: boolean }): Promise<CreatureTemplate | undefined> {
   try {
     const raw = await db.creatureTemplates.get(id);
     if (!raw) return undefined;
@@ -45,6 +46,7 @@ export async function getById(id: string): Promise<CreatureTemplate | undefined>
       console.warn('creatureTemplateRepository.getById: validation failed for id', id, result.error);
       return undefined;
     }
+    if (!options?.includeDeleted && result.data.deletedAt) return undefined;
     return result.data;
   } catch (e) {
     console.warn('creatureTemplateRepository.getById: error', id, e);
@@ -58,10 +60,10 @@ export async function getById(id: string): Promise<CreatureTemplate | undefined>
  * @param campaignId - The ID of the campaign whose templates should be fetched.
  * @returns An array of validated templates; may be empty.
  */
-export async function listByCampaign(campaignId: string): Promise<CreatureTemplate[]> {
+export async function listByCampaign(campaignId: string, options?: { includeDeleted?: boolean }): Promise<CreatureTemplate[]> {
   try {
     const raws = await db.creatureTemplates.where('campaignId').equals(campaignId).toArray();
-    return raws.flatMap((raw) => {
+    const parsed = raws.flatMap((raw) => {
       const result = creatureTemplateSchema.safeParse(raw);
       if (!result.success) {
         console.warn('creatureTemplateRepository.listByCampaign: validation failed', raw?.id, result.error);
@@ -69,6 +71,7 @@ export async function listByCampaign(campaignId: string): Promise<CreatureTempla
       }
       return [result.data];
     });
+    return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
     console.warn('creatureTemplateRepository.listByCampaign: error', campaignId, e);
     return [];
@@ -100,4 +103,44 @@ export async function update(id: string, patch: Partial<CreatureTemplate>): Prom
  */
 export async function archive(id: string): Promise<void> {
   await db.creatureTemplates.update(id, { status: 'archived', updatedAt: nowISO() });
+}
+
+export async function softDelete(id: string, txId?: string): Promise<void> {
+  try {
+    const row = await db.creatureTemplates.get(id);
+    if (!row) return;
+    if ((row as CreatureTemplate).deletedAt) return;
+    const finalTxId = txId ?? generateSoftDeleteTxId();
+    const now = nowISO();
+    await db.creatureTemplates.update(id, {
+      deletedAt: now,
+      softDeletedBy: finalTxId,
+      updatedAt: now,
+    });
+  } catch (e) {
+    throw new Error(`creatureTemplateRepository.softDelete failed: ${e}`);
+  }
+}
+
+export async function restore(id: string): Promise<void> {
+  try {
+    const row = await db.creatureTemplates.get(id);
+    if (!row) return;
+    if (!(row as CreatureTemplate).deletedAt) return;
+    await db.creatureTemplates.update(id, {
+      deletedAt: undefined,
+      softDeletedBy: undefined,
+      updatedAt: nowISO(),
+    });
+  } catch (e) {
+    throw new Error(`creatureTemplateRepository.restore failed: ${e}`);
+  }
+}
+
+export async function hardDelete(id: string): Promise<void> {
+  try {
+    await db.creatureTemplates.delete(id);
+  } catch (e) {
+    throw new Error(`creatureTemplateRepository.hardDelete failed: ${e}`);
+  }
 }
