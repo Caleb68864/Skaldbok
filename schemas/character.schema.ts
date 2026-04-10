@@ -93,6 +93,8 @@ export const characterRecordSchema = z.object({
   uiState: z.object({
     expandedSections: z.array(z.string()),
   }),
+  deletedAt: z.string().optional().describe('ISO timestamp when soft-deleted; absent when live'),
+  softDeletedBy: z.string().optional().describe('Transaction UUID identifying the cascade that soft-deleted this character'),
 });
 
 export type CharacterRecordSchema = z.infer<typeof characterRecordSchema>;
