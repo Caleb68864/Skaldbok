@@ -1,4 +1,11 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -71,11 +78,6 @@
           }
         ]
       }
-    ]
-  },
-  "permissions": {
-    "allow": [
-      "Bash(npx tsc:*)"
     ]
   }
 }
