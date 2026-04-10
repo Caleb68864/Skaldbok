@@ -10,6 +10,8 @@ export const entityLinkSchema = z.object({
   schemaVersion: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  deletedAt: z.string().optional(),
+  softDeletedBy: z.string().optional(),
 });
 
 export type EntityLink = z.infer<typeof entityLinkSchema>;

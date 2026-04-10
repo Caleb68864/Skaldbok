@@ -84,6 +84,10 @@ export const baseNoteSchema = z.object({
    * Legacy notes without this field default to `'campaign'`.
    */
   scope: z.enum(['campaign', 'shared']).optional().default('campaign'),
+  /** ISO datetime when this note was soft-deleted; absent while active. */
+  deletedAt: z.string().optional(),
+  /** Transaction UUID identifying the cascade that soft-deleted this note. */
+  softDeletedBy: z.string().optional(),
 });
 
 /**

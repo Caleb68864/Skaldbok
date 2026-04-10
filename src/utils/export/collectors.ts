@@ -110,13 +110,23 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
     // 3. Load encounters by sessionId
     const encounters = await listEncountersBySession(sessionId);
 
-    // 4. Load creature templates referenced by encounter participants
-    const creatureIds = new Set(
-      encounters
-        .flatMap((e) => e.participants)
-        .map((p) => p.linkedCreatureId)
-        .filter((id): id is string => id !== undefined)
+    // 4. Load creature templates referenced by encounter participants.
+    // Walk each participant's outgoing `represents` edges to find the
+    // associated creature template ids, then batch-load the templates.
+    const participantIds = encounters.flatMap((e) =>
+      e.participants.map((p) => p.id),
     );
+    const representsLinkLists = await Promise.all(
+      participantIds.map((id) => getAllLinksFrom(id)),
+    );
+    const creatureIds = new Set<string>();
+    for (const links of representsLinkLists) {
+      for (const link of links) {
+        if (link.relationshipType === 'represents' && link.toEntityType === 'creature') {
+          creatureIds.add(link.toEntityId);
+        }
+      }
+    }
     const creatureTemplates = (
       await Promise.all([...creatureIds].map((id) => getCreatureTemplateById(id)))
     ).filter((t): t is CreatureTemplate => t !== undefined);

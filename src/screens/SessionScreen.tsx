@@ -4,8 +4,7 @@ import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { EndSessionModal } from '../features/campaign/EndSessionModal';
 import { useExportActions } from '../features/export/useExportActions';
-import { CombatTimeline } from '../features/combat/CombatTimeline';
-import { useNoteActions } from '../features/notes/useNoteActions';
+import { useToast } from '../context/ToastContext';
 // NotesGrid kept for rollback safety — file not deleted per spec
 // import { NotesGrid } from '../features/notes/NotesGrid';
 import { VaultBrowser } from '../features/kb/VaultBrowser';
@@ -13,8 +12,14 @@ import { SessionQuickActions } from '../features/session/SessionQuickActions';
 import { useEncounterList } from '../features/encounters/useEncounterList';
 import { EncounterListItem } from '../features/encounters/EncounterListItem';
 import { EncounterScreen } from '../features/encounters/EncounterScreen';
-import { getNotesBySession } from '../storage/repositories/noteRepository';
+import {
+  SessionEncounterProvider,
+  useSessionEncounterContext,
+} from '../features/session/SessionEncounterContext';
+import { SessionBar } from '../features/session/SessionBar';
+import { TiptapNoteEditor } from '../components/notes/TiptapNoteEditor';
 import { getSessionsByCampaign } from '../storage/repositories/sessionRepository';
+import { getNotesBySession } from '../storage/repositories/noteRepository';
 import * as encounterRepository from '../storage/repositories/encounterRepository';
 import type { Session } from '../types/session';
 import type { Note } from '../types/note';
@@ -39,22 +44,180 @@ const actionBtnClass = "min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] bo
 const primaryBtnClass = "min-h-11 min-w-11 px-5 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer whitespace-nowrap";
 
 export function SessionScreen() {
+  const { activeCampaign, activeSession } = useCampaignContext();
+
+  if (!activeCampaign) {
+    return <NoCampaignPrompt />;
+  }
+
+  // When a session is active, wrap the session-scoped content in
+  // SessionEncounterProvider so SessionBar, the Start Encounter form, and the
+  // embedded EncounterScreen can all consume the same hook instance. When no
+  // session is active, render the fallback view without the provider (the
+  // provider requires a sessionId).
+  if (activeSession) {
+    return (
+      <SessionEncounterProvider sessionId={activeSession.id}>
+        <ActiveSessionContent />
+      </SessionEncounterProvider>
+    );
+  }
+
+  return <NoActiveSessionContent />;
+}
+
+/**
+ * Rendered when the user has selected a campaign but has no currently active
+ * session. Shows past sessions and the "Start Session" button. Rendered
+ * OUTSIDE SessionEncounterProvider because the provider requires a sessionId.
+ */
+function NoActiveSessionContent() {
   const navigate = useNavigate();
-  const { activeCampaign, activeSession, startSession, endSession, resumeSession } = useCampaignContext();
-  const { exportSessionMarkdown, exportSessionBundle, exportSessionSkaldmark } = useExportActions();
-  const { createNote } = useNoteActions();
-  const [showEndConfirm, setShowEndConfirm] = useState(false);
-  const [activeCombatNoteId, setActiveCombatNoteId] = useState<string | null>(null);
-  const [showCombatView, setShowCombatView] = useState(false);
+  const { activeCampaign, startSession, resumeSession } = useCampaignContext();
+  const { exportSessionMarkdown, exportSessionBundle } = useExportActions();
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
   const [lastSessionNoteCount, setLastSessionNoteCount] = useState(0);
+
+  useEffect(() => {
+    if (!activeCampaign) return;
+    let mounted = true;
+    setLoadingPast(true);
+    getSessionsByCampaign(activeCampaign.id).then(sessions => {
+      if (!mounted) return;
+      const ended = sessions
+        .filter(s => s.status === 'ended')
+        .sort((a, b) => b.date.localeCompare(a.date));
+      setPastSessions(ended);
+      if (ended.length > 0) {
+        getNotesBySession(ended[0].id).then((notes: Note[]) => {
+          if (mounted) setLastSessionNoteCount(notes.length);
+        });
+      }
+      setLoadingPast(false);
+    }).catch(() => {
+      if (mounted) setLoadingPast(false);
+    });
+    return () => { mounted = false; };
+  }, [activeCampaign?.id]);
+
+  if (!activeCampaign) return null;
+
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-[var(--color-text)] m-0">{activeCampaign.name}</h2>
+        <button
+          onClick={() => navigate('/bestiary')}
+          className={actionBtnClass}
+        >
+          Bestiary
+        </button>
+      </div>
+
+      <div className="mb-4">
+        {pastSessions.length > 0 ? (
+          <div className="bg-[var(--color-surface-raised)] rounded-lg px-4 py-3 mb-3">
+            <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-[0.05em] mb-1">
+              Last Session
+            </p>
+            <p className="text-[var(--color-text)] font-semibold mb-0.5">
+              {pastSessions[0].title}
+            </p>
+            <p className="text-[var(--color-text-muted)] text-[13px]">
+              {formatDate(pastSessions[0].date)}
+              {lastSessionNoteCount > 0 && ` · ${lastSessionNoteCount} note${lastSessionNoteCount !== 1 ? 's' : ''}`}
+            </p>
+          </div>
+        ) : (
+          <p className="text-[var(--color-text-muted)] mb-3 text-sm">
+            No sessions yet.
+          </p>
+        )}
+        <button onClick={() => startSession()} className={primaryBtnClass}>
+          Start Session
+        </button>
+      </div>
+
+      {!loadingPast && pastSessions.length > 0 && (
+        <div>
+          <h3 className="text-[var(--color-text)] mb-2">Past Sessions</h3>
+          {pastSessions.map(session => (
+            <div
+              key={session.id}
+              className="bg-[var(--color-surface-raised)] rounded-lg p-3 mb-2"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[var(--color-text)] font-semibold mb-0.5">
+                    {session.title}
+                  </p>
+                  <p className="text-[var(--color-text-muted)] text-xs">
+                    {formatDate(session.date)}
+                  </p>
+                </div>
+                <div className="flex gap-3 shrink-0">
+                  <button
+                    onClick={() => resumeSession(session.id)}
+                    className="min-h-11 px-3 py-1.5 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-md cursor-pointer text-xs font-semibold"
+                  >
+                    Resume
+                  </button>
+                  <button
+                    onClick={() => exportSessionMarkdown(session.id)}
+                    className="min-h-11 px-3 py-1.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
+                  >
+                    .md
+                  </button>
+                  <button
+                    onClick={() => exportSessionBundle(session.id)}
+                    className="min-h-11 px-3 py-1.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
+                  >
+                    .zip
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <VaultBrowser campaignId={activeCampaign.id} compact />
+    </div>
+  );
+}
+
+/**
+ * Rendered inside <SessionEncounterProvider> when the user has an active
+ * session. Has access to useSessionEncounterContext for all encounter
+ * lifecycle operations.
+ */
+function ActiveSessionContent() {
+  const navigate = useNavigate();
+  const { activeCampaign, activeSession, endSession } = useCampaignContext();
+  const { exportSessionMarkdown, exportSessionBundle, exportSessionSkaldmark } = useExportActions();
+  const { showToast } = useToast();
+
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [elapsed, setElapsed] = useState('');
   const [viewingEncounterId, setViewingEncounterId] = useState<string | null>(null);
   const [showStartEncounter, setShowStartEncounter] = useState(false);
   const [newEncounterType, setNewEncounterType] = useState<'combat' | 'social' | 'exploration'>('combat');
   const [newEncounterTitle, setNewEncounterTitle] = useState('');
-  const { encounters, activeEncounter, refresh: refreshEncounters } = useEncounterList(activeSession?.id ?? null);
+  const [newEncounterDescription, setNewEncounterDescription] = useState<unknown>(null);
+  const [newEncounterTagsInput, setNewEncounterTagsInput] = useState('');
+  const [newEncounterLocation, setNewEncounterLocation] = useState('');
+  const [newEncounterParentOverride, setNewEncounterParentOverride] = useState<'auto' | 'none' | string>('auto');
+  const [submittingEncounter, setSubmittingEncounter] = useState(false);
+  const [pastSessions, setPastSessions] = useState<Session[]>([]);
+  const [loadingPast, setLoadingPast] = useState(false);
+
+  const { encounters, refresh: refreshEncounters } = useEncounterList(activeSession?.id ?? null);
+  const {
+    activeEncounter,
+    recentEnded,
+    startEncounter,
+  } = useSessionEncounterContext();
 
   // Session timer
   const formatElapsed = useCallback((startedAt: string) => {
@@ -84,36 +247,12 @@ export function SessionScreen() {
         .filter(s => s.status === 'ended')
         .sort((a, b) => b.date.localeCompare(a.date));
       setPastSessions(ended);
-      if (ended.length > 0) {
-        getNotesBySession(ended[0].id).then((notes: Note[]) => {
-          if (mounted) setLastSessionNoteCount(notes.length);
-        });
-      }
       setLoadingPast(false);
     }).catch(() => {
       if (mounted) setLoadingPast(false);
     });
     return () => { mounted = false; };
   }, [activeCampaign?.id, activeSession]);
-
-  useEffect(() => {
-    if (!activeSession) {
-      setActiveCombatNoteId(null);
-      setShowCombatView(false);
-      return;
-    }
-    let mounted = true;
-    getNotesBySession(activeSession.id).then((notes: Note[]) => {
-      if (!mounted) return;
-      const activeCombat = notes.find(n => n.type === 'combat' && n.status === 'active');
-      setActiveCombatNoteId(activeCombat?.id ?? null);
-    });
-    return () => { mounted = false; };
-  }, [activeSession?.id]);
-
-  const handleStartSession = async () => {
-    await startSession();
-  };
 
   const handleEndSession = () => {
     setShowEndConfirm(true);
@@ -129,45 +268,63 @@ export function SessionScreen() {
     setShowEndConfirm(false);
   };
 
-  const handleStartEncounter = async () => {
-    if (!newEncounterTitle.trim()) return;
-    const now = new Date().toISOString();
-    await encounterRepository.create({
-      sessionId: activeSession!.id,
-      campaignId: activeCampaign!.id,
-      title: newEncounterTitle.trim(),
-      type: newEncounterType,
-      status: 'active',
-      startedAt: now,
-      participants: [],
-      combatData: newEncounterType === 'combat' ? { currentRound: 1, events: [] } : undefined,
-    });
-    setShowStartEncounter(false);
+  const resetStartEncounterForm = () => {
     setNewEncounterTitle('');
-    refreshEncounters();
+    setNewEncounterDescription(null);
+    setNewEncounterTagsInput('');
+    setNewEncounterLocation('');
+    setNewEncounterParentOverride('auto');
+    setNewEncounterType('combat');
   };
 
-  const handleStartCombat = async () => {
-    const note = await createNote({
-      title: `Combat — Round 1`,
-      type: 'combat',
-      body: null,
-      pinned: false,
-      status: 'active',
-      typeData: { rounds: [{ roundNumber: 1, events: [] }], participants: [] },
-    });
-    if (note) {
-      setActiveCombatNoteId(note.id);
-      setShowCombatView(true);
+  const handleStartEncounter = async () => {
+    if (!newEncounterTitle.trim() || submittingEncounter) return;
+    setSubmittingEncounter(true);
+    try {
+      const tags = newEncounterTagsInput
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+
+      let parentOverride: string | null | undefined;
+      if (newEncounterParentOverride === 'auto') {
+        parentOverride = undefined;
+      } else if (newEncounterParentOverride === 'none') {
+        parentOverride = null;
+      } else {
+        parentOverride = newEncounterParentOverride;
+      }
+
+      // Read BEFORE calling startEncounter so we can show an auto-end toast.
+      const prior = activeEncounter;
+
+      const newEnc = await startEncounter({
+        title: newEncounterTitle.trim(),
+        type: newEncounterType,
+        description: newEncounterDescription ?? undefined,
+        tags,
+        location: newEncounterLocation.trim() || undefined,
+        parentOverride,
+      });
+
+      if (prior && prior.id !== newEnc.id) {
+        showToast(`${prior.title} ended, ${newEnc.title} started`, 'info', 3000);
+      }
+
+      setShowStartEncounter(false);
+      resetStartEncounterForm();
+      refreshEncounters();
+    } finally {
+      setSubmittingEncounter(false);
     }
   };
 
-  if (!activeCampaign) {
-    return <NoCampaignPrompt />;
-  }
+  if (!activeCampaign || !activeSession) return null;
 
-  // Show full encounter screen when viewing one
-  if (viewingEncounterId && activeSession) {
+  // Show full encounter screen when viewing one. The EncounterScreen sits
+  // INSIDE the SessionEncounterProvider so it can call endEncounter via the
+  // context.
+  if (viewingEncounterId) {
     return (
       <EncounterScreen
         encounterId={viewingEncounterId}
@@ -181,9 +338,28 @@ export function SessionScreen() {
     );
   }
 
+  // Options for the "Started during" parent-override picker. Uses recentEnded
+  // + the current active encounter if present (dedup by id).
+  const parentOptionIds = new Set<string>();
+  const parentOptions: { id: string; label: string }[] = [];
+  if (activeEncounter) {
+    parentOptionIds.add(activeEncounter.id);
+    parentOptions.push({ id: activeEncounter.id, label: `${activeEncounter.title} (active)` });
+  }
+  for (const enc of recentEnded) {
+    if (!parentOptionIds.has(enc.id)) {
+      parentOptionIds.add(enc.id);
+      parentOptions.push({ id: enc.id, label: enc.title });
+    }
+  }
+
   return (
     <div className="p-4">
-      <div className="flex items-center justify-between mb-2">
+      <SessionBar
+        onActiveEncounterClick={(id) => setViewingEncounterId(id)}
+      />
+
+      <div className="flex items-center justify-between mb-2 mt-3">
         <h2 className="text-[var(--color-text)] m-0">{activeCampaign.name}</h2>
         <button
           onClick={() => navigate('/bestiary')}
@@ -193,154 +369,108 @@ export function SessionScreen() {
         </button>
       </div>
 
-      {activeSession ? (
-        <div className="bg-[var(--color-surface-raised)] rounded-lg p-4 mb-4">
-          <div className="flex justify-between items-baseline mb-1">
-            <h3 className="text-[var(--color-text)] m-0">{activeSession.title}</h3>
-            {elapsed && (
-              <span className="text-[var(--color-accent)] text-sm font-semibold tabular-nums">
-                {elapsed}
-              </span>
-            )}
-          </div>
-          <p className="text-[var(--color-text-muted)] mb-3 text-sm">
-            Started: {formatDateTime(activeSession.startedAt)}
-          </p>
-          <div className="flex gap-3 flex-wrap">
-            <button onClick={handleEndSession} className={primaryBtnClass}>
-              End Session
-            </button>
-            <button onClick={() => exportSessionMarkdown(activeSession.id)} className={actionBtnClass}>
-              Export Session
-            </button>
-            <button onClick={() => exportSessionBundle(activeSession.id)} className={actionBtnClass}>
-              Export + Notes (ZIP)
-            </button>
-            <button onClick={() => exportSessionSkaldmark(activeSession.id, false)} className={actionBtnClass}>
-              Export (.skaldbok)
-            </button>
-          </div>
-
-          {/* Quick session actions — hidden during combat to prevent overlay */}
-          {!showCombatView && (
-            <div className="mt-4">
-              <SessionQuickActions />
-            </div>
-          )}
-
-          {/* Combat section */}
-          {showCombatView && activeCombatNoteId ? (
-            <CombatTimeline
-              combatNoteId={activeCombatNoteId}
-              onClose={() => {
-                setShowCombatView(false);
-                setActiveCombatNoteId(null);
-              }}
-            />
-          ) : (
-            <div className="mt-3">
-              {activeCombatNoteId ? (
-                <button onClick={() => setShowCombatView(true)} className={actionBtnClass}>
-                  Resume Combat
-                </button>
-              ) : (
-                <button onClick={handleStartCombat} className={actionBtnClass}>
-                  Start Combat
-                </button>
-              )}
-            </div>
+      <div className="bg-[var(--color-surface-raised)] rounded-lg p-4 mb-4">
+        <div className="flex justify-between items-baseline mb-1">
+          <h3 className="text-[var(--color-text)] m-0">{activeSession.title}</h3>
+          {elapsed && (
+            <span className="text-[var(--color-accent)] text-sm font-semibold tabular-nums">
+              {elapsed}
+            </span>
           )}
         </div>
-      ) : (
-        <div className="mb-4">
-          {pastSessions.length > 0 ? (
-            <div className="bg-[var(--color-surface-raised)] rounded-lg px-4 py-3 mb-3">
-              <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-[0.05em] mb-1">
-                Last Session
-              </p>
-              <p className="text-[var(--color-text)] font-semibold mb-0.5">
-                {pastSessions[0].title}
-              </p>
-              <p className="text-[var(--color-text-muted)] text-[13px]">
-                {formatDate(pastSessions[0].date)}
-                {lastSessionNoteCount > 0 && ` · ${lastSessionNoteCount} note${lastSessionNoteCount !== 1 ? 's' : ''}`}
-              </p>
-            </div>
-          ) : (
-            <p className="text-[var(--color-text-muted)] mb-3 text-sm">
-              No sessions yet.
-            </p>
-          )}
-          <button onClick={handleStartSession} className={primaryBtnClass}>
-            Start Session
+        <p className="text-[var(--color-text-muted)] mb-3 text-sm">
+          Started: {formatDateTime(activeSession.startedAt)}
+        </p>
+        <div className="flex gap-3 flex-wrap">
+          <button onClick={handleEndSession} className={primaryBtnClass}>
+            End Session
+          </button>
+          <button onClick={() => exportSessionMarkdown(activeSession.id)} className={actionBtnClass}>
+            Export Session
+          </button>
+          <button onClick={() => exportSessionBundle(activeSession.id)} className={actionBtnClass}>
+            Export + Notes (ZIP)
+          </button>
+          <button onClick={() => exportSessionSkaldmark(activeSession.id, false)} className={actionBtnClass}>
+            Export (.skaldbok)
           </button>
         </div>
-      )}
+
+        <div className="mt-4">
+          <SessionQuickActions />
+        </div>
+      </div>
 
       {/* Encounter section */}
-      {activeSession && (
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[var(--color-text)] m-0 text-sm">Encounters</h3>
-            <button onClick={() => setShowStartEncounter(true)} className={actionBtnClass}>
-              Start Encounter
-            </button>
-          </div>
-
-          {/* Active encounter indicator */}
-          {activeEncounter && (
-            <button
-              onClick={() => setViewingEncounterId(activeEncounter.id)}
-              className="w-full text-left bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-3 mb-2 cursor-pointer"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[var(--color-text)] font-semibold text-sm">
-                  {activeEncounter.title}
-                </span>
-                <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 rounded-full text-[10px] font-bold uppercase">
-                  Active
-                </span>
-              </div>
-              <span className="text-[var(--color-text-muted)] text-xs capitalize">
-                {activeEncounter.type} &middot; {activeEncounter.participants.length} participants
-              </span>
-            </button>
-          )}
-
-          {/* Past encounters */}
-          {encounters.filter(e => e.status === 'ended').length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              {encounters
-                .filter(e => e.status === 'ended')
-                .map(e => (
-                  <EncounterListItem
-                    key={e.id}
-                    encounter={e}
-                    onClick={() => setViewingEncounterId(e.id)}
-                  />
-                ))}
-            </div>
-          )}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[var(--color-text)] m-0 text-sm">Encounters</h3>
+          <button onClick={() => setShowStartEncounter(true)} className={actionBtnClass}>
+            Start Encounter
+          </button>
         </div>
-      )}
+
+        {/* Active encounter indicator */}
+        {activeEncounter && (
+          <button
+            onClick={() => setViewingEncounterId(activeEncounter.id)}
+            className="w-full text-left bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-3 mb-2 cursor-pointer"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[var(--color-text)] font-semibold text-sm">
+                {activeEncounter.title}
+              </span>
+              <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 rounded-full text-[10px] font-bold uppercase">
+                Active
+              </span>
+            </div>
+            <span className="text-[var(--color-text-muted)] text-xs capitalize">
+              {activeEncounter.type} &middot; {activeEncounter.participants.length} participants
+            </span>
+          </button>
+        )}
+
+        {/* Past encounters */}
+        {encounters.filter(e => e.status === 'ended').length > 0 && (
+          <div className="flex flex-col gap-1.5">
+            {encounters
+              .filter(e => e.status === 'ended')
+              .map(e => (
+                <EncounterListItem
+                  key={e.id}
+                  encounter={e}
+                  onClick={() => setViewingEncounterId(e.id)}
+                />
+              ))}
+          </div>
+        )}
+      </div>
 
       {/* Start encounter modal */}
       {showStartEncounter && (
         <div
           role="dialog"
           aria-label="Start encounter"
-          onClick={() => setShowStartEncounter(false)}
+          onClick={() => {
+            if (!submittingEncounter) setShowStartEncounter(false);
+          }}
           className="fixed inset-0 bg-black/50 z-[300] flex items-end justify-center"
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-[480px] px-4 pt-5 pb-6"
+            className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-[480px] px-4 pt-5 pb-6 max-h-[90vh] overflow-y-auto"
           >
             <h3 className="text-[var(--color-text)] mb-3">Start Encounter</h3>
+
+            {/* Type */}
+            <label className="block text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
+              Type
+            </label>
             <div className="flex gap-2 mb-3">
               {(['combat', 'social', 'exploration'] as const).map(t => (
                 <button
                   key={t}
+                  type="button"
                   onClick={() => setNewEncounterType(t)}
                   className={`px-3 py-1.5 rounded-full text-xs font-semibold border-none cursor-pointer ${
                     newEncounterType === t
@@ -352,6 +482,11 @@ export function SessionScreen() {
                 </button>
               ))}
             </div>
+
+            {/* Title */}
+            <label className="block text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
+              Title
+            </label>
             <input
               type="text"
               placeholder="Encounter title"
@@ -360,18 +495,81 @@ export function SessionScreen() {
               className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
               autoFocus
             />
+
+            {/* Description */}
+            <label className="block text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
+              Description
+            </label>
+            <div className="mb-3">
+              <TiptapNoteEditor
+                initialContent={newEncounterDescription}
+                onChange={setNewEncounterDescription}
+                campaignId={activeSession.campaignId}
+                placeholder="Scene-setting (optional)…"
+                showToolbar={false}
+                minHeight="100px"
+              />
+            </div>
+
+            {/* Tags */}
+            <label className="block text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
+              Tags (comma-separated)
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. ambush, forest, kobolds"
+              value={newEncounterTagsInput}
+              onChange={e => setNewEncounterTagsInput(e.target.value)}
+              className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"
+            />
+
+            {/* Location */}
+            <label className="block text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
+              Location
+            </label>
+            <input
+              type="text"
+              placeholder="e.g. Riverside Clearing"
+              value={newEncounterLocation}
+              onChange={e => setNewEncounterLocation(e.target.value)}
+              className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"
+            />
+
+            {/* Started during override */}
+            <label className="block text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
+              Started during
+            </label>
+            <select
+              value={newEncounterParentOverride}
+              onChange={e => setNewEncounterParentOverride(e.target.value)}
+              className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"
+            >
+              <option value="auto">Auto (current active)</option>
+              <option value="none">None (unrelated)</option>
+              {parentOptions.map(opt => (
+                <option key={opt.id} value={opt.id}>{opt.label}</option>
+              ))}
+            </select>
+
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={handleStartEncounter}
-                disabled={!newEncounterTitle.trim()}
+                disabled={!newEncounterTitle.trim() || submittingEncounter}
                 className={`flex-1 min-h-11 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-sm font-semibold cursor-pointer ${
-                  !newEncounterTitle.trim() ? 'opacity-60' : ''
+                  !newEncounterTitle.trim() || submittingEncounter ? 'opacity-60' : ''
                 }`}
               >
-                Start
+                {submittingEncounter ? 'Starting…' : 'Start'}
               </button>
               <button
-                onClick={() => setShowStartEncounter(false)}
+                type="button"
+                onClick={() => {
+                  if (!submittingEncounter) {
+                    setShowStartEncounter(false);
+                    resetStartEncounterForm();
+                  }
+                }}
                 className="min-h-11 px-4 bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] rounded-lg text-sm cursor-pointer"
               >
                 Cancel
@@ -400,14 +598,6 @@ export function SessionScreen() {
                   </p>
                 </div>
                 <div className="flex gap-3 shrink-0">
-                  {!activeSession && (
-                    <button
-                      onClick={() => resumeSession(session.id)}
-                      className="min-h-11 px-3 py-1.5 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-md cursor-pointer text-xs font-semibold"
-                    >
-                      Resume
-                    </button>
-                  )}
                   <button
                     onClick={() => exportSessionMarkdown(session.id)}
                     className="min-h-11 px-3 py-1.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
@@ -430,11 +620,11 @@ export function SessionScreen() {
       {/* Vault Browser (compact mode — session-scoped notes) */}
       <VaultBrowser
         campaignId={activeCampaign.id}
-        sessionId={activeSession?.id}
+        sessionId={activeSession.id}
         compact
       />
 
-      {showEndConfirm && activeSession && (
+      {showEndConfirm && (
         <EndSessionModal
           sessionTitle={activeSession.title}
           hasActiveEncounter={!!activeEncounter}

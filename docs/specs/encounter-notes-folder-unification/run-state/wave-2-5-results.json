@@ -1,0 +1,116 @@
+{
+  "waves": [2, 3, 4, 5],
+  "executed_at": "2026-04-10",
+  "sub_specs": [
+    {
+      "number": 2,
+      "title": "Dexie v8 Schema Migration",
+      "status": "PASS",
+      "worker_agent_id": "a0732404bd87e1fba",
+      "files_created": [
+        "src/storage/db/migrations/pre-encounter-rework-backup.ts"
+      ],
+      "files_modified": [
+        "src/storage/db/client.ts",
+        ".gitignore"
+      ],
+      "build_result": "PASS (12.59s, zero TypeScript errors)",
+      "criteria_passed": "8/8",
+      "key_decisions": [
+        "Backup target: localStorage (key forge:backup:pre-encounter-rework-{date}.json) — browser Dexie has no filesystem; phase spec pre-authorized this fallback",
+        "Used generateId() from ../../utils/ids instead of crypto.randomUUID() (matches existing v6 migration pattern)",
+        "Folded participant mutation into the encounter .update() call for one round-trip per row",
+        "Upgrade function is ~60 lines, well under the 80-line split threshold"
+      ],
+      "manual_verification_needed": "Open dev app, check IndexedDB → skaldbok-db version === 8, localStorage has forge:backup:pre-encounter-rework-YYYY-MM-DD.json, no console errors"
+    },
+    {
+      "number": 3,
+      "title": "Encounter + EntityLink Data Layer Extensions",
+      "status": "PASS",
+      "worker_agent_id": "a46228c2669354b6d",
+      "files_modified_in_scope": [
+        "src/types/encounter.ts",
+        "src/storage/repositories/encounterRepository.ts",
+        "src/storage/repositories/entityLinkRepository.ts"
+      ],
+      "files_modified_out_of_scope_for_build_safety": [
+        "src/features/encounters/useEncounter.ts",
+        "src/features/encounters/CombatEncounterView.tsx",
+        "src/features/encounters/ParticipantDrawer.tsx",
+        "src/features/encounters/EncounterScreen.tsx",
+        "src/features/encounters/EncounterListItem.tsx",
+        "src/features/bestiary/BestiaryScreen.tsx",
+        "src/screens/SessionScreen.tsx",
+        "src/utils/export/collectors.ts"
+      ],
+      "build_result": "PASS (11.05s)",
+      "criteria_passed": "11/11 (+ 1 skipped lint)",
+      "key_decisions": [
+        "Rewrote encounterRepository.end() to call endActiveSegment() then flip status — in-scope fix for the now-gone scalar startedAt/endedAt",
+        "Bled into 8 Sub-Spec-5 files with a mix of @ts-expect-error (writes) and structural casts (reads), every one tagged TODO(sub-spec-5) for Sub-Spec 5 to clean up",
+        "Used Map<id, EntityLink> with inline already-deleted filter in softDeleteLinksForEncounter (skips re-writing already-deleted rows)",
+        "useEncounter.startEncounter and SessionScreen.handleStartEncounter inline-updated because the fix was trivial (segments: [{startedAt: now}] + tags: [])"
+      ]
+    },
+    {
+      "number": 4,
+      "title": "useSessionEncounter Hook + Context",
+      "status": "PASS",
+      "worker_agent_id": "a7d37df737f5392d9",
+      "files_created": [
+        "src/features/session/useSessionEncounter.ts",
+        "src/features/session/SessionEncounterContext.tsx"
+      ],
+      "files_modified": [],
+      "build_result": "PASS (12.17s)",
+      "criteria_passed": "17/17",
+      "key_decisions": [
+        "Typed local updates variable as Partial<Encounter> instead of Record<string, unknown> (Dexie v4 UpdateSpec<T> compatibility)",
+        "Used (existing as Encounter).deletedAt cast in reopenEncounter matching Sub-Spec 3's encounterRepository style"
+      ],
+      "issues": []
+    },
+    {
+      "number": 5,
+      "title": "useSessionLog + useEncounter Extensions",
+      "status": "PASS",
+      "worker_agent_id": "a28f8f41ff44321a0",
+      "files_modified": [
+        "src/features/session/useSessionLog.ts",
+        "src/features/encounters/useEncounter.ts",
+        "src/features/encounters/CombatEncounterView.tsx",
+        "src/features/encounters/ParticipantDrawer.tsx",
+        "src/features/encounters/EncounterScreen.tsx",
+        "src/features/encounters/EncounterListItem.tsx",
+        "src/features/bestiary/BestiaryScreen.tsx",
+        "src/utils/export/collectors.ts"
+      ],
+      "build_result": "PASS (18.52s, 2295 modules, zero TypeScript errors)",
+      "criteria_passed": "13/13",
+      "audits_independently_verified": {
+        "grep TODO(sub-spec-5) in src/": "ZERO matches",
+        "grep quickCreateParticipant in src/": "ZERO matches"
+      },
+      "todo_cleanup_count": 11,
+      "key_decisions": [
+        "logToSession detects body inside typeData and extracts it to the note's body column — keeps public signature uniform",
+        "Continued emitting the session→note contains edge (on top of the new encounter→note edge) because session exports and KB graph sync depend on it",
+        "addParticipantFromTemplate made polymorphic (CreatureTemplate | CharacterRecord | string) with addParticipantFromCharacter(id) as a thin wrapper — avoided a ripple edit across the party picker UI",
+        "Implemented the full represents entity-link walk in collectors.ts (~15 lines) instead of deferring to TODO(phase-2-export)",
+        "quickCreateParticipant caller in EncounterScreen was rewritten in-place (create template + addParticipantFromTemplate) since there were no external callers"
+      ],
+      "issues": []
+    }
+  ],
+  "overall_wave_status": "PASS",
+  "committed": false,
+  "build_verification": "PASS — npm run build (tsc -b && vite build) passes cleanly after every wave and at the end.",
+  "lint_status": "SKIPPED — ESLint not installed in this repo (pre-existing environment drift, not a regression). TypeScript via tsc -b provides full static verification.",
+  "remaining_work": [
+    "Sub-Spec 6 — UI Primitives: SessionBar + EncounterParticipantPicker",
+    "Sub-Spec 7 — SessionScreen + EncounterScreen Integration",
+    "Sub-Spec 8 — Quick Log Palette: New Actions + Attach-To Control",
+    "Sub-Spec 9 — Verification, Cleanup, and End-to-End Smoke"
+  ]
+}

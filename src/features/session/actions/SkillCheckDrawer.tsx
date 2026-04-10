@@ -4,6 +4,8 @@ import { PartyPicker } from '../../../components/fields/PartyPicker';
 import type { ResolvedMember } from '../../../components/fields/PartyPicker';
 import { useNoteActions } from '../../notes/useNoteActions';
 import { useToast } from '../../../context/ToastContext';
+import { useSessionEncounterContextSafe } from '../SessionEncounterContext';
+import { AttachToControl, resolveAttach, type AttachToValue } from '../quickActions/AttachToControl';
 import { cn } from '../../../lib/utils';
 
 /**
@@ -139,8 +141,10 @@ export interface SkillCheckDrawerProps {
 export function SkillCheckDrawer({ open, onClose, members, selectedMembers, onSelectMembers, onLogged }: SkillCheckDrawerProps) {
   const { createNote } = useNoteActions();
   const { showToast } = useToast();
+  const sessionEncounterCtx = useSessionEncounterContextSafe();
   const [selectedSkill, setSelectedSkill] = useState<string | null>(null);
   const [rollMods, setRollMods] = useState({ boon: false, bane: false, pushed: false });
+  const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
 
   /** Returns the display label for the current member selection (single name, "Party", or "Unknown"). */
   const selectedNames = () => {
@@ -165,15 +169,29 @@ export function SkillCheckDrawer({ open, onClose, members, selectedMembers, onSe
   const logEvent = async (title: string, typeData: Record<string, unknown>) => {
     const who = selectedNames();
     const fullTitle = who ? `${who}: ${title}` : title;
-    await createNote({
-      title: fullTitle,
-      type: 'skill-check',
-      body: null,
-      pinned: false,
-      status: 'active',
-      typeData,
-    });
-    showToast(`Logged: ${fullTitle}`);
+    const currentAttach = attachTo;
+    await createNote(
+      {
+        title: fullTitle,
+        type: 'skill-check',
+        body: null,
+        pinned: false,
+        status: 'active',
+        typeData,
+      },
+      { targetEncounterId: resolveAttach(currentAttach) },
+    );
+    let encounterTitle: string | null = null;
+    if (currentAttach === 'auto') {
+      encounterTitle = sessionEncounterCtx?.activeEncounter?.title ?? null;
+    } else if (typeof currentAttach === 'string') {
+      encounterTitle = 'encounter';
+    }
+    if (encounterTitle) {
+      showToast(`Logged to ${encounterTitle}`, 'success', 2000);
+    } else {
+      showToast('Logged to session', 'success', 2000);
+    }
     handleClose();
     onLogged();
   };
@@ -182,6 +200,7 @@ export function SkillCheckDrawer({ open, onClose, members, selectedMembers, onSe
   const handleClose = () => {
     setSelectedSkill(null);
     setRollMods({ boon: false, bane: false, pushed: false });
+    setAttachTo('auto');
     onClose();
   };
 
@@ -196,6 +215,7 @@ export function SkillCheckDrawer({ open, onClose, members, selectedMembers, onSe
             {selectedSkill}{modTag}
           </p>
           <RollModifiers mods={rollMods} onToggle={key => setRollMods(m => ({ ...m, [key]: !m[key] }))} />
+          <AttachToControl value={attachTo} onChange={setAttachTo} />
           <div className="grid grid-cols-2 gap-2">
             {RESULTS.map(result => (
               <button

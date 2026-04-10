@@ -12,6 +12,7 @@ import type { Attachment } from '../../types/attachment';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { Encounter } from '../../types/encounter';
 import { generateId } from '../../utils/ids';
+import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
 export interface ReferenceNote {
   id: string;
@@ -236,6 +237,94 @@ class SkaldbokDatabase extends Dexie {
           key: metaKey,
           value: 'true',
         });
+      });
+
+    // --- Version 8: Encounter / notes / folder unification + soft deletes ---
+    // Adds deletedAt indexes across every domain table, restructures Encounter
+    // to use a segments[] array, and converts participant FKs to entityLinks.
+    this.version(8)
+      .stores({
+        // Domain tables — append deletedAt (and softDeletedBy on entityLinks)
+        campaigns: 'id, status, updatedAt, deletedAt',
+        sessions: 'id, campaignId, status, date, [campaignId+status], deletedAt',
+        notes: 'id, campaignId, sessionId, type, status, pinned, visibility, scope, deletedAt',
+        entityLinks:
+          'id, [fromEntityId+relationshipType], [toEntityId+relationshipType], fromEntityType, toEntityType, deletedAt, softDeletedBy',
+        parties: 'id, campaignId, deletedAt',
+        partyMembers: 'id, partyId, linkedCharacterId, deletedAt',
+        creatureTemplates: 'id, campaignId, category, status, name, deletedAt',
+        encounters: 'id, sessionId, campaignId, type, status, deletedAt',
+        characters: 'id, systemId, updatedAt, deletedAt',
+      })
+      .upgrade(async (tx) => {
+        // 1. Backup first. Throws on failure, which aborts the transaction.
+        await writePreEncounterReworkBackup(tx);
+
+        // 2. Migrate Encounter rows: scalar startedAt/endedAt -> segments[] array.
+        const encountersTable = tx.table('encounters');
+        const entityLinksTable = tx.table('entityLinks');
+        const allEncounters = await encountersTable.toArray();
+        const nowIso = new Date().toISOString();
+
+        for (const enc of allEncounters) {
+          const segments: Array<{ startedAt: string; endedAt?: string }> = [];
+          if (enc.startedAt) {
+            const segment: { startedAt: string; endedAt?: string } = {
+              startedAt: enc.startedAt,
+            };
+            if (enc.endedAt) segment.endedAt = enc.endedAt;
+            segments.push(segment);
+          }
+
+          // 3. Convert participant linkedCreatureId / linkedCharacterId into
+          //    'represents' entity links, then strip the FK fields.
+          const participants = Array.isArray(enc.participants) ? enc.participants : [];
+          for (const participant of participants) {
+            if (participant && participant.linkedCreatureId) {
+              await entityLinksTable.add({
+                id: generateId(),
+                fromEntityId: participant.id,
+                fromEntityType: 'encounterParticipant',
+                toEntityId: participant.linkedCreatureId,
+                toEntityType: 'creature',
+                relationshipType: 'represents',
+                schemaVersion: 1,
+                createdAt: nowIso,
+                updatedAt: nowIso,
+              });
+              delete participant.linkedCreatureId;
+            }
+            if (participant && participant.linkedCharacterId) {
+              await entityLinksTable.add({
+                id: generateId(),
+                fromEntityId: participant.id,
+                fromEntityType: 'encounterParticipant',
+                toEntityId: participant.linkedCharacterId,
+                toEntityType: 'character',
+                relationshipType: 'represents',
+                schemaVersion: 1,
+                createdAt: nowIso,
+                updatedAt: nowIso,
+              });
+              delete participant.linkedCharacterId;
+            }
+          }
+
+          await encountersTable.update(enc.id, {
+            segments,
+            description: undefined,
+            body: undefined,
+            summary: undefined,
+            tags: enc.tags ?? [],
+            participants,
+            startedAt: undefined,
+            endedAt: undefined,
+          });
+        }
+
+        // 4. Delete old type:'combat' notes (user-confirmed decision — no real
+        //    data to preserve; the pre-migration backup above still captured them).
+        await tx.table('notes').where('type').equals('combat').delete();
       });
   }
 }

@@ -1,0 +1,51 @@
+{
+  "spec_path": "docs/specs/2026-04-10-encounter-notes-folder-unification.md",
+  "spec_slug": "encounter-notes-folder-unification",
+  "spec_title": "Encounter as Notes-Folder — Unification Spec",
+  "spec_summary": "Unify Skaldbok combat/encounter flow. Combat becomes a type: 'combat' encounter. Quick Log auto-attaches to active encounter via entityLinks 'contains' edge. NPCs mintable inline from picker + Quick Log. Participant FKs migrate to 'represents' edges. Every domain table gains soft-delete foundation. 9 sub-specs across 9 sequential waves.",
+  "phase_specs_loaded": true,
+  "phase_spec_paths": {
+    "1": "docs/specs/encounter-notes-folder-unification/sub-spec-1-soft-delete-foundation.md",
+    "2": "docs/specs/encounter-notes-folder-unification/sub-spec-2-dexie-v8-migration.md",
+    "3": "docs/specs/encounter-notes-folder-unification/sub-spec-3-encounter-entitylink-extensions.md",
+    "4": "docs/specs/encounter-notes-folder-unification/sub-spec-4-use-session-encounter-hook.md",
+    "5": "docs/specs/encounter-notes-folder-unification/sub-spec-5-session-log-encounter-extensions.md",
+    "6": "docs/specs/encounter-notes-folder-unification/sub-spec-6-ui-primitives-sessionbar-picker.md",
+    "7": "docs/specs/encounter-notes-folder-unification/sub-spec-7-session-encounter-screens.md",
+    "8": "docs/specs/encounter-notes-folder-unification/sub-spec-8-quick-log-palette.md",
+    "9": "docs/specs/encounter-notes-folder-unification/sub-spec-9-verification-cleanup.md"
+  },
+  "execution_plan": {
+    "waves": [
+      {"wave": 1, "sub_specs": [{"number": 1, "title": "Soft-Delete Foundation", "dependencies": []}]},
+      {"wave": 2, "sub_specs": [{"number": 2, "title": "Dexie v8 Schema Migration", "dependencies": [1]}]},
+      {"wave": 3, "sub_specs": [{"number": 3, "title": "Encounter + EntityLink Data Layer Extensions", "dependencies": [2]}]},
+      {"wave": 4, "sub_specs": [{"number": 4, "title": "useSessionEncounter Hook + Context", "dependencies": [3]}]},
+      {"wave": 5, "sub_specs": [{"number": 5, "title": "useSessionLog + useEncounter Extensions", "dependencies": [3, 4]}]},
+      {"wave": 6, "sub_specs": [{"number": 6, "title": "UI Primitives: SessionBar + EncounterParticipantPicker", "dependencies": [4, 5]}]},
+      {"wave": 7, "sub_specs": [{"number": 7, "title": "SessionScreen + EncounterScreen Integration", "dependencies": [6]}]},
+      {"wave": 8, "sub_specs": [{"number": 8, "title": "Quick Log Palette: New Actions + Attach-To Control", "dependencies": [5, 6]}]},
+      {"wave": 9, "sub_specs": [{"number": 9, "title": "Verification, Cleanup, and End-to-End Smoke", "dependencies": [1, 2, 3, 4, 5, 6, 7, 8]}]}
+    ]
+  },
+  "shared_context_summary": "See run-state.json context field. Key anchors: repo is Skaldbok (TypeScript/React 19/Dexie 4/Tiptap 2). Test framework: NONE. Verification: npm run build + npm run lint + manual smoke. CLAUDE.md at repo root documents entity-linking, soft-delete, and config-over-hardcoding rules.",
+  "config": {
+    "build_command": "npm run build",
+    "test_command": "npm run lint",
+    "verification_strategy": "build-only",
+    "review_enabled": true,
+    "review_max_compliance_loops": 3,
+    "review_max_quality_loops": 2,
+    "harness_active": false,
+    "harness_directory": null,
+    "harness_checks_dir": null,
+    "harness_init_script": null,
+    "harness_progress_file": null,
+    "agent_model": "sonnet",
+    "review_model": "opus"
+  },
+  "worker_file_path": "C:/Users/CalebBennett/.claude/plugins/cache/logic-tool-plugins/forge/2.15.3/agents/forge-worker.md",
+  "reviewer_file_path": "C:/Users/CalebBennett/.claude/plugins/cache/logic-tool-plugins/forge/2.15.3/agents/forge-reviewer.md",
+  "infrastructure": null,
+  "notes": "The user left autonomous-execution authorization. Sub-specs are strictly sequential (no parallelism). No harness means no worktree isolation — workers modify the shared working tree. Context is at ~200k tokens consumed already; execution will proceed wave-by-wave and may hit natural stopping points."
+}

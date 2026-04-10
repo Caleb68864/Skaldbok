@@ -3,6 +3,7 @@ import { baseNoteSchema } from '../../types/note';
 import type { Note } from '../../types/note';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
+import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 
 // Lazy import to avoid circular dependency — linkSyncEngine imports noteRepository
 let _syncModule: typeof import('../../features/kb/linkSyncEngine') | null = null;
@@ -31,7 +32,7 @@ async function getSyncModule() {
  * if (!note) console.warn('Note not found');
  * ```
  */
-export async function getNoteById(id: string): Promise<Note | undefined> {
+export async function getNoteById(id: string, options?: { includeDeleted?: boolean }): Promise<Note | undefined> {
   try {
     const record = await db.notes.get(id);
     if (!record) return undefined;
@@ -40,6 +41,7 @@ export async function getNoteById(id: string): Promise<Note | undefined> {
       console.warn('noteRepository.getNoteById: validation failed for id', id, parsed.error);
       return undefined;
     }
+    if (!options?.includeDeleted && parsed.data.deletedAt) return undefined;
     return parsed.data;
   } catch (e) {
     throw new Error(`noteRepository.getNoteById failed: ${e}`);
@@ -63,19 +65,20 @@ export async function getNoteById(id: string): Promise<Note | undefined> {
  * console.log(`Found ${notes.length} notes.`);
  * ```
  */
-export async function getNotesByCampaign(campaignId: string): Promise<Note[]> {
+export async function getNotesByCampaign(campaignId: string, options?: { includeDeleted?: boolean }): Promise<Note[]> {
   try {
     const records = await db.notes.where('campaignId').equals(campaignId).toArray();
-    return records
+    const parsed = records
       .map(record => {
-        const parsed = baseNoteSchema.safeParse(record);
-        if (!parsed.success) {
-          console.warn('noteRepository.getNotesByCampaign: validation failed', parsed.error);
+        const result = baseNoteSchema.safeParse(record);
+        if (!result.success) {
+          console.warn('noteRepository.getNotesByCampaign: validation failed', result.error);
           return undefined;
         }
-        return parsed.data;
+        return result.data;
       })
       .filter((n): n is Note => n !== undefined);
+    return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
     throw new Error(`noteRepository.getNotesByCampaign failed: ${e}`);
   }
@@ -99,19 +102,20 @@ export async function getNotesByCampaign(campaignId: string): Promise<Note[]> {
  * const combatNote = sessionNotes.find(n => n.type === 'combat');
  * ```
  */
-export async function getNotesBySession(sessionId: string): Promise<Note[]> {
+export async function getNotesBySession(sessionId: string, options?: { includeDeleted?: boolean }): Promise<Note[]> {
   try {
     const records = await db.notes.where('sessionId').equals(sessionId).toArray();
-    return records
+    const parsed = records
       .map(record => {
-        const parsed = baseNoteSchema.safeParse(record);
-        if (!parsed.success) {
-          console.warn('noteRepository.getNotesBySession: validation failed', parsed.error);
+        const result = baseNoteSchema.safeParse(record);
+        if (!result.success) {
+          console.warn('noteRepository.getNotesBySession: validation failed', result.error);
           return undefined;
         }
-        return parsed.data;
+        return result.data;
       })
       .filter((n): n is Note => n !== undefined);
+    return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
     throw new Error(`noteRepository.getNotesBySession failed: ${e}`);
   }
@@ -219,5 +223,45 @@ export async function deleteNote(id: string): Promise<void> {
     getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
   } catch (e) {
     throw new Error(`noteRepository.deleteNote failed: ${e}`);
+  }
+}
+
+export async function softDelete(id: string, txId?: string): Promise<void> {
+  try {
+    const row = await db.notes.get(id);
+    if (!row) return;
+    if ((row as Note).deletedAt) return;
+    const finalTxId = txId ?? generateSoftDeleteTxId();
+    const now = nowISO();
+    await db.notes.update(id, {
+      deletedAt: now,
+      softDeletedBy: finalTxId,
+      updatedAt: now,
+    });
+  } catch (e) {
+    throw new Error(`noteRepository.softDelete failed: ${e}`);
+  }
+}
+
+export async function restore(id: string): Promise<void> {
+  try {
+    const row = await db.notes.get(id);
+    if (!row) return;
+    if (!(row as Note).deletedAt) return;
+    await db.notes.update(id, {
+      deletedAt: undefined,
+      softDeletedBy: undefined,
+      updatedAt: nowISO(),
+    });
+  } catch (e) {
+    throw new Error(`noteRepository.restore failed: ${e}`);
+  }
+}
+
+export async function hardDelete(id: string): Promise<void> {
+  try {
+    await db.notes.delete(id);
+  } catch (e) {
+    throw new Error(`noteRepository.hardDelete failed: ${e}`);
   }
 }

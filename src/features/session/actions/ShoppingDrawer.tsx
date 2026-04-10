@@ -5,6 +5,8 @@ import type { ResolvedMember } from '../../../components/fields/PartyPicker';
 import { CounterControl } from '../../../components/primitives/CounterControl';
 import { useNoteActions } from '../../notes/useNoteActions';
 import { useToast } from '../../../context/ToastContext';
+import { useSessionEncounterContextSafe } from '../SessionEncounterContext';
+import { AttachToControl, resolveAttach, type AttachToValue } from '../quickActions/AttachToControl';
 import { cn } from '../../../lib/utils';
 
 /**
@@ -55,12 +57,14 @@ export interface ShoppingDrawerProps {
 export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSelectMembers, onLogged }: ShoppingDrawerProps) {
   const { createNote } = useNoteActions();
   const { showToast } = useToast();
+  const sessionEncounterCtx = useSessionEncounterContextSafe();
   const [shopItem, setShopItem] = useState('');
   const [shopAction, setShopAction] = useState<'buy' | 'sell'>('buy');
   const [shopGold, setShopGold] = useState(0);
   const [shopSilver, setShopSilver] = useState(0);
   const [shopCopper, setShopCopper] = useState(0);
   const [shopQuantity, setShopQuantity] = useState(1);
+  const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
 
   /** Returns the display label for the current member selection. */
   const selectedNames = () => {
@@ -77,6 +81,7 @@ export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSele
     setShopSilver(0);
     setShopCopper(0);
     setShopQuantity(1);
+    setAttachTo('auto');
     onClose();
   };
 
@@ -104,25 +109,39 @@ export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSele
     const qtyPart = shopQuantity > 1 ? ` ×${shopQuantity}` : '';
     const fullTitle = `${selectedNames()}: ${verb}${itemPart}${qtyPart}${coinPart}`;
 
-    await createNote({
-      title: fullTitle,
-      type: 'generic',
-      body: null,
-      pinned: false,
-      status: 'active',
-      typeData: {
-        action: shopAction,
-        item: shopItem.trim() || undefined,
-        quantity: shopQuantity,
-        costGold: shopGold,
-        costSilver: shopSilver,
-        costCopper: shopCopper,
-        totalGold,
-        totalSilver,
-        totalCopper,
+    const currentAttach = attachTo;
+    await createNote(
+      {
+        title: fullTitle,
+        type: 'generic',
+        body: null,
+        pinned: false,
+        status: 'active',
+        typeData: {
+          action: shopAction,
+          item: shopItem.trim() || undefined,
+          quantity: shopQuantity,
+          costGold: shopGold,
+          costSilver: shopSilver,
+          costCopper: shopCopper,
+          totalGold,
+          totalSilver,
+          totalCopper,
+        },
       },
-    });
-    showToast(`Logged: ${fullTitle}`);
+      { targetEncounterId: resolveAttach(currentAttach) },
+    );
+    let encounterTitle: string | null = null;
+    if (currentAttach === 'auto') {
+      encounterTitle = sessionEncounterCtx?.activeEncounter?.title ?? null;
+    } else if (typeof currentAttach === 'string') {
+      encounterTitle = 'encounter';
+    }
+    if (encounterTitle) {
+      showToast(`Logged to ${encounterTitle}`, 'success', 2000);
+    } else {
+      showToast('Logged to session', 'success', 2000);
+    }
     handleClose();
     onLogged();
   };
@@ -188,6 +207,7 @@ export function ShoppingDrawer({ open, onClose, members, selectedMembers, onSele
           Total: {totalStr}
         </p>
       )}
+      <AttachToControl value={attachTo} onChange={setAttachTo} />
       <button
         onClick={handleLog}
         className={cn(

@@ -14,6 +14,8 @@ export const campaignSchema = z.object({
   schemaVersion: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  deletedAt: z.string().optional(),
+  softDeletedBy: z.string().optional(),
 });
 
 export type Campaign = z.infer<typeof campaignSchema>;
