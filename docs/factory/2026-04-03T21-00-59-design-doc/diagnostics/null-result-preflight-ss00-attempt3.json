@@ -1,0 +1,8 @@
+{
+  "promptLength": 32548,
+  "toolsUsed": 0,
+  "turnsUsed": 0,
+  "assistantTextAccumulated": false,
+  "safetyNetMs": 1800000,
+  "idleAbort": false
+}

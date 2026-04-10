@@ -1,0 +1,111 @@
+{
+  "run_id": "2026-03-31T16-49-14-design-doc",
+  "current_phase": "abort",
+  "phase_status": "failed",
+  "attempts": 1,
+  "phases": [
+    {
+      "name": "triage",
+      "status": "skipped",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "forge",
+      "status": "complete",
+      "started": "2026-03-31T16:49:18.230Z",
+      "completed": "2026-03-31T16:51:06.154Z",
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T16:49:18.235Z",
+          "ended": "2026-03-31T16:51:06.152Z",
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "prep",
+      "status": "complete",
+      "started": "2026-03-31T16:51:06.161Z",
+      "completed": "2026-03-31T16:52:55.787Z",
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T16:51:06.164Z",
+          "ended": "2026-03-31T16:52:55.785Z",
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "preflight",
+      "status": "in_progress",
+      "started": "2026-03-31T16:52:55.791Z",
+      "completed": null,
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T16:52:55.794Z",
+          "ended": "2026-03-31T16:54:27.481Z",
+          "error": "Agent returned no result"
+        }
+      ]
+    },
+    {
+      "name": "run",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "verify",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "completeness",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "outcomes",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    }
+  ],
+  "timing": {
+    "total_start": "2026-03-31T16:49:14.629Z",
+    "total_end": null,
+    "total_duration_ms": null
+  },
+  "dry_run": false,
+  "unattended": false,
+  "doom_loop": {
+    "total_tokens_used": 0,
+    "token_budget": 500000,
+    "consecutive_non_productive_waves": 1,
+    "total_waves": 3
+  },
+  "spec_score": null,
+  "sub_spec_count": 3,
+  "completeness_cycles": 0,
+  "input_type": "design-doc",
+  "input_source": "C:/Users/CalebBennett/Documents/GitHub/Skaldmark/docs/factory/forge-input-20260331-160300.md",
+  "git": {
+    "branch": "2026/03/31-1156-caleb-feat-2026-03-31-unified-production-readiness-design",
+    "head_commit": "0d665e151fe004252e3f80bd912414976291bc48",
+    "base_ref": "0d665e151fe004252e3f80bd912414976291bc48",
+    "dirty": true,
+    "recent_commits": "0d665e1 factory: 2026-03-31T11-56-48-design-doc (abort)\n75f5130 fix: navigate-during-render, Dexie index, note timestamps + E2E test suite\nf1af5eb feat: universal note model + MiniSearch full-text search\n87af7ec feat: Scaldbok campaign integration + session journaling + image attachments\n8509b5d factory: 2026-03-31T01-23-45-design-doc (abort)\ned30726 factory: 2026-03-27T19-37-55-design-doc (abort)\na09d7cb docs: expand reference sheet with weapons, combat, magic, and layout improvements\n9feef1d fix: shield icon SVG path, add Reset Order button for panel reorder\n2f84127 feat: wire up DraggableCardContainer with reorder toggle on Sheet page\nb52732d feat: replace trained skill checkbox with shield icon in play mode",
+    "uncommitted_diff_stat": "src/components/notes/TagPicker.tsx             |   3 +-\n src/components/notes/TiptapNoteEditor.tsx      | 120 ++++++++++-\n src/components/primitives/Button.tsx           |   2 +-\n src/features/campaign/ManagePartyDrawer.tsx    |   4 +-\n src/features/characters/useCharacterActions.ts |   6 +-\n src/features/combat/CombatTimeline.tsx         |  48 ++++-\n src/features/notes/NoteItem.tsx                |  50 ++++-\n src/features/notes/useNoteSearch.ts            |   7 +-\n src/features/session/SessionQuickActions.tsx   |  45 +++-\n src/screens/CharacterLibraryScreen.tsx         | 112 +++++++++-\n src/screens/NotesScreen.tsx                    |  49 ++++-\n src/screens/SessionScreen.tsx                  |  16 +-\n tests/e2e_full_test.py                         | 280 ++++++++++++++++++++++++-\n 13 files changed, 689 insertions(+), 53 deletions(-)"
+  }
+}

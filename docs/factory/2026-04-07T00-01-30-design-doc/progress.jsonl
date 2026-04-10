@@ -1,0 +1,7 @@
+{"ts":"2026-04-07T00:01:33.583Z","event":"phase_start","phase":"forge","model":"opus","elapsed_ms":6}
+{"ts":"2026-04-07T00:10:50.997Z","event":"phase_complete","phase":"forge","duration_ms":557414,"elapsed_ms":557420}
+{"ts":"2026-04-07T00:10:51.009Z","event":"phase_start","phase":"prep","model":"opus","elapsed_ms":557432}
+{"ts":"2026-04-07T00:18:27.119Z","event":"phase_complete","phase":"prep","duration_ms":456110,"elapsed_ms":1013542}
+{"ts":"2026-04-07T00:18:27.134Z","event":"phase_start","phase":"preflight","model":"opus","elapsed_ms":1013557}
+{"ts":"2026-04-07T00:42:07.109Z","event":"phase_failed","phase":"preflight","issues":["sub-spec 2/10: CRITICAL: getNodesByType() uses compound index [campaignId+type] on kb_nodes but SS-01 schema does not declare this compound index — will cause Dexie runtime error. Fix requires human decision: add compound index to SS-01 or change query pattern in SS-02.","sub-spec 10/10: CRITICAL: 'Show tags' toggle in GraphView.tsx is broken — visibleTypes state excludes 'tag' and the filter logic rejects tag nodes before the showTags check is evaluated. The type toggle buttons also omit 'tag', so there is no UI path to show tags. AC-5 will always fail. Fix: either check showTags before visibleTypes for tag-type nodes, or have the showTags checkbox add/remove 'tag' from visibleTypes. This is a logic change that cannot be auto-fixed."],"elapsed_ms":2433532}
+{"ts":"2026-04-07T00:42:07.128Z","event":"run_complete","elapsed_ms":2433552,"detail":"2 phases completed"}

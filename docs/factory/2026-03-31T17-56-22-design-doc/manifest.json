@@ -1,0 +1,111 @@
+{
+  "run_id": "2026-03-31T17-56-22-design-doc",
+  "current_phase": "abort",
+  "phase_status": "failed",
+  "attempts": 1,
+  "phases": [
+    {
+      "name": "triage",
+      "status": "skipped",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "forge",
+      "status": "complete",
+      "started": "2026-03-31T17:56:24.483Z",
+      "completed": "2026-03-31T17:59:11.820Z",
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T17:56:24.489Z",
+          "ended": "2026-03-31T17:59:11.818Z",
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "prep",
+      "status": "complete",
+      "started": "2026-03-31T17:59:11.828Z",
+      "completed": "2026-03-31T18:04:18.162Z",
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T17:59:11.832Z",
+          "ended": "2026-03-31T18:04:18.161Z",
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "preflight",
+      "status": "in_progress",
+      "started": "2026-03-31T18:04:18.170Z",
+      "completed": null,
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T18:04:18.173Z",
+          "ended": "2026-03-31T18:04:30.633Z",
+          "error": "Agent spawn failed: Claude Code returned an error result: API Error: 500 {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Internal server error\"},\"request_id\":\"req_011CZbbjvjMgcSJBNx2TMp85\"}"
+        }
+      ]
+    },
+    {
+      "name": "run",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "verify",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "completeness",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "outcomes",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    }
+  ],
+  "timing": {
+    "total_start": "2026-03-31T17:56:22.571Z",
+    "total_end": null,
+    "total_duration_ms": null
+  },
+  "dry_run": false,
+  "unattended": false,
+  "doom_loop": {
+    "total_tokens_used": 0,
+    "token_budget": 500000,
+    "consecutive_non_productive_waves": 1,
+    "total_waves": 3
+  },
+  "spec_score": null,
+  "sub_spec_count": 16,
+  "completeness_cycles": 0,
+  "input_type": "design-doc",
+  "input_source": "docs/plans/2026-03-31-issues-batch-resolution-design.md",
+  "git": {
+    "branch": "2026/03/31-1649-caleb-feat-forge-input-20260331-160300",
+    "head_commit": "4d610852dd60ef6601fe56f396badb1a3d4941f0",
+    "base_ref": "4d610852dd60ef6601fe56f396badb1a3d4941f0",
+    "dirty": true,
+    "recent_commits": "4d61085 fix: wire note search UI, complete clear-all-data, cascade party member delete\nccacc1b factory: 2026-03-31T16-49-14-design-doc (abort)\n0d665e1 factory: 2026-03-31T11-56-48-design-doc (abort)\n75f5130 fix: navigate-during-render, Dexie index, note timestamps + E2E test suite\nf1af5eb feat: universal note model + MiniSearch full-text search\n87af7ec feat: Scaldbok campaign integration + session journaling + image attachments\n8509b5d factory: 2026-03-31T01-23-45-design-doc (abort)\ned30726 factory: 2026-03-27T19-37-55-design-doc (abort)\na09d7cb docs: expand reference sheet with weapons, combat, magic, and layout improvements\n9feef1d fix: shield icon SVG path, add Reset Order button for panel reorder",
+    "uncommitted_diff_stat": ".claude/settings.local.json | 7 ++++++-\n 1 file changed, 6 insertions(+), 1 deletion(-)"
+  }
+}

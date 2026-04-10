@@ -1,0 +1,3 @@
+{"ts":"2026-03-31T18:21:42.149Z","event":"phase_start","phase":"forge","model":"opus","elapsed_ms":5}
+{"ts":"2026-03-31T18:30:42.173Z","event":"phase_failed","phase":"forge","issues":["Agent returned no result"],"elapsed_ms":540029}
+{"ts":"2026-03-31T18:30:42.179Z","event":"run_complete","elapsed_ms":540035,"detail":"0 phases completed"}

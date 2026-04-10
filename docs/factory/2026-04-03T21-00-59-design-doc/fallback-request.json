@@ -1,0 +1,125 @@
+{
+  "phase": "preflight",
+  "error": "Agent returned no result",
+  "factoryDir": "C:\\Users\\CalebBennett\\Documents\\GitHub\\Skaldmark\\docs\\factory\\2026-04-03T21-00-59-design-doc",
+  "phaseSpecPath": "C:\\Users\\CalebBennett\\Documents\\GitHub\\Skaldmark\\docs\\factory\\2026-04-03T21-00-59-design-doc\\phase-spec-preflight.md",
+  "memoryPath": "C:\\Users\\CalebBennett\\Documents\\GitHub\\Skaldmark\\docs\\factory\\2026-04-03T21-00-59-design-doc\\memory.md",
+  "manifestSnapshot": {
+    "run_id": "2026-04-03T21-00-59-design-doc",
+    "current_phase": "preflight",
+    "phase_status": "failed",
+    "attempts": 2,
+    "phases": [
+      {
+        "name": "triage",
+        "status": "skipped",
+        "started": null,
+        "completed": null,
+        "attempts": 0
+      },
+      {
+        "name": "forge",
+        "status": "complete",
+        "started": "2026-04-03T21:01:06.120Z",
+        "completed": "2026-04-03T21:04:27.038Z",
+        "attempts": 1,
+        "attempts_log": [
+          {
+            "started": "2026-04-03T21:01:06.128Z",
+            "ended": "2026-04-03T21:04:27.037Z",
+            "error": null
+          }
+        ]
+      },
+      {
+        "name": "prep",
+        "status": "complete",
+        "started": "2026-04-03T21:04:27.046Z",
+        "completed": "2026-04-03T21:09:07.687Z",
+        "attempts": 1,
+        "attempts_log": [
+          {
+            "started": "2026-04-03T21:04:27.049Z",
+            "ended": "2026-04-03T21:09:07.685Z",
+            "error": null
+          }
+        ]
+      },
+      {
+        "name": "preflight",
+        "status": "in_progress",
+        "started": "2026-04-03T21:14:25.575Z",
+        "completed": null,
+        "attempts": 2,
+        "attempts_log": [
+          {
+            "started": "2026-04-03T21:09:07.695Z",
+            "ended": "2026-04-03T21:14:25.569Z",
+            "error": "Agent returned no result"
+          },
+          {
+            "started": "2026-04-03T21:14:25.580Z",
+            "ended": "2026-04-03T21:17:02.481Z",
+            "error": "Agent returned no result"
+          }
+        ]
+      },
+      {
+        "name": "run",
+        "status": "pending",
+        "started": null,
+        "completed": null,
+        "attempts": 0
+      },
+      {
+        "name": "verify",
+        "status": "pending",
+        "started": null,
+        "completed": null,
+        "attempts": 0
+      },
+      {
+        "name": "completeness",
+        "status": "pending",
+        "started": null,
+        "completed": null,
+        "attempts": 0
+      },
+      {
+        "name": "outcomes",
+        "status": "pending",
+        "started": null,
+        "completed": null,
+        "attempts": 0
+      }
+    ],
+    "timing": {
+      "total_start": "2026-04-03T21:00:59.917Z",
+      "total_end": null,
+      "total_duration_ms": null
+    },
+    "dry_run": false,
+    "unattended": false,
+    "doom_loop": {
+      "total_tokens_used": 0,
+      "token_budget": 500000,
+      "consecutive_non_productive_waves": 2,
+      "total_waves": 4
+    },
+    "spec_score": null,
+    "sub_spec_count": 7,
+    "completeness_cycles": 0,
+    "input_type": "design-doc",
+    "input_source": "docs/plans/2026-04-03-temp-stat-modifiers-design.md",
+    "git": {
+      "branch": "2026/03/31-1821-caleb-feat-2026-03-31-issues-batch-resolution-design",
+      "head_commit": "55227c7f1e19dade9c3a79f727d877e3a6b1d167",
+      "base_ref": "55227c7f1e19dade9c3a79f727d877e3a6b1d167",
+      "dirty": true,
+      "recent_commits": "55227c7 feat: 17-issue batch resolution — session hub, notes overhaul, FAB, export fix\nd459f1d factory: 2026-03-31T17-56-22-design-doc (abort)\n4d61085 fix: wire note search UI, complete clear-all-data, cascade party member delete\nccacc1b factory: 2026-03-31T16-49-14-design-doc (abort)\n0d665e1 factory: 2026-03-31T11-56-48-design-doc (abort)\n75f5130 fix: navigate-during-render, Dexie index, note timestamps + E2E test suite\nf1af5eb feat: universal note model + MiniSearch full-text search\n87af7ec feat: Scaldbok campaign integration + session journaling + image attachments\n8509b5d factory: 2026-03-31T01-23-45-design-doc (abort)\ned30726 factory: 2026-03-27T19-37-55-design-doc (abort)",
+      "uncommitted_diff_stat": ".claude/settings.local.json                       |  14 +-\n package-lock.json                                 | 114 +++-\n package.json                                      |   5 +-\n src/components/fields/FilterBar.tsx               |  22 -\n src/components/fields/PartyPicker.tsx             |  59 ++\n src/components/notes/TagPicker.tsx                |  82 ++-\n src/components/notes/TiptapNoteEditor.tsx         | 163 +++++-\n src/components/panels/CustomNoteCard.tsx          |  33 --\n src/components/panels/PinnedSkillsPanel.tsx       | 207 -------\n src/components/panels/PreparedSpellsPanel.tsx     | 112 ----\n src/components/panels/WeaponRackPanel.tsx         | 219 -------\n src/components/shell/BottomNav.tsx                |  26 +\n src/components/shell/CharacterSubNav.tsx          |  29 +\n src/components/shell/GlobalFAB.tsx                |  56 ++\n src/components/shell/ShellLayout.tsx              |  32 +\n src/features/campaign/CampaignContext.tsx         | 105 ++++\n src/features/campaign/ManagePartyDrawer.tsx       |  42 ++\n src/features/export/useExportActions.ts           |  75 +++\n src/features/notes/NotesGrid.tsx                  |  43 ++\n src/features/notes/QuickLocationDrawer.tsx        | 201 -------\n src/features/notes/QuickNPCDrawer.tsx             | 201 -------\n src/features/notes/QuickNoteDrawer.tsx            |  51 ++\n src/features/notes/useNoteActions.ts              | 112 ++--\n src/features/session/actions/LootDrawer.tsx       |  40 ++\n src/features/session/actions/QuoteDrawer.tsx      |  40 ++\n src/features/session/actions/RumorDrawer.tsx      |  43 ++\n src/features/session/actions/ShoppingDrawer.tsx   |  44 ++\n src/features/session/actions/SkillCheckDrawer.tsx |  76 +++\n src/features/session/useSessionLog.ts             | 141 ++++-\n src/routes/index.tsx                              |  28 +\n src/screens/CombatScreen.tsx                      | 681 ----------------------\n src/screens/GearScreen.tsx                        |  29 +\n src/screens/NoteEditorScreen.tsx                  |  33 ++\n src/screens/NotesScreen.tsx                       | 312 ----------\n src/screens/SessionScreen.tsx                     |  53 ++\n src/screens/SheetScreen.tsx                       |  30 +\n src/screens/SkillsScreen.tsx                      |  29 +\n src/storage/repositories/characterRepository.ts   |  64 ++\n src/storage/repositories/noteRepository.ts        | 115 ++++\n src/storage/repositories/sessionRepository.ts     | 100 ++++\n src/types/character.ts                            | 193 +++++-\n src/types/note.ts                                 |  58 +-\n src/types/party.ts                                |  48 ++\n src/types/session.ts                              |  40 +-\n src/types/settings.ts                             |  46 +-\n src/utils/export/delivery.ts                      |  55 ++\n 46 files changed, 2246 insertions(+), 2055 deletions(-)"
+    }
+  },
+  "model": "unknown",
+  "timestamp": "2026-04-03T21:17:02.482Z"
+}

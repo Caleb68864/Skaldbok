@@ -1,0 +1,111 @@
+{
+  "run_id": "2026-03-31T11-56-48-design-doc",
+  "current_phase": "abort",
+  "phase_status": "failed",
+  "attempts": 1,
+  "phases": [
+    {
+      "name": "triage",
+      "status": "skipped",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "forge",
+      "status": "complete",
+      "started": "2026-03-31T11:56:48.380Z",
+      "completed": "2026-03-31T11:59:20.754Z",
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T11:56:48.383Z",
+          "ended": "2026-03-31T11:59:20.752Z",
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "prep",
+      "status": "complete",
+      "started": "2026-03-31T11:59:20.763Z",
+      "completed": "2026-03-31T12:04:55.150Z",
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T11:59:20.768Z",
+          "ended": "2026-03-31T12:04:55.148Z",
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "preflight",
+      "status": "in_progress",
+      "started": "2026-03-31T12:04:55.159Z",
+      "completed": null,
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-03-31T12:04:55.165Z",
+          "ended": "2026-03-31T12:10:19.559Z",
+          "error": "Agent returned no result"
+        }
+      ]
+    },
+    {
+      "name": "run",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "verify",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "completeness",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "outcomes",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    }
+  ],
+  "timing": {
+    "total_start": "2026-03-31T11:56:48.074Z",
+    "total_end": null,
+    "total_duration_ms": null
+  },
+  "dry_run": false,
+  "unattended": false,
+  "doom_loop": {
+    "total_tokens_used": 0,
+    "token_budget": 500000,
+    "consecutive_non_productive_waves": 1,
+    "total_waves": 3
+  },
+  "spec_score": null,
+  "sub_spec_count": 12,
+  "completeness_cycles": 0,
+  "input_type": "design-doc",
+  "input_source": "docs/plans/2026-03-31-unified-production-readiness-design.md",
+  "git": {
+    "branch": "2026/03/31-0123-caleb-feat-2026-03-30-scaldbok-integration-design",
+    "head_commit": "75f51307aaae527f43dcf39fb01ec6fb41e78862",
+    "base_ref": "75f51307aaae527f43dcf39fb01ec6fb41e78862",
+    "dirty": true,
+    "recent_commits": "75f5130 fix: navigate-during-render, Dexie index, note timestamps + E2E test suite\nf1af5eb feat: universal note model + MiniSearch full-text search\n87af7ec feat: Scaldbok campaign integration + session journaling + image attachments\n8509b5d factory: 2026-03-31T01-23-45-design-doc (abort)\ned30726 factory: 2026-03-27T19-37-55-design-doc (abort)\na09d7cb docs: expand reference sheet with weapons, combat, magic, and layout improvements\n9feef1d fix: shield icon SVG path, add Reset Order button for panel reorder\n2f84127 feat: wire up DraggableCardContainer with reorder toggle on Sheet page\nb52732d feat: replace trained skill checkbox with shield icon in play mode\nf4a7b25 style: increase trained skill border gap with !important override",
+    "uncommitted_diff_stat": ""
+  }
+}
