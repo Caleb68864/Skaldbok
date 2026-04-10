@@ -1,0 +1,3 @@
+{"ts":"2026-03-27T19:59:21.136Z","type":"outcome","resultText":true,"toolsUsed":0,"turnsUsed":0,"maxTurns":5,"idleAbort":false,"idleDurationMs":null,"recoveryUsed":"none","recoverySuccess":false,"schemaValid":true}
+{"ts":"2026-03-27T20:33:01.120Z","type":"outcome","resultText":false,"toolsUsed":0,"turnsUsed":0,"maxTurns":5,"idleAbort":false,"idleDurationMs":null,"recoveryUsed":"none","recoverySuccess":false,"schemaValid":false}
+{"ts":"2026-03-27T21:02:21.266Z","type":"outcome","resultText":true,"toolsUsed":0,"turnsUsed":0,"maxTurns":5,"idleAbort":false,"idleDurationMs":null,"recoveryUsed":"none","recoverySuccess":false,"schemaValid":true}

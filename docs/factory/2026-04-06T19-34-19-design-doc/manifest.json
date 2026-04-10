@@ -1,0 +1,90 @@
+{
+  "run_id": "2026-04-06T19-34-19-design-doc",
+  "current_phase": "forge",
+  "phase_status": "in_progress",
+  "attempts": 1,
+  "phases": [
+    {
+      "name": "triage",
+      "status": "skipped",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "forge",
+      "status": "in_progress",
+      "started": "2026-04-06T19:34:22.257Z",
+      "completed": null,
+      "attempts": 1
+    },
+    {
+      "name": "prep",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "preflight",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "run",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "verify",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "completeness",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "outcomes",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    }
+  ],
+  "timing": {
+    "total_start": "2026-04-06T19:34:19.123Z",
+    "total_end": null,
+    "total_duration_ms": null
+  },
+  "dry_run": false,
+  "unattended": false,
+  "doom_loop": {
+    "total_tokens_used": 0,
+    "token_budget": 500000,
+    "consecutive_non_productive_waves": 0,
+    "total_waves": 0
+  },
+  "spec_score": null,
+  "sub_spec_count": null,
+  "completeness_cycles": 0,
+  "input_type": "design-doc",
+  "input_source": "C:/Users/CalebBennett/Documents/GitHub/Skaldmark/docs/factory/forge-input-20260406-000000.md",
+  "git": {
+    "branch": "2026/04/03-2216-caleb-feat-2026-04-03-ui-overhaul-design",
+    "head_commit": "467c44270a5f97a4aa40ec0cc201d14d6c2e13e8",
+    "base_ref": "467c44270a5f97a4aa40ec0cc201d14d6c2e13e8",
+    "dirty": true,
+    "recent_commits": "467c442 fix: restore reference page bottom navigation pills with Tailwind\n21a1f21 feat: full UI overhaul — Tailwind v4 + Lucide + shadcn/ui\n8e51403 factory: 2026-04-03T22-16-42-design-doc (abort)\nf8df17d feat: temporary stat modifiers — overlay system for spells and effects\n76f6ad4 factory: 2026-04-03T21-00-59-design-doc (abort)\n55227c7 feat: 17-issue batch resolution — session hub, notes overhaul, FAB, export fix\nd459f1d factory: 2026-03-31T17-56-22-design-doc (abort)\n4d61085 fix: wire note search UI, complete clear-all-data, cascade party member delete\nccacc1b factory: 2026-03-31T16-49-14-design-doc (abort)\n0d665e1 factory: 2026-03-31T11-56-48-design-doc (abort)",
+    "uncommitted_diff_stat": "schemas/character.schema.ts              |  1 +\n src/components/fields/MagicSpellCard.tsx | 48 ++++++++++++++++++++++++--------\n src/screens/MagicScreen.tsx              | 36 +++++++++++++-----------\n src/types/character.ts                   |  2 ++\n 4 files changed, 58 insertions(+), 29 deletions(-)"
+  }
+}

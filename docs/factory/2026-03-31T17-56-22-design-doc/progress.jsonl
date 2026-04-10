@@ -1,0 +1,7 @@
+{"ts":"2026-03-31T17:56:24.484Z","event":"phase_start","phase":"forge","model":"opus","elapsed_ms":7}
+{"ts":"2026-03-31T17:59:11.819Z","event":"phase_complete","phase":"forge","duration_ms":167335,"elapsed_ms":167342}
+{"ts":"2026-03-31T17:59:11.828Z","event":"phase_start","phase":"prep","model":"opus","elapsed_ms":167351}
+{"ts":"2026-03-31T18:04:18.161Z","event":"phase_complete","phase":"prep","duration_ms":306333,"elapsed_ms":473684}
+{"ts":"2026-03-31T18:04:18.170Z","event":"phase_start","phase":"preflight","model":"opus","elapsed_ms":473693}
+{"ts":"2026-03-31T18:04:30.633Z","event":"phase_failed","phase":"preflight","issues":["Handler exception: Agent spawn failed: Claude Code returned an error result: API Error: 500 {\"type\":\"error\",\"error\":{\"type\":\"api_error\",\"message\":\"Internal server error\"},\"request_id\":\"req_011CZbbjvjMgcSJBNx2TMp85\"}"],"elapsed_ms":486156}
+{"ts":"2026-03-31T18:04:30.650Z","event":"run_complete","elapsed_ms":486173,"detail":"2 phases completed"}

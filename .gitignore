@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.claude-terminal/
+.playwright-mcp/
+tests/screenshots/
+docs/tests/screenshots/
+bash.exe.stackdump
+*.log
+*.png
+!public/**/*.png

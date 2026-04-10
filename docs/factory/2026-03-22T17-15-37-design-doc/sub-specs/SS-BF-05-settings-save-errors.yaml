@@ -1,0 +1,85 @@
+sub_spec:
+  id: "SS-BF-05"
+  title: "Settings Save Error Surfacing"
+  parent_spec: "SPEC-SKALDBOK-BUGFIX-001"
+  score: 90
+  priority: "P0"
+  phase: 1
+  depends_on: []
+  goals: ["G2"]
+  source_bug: >
+    In useAppSettings.ts, the updateSettings callback (line 39) uses
+    settingsRepository.save(updated).catch(console.error) inside a
+    setState callback. This silently swallows save errors — the user
+    and calling code have no indication that their settings were not
+    persisted. Additionally, in AppStateContext.tsx, toggleMode (line 44)
+    and system seed (line 37) also swallow errors with .catch(console.error).
+    This creates a data loss risk: the user changes a setting, sees the
+    UI update, but the change is silently lost on next app load.
+
+  intent: >
+    Surface settings save errors to the UI so users are aware when
+    persistence fails. Propagate errors from updateSettings to callers.
+    Use the same error display pattern already established by useAutosave.
+
+  scope:
+    in:
+      - "Make updateSettings in useAppSettings return save errors"
+      - "Add error state to useAppSettings hook"
+      - "Surface save errors in AppStateContext consumers"
+      - "Ensure toggleMode surfaces errors"
+    out:
+      - "Retry logic for failed saves"
+      - "Toast/notification system (use inline error display)"
+
+  analysis:
+    current_state: >
+      useAppSettings.ts updateSettings: sets state optimistically, fires
+      settingsRepository.save().catch(console.error) inside setState callback.
+      Errors go to console only, never to UI.
+      AppStateContext.tsx toggleMode: calls updateSettings().catch(console.error).
+      Both lose error information silently.
+    root_cause: "Error handling pattern uses console.error as catch-all without UI feedback"
+    fix_approach: >
+      1. Move settingsRepository.save() out of the setState callback
+      2. Add error state to useAppSettings, set it when save fails
+      3. Expose error from useAppSettings return value
+      4. Expose error in AppStateContext value
+      5. Display errors in consuming components (SettingsScreen, TopBar)
+
+  tasks:
+    - id: "T-BF-006"
+      title: "Surface settings save errors"
+      acceptance_criteria:
+        - id: "AC-BF-006-1"
+          criterion: "useAppSettings returns an error field"
+          testable: true
+          test_type: "automated"
+        - id: "AC-BF-006-2"
+          criterion: "When settingsRepository.save() fails, error state is set"
+          testable: true
+          test_type: "unit"
+        - id: "AC-BF-006-3"
+          criterion: "AppStateContextValue includes a settingsError field"
+          testable: true
+          test_type: "automated"
+        - id: "AC-BF-006-4"
+          criterion: "settingsRepository.save() is NOT called inside a setState callback"
+          testable: true
+          test_type: "automated"
+
+  files:
+    modifies:
+      - "src/features/settings/useAppSettings.ts"
+      - "src/context/AppStateContext.tsx"
+    creates: []
+
+  guardrails:
+    do:
+      - "Use optimistic update pattern: set state first, then save, revert on error"
+      - "Follow existing error display pattern from useAutosave"
+      - "Clear error on next successful save"
+    dont:
+      - "Do not swallow errors with console.error alone"
+      - "Do not add retry logic (keep fix minimal)"
+      - "Do not change settingsRepository interface"

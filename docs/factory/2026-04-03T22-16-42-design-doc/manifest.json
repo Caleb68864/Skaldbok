@@ -1,0 +1,111 @@
+{
+  "run_id": "2026-04-03T22-16-42-design-doc",
+  "current_phase": "abort",
+  "phase_status": "failed",
+  "attempts": 1,
+  "phases": [
+    {
+      "name": "triage",
+      "status": "skipped",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "forge",
+      "status": "complete",
+      "started": "2026-04-03T22:16:43.891Z",
+      "completed": "2026-04-03T22:19:30.239Z",
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-04-03T22:16:43.895Z",
+          "ended": "2026-04-03T22:19:30.237Z",
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "prep",
+      "status": "complete",
+      "started": "2026-04-03T22:19:30.245Z",
+      "completed": "2026-04-03T22:25:34.621Z",
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-04-03T22:19:30.248Z",
+          "ended": "2026-04-03T22:25:34.620Z",
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "preflight",
+      "status": "in_progress",
+      "started": "2026-04-03T22:25:34.628Z",
+      "completed": null,
+      "attempts": 1,
+      "attempts_log": [
+        {
+          "started": "2026-04-03T22:25:34.632Z",
+          "ended": "2026-04-03T22:52:53.237Z",
+          "error": "sub-spec 1/10: CRITICAL C1: Tailwind v4 uses CSS-based @theme config, not tailwind.config.ts — entire config strategy (SS-01, SS-06, SS-08) uses wrong API, CRITICAL C2: Token names --color-muted, --color-destructive, --color-background don't exist in theme.css — actual names are --color-text-muted, --color-danger, --color-bg, CRITICAL C3: src/App.tsx path is wrong — actual path is src/app/App.tsx (SS-04 AC 4.4), CRITICAL C4: src/db/ and src/repositories/ paths don't exist — actual paths are src/storage/db/ and src/storage/repositories/ (SS-04 AC 4.5), CRITICAL C5: Screen filenames don't match actual files — LibraryScreen→CharacterLibraryScreen, NoteEditor→NoteEditorScreen, and MoreScreen + PrintableSheetScreen are missing entirely, CRITICAL C6: Primitives Drawer.tsx, IconButton.tsx, Chip.tsx, CounterControl.tsx have no migration plan but are actively used across 13+ files"
+        }
+      ]
+    },
+    {
+      "name": "run",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "verify",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "completeness",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "outcomes",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    }
+  ],
+  "timing": {
+    "total_start": "2026-04-03T22:16:42.359Z",
+    "total_end": null,
+    "total_duration_ms": null
+  },
+  "dry_run": false,
+  "unattended": false,
+  "doom_loop": {
+    "total_tokens_used": 0,
+    "token_budget": 500000,
+    "consecutive_non_productive_waves": 1,
+    "total_waves": 3
+  },
+  "spec_score": null,
+  "sub_spec_count": 10,
+  "completeness_cycles": 0,
+  "input_type": "design-doc",
+  "input_source": "C:/Users/CalebBennett/Documents/GitHub/Skaldmark/docs/plans/2026-04-03-ui-overhaul-design.md",
+  "git": {
+    "branch": "2026/04/03-2101-caleb-feat-2026-04-03-temp-stat-modifiers-design",
+    "head_commit": "f8df17d63665a29211065954c07926900b2bf350",
+    "base_ref": "f8df17d63665a29211065954c07926900b2bf350",
+    "dirty": true,
+    "recent_commits": "f8df17d feat: temporary stat modifiers — overlay system for spells and effects\n76f6ad4 factory: 2026-04-03T21-00-59-design-doc (abort)\n55227c7 feat: 17-issue batch resolution — session hub, notes overhaul, FAB, export fix\nd459f1d factory: 2026-03-31T17-56-22-design-doc (abort)\n4d61085 fix: wire note search UI, complete clear-all-data, cascade party member delete\nccacc1b factory: 2026-03-31T16-49-14-design-doc (abort)\n0d665e1 factory: 2026-03-31T11-56-48-design-doc (abort)\n75f5130 fix: navigate-during-render, Dexie index, note timestamps + E2E test suite\nf1af5eb feat: universal note model + MiniSearch full-text search\n87af7ec feat: Scaldbok campaign integration + session journaling + image attachments",
+    "uncommitted_diff_stat": ""
+  }
+}

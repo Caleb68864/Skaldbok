@@ -1,0 +1,307 @@
+/* ============================================================
+   Skaldmark — Design Token System
+   Single source of truth for all visual tokens.
+   ============================================================ */
+
+/* Shared tokens (theme-agnostic) */
+:root {
+  /* Font Families */
+  --font-display: 'Marcellus', Georgia, serif;
+  --font-ui: 'Source Serif 4', Georgia, serif;
+  --font-text: 'Source Sans 3', Arial, Helvetica, sans-serif;
+
+  /* Typography Scale */
+  --size-xs: 0.75rem;
+  --size-sm: 0.875rem;
+  --size-md: 1rem;
+  --size-lg: 1.125rem;
+  --size-xl: 1.25rem;
+  --size-2xl: 1.5rem;
+  --size-3xl: 1.875rem;
+
+  /* Font Weights */
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Line Heights */
+  --lh-tight: 1.2;
+  --lh-normal: 1.5;
+  --lh-relaxed: 1.65;
+
+  /* Spacing Scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+
+  /* Legacy spacing aliases */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+
+  /* Border Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Shadows */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.12);
+  --shadow-medium: 0 6px 18px rgba(0, 0, 0, 0.16);
+  --shadow-deep: 0 10px 28px rgba(0, 0, 0, 0.22);
+  --shadow-inset-soft: inset 0 1px 2px rgba(0, 0, 0, 0.10);
+
+  /* Border Shorthand Tokens */
+  --border-thin: 1px solid var(--color-border);
+  --border-strong: 2px solid var(--color-border);
+
+  /* Touch Target */
+  --touch-target-min: 44px;
+
+  /* Legacy font-size aliases */
+  --font-size-sm: var(--size-sm);
+  --font-size-md: var(--size-md);
+  --font-size-lg: var(--size-lg);
+  --font-size-xl: var(--size-xl);
+
+  /* Legacy shadow aliases */
+  --shadow-sm: var(--shadow-soft);
+  --shadow-md: var(--shadow-medium);
+
+  /* Legacy font alias */
+  --font-family: var(--font-ui);
+}
+
+/* ============================================================
+   Theme Palettes
+   ============================================================ */
+
+/* Dark theme — "Torchlight in the Barrow" */
+[data-theme="dark"] {
+  --color-bg: #121613;
+  --color-surface: #1A211D;
+  --color-surface-alt: #222B26;
+  --color-text: #E9DFC7;
+  --color-text-muted: #B5A88E;
+  --color-accent: #2F877A;
+  --color-accent-alt: #73B6AA;
+  --color-danger: #D14935;
+  --color-border: #3E4B43;
+  --color-gold: #AA8240;
+  --color-success: #6E8C54;
+  --color-warning: #C07A35;
+  --color-info: #6A9CA4;
+
+  /* Mode indicators */
+  --color-mode-play: #2a6e3f;
+  --color-mode-edit: #3a4a9e;
+
+  /* Texture tokens */
+  --texture-grain-opacity: 0.06;
+  --texture-shadow-strength: 0.3;
+  --texture-highlight-strength: 0.08;
+}
+
+/* Parchment theme — "The Adventurer's Ledger" */
+[data-theme="parchment"] {
+  --color-bg: #D9C59A;
+  --color-surface: #E8D8B2;
+  --color-surface-alt: #F1E4C8;
+  --color-text: #3A2B18;
+  --color-text-muted: #6B573C;
+  --color-accent: #2B756B;
+  --color-accent-alt: #184A46;
+  --color-danger: #A52F22;
+  --color-border: #8A7451;
+  --color-gold: #9C7934;
+  --color-success: #667C4A;
+  --color-warning: #AF6D2B;
+  --color-info: #52727A;
+
+  /* Mode indicators */
+  --color-mode-play: #2e6930;
+  --color-mode-edit: #2c4a8a;
+
+  /* Texture tokens */
+  --texture-grain-opacity: 0.04;
+  --texture-shadow-strength: 0.15;
+  --texture-highlight-strength: 0.12;
+}
+
+/* Light theme — "Camp Before the Hunt" */
+[data-theme="light"] {
+  --color-bg: #EEE6D2;
+  --color-surface: #F7F1E2;
+  --color-surface-alt: #EAE0C7;
+  --color-text: #2D241B;
+  --color-text-muted: #6C5B46;
+  --color-accent: #1F6E66;
+  --color-accent-alt: #154B47;
+  --color-danger: #B63828;
+  --color-border: #A69170;
+  --color-gold: #A98235;
+  --color-success: #5D7A49;
+  --color-warning: #B96A2A;
+  --color-info: #3E6C73;
+
+  /* Mode indicators */
+  --color-mode-play: #2e7d32;
+  --color-mode-edit: #1565c0;
+
+  /* Texture tokens */
+  --texture-grain-opacity: 0.03;
+  --texture-shadow-strength: 0.1;
+  --texture-highlight-strength: 0.15;
+}
+
+/* ============================================================
+   Global Base Styles
+   ============================================================ */
+
+/* Tailwind preflight handles margin/padding resets.
+   Only keep box-sizing. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--size-md);
+  line-height: var(--lh-normal);
+  min-height: 100vh;
+}
+
+/* Headings use display font */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  line-height: var(--lh-tight);
+}
+
+h1 {
+  font-size: var(--size-3xl);
+  font-weight: var(--weight-bold);
+}
+
+h2 {
+  font-size: var(--size-2xl);
+  font-weight: var(--weight-bold);
+}
+
+h3 {
+  font-size: var(--size-xl);
+  font-weight: var(--weight-semibold);
+}
+
+h4 {
+  font-size: var(--size-lg);
+  font-weight: var(--weight-semibold);
+}
+
+h5 {
+  font-size: var(--size-md);
+  font-weight: var(--weight-semibold);
+}
+
+h6 {
+  font-size: var(--size-sm);
+  font-weight: var(--weight-semibold);
+}
+
+/* ============================================================
+   Form Elements Base Styling
+   (Component CSS removed — Tailwind handles styling now)
+   Only keeping input/select/textarea base styles for unstyled forms
+   ============================================================ */
+
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
+  font-size: var(--size-md);
+  color: var(--color-text);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  box-shadow: var(--shadow-inset-soft);
+  min-height: var(--touch-target-min);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent);
+}
+
+input.error,
+input[aria-invalid="true"],
+textarea.error,
+textarea[aria-invalid="true"],
+select.error,
+select[aria-invalid="true"] {
+  border-color: var(--color-danger);
+  box-shadow: var(--shadow-inset-soft), 0 0 0 1px var(--color-danger);
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Hide native number-input spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
+}
+
+/* ============================================================
+   All component CSS below this point has been removed.
+   Components are now styled with Tailwind CSS classes.
+   Only design tokens (:root, [data-theme]), global base styles,
+   and form element defaults remain in this file.
+   ============================================================ */
+
+/* Focus-Visible Ring (keyboard accessibility) — kept for a11y */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible),
+[tabindex]:focus:not(:focus-visible) {
+  outline: none;
+}
+

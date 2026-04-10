@@ -1,0 +1,9 @@
+{"ts":"2026-04-03T21:01:06.120Z","event":"phase_start","phase":"forge","model":"opus","elapsed_ms":10}
+{"ts":"2026-04-03T21:04:27.037Z","event":"phase_complete","phase":"forge","duration_ms":200917,"elapsed_ms":200926}
+{"ts":"2026-04-03T21:04:27.046Z","event":"phase_start","phase":"prep","model":"opus","elapsed_ms":200935}
+{"ts":"2026-04-03T21:09:07.685Z","event":"phase_complete","phase":"prep","duration_ms":280639,"elapsed_ms":481574}
+{"ts":"2026-04-03T21:09:07.693Z","event":"phase_start","phase":"preflight","model":"opus","elapsed_ms":481582}
+{"ts":"2026-04-03T21:14:25.569Z","event":"phase_failed","phase":"preflight","issues":["Agent returned no result"],"elapsed_ms":799458}
+{"ts":"2026-04-03T21:14:25.575Z","event":"phase_start","phase":"preflight","model":"opus","elapsed_ms":799464}
+{"ts":"2026-04-03T21:17:02.481Z","event":"phase_failed","phase":"preflight","issues":["Agent returned no result"],"elapsed_ms":956370}
+{"ts":"2026-04-03T21:17:02.487Z","event":"run_complete","elapsed_ms":956376,"detail":"2 phases completed"}

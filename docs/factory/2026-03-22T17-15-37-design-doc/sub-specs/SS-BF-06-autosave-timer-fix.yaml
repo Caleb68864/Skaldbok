@@ -1,0 +1,73 @@
+sub_spec:
+  id: "SS-BF-06"
+  title: "Autosave Timer Leak Fix"
+  parent_spec: "SPEC-SKALDBOK-BUGFIX-001"
+  score: 88
+  priority: "P1"
+  phase: 1
+  depends_on: []
+  goals: ["G2"]
+  source_bug: >
+    In useAutosave.ts, the first useEffect (line 15) creates a setTimeout
+    but its cleanup function (lines 34-36) is empty — it does not clear
+    the timeout. This means on rapid character updates, old timers accumulate
+    and may fire after new timers, causing out-of-order saves or saving
+    stale data. The second useEffect (line 42) handles unmount cleanup
+    correctly, but the per-render cleanup is missing.
+
+  intent: >
+    Fix the useAutosave hook to properly clear pending timeouts in the
+    useEffect cleanup function, preventing timer leaks on rapid updates.
+
+  scope:
+    in:
+      - "Add clearTimeout to the first useEffect cleanup in useAutosave.ts"
+    out:
+      - "Changes to debounce timing or autosave behavior"
+      - "Changes to the unmount flush logic"
+
+  analysis:
+    current_state: >
+      useAutosave.ts first useEffect cleanup (lines 34-36):
+        return () => {
+          // Cleanup: flush on unmount
+        };
+      This is a no-op. Meanwhile line 19 does clearTimeout before setting
+      a new timer, which partially mitigates the issue. But the cleanup
+      should also clear to handle React StrictMode double-invocation and
+      edge cases where the effect fires before the timeout clears.
+    root_cause: "Empty cleanup function in useEffect"
+    fix_approach: >
+      Replace the empty cleanup with clearTimeout(timerRef.current) to ensure
+      any pending timer is cancelled when the effect re-runs or unmounts.
+
+  tasks:
+    - id: "T-BF-007"
+      title: "Fix autosave timer cleanup"
+      acceptance_criteria:
+        - id: "AC-BF-007-1"
+          criterion: "First useEffect cleanup calls clearTimeout on timerRef.current"
+          testable: true
+          test_type: "automated"
+        - id: "AC-BF-007-2"
+          criterion: "Rapid character updates do not cause stale data saves"
+          testable: true
+          test_type: "unit"
+        - id: "AC-BF-007-3"
+          criterion: "Unmount flush still works correctly"
+          testable: true
+          test_type: "unit"
+
+  files:
+    modifies:
+      - "src/hooks/useAutosave.ts"
+    creates: []
+
+  guardrails:
+    do:
+      - "Clear the timeout in the useEffect cleanup return function"
+      - "Preserve the existing unmount flush behavior"
+    dont:
+      - "Do not change debounce timing"
+      - "Do not add additional save logic"
+      - "Do not remove the second useEffect for unmount handling"

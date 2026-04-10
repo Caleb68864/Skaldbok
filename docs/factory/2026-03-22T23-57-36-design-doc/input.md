@@ -1,0 +1,1 @@
+docs/plans/2026-03-22-sheet-enhancements-and-session-tools-design.md

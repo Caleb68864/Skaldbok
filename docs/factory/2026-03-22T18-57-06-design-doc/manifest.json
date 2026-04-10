@@ -1,0 +1,90 @@
+{
+  "run_id": "2026-03-22T18-57-06-design-doc",
+  "current_phase": "abort",
+  "phase_status": "failed",
+  "attempts": 3,
+  "phases": [
+    {
+      "name": "triage",
+      "status": "skipped",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "forge",
+      "status": "complete",
+      "started": "2026-03-22T18:57:07.008Z",
+      "completed": "2026-03-22T19:04:54.230Z",
+      "attempts": 1
+    },
+    {
+      "name": "prep",
+      "status": "complete",
+      "started": "2026-03-22T19:04:54.238Z",
+      "completed": "2026-03-22T19:08:16.237Z",
+      "attempts": 1
+    },
+    {
+      "name": "preflight",
+      "status": "complete",
+      "started": "2026-03-22T19:08:16.245Z",
+      "completed": "2026-03-22T19:09:58.349Z",
+      "attempts": 1
+    },
+    {
+      "name": "run",
+      "status": "complete",
+      "started": "2026-03-22T19:09:58.357Z",
+      "completed": "2026-03-22T19:13:04.463Z",
+      "attempts": 1
+    },
+    {
+      "name": "verify",
+      "status": "complete",
+      "started": "2026-03-22T19:13:04.470Z",
+      "completed": "2026-03-22T19:14:21.356Z",
+      "attempts": 1
+    },
+    {
+      "name": "completeness",
+      "status": "in_progress",
+      "started": "2026-03-22T19:24:22.193Z",
+      "completed": null,
+      "attempts": 3
+    },
+    {
+      "name": "outcomes",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    }
+  ],
+  "timing": {
+    "total_start": "2026-03-22T18:57:06.683Z",
+    "total_end": null,
+    "total_duration_ms": null
+  },
+  "dry_run": false,
+  "unattended": false,
+  "doom_loop": {
+    "total_tokens_used": 0,
+    "token_budget": 500000,
+    "consecutive_non_productive_waves": 3,
+    "total_waves": 8
+  },
+  "spec_score": null,
+  "sub_spec_count": null,
+  "completeness_cycles": 0,
+  "input_type": "design-doc",
+  "input_source": "C:/Users/CalebBennett/Documents/GitHub/Skaldmark/docs/factory/forge-input.md",
+  "git": {
+    "branch": "2026/03/22-1755-caleb-feat-design-doc",
+    "head_commit": "fc32987075eee71a84257fd07d0615e33c6f029e",
+    "base_ref": "fc32987075eee71a84257fd07d0615e33c6f029e",
+    "dirty": true,
+    "recent_commits": "fc32987 fix: complete remaining spec gaps from completeness report\n281fa34 factory: 2026-03-22T17-55-04-design-doc (abort)\n7d46777 feat: implement Skaldbok Dragonbane character sheet PWA\n59b17d1 Initial commit — Skaldmark: The Adventurer's Ledger",
+    "uncommitted_diff_stat": ""
+  }
+}

@@ -1,0 +1,8 @@
+{"ts":"2026-04-03T21:01:06.121Z","event_type":"phase_start","phase":"forge","detail":"Phase beginning","elapsed_ms":14,"metadata":{"model":"opus"}}
+{"ts":"2026-04-03T21:04:27.038Z","event_type":"phase_complete","phase":"forge","detail":"Phase finished","elapsed_ms":200931,"metadata":{"duration_ms":200917}}
+{"ts":"2026-04-03T21:04:27.047Z","event_type":"phase_start","phase":"prep","detail":"Phase beginning","elapsed_ms":200940,"metadata":{"model":"opus"}}
+{"ts":"2026-04-03T21:09:07.686Z","event_type":"phase_complete","phase":"prep","detail":"Phase finished","elapsed_ms":481579,"metadata":{"duration_ms":280639}}
+{"ts":"2026-04-03T21:09:07.693Z","event_type":"phase_start","phase":"preflight","detail":"Phase beginning","elapsed_ms":481586,"metadata":{"model":"opus"}}
+{"ts":"2026-04-03T21:14:25.570Z","event_type":"phase_failed","phase":"preflight","detail":"Agent returned no result","elapsed_ms":799464}
+{"ts":"2026-04-03T21:14:25.575Z","event_type":"phase_start","phase":"preflight","detail":"Phase beginning","elapsed_ms":799468,"metadata":{"model":"opus"}}
+{"ts":"2026-04-03T21:17:02.481Z","event_type":"phase_failed","phase":"preflight","detail":"Agent returned no result","elapsed_ms":956374}

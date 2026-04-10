@@ -1,0 +1,9 @@
+Skaldmark E2E Test Report — 10 iterations
+============================================================
+
+Total tests: 120
+Passes: 120
+Failures: 0
+Pass rate: 100.0%
+
+Issues:

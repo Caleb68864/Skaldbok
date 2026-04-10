@@ -1,0 +1,81 @@
+{
+  "run_id": "2026-03-22T14-15-55-design-doc",
+  "current_phase": "abort",
+  "phase_status": "failed",
+  "attempts": 3,
+  "phases": [
+    {
+      "name": "triage",
+      "status": "skipped",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "forge",
+      "status": "in_progress",
+      "started": "2026-03-22T14:29:33.870Z",
+      "completed": null,
+      "attempts": 3
+    },
+    {
+      "name": "prep",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "preflight",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "run",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "verify",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "gap-analysis",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    },
+    {
+      "name": "outcomes",
+      "status": "pending",
+      "started": null,
+      "completed": null,
+      "attempts": 0
+    }
+  ],
+  "timing": {
+    "total_start": "2026-03-22T14:15:55.606Z",
+    "total_end": null,
+    "total_duration_ms": null
+  },
+  "dry_run": false,
+  "unattended": false,
+  "doom_loop": {
+    "total_tokens_used": 0,
+    "token_budget": 500000,
+    "consecutive_non_productive_waves": 3,
+    "total_waves": 3
+  },
+  "spec_score": null,
+  "sub_spec_count": null,
+  "input_type": "design-doc",
+  "input_source": "C:\\Users\\CalebBennett\\Documents\\GitHub\\Skaldmark\\snd brain dump.md"
+}

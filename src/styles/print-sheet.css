@@ -1,0 +1,795 @@
+/* ============================================================
+   print-sheet.css
+   Print-optimized styles for the Dragonbane character sheet.
+   Intentional exception to inline-styles convention:
+   @page and @media print cannot be expressed as inline styles.
+   ============================================================ */
+
+/* ----- Page Setup ----- */
+@page {
+  size: letter portrait;
+  margin: 0.25in;
+}
+
+/* ----- Sheet Container ----- */
+/*
+  SS-15 FIX: height must equal the PRINTABLE area, not the physical page.
+  @page margin: 0.25in top + 0.25in bottom = 0.5in total margin.
+  Physical page: 11in → printable area: 10.5in.
+  Setting height: 11in made Chrome see a 0.5in overflow → blank page 2.
+  Setting height: 10.5in keeps the container within the printable area.
+*/
+.print-sheet {
+  width: 8in; /* 8.5in physical − 0.25in left − 0.25in right = 8in printable */
+  height: 10.5in; /* 11in physical − 0.25in top − 0.25in bottom = 10.5in printable */
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+  position: relative;
+  /* SS-15: prevent Chrome from splitting this element across two pages */
+  page-break-inside: avoid;
+  break-inside: avoid;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+
+/* ----- Color Mode ----- */
+.print-sheet--color {
+  background-color: #f5f0e8; /* parchment */
+  color: #1a1a1a;
+}
+
+.print-sheet--color .sheet-header {
+  background-color: #1a4a2a; /* teal */
+  color: #ffffff;
+  padding: 4px 6px;
+}
+
+.print-sheet--color .sheet-title {
+  color: #ffffff;
+}
+
+.print-sheet--color .sheet-section-header {
+  color: #1a4a2a;
+  border-bottom-color: #1a4a2a;
+}
+
+/* ----- B&W Mode ----- */
+.print-sheet--bw {
+  background-color: #ffffff;
+  color: #000000;
+}
+
+.print-sheet--bw .sheet-header {
+  background-color: #1a1a1a;
+  color: #ffffff;
+  padding: 4px 6px;
+}
+
+.print-sheet--bw .sheet-title {
+  color: #ffffff;
+}
+
+.print-sheet--bw .sheet-section-header {
+  color: #000000;
+  border-bottom-color: #000000;
+}
+
+/* ----- Typography Baseline ----- */
+/* Minimum text size: 7pt / ~9px. No text may be smaller. */
+.print-sheet * {
+  line-height: 1.2;
+}
+
+/* Font roles (use CSS variables from app's bundled fonts) */
+.print-sheet .sheet-title,
+.print-sheet .sheet-section-header {
+  font-family: var(--font-display, 'Marcellus', serif);
+}
+
+.print-sheet .sheet-label,
+.print-sheet .sheet-attribute-label,
+.print-sheet .sheet-derived-label,
+.print-sheet .sheet-field-label,
+.print-sheet .sheet-inventory-label,
+.print-sheet .sheet-currency-label,
+.print-sheet .sheet-condition-label,
+.print-sheet .sheet-death-label,
+.print-sheet .sheet-dot-label,
+.print-sheet .sheet-checkbox-label,
+.print-sheet .sheet-equipment-type-label {
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+}
+
+/* Body text */
+.print-sheet .sheet-value,
+.print-sheet .sheet-attribute-value,
+.print-sheet .sheet-derived-value,
+.print-sheet .sheet-currency-value,
+.print-sheet .sheet-inventory-name,
+.print-sheet .sheet-skill-name,
+.print-sheet .sheet-skill-value,
+.print-sheet .sheet-ability-row,
+.print-sheet .sheet-field-value {
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+}
+
+/* ----- No External Fonts ----- */
+/*
+  IMPORTANT: Do NOT add any @import url(...) for Google Fonts or any CDN.
+  The app bundles its own fonts. Use var(--font-display), var(--font-ui),
+  and var(--font-text) CSS custom properties defined by the app theme.
+  Fallback stacks are included above for robustness.
+*/
+
+/* ──────────────────────────────────────────────
+   SS-04: Header Section
+   ────────────────────────────────────────────── */
+
+.sheet-header {
+  margin-bottom: 0.1in;
+}
+
+.sheet-title {
+  font-family: var(--font-display, 'Marcellus', serif);
+  font-size: 28pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.sheet-header-bar {
+  height: 6px;
+  margin: 4px 0;
+}
+
+/* Color mode: teal bar */
+.print-sheet--color .sheet-header-bar {
+  background-color: #1a4a2a;
+}
+
+/* B&W mode: dark gray bar */
+.print-sheet--bw .sheet-header-bar {
+  background-color: #1a1a1a;
+}
+
+.sheet-identity-row {
+  display: flex;
+  gap: 0.15in;
+  margin-bottom: 2px;
+}
+
+.sheet-field {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  border-bottom: 1px solid currentColor;
+  min-width: 0;
+}
+
+.sheet-field--wide {
+  flex: 2;
+}
+
+.sheet-label {
+  font-size: 7pt;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.sheet-value {
+  font-size: 9pt;
+  min-height: 1em;
+}
+
+/* Floating toolbar — hidden when printing */
+.print-toolbar {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 1000;
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.print-toolbar button {
+  padding: 0.4rem 0.8rem;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  border-radius: 0.25rem;
+  background: #fff;
+  font-size: 0.875rem;
+}
+
+.print-toolbar button:hover {
+  background: #f0f0f0;
+}
+
+@media print {
+  .print-toolbar {
+    display: none !important;
+  }
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    /*
+      SS-15 FIX: Constrain body to exactly one page height so Chrome does not
+      generate a blank second page from wrapper element overflow.
+      height: 10.5in matches .print-sheet height (printable area within @page margins).
+    */
+    height: 10.5in;
+    max-height: 10.5in;
+    overflow: hidden;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  /* Ensure the sheet wrapper itself never triggers a page break */
+  .print-sheet {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    page-break-before: avoid !important;
+    break-before: avoid !important;
+  }
+}
+
+/* ──────────────────────────────────────────────
+   SS-05: Attribute Band & Conditions
+   ────────────────────────────────────────────── */
+
+.sheet-attribute-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.08in;
+  margin-bottom: 0.05in;
+}
+
+.sheet-attribute-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sheet-attribute-box {
+  border: 1.5px solid currentColor;
+  text-align: center;
+  padding: 2px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sheet-attribute-label {
+  font-size: 7pt;
+  text-transform: uppercase;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  font-weight: bold;
+}
+
+.sheet-attribute-value {
+  font-size: 18pt;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+  font-weight: bold;
+  line-height: 1.1;
+  min-height: 1.2em;
+}
+
+.sheet-condition {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 7pt;
+  margin-top: 2px;
+}
+
+.sheet-condition-diamond {
+  font-size: 9pt;
+}
+
+.sheet-condition-label {
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+}
+
+/* ──────────────────────────────────────────────
+   SS-06: Derived Stats Row
+   ────────────────────────────────────────────── */
+
+.sheet-derived-row {
+  display: flex;
+  gap: 0.1in;
+  margin-bottom: 0.08in;
+  border-top: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  padding: 3px 0;
+}
+
+.sheet-derived-field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-right: 1px solid currentColor;
+  padding: 0 4px;
+}
+
+.sheet-derived-field:last-child {
+  border-right: none;
+}
+
+.sheet-derived-label {
+  font-size: 7pt;
+  text-transform: uppercase;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  opacity: 0.8;
+  line-height: 1.2;
+}
+
+.sheet-derived-value {
+  font-size: 12pt;
+  font-weight: bold;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+}
+
+/* ──────────────────────────────────────────────
+   SS-07: Skills Section
+   ────────────────────────────────────────────── */
+
+.sheet-skills-section {
+  overflow: hidden;
+}
+
+.sheet-section-header {
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  font-size: 7pt;
+  text-transform: uppercase;
+  font-weight: bold;
+  border-bottom: 1px solid currentColor;
+  margin: 2px 0 1px 0;
+  letter-spacing: 0.05em;
+}
+
+.sheet-skill-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.2);
+  min-height: 12px;
+  padding: 0 1px;
+}
+
+.sheet-skill-trained {
+  font-size: 8pt;
+  width: 10px;
+  flex-shrink: 0;
+}
+
+.sheet-skill-name {
+  flex: 1;
+  font-size: 7.5pt;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-skill-value {
+  font-size: 8pt;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: right;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+}
+
+/* ──────────────────────────────────────────────
+   SS-08: Abilities & Spells Section
+   ────────────────────────────────────────────── */
+
+.sheet-abilities-spells {
+  overflow: hidden;
+  height: 200px; /* fixed: 5 ability + 5 spell slots + 2 headers; prevents growth beyond allocation */
+}
+
+.sheet-ability-row {
+  font-size: 8pt;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+  border-bottom: 0.5px solid rgba(0, 0, 0, 0.25);
+  min-height: 13px;
+  padding: 1px 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-blank-row {
+  /* Same dimensions as .sheet-ability-row — blank lines must still render */
+  color: transparent; /* hides &nbsp; visually while maintaining height */
+}
+
+/* ──────────────────────────────────────────────
+   SS-09: Currency Section
+   ────────────────────────────────────────────── */
+
+.sheet-currency {
+  margin-top: 0.05in;
+}
+
+.sheet-currency-row {
+  display: flex;
+  gap: 0.05in;
+}
+
+.sheet-currency-field {
+  flex: 1;
+  border: 1px solid currentColor;
+  text-align: center;
+  padding: 2px 3px;
+}
+
+.sheet-currency-label {
+  display: block;
+  font-size: 7pt;
+  text-transform: uppercase;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  opacity: 0.7;
+}
+
+.sheet-currency-value {
+  display: block;
+  font-size: 10pt;
+  font-weight: bold;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+}
+
+/* ──────────────────────────────────────────────
+   SS-10: Inventory Section
+   ────────────────────────────────────────────── */
+
+.sheet-inventory {
+  overflow: hidden;
+}
+
+.sheet-inventory-slot {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  border-bottom: 0.5px solid rgba(0,0,0,0.25);
+  min-height: 12px;
+  padding: 1px 2px;
+  font-size: 8pt;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+}
+
+.sheet-inventory-number {
+  color: rgba(0,0,0,0.5);
+  font-size: 7pt;
+  min-width: 12px;
+  flex-shrink: 0;
+}
+
+.sheet-inventory-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sheet-inventory-label {
+  font-size: 7pt;
+  text-transform: uppercase;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  font-weight: bold;
+  margin-right: 3px;
+  flex-shrink: 0;
+}
+
+.sheet-inventory-memento {
+  margin-top: 2px;
+  border-top: 1px solid currentColor;
+}
+
+.sheet-tiny-items {
+  font-size: 7.5pt;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+  border-top: 1px solid currentColor;
+  padding-top: 2px;
+  overflow: hidden;
+}
+
+.sheet-tiny-items-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ──────────────────────────────────────────────
+   SS-11: Armor & Helmet Section
+   ────────────────────────────────────────────── */
+
+.sheet-armor-section {
+  margin-bottom: 0.05in;
+}
+
+.sheet-equipment-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.sheet-equipment-type-label {
+  font-size: 7pt;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  font-weight: bold;
+  text-transform: uppercase;
+  min-width: 32px;
+  flex-shrink: 0;
+  padding-top: 8px; /* align with fields */
+}
+
+.sheet-equipment-fields {
+  display: flex;
+  flex: 1;
+  gap: 3px;
+}
+
+.sheet-equipment-field {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+}
+
+.sheet-equipment-name {
+  flex: 3;
+}
+
+.sheet-equipment-rating {
+  flex: 1;
+}
+
+.sheet-equipment-features {
+  flex: 3;
+}
+
+.sheet-field-label {
+  font-size: 7pt;
+  text-transform: uppercase;
+  opacity: 0.65;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+}
+
+.sheet-field-value {
+  font-size: 8.5pt;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+  min-height: 0.9em;
+}
+
+/* ──────────────────────────────────────────────
+   SS-12: Weapons Table
+   ────────────────────────────────────────────── */
+
+.sheet-weapons {
+  margin-bottom: 0.05in;
+}
+
+.sheet-weapons-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 7.5pt;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+}
+
+.sheet-weapons-table th {
+  font-size: 7pt;
+  text-transform: uppercase;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  border-bottom: 1.5px solid currentColor;
+  padding: 1px 2px;
+  text-align: left;
+}
+
+.sheet-weapons-table td {
+  border-bottom: 0.5px solid rgba(0,0,0,0.25);
+  padding: 1px 2px;
+  min-height: 14px;
+}
+
+.sheet-weapons-table .col-name     { width: 25%; }
+.sheet-weapons-table .col-grip     { width: 7%; }
+.sheet-weapons-table .col-range    { width: 12%; }
+.sheet-weapons-table .col-damage   { width: 12%; }
+.sheet-weapons-table .col-durability { width: 8%; }
+.sheet-weapons-table .col-features { width: 36%; }
+
+/* Blank rows still render with correct height */
+.sheet-weapons-table .sheet-blank-row td {
+  min-height: 14px;
+}
+
+/* ──────────────────────────────────────────────
+   SS-13: Resource Trackers (HP, WP, Death Rolls)
+   ────────────────────────────────────────────── */
+
+/* Dot grid */
+.sheet-dot-tracker {
+  margin-bottom: 4px;
+}
+
+.sheet-dot-label {
+  font-size: 7pt;
+  text-transform: uppercase;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.sheet-dot-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+}
+
+.sheet-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  display: inline-block;
+}
+
+.dot-empty {
+  background-color: transparent;
+}
+
+/* HP dot colors */
+.print-sheet--color .hp-dot-filled {
+  background-color: #c0392b; /* red */
+  border-color: #c0392b;
+}
+
+/* WP dot colors */
+.print-sheet--color .wp-dot-filled {
+  background-color: #1a6b35; /* green */
+  border-color: #1a6b35;
+}
+
+/* B&W mode dots */
+.print-sheet--bw .hp-dot-filled,
+.print-sheet--bw .wp-dot-filled {
+  background-color: #333333;
+  border-color: #333333;
+}
+
+/* Rest checkboxes */
+.sheet-rest-row {
+  display: flex;
+  gap: 0.15in;
+  margin: 4px 0;
+}
+
+.sheet-rest-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 7.5pt;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+}
+
+.sheet-checkbox-box {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid currentColor;
+  flex-shrink: 0;
+}
+
+.sheet-checkbox-label {
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+  font-size: 7.5pt;
+}
+
+/* Death rolls */
+.sheet-death-rolls {
+  margin-top: 4px;
+}
+
+.sheet-death-roll-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.sheet-death-label {
+  font-size: 7pt;
+  min-width: 40px;
+  font-family: var(--font-ui, 'Source Serif 4', serif);
+}
+
+/* ──────────────────────────────────────────────
+   SS-15: Single-Page Constraint
+   Layout grid + mitigations for single letter-page fit.
+   These rules are intentionally placed last so they
+   override earlier section defaults via cascade.
+   ────────────────────────────────────────────── */
+
+/* ---- Three-column body layout (abilities/skills/inventory) ---- */
+/* height: 5.5in keeps this section from pushing lower content off-page */
+.print-body-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.08in;
+  height: 5.5in;
+  overflow: hidden;
+  margin-bottom: 0.05in;
+}
+
+/* ---- Three-column lower section (armor/weapons/trackers) ---- */
+/* height: 2.5in caps the lower section within page budget */
+.print-lower-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.08in;
+  height: 2.5in;
+  overflow: hidden;
+}
+
+/* ---- Column base: clip overflow within each column ---- */
+.print-col {
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* ---- Mitigation A: Reduce font sizes in dense sections ---- */
+/* Skills: tightest density, drop to 7pt minimum */
+.sheet-skill-name {
+  font-size: 7pt;
+}
+
+.sheet-skill-value {
+  font-size: 7.5pt;
+}
+
+.sheet-skill-row {
+  min-height: 11px;
+}
+
+/* Inventory slots */
+.sheet-inventory-slot {
+  font-size: 7.5pt;
+  min-height: 11px;
+}
+
+/* Ability/spell rows */
+.sheet-ability-row {
+  font-size: 7.5pt;
+  min-height: 11px;
+}
+
+/* ---- Mitigation B: Reduce padding/margins between sections ---- */
+/* Tighter attribute grid */
+.sheet-attribute-grid {
+  margin-bottom: 0.03in;
+}
+
+/* Tighter derived row */
+.sheet-derived-row {
+  padding: 2px 0;
+}
+
+/* Tighter section headers (all sections) */
+.sheet-section-header {
+  margin: 1px 0;
+}
+
+/* ---- Abilities/Spells container: fixed height for 3+3 slots ---- */
+/* 3 ability rows + 3 spell rows + 2 headers + buffer = ~120px */
+.sheet-abilities-spells {
+  height: 130px;
+}
