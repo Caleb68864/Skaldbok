@@ -62,6 +62,9 @@ export function TimelineItemBar({
   };
 
   const accentColor = resolveTokenColor(layout.item.colorToken);
+  const isCompact = layout.widthPx < 92;
+  const renderedWidth = isCompact ? Math.max(layout.widthPx, 28) : layout.widthPx;
+  const renderedLeft = isCompact ? Math.max(layout.leftPx - ((renderedWidth - layout.widthPx) / 2), 0) : layout.leftPx;
   const label = truncateVisibleLabel(layout.item.title, layout.widthPx - 24);
 
   return (
@@ -70,16 +73,18 @@ export function TimelineItemBar({
         <button
           type="button"
           className={cn(
-            'absolute flex h-9 items-center gap-2 overflow-hidden rounded-[var(--radius-sm)] border px-3 text-left shadow-[var(--shadow-soft)] transition-all',
+            'absolute flex h-9 items-center gap-2 overflow-hidden rounded-[var(--radius-sm)] border text-left shadow-[var(--shadow-soft)] transition-all',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
+            'min-h-10 touch-manipulation',
+            isCompact ? 'justify-center px-0' : 'px-3',
             resolveToneClass(layout.item.variant),
             selected && 'ring-2 ring-gold',
             hovered && 'translate-y-[-1px] shadow-[var(--shadow-medium)]',
           )}
           style={{
-            left: layout.leftPx,
-            top: layout.topPx,
-            width: layout.widthPx,
+            left: renderedLeft,
+            top: layout.topPx - 2,
+            width: renderedWidth,
             borderColor: accentColor ?? undefined,
           }}
           aria-label={`${layout.item.title} on ${trackLabel}`}
@@ -91,24 +96,30 @@ export function TimelineItemBar({
           onMouseLeave={() => onHoverChange(false)}
           onKeyDown={handleKeyDown}
         >
-          {typeof layout.item.icon === 'string' ? (
-            <span className="text-xs">{layout.item.icon}</span>
-          ) : layout.item.icon ? (
-            layout.item.icon
-          ) : (
-            <Flag className="h-3.5 w-3.5 shrink-0 text-text-muted" />
-          )}
-          {renderContent ? (
-            <div className="min-w-0 flex-1">{renderContent(layout.item, layout)}</div>
-          ) : (
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">{label}</span>
-              {layout.item.subtitle ? (
-                <span className="block truncate text-[11px] text-text-muted">{layout.item.subtitle}</span>
-              ) : null}
-            </span>
-          )}
-          {layout.item.sourceId ? <Link2 className="h-3.5 w-3.5 shrink-0 text-text-muted" /> : null}
+          <span className={cn('flex shrink-0 items-center justify-center', isCompact && 'h-full w-full')}>
+            {typeof layout.item.icon === 'string' ? (
+              <span className="text-xs">{layout.item.icon}</span>
+            ) : layout.item.icon ? (
+              layout.item.icon
+            ) : (
+              <Flag className="h-3.5 w-3.5 shrink-0 text-text-muted" />
+            )}
+          </span>
+          {!isCompact ? (
+            <>
+              {renderContent ? (
+                <div className="min-w-0 flex-1">{renderContent(layout.item, layout)}</div>
+              ) : (
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">{label}</span>
+                  {layout.item.subtitle ? (
+                    <span className="block truncate text-[11px] text-text-muted">{layout.item.subtitle}</span>
+                  ) : null}
+                </span>
+              )}
+              {layout.item.sourceId ? <Link2 className="h-3.5 w-3.5 shrink-0 text-text-muted" /> : null}
+            </>
+          ) : null}
         </button>
       </TooltipTrigger>
       <TooltipContent className="max-w-xs border border-border bg-surface p-3">

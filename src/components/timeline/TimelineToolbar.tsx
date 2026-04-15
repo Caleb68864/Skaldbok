@@ -215,18 +215,29 @@ export function TimelineToolbar({
           </Button>
         </div>
       </div>
-      <label className="relative block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" />
+      <label
+        data-timeline-search="true"
+        className="flex h-12 items-center rounded-[var(--radius-md)] border border-border bg-surface-alt shadow-[var(--shadow-inset-soft)]"
+      >
+        <span className="flex w-12 shrink-0 items-center justify-center text-text-muted">
+          <Search className="h-4 w-4" />
+        </span>
         <input
-          type="search"
+          type="text"
           value={searchText}
           onChange={(event) => {
             const nextValue = event.target.value;
             startTransition(() => onSearchChange(nextValue));
           }}
           placeholder="Search timeline events, tags, or kinds"
-          className="h-11 w-full rounded-[var(--radius-md)] border border-border bg-surface-alt pl-10 pr-4 text-sm text-text shadow-[var(--shadow-inset-soft)]"
+          className="h-full min-h-0 flex-1 border-0 bg-transparent p-0 pr-4 text-sm leading-none text-text shadow-none outline-none placeholder:text-text-muted/80 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
+          style={{
+            WebkitAppearance: 'none',
+            appearance: 'none',
+          }}
           aria-label="Search timeline events"
+          autoComplete="off"
+          spellCheck={false}
         />
       </label>
     </div>

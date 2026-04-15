@@ -42,7 +42,7 @@ export function TimelineViewport({
   onTrackSelect,
 }: TimelineViewportProps) {
   return (
-    <div className="overflow-auto rounded-[var(--radius-lg)] border border-border bg-surface texture-card-bevel">
+    <div className="overflow-auto rounded-[var(--radius-lg)] border border-border bg-surface texture-card-bevel [touch-action:pan-x_pinch-zoom] overscroll-x-contain">
       <div className="min-w-max">
         <TimelineHeaderAxis
           labelColumnWidth={labelColumnWidth}

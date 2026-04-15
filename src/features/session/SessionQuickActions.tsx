@@ -144,7 +144,11 @@ function formatModTags(mods: { boon: boolean; bane: boolean; pushed: boolean }):
 
 // ── Main Component ──────────────────────────────────────────────
 
-export function SessionQuickActions() {
+interface SessionQuickActionsProps {
+  onLogComplete?: () => void;
+}
+
+export function SessionQuickActions({ onLogComplete }: SessionQuickActionsProps) {
   const { createNote } = useNoteActions();
   const { character } = useActiveCharacter();
   const { activeCampaign, activeParty, activeCharacterInCampaign } = useCampaignContext();
@@ -288,7 +292,7 @@ export function SessionQuickActions() {
     const who = selectedNames();
     const fullTitle = who ? `${who}: ${title}` : title;
     const currentAttach = attachTo;
-    await createNote(
+    const createdNote = await createNote(
       {
         title: fullTitle,
         type: type as 'skill-check' | 'generic' | 'loot' | 'quote' | 'rumor',
@@ -300,7 +304,11 @@ export function SessionQuickActions() {
       },
       { targetEncounterId: resolveAttach(currentAttach) },
     );
+    if (!createdNote) {
+      return;
+    }
     fireQuickLogToast(currentAttach);
+    onLogComplete?.();
     close();
   };
 
@@ -1033,9 +1041,10 @@ export function SessionQuickActions() {
             <QuickNoteAction
               campaignId={activeCampaign?.id ?? null}
               onClose={close}
+              onSaved={onLogComplete}
             />
           ) : (
-            <QuickNpcAction onClose={close} />
+            <QuickNpcAction onClose={close} onSaved={onLogComplete} />
           )}
         </Drawer>
       )}

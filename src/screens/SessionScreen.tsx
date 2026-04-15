@@ -10,13 +10,12 @@ import { useToast } from '../context/ToastContext';
 import { VaultBrowser } from '../features/kb/VaultBrowser';
 import { SessionQuickActions } from '../features/session/SessionQuickActions';
 import { useEncounterList } from '../features/encounters/useEncounterList';
-import { EncounterListItem } from '../features/encounters/EncounterListItem';
 import { EncounterScreen } from '../features/encounters/EncounterScreen';
 import {
   SessionEncounterProvider,
   useSessionEncounterContext,
 } from '../features/session/SessionEncounterContext';
-import { SessionBar } from '../features/session/SessionBar';
+import { SessionTimelinePanel } from '../features/session/SessionTimelinePanel';
 import { TiptapNoteEditor } from '../components/notes/TiptapNoteEditor';
 import { getSessionsByCampaign } from '../storage/repositories/sessionRepository';
 import { getNotesBySession } from '../storage/repositories/noteRepository';
@@ -211,12 +210,14 @@ function ActiveSessionContent() {
   const [submittingEncounter, setSubmittingEncounter] = useState(false);
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
+  const [timelineRefreshToken, setTimelineRefreshToken] = useState(0);
 
   const { encounters, refresh: refreshEncounters } = useEncounterList(activeSession?.id ?? null);
   const {
     activeEncounter,
     recentEnded,
     startEncounter,
+    reopenEncounter,
   } = useSessionEncounterContext();
 
   // Session timer
@@ -314,6 +315,7 @@ function ActiveSessionContent() {
       setShowStartEncounter(false);
       resetStartEncounterForm();
       refreshEncounters();
+      setTimelineRefreshToken((currentToken) => currentToken + 1);
     } finally {
       setSubmittingEncounter(false);
     }
@@ -333,6 +335,7 @@ function ActiveSessionContent() {
         onClose={() => {
           setViewingEncounterId(null);
           refreshEncounters();
+          setTimelineRefreshToken((currentToken) => currentToken + 1);
         }}
       />
     );
@@ -355,10 +358,6 @@ function ActiveSessionContent() {
 
   return (
     <div className="p-4">
-      <SessionBar
-        onActiveEncounterClick={(id) => setViewingEncounterId(id)}
-      />
-
       <div className="flex items-center justify-between mb-2 mt-3">
         <h2 className="text-[var(--color-text)] m-0">{activeCampaign.name}</h2>
         <button
@@ -397,54 +396,24 @@ function ActiveSessionContent() {
         </div>
 
         <div className="mt-4">
-          <SessionQuickActions />
+          <SessionQuickActions onLogComplete={() => setTimelineRefreshToken((currentToken) => currentToken + 1)} />
         </div>
       </div>
 
-      {/* Encounter section */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-[var(--color-text)] m-0 text-sm">Encounters</h3>
-          <button onClick={() => setShowStartEncounter(true)} className={actionBtnClass}>
-            Start Encounter
-          </button>
-        </div>
-
-        {/* Active encounter indicator */}
-        {activeEncounter && (
-          <button
-            onClick={() => setViewingEncounterId(activeEncounter.id)}
-            className="w-full text-left bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg p-3 mb-2 cursor-pointer"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--color-text)] font-semibold text-sm">
-                {activeEncounter.title}
-              </span>
-              <span className="px-2 py-0.5 bg-amber-200 dark:bg-amber-800 text-amber-900 dark:text-amber-100 rounded-full text-[10px] font-bold uppercase">
-                Active
-              </span>
-            </div>
-            <span className="text-[var(--color-text-muted)] text-xs capitalize">
-              {activeEncounter.type} &middot; {activeEncounter.participants.length} participants
-            </span>
-          </button>
-        )}
-
-        {/* Past encounters */}
-        {encounters.filter(e => e.status === 'ended').length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            {encounters
-              .filter(e => e.status === 'ended')
-              .map(e => (
-                <EncounterListItem
-                  key={e.id}
-                  encounter={e}
-                  onClick={() => setViewingEncounterId(e.id)}
-                />
-              ))}
-          </div>
-        )}
-      </div>
+      <SessionTimelinePanel
+        session={activeSession}
+        encounters={encounters}
+        activeEncounter={activeEncounter}
+        onStartEncounter={() => setShowStartEncounter(true)}
+        onOpenEncounter={(encounterId) => setViewingEncounterId(encounterId)}
+        onReopenEncounter={async (encounterId) => {
+          await reopenEncounter(encounterId);
+          await refreshEncounters();
+          setTimelineRefreshToken((currentToken) => currentToken + 1);
+        }}
+        onOpenNote={(noteId) => navigate(`/note/${noteId}/edit`)}
+        refreshToken={timelineRefreshToken}
+      />
 
       {/* Start encounter modal */}
       {showStartEncounter && (

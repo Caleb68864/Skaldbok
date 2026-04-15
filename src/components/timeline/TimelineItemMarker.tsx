@@ -46,14 +46,14 @@ export function TimelineItemMarker({
         <button
           type="button"
           className={cn(
-            'absolute flex h-7 w-7 items-center justify-center rounded-full border bg-surface shadow-[var(--shadow-soft)] transition-all',
+            'absolute flex h-9 w-9 touch-manipulation items-center justify-center rounded-full border bg-surface shadow-[var(--shadow-soft)] transition-all',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent',
             selected && 'ring-2 ring-gold',
             hovered && 'scale-105 shadow-[var(--shadow-medium)]',
           )}
           style={{
-            left: layout.leftPx - 12,
-            top: layout.topPx + 4,
+            left: layout.leftPx - 16,
+            top: layout.topPx,
             borderColor: resolveTokenColor(layout.item.colorToken),
           }}
           aria-label={`${layout.item.title} on ${trackLabel}`}
@@ -65,7 +65,7 @@ export function TimelineItemMarker({
           onMouseLeave={() => onHoverChange(false)}
           onKeyDown={handleKeyDown}
         >
-          <Diamond className="h-3.5 w-3.5 text-accent" />
+          <Diamond className="h-4 w-4 text-accent" />
           {layout.item.sourceId ? <Link2 className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-surface p-0.5 text-text-muted" /> : null}
         </button>
       </TooltipTrigger>
