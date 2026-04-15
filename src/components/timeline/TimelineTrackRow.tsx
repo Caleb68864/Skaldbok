@@ -63,7 +63,7 @@ export function TimelineTrackRow({
       <button
         type="button"
         className={cn(
-          'sticky left-0 z-20 flex min-h-full items-start gap-3 border-r border-border bg-surface px-4 py-3 text-left',
+          'sticky left-0 z-20 flex min-h-full touch-manipulation items-start gap-3 border-r border-border bg-surface px-4 py-4 text-left',
           selectedTrackId === layout.track.id && 'bg-surface-alt',
         )}
         onClick={() => onTrackSelect(layout.track.id)}

@@ -24,14 +24,14 @@ export function TimelineHeaderAxis({
       className="sticky top-0 z-30 grid border-b border-border bg-surface/95 backdrop-blur"
       style={{ gridTemplateColumns: `${labelColumnWidth}px ${timelineWidth}px` }}
     >
-      <div className="sticky left-0 z-20 flex items-center gap-3 border-r border-border bg-surface px-4 py-3">
+      <div className="sticky left-0 z-20 flex min-h-[80px] items-center gap-3 border-r border-border bg-surface px-4 py-3">
         <CalendarDays className="h-4 w-4 text-text-muted" />
         <div>
           <p className="text-sm font-semibold text-text">Timeline</p>
           <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">{scaleUnit}</p>
         </div>
       </div>
-      <div className="relative h-[72px] min-h-[72px] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_50%,rgba(0,0,0,0.05))]">
+      <div className="relative h-[80px] min-h-[80px] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_50%,rgba(0,0,0,0.05))]">
         <TimelineGrid ticks={ticks} markers={markers} />
         {majorTicks.map((tick) => (
           <div

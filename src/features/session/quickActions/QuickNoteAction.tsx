@@ -10,6 +10,8 @@ export interface QuickNoteActionProps {
   campaignId: string | null;
   /** Called when the user cancels or after a successful save. */
   onClose: () => void;
+  /** Optional callback fired after a successful save. */
+  onSaved?: () => void;
 }
 
 /**
@@ -19,7 +21,7 @@ export interface QuickNoteActionProps {
  * the {@link AttachToControl} per-entry attach-to-encounter override. Fires a
  * success toast after a successful write.
  */
-export function QuickNoteAction({ campaignId, onClose }: QuickNoteActionProps) {
+export function QuickNoteAction({ campaignId, onClose, onSaved }: QuickNoteActionProps) {
   const { logGenericNote } = useSessionLog();
   const { showToast } = useToast();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
@@ -47,6 +49,7 @@ export function QuickNoteAction({ campaignId, onClose }: QuickNoteActionProps) {
       } else {
         showToast('Logged to session', 'success', 2000);
       }
+      onSaved?.();
       onClose();
     } finally {
       setSaving(false);

@@ -7,6 +7,8 @@ import { AttachToControl, resolveAttach, type AttachToValue } from './AttachToCo
 export interface QuickNpcActionProps {
   /** Called when the user cancels or after a successful save. */
   onClose: () => void;
+  /** Optional callback fired after a successful save. */
+  onSaved?: () => void;
 }
 
 type NpcCategory = 'monster' | 'npc' | 'animal';
@@ -19,7 +21,7 @@ type NpcCategory = 'monster' | 'npc' | 'animal';
  * {@link AttachToControl} per-entry attach-to-encounter override and fires a
  * success toast after a successful write.
  */
-export function QuickNpcAction({ onClose }: QuickNpcActionProps) {
+export function QuickNpcAction({ onClose, onSaved }: QuickNpcActionProps) {
   const { logNpcCapture } = useSessionLog();
   const { showToast } = useToast();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
@@ -59,6 +61,7 @@ export function QuickNpcAction({ onClose }: QuickNpcActionProps) {
       } else {
         showToast('Logged to session', 'success', 2000);
       }
+      onSaved?.();
       onClose();
     } finally {
       setSaving(false);
