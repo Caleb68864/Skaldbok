@@ -1,5 +1,10 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { ReopenEncounterPrompt } from '../../components/modals/ReopenEncounterPrompt';
+import { flushAll } from '../persistence/autosaveFlush';
+import * as encounterRepository from '../../storage/repositories/encounterRepository';
+import type { Encounter } from '../../types/encounter';
 import { db } from '../../storage/db/client';
 import * as metadataRepository from '../../storage/repositories/metadataRepository';
 import { generateId } from '../../utils/ids';
@@ -157,6 +162,16 @@ export function useCampaignContext(): CampaignContextValue {
 const STALE_SESSION_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * Returns the ISO timestamp of the encounter's most recently ended segment,
+ * or null if the encounter has no segments or the last segment is still open.
+ */
+function lastSegmentEnd(enc: Encounter): string | null {
+  if (!enc.segments || enc.segments.length === 0) return null;
+  const last = enc.segments[enc.segments.length - 1];
+  return last.endedAt ?? null;
+}
+
+/**
  * Queries the database for the party belonging to `campaignId` and joins its members.
  *
  * @param campaignId - Campaign whose party should be loaded.
@@ -197,6 +212,13 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const [activeParty, setActiveParty_] = useState<ActivePartyWithMembers | null>(null);
   const [activeCharacterInCampaign, setActiveCharacterInCampaign_] = useState<PartyMember | null>(null);
   const [staleSession, setStaleSession] = useState<Session | null>(null);
+  // Tracks the sessionId the stale-modal has been dismissed for. Prevents
+  // re-prompting on every route change after the user clicks Continue.
+  // Resets when activeSession id changes (new session earns a fresh warning).
+  const staleModalDismissedForSessionIdRef = useRef<string | null>(null);
+  const location = useLocation();
+  // Candidate encounter to surface via ReopenEncounterPrompt after resumeSession.
+  const [reopenCandidate, setReopenCandidate] = useState<Encounter | null>(null);
 
   // Hydrate on mount
   useEffect(() => {
@@ -261,6 +283,25 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-check staleness on every route change (not only at hydration). A session
+  // older than STALE_SESSION_MS will re-prompt each time the user navigates
+  // until they click Continue. The dismissed-id ref is keyed on the session id
+  // so a new session naturally earns a fresh warning.
+  useEffect(() => {
+    if (!activeSession) return;
+    if (staleModalDismissedForSessionIdRef.current === activeSession.id) return;
+    if (Date.now() - new Date(activeSession.startedAt).getTime() > STALE_SESSION_MS) {
+      setStaleSession(activeSession);
+    }
+  }, [location.pathname, activeSession]);
+
+  // Reset the dismissed ref when the session changes (including clear to null).
+  useEffect(() => {
+    if (!activeSession) {
+      staleModalDismissedForSessionIdRef.current = null;
+    }
+  }, [activeSession]);
+
   const startSession = useCallback(async () => {
     if (!activeCampaign) {
       showToast('No active campaign');
@@ -320,6 +361,8 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       return;
     }
     try {
+      // Flush pending autosaves before mutating session state.
+      await flushAll();
       const session = await db.sessions.get(sessionId);
       if (!session) { showToast('Session not found'); return; }
       const now = nowISO();
@@ -329,11 +372,59 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         updatedAt: now,
       });
       setActiveSession_({ ...session, status: 'active', endedAt: undefined, updatedAt: now });
+
+      // Pick the most-recently-ended non-deleted encounter and prompt the user
+      // whether to reopen it. Selection rule: last segment's endedAt (the real
+      // "when was this last active" signal), skipping encounters that never
+      // had a segment.
+      const encounters = await encounterRepository.listBySession(sessionId);
+      const candidate = encounters
+        .filter((e) => !e.deletedAt && e.status !== 'active')
+        .map((e) => ({ enc: e, lastEnd: lastSegmentEnd(e) }))
+        .filter((r): r is { enc: Encounter; lastEnd: string } => r.lastEnd !== null)
+        .sort((a, b) => b.lastEnd.localeCompare(a.lastEnd))[0]?.enc;
+
+      if (candidate) {
+        setReopenCandidate(candidate);
+      } else {
+        showToast('Session resumed', 'info');
+      }
     } catch (e) {
       showToast('Failed to resume session');
       console.error('resumeSession failed:', e);
     }
   }, [activeSession, showToast]);
+
+  const handleReopenCandidate = useCallback(async () => {
+    const target = reopenCandidate;
+    if (!target) return;
+    setReopenCandidate(null);
+    try {
+      await encounterRepository.reopenEncounter(target.sessionId, target.id);
+      showToast(`Reopened "${target.title ?? 'encounter'}"`, 'info', {
+        duration: 6000,
+        action: {
+          label: 'Undo',
+          onClick: async () => {
+            try {
+              await encounterRepository.end(target.id);
+            } catch (e) {
+              console.error('[resume] undo failed', e);
+              showToast('Undo failed', 'error');
+            }
+          },
+        },
+      });
+    } catch (e) {
+      console.error('[resume] reopen failed', e);
+      showToast('Could not reopen encounter', 'error');
+    }
+  }, [reopenCandidate, showToast]);
+
+  const handleSkipReopen = useCallback(() => {
+    setReopenCandidate(null);
+    showToast('Session resumed', 'info');
+  }, [showToast]);
 
   const setActiveCampaign = useCallback(async (campaignId: string) => {
     try {
@@ -401,10 +492,14 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setStaleSession(null);
   }, [staleSession, showToast]);
 
-  /** Dismisses the stale-session modal without ending the session. */
+  /** Dismisses the stale-session modal without ending the session. Remembers
+   * the sessionId so subsequent route changes don't re-prompt. */
   const handleStaleContinue = useCallback(() => {
+    if (staleSession) {
+      staleModalDismissedForSessionIdRef.current = staleSession.id;
+    }
     setStaleSession(null);
-  }, []);
+  }, [staleSession]);
 
   return (
     <CampaignContext.Provider
@@ -427,6 +522,14 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
           sessionTitle={staleSession.title}
           onEnd={handleStaleEnd}
           onContinue={handleStaleContinue}
+        />
+      )}
+      {reopenCandidate && (
+        <ReopenEncounterPrompt
+          encounter={reopenCandidate}
+          open={!!reopenCandidate}
+          onReopen={handleReopenCandidate}
+          onSkip={handleSkipReopen}
         />
       )}
     </CampaignContext.Provider>
