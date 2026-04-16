@@ -1,6 +1,7 @@
 import { useRoutes } from 'react-router-dom';
 import { routes } from '../routes';
 import { useAppState } from '../context/AppStateContext';
+import { UpdatePrompt } from '../pwa/UpdatePrompt';
 
 export function App() {
   const { isLoading } = useAppState();
@@ -14,5 +15,10 @@ export function App() {
     );
   }
 
-  return element;
+  return (
+    <>
+      {element}
+      <UpdatePrompt />
+    </>
+  );
 }
