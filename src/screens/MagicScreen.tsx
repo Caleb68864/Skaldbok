@@ -29,7 +29,8 @@ const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-bord
 export default function MagicScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { isLoading: settingsLoading, settings } = useAppState();
+  const { isLoading: settingsLoading, settings, updateSettings } = useAppState();
+  const showMagic = settings.showCharacterMagic === true;
   const isEditMode = useIsEditMode();
   const { showToast } = useToast();
   useAutosave(character, characterRepository.save, 1000);
@@ -197,48 +198,78 @@ export default function MagicScreen() {
 
   return (
     <div className="p-[var(--space-md)]">
-      {/* ── Page header with prepared counter ── */}
+      {/* ── Page header with prepared counter + show-magic toggle ── */}
       <div className="flex items-center justify-between mb-[var(--space-sm)] flex-wrap gap-[var(--space-sm)]">
-        <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] m-0">Magic</h1>
-        <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-bold">
-          {preparedCount}/{maxPrepared} Prepared
-        </span>
+        <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] m-0">
+          Abilities / Magic
+        </h1>
+        <div className="flex items-center gap-[var(--space-md)]">
+          {showMagic && (
+            <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-bold">
+              {preparedCount}/{maxPrepared} Prepared
+            </span>
+          )}
+          <label className="flex items-center gap-2 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showMagic}
+              onChange={e => updateSettings({ showCharacterMagic: e.target.checked }).catch(console.error)}
+              className="h-4 w-4 accent-[var(--color-accent)]"
+            />
+            Show Magic
+          </label>
+        </div>
       </div>
 
-      {/* ── Over-limit warning ── */}
-      {overLimit && (
+      {/* ── Over-limit warning (spells only) ── */}
+      {showMagic && overLimit && (
         <div className="bg-[color-mix(in_srgb,var(--color-warning,#e67e22)_15%,transparent)] border border-[var(--color-warning,#e67e22)] rounded-[var(--radius-sm)] px-[var(--space-md)] py-[var(--space-sm)] mb-[var(--space-sm)] text-[length:var(--font-size-sm)] text-[var(--color-text)]">
           ⚠ You have {preparedCount} prepared but can only hold {maxPrepared}. Please unprepare {preparedCount - maxPrepared} spell{preparedCount - maxPrepared !== 1 ? 's' : ''}.
         </div>
       )}
 
-      {/* ── Metal warning banner ── */}
-      {metalBlocked && (
+      {/* ── Metal warning banner (spells only) ── */}
+      {showMagic && metalBlocked && (
         <div className="bg-[color-mix(in_srgb,var(--color-danger)_15%,transparent)] border border-[var(--color-danger)] rounded-[var(--radius-sm)] px-[var(--space-md)] py-[var(--space-sm)] mb-[var(--space-sm)] text-[length:var(--font-size-sm)] text-[var(--color-text)]">
           ⚠ Metal equipment equipped — spellcasting is impaired!
         </div>
       )}
 
-      {/* ── Filter tabs: Prepared | Grimoire ── */}
-      <div className="flex gap-[var(--space-1)] mb-[var(--space-md)]">
-        {(['prepared', 'grimoire'] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            className={cn(
-              "px-4 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--font-size-sm)] font-semibold transition-colors",
-              filter === tab
-                ? "bg-[var(--color-accent)] text-white"
-                : "bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-            )}
-            onClick={() => setFilter(tab)}
-          >
-            {tab === 'prepared' ? 'Prepared' : 'Grimoire'}
-          </button>
-        ))}
-      </div>
+      {/* ── Filter tabs: Prepared | Grimoire (spells only) ── */}
+      {showMagic && (
+        <div className="flex gap-[var(--space-1)] mb-[var(--space-md)]">
+          {(['prepared', 'grimoire'] as const).map((tab) => (
+            <button
+              key={tab}
+              type="button"
+              className={cn(
+                "px-4 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--font-size-sm)] font-semibold transition-colors",
+                filter === tab
+                  ? "bg-[var(--color-accent)] text-white"
+                  : "bg-[var(--color-surface-alt)] text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
+              )}
+              onClick={() => setFilter(tab)}
+            >
+              {tab === 'prepared' ? 'Prepared' : 'Grimoire'}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* ── Spells section ── */}
+      {/* ── Heroic Abilities section (always shown — this is the primary
+             content for non-casters and the default view) ── */}
+      <SectionPanel title="Heroic Abilities" subtitle="p. 30-31" collapsible defaultOpen>
+        <div className="flex justify-end mb-[var(--space-sm)]">
+          {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingAbility(null); setAbilityDrawerOpen(true); }}>+ Add Ability</Button>}
+        </div>
+        {character.heroicAbilities.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No heroic abilities yet.</p>}
+        <div className="flex flex-col gap-[var(--space-md)]">
+          {character.heroicAbilities.map(a => <AbilityCard key={a.id} ability={a} onEdit={() => { setEditingAbility(a); setAbilityDrawerOpen(true); }} onDelete={() => handleAbilityDelete(a.id)} isEditMode={isEditMode} />)}
+        </div>
+      </SectionPanel>
+
+      {/* ── Spells section (hidden unless "Show Magic" is toggled on) ── */}
+      {showMagic && (
       <SectionPanel title="Spells" subtitle="p. 63-64" collapsible defaultOpen>
         <div className="flex justify-end mb-[var(--space-sm)]">
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingSpell(null); setSpellDrawerOpen(true); }}>+ Add Spell</Button>}
@@ -268,17 +299,7 @@ export default function MagicScreen() {
           ))}
         </div>
       </SectionPanel>
-
-      {/* ── Heroic Abilities section ── */}
-      <SectionPanel title="Heroic Abilities" subtitle="p. 30-31" collapsible defaultOpen>
-        <div className="flex justify-end mb-[var(--space-sm)]">
-          {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingAbility(null); setAbilityDrawerOpen(true); }}>+ Add Ability</Button>}
-        </div>
-        {character.heroicAbilities.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No heroic abilities yet.</p>}
-        <div className="flex flex-col gap-[var(--space-md)]">
-          {character.heroicAbilities.map(a => <AbilityCard key={a.id} ability={a} onEdit={() => { setEditingAbility(a); setAbilityDrawerOpen(true); }} onDelete={() => handleAbilityDelete(a.id)} isEditMode={isEditMode} />)}
-        </div>
-      </SectionPanel>
+      )}
 
       {/* ── Spell edit drawer ── */}
       <Drawer open={spellDrawerOpen} onClose={() => setSpellDrawerOpen(false)} title={editingSpell ? 'Edit Spell' : 'Add Spell'}>

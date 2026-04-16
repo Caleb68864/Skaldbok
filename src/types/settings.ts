@@ -62,4 +62,11 @@ export interface AppSettings extends Versioned {
   showOtherSessionNotes?: Record<string, boolean>;
   /** Per-campaign custom tags created by the user. Keyed by `campaignId`; value is an array of tag strings. */
   customTags?: Record<string, string[]>;
+  /**
+   * If `true`, the `Abilities / Magic` character screen shows both Spells and
+   * Heroic Abilities. If `false` (or absent), only Heroic Abilities render —
+   * Spells stay hidden. Defaults to `false` so non-caster characters see a
+   * focused screen. Users toggle it per-app via the checkbox on that screen.
+   */
+  showCharacterMagic?: boolean;
 }

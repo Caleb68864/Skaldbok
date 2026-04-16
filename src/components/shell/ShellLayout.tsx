@@ -6,7 +6,7 @@ import { BottomNav } from './BottomNav';
 import { GlobalFAB } from './GlobalFAB';
 import { CampaignCreateModal } from '../../features/campaign/CampaignCreateModal';
 import { ManagePartyDrawer } from '../../features/campaign/ManagePartyDrawer';
-import { SessionLogOverlay } from '../../features/session/SessionLogOverlay';
+import { SessionRefreshProvider } from '../../features/session/SessionRefreshContext';
 
 /**
  * Root layout component that wraps every authenticated route in Skaldmark.
@@ -24,10 +24,9 @@ import { SessionLogOverlay } from '../../features/session/SessionLogOverlay';
  *    the current path starts with `/character`.
  * 3. **`<main>`** — Flex-grow scrollable content area that hosts the `<Outlet>`.
  * 4. **BottomNav** — Persistent three-tab primary navigation.
- * 5. **GlobalFAB** — Floating action button for quick session actions.
- * 6. **SessionLogOverlay** _(conditional)_ — Session event log overlay,
- *    rendered only on character routes.
- * 7. **CampaignCreateModal** / **ManagePartyDrawer** — Conditionally mounted
+ * 5. **GlobalFAB** — Floating action button hosting the full quick-log
+ *    surface (notes, NPCs, skill checks, spells, abilities, shopping, etc.).
+ * 6. **CampaignCreateModal** / **ManagePartyDrawer** — Conditionally mounted
  *    modals controlled by local boolean state.
  *
  * The outer `div` uses `h-dvh` with `overflow-hidden` so the shell
@@ -47,24 +46,25 @@ export function ShellLayout() {
   const isCharacterTab = location.pathname.startsWith('/character');
 
   return (
-    <div className="flex flex-col h-dvh overflow-hidden">
-      <CampaignHeader
-        onCreateCampaign={() => setShowCreateCampaign(true)}
-        onManageParty={() => setShowManageParty(true)}
-      />
-      {isCharacterTab && <CharacterSubNav />}
-      <main className="flex-1 overflow-y-auto overflow-x-hidden">
-        <Outlet />
-      </main>
-      <BottomNav />
-      <GlobalFAB />
-      {isCharacterTab && <SessionLogOverlay />}
-      {showCreateCampaign && (
-        <CampaignCreateModal onClose={() => setShowCreateCampaign(false)} />
-      )}
-      {showManageParty && (
-        <ManagePartyDrawer onClose={() => setShowManageParty(false)} />
-      )}
-    </div>
+    <SessionRefreshProvider>
+      <div className="flex flex-col h-dvh overflow-hidden">
+        <CampaignHeader
+          onCreateCampaign={() => setShowCreateCampaign(true)}
+          onManageParty={() => setShowManageParty(true)}
+        />
+        {isCharacterTab && <CharacterSubNav />}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <Outlet />
+        </main>
+        <BottomNav />
+        <GlobalFAB />
+        {showCreateCampaign && (
+          <CampaignCreateModal onClose={() => setShowCreateCampaign(false)} />
+        )}
+        {showManageParty && (
+          <ManagePartyDrawer onClose={() => setShowManageParty(false)} />
+        )}
+      </div>
+    </SessionRefreshProvider>
   );
 }

@@ -355,7 +355,7 @@ export function SessionTimelinePanel({
           tracks={timelineDataset.tracks}
           items={timelineDataset.items}
           markers={timelineDataset.markers}
-          toolbarTitle="Timeline Workspace"
+          toolbarTitle="Timeline"
           filterState={timelineFilterState}
           onFilterStateChange={handleFilterStateChange}
           renderTrackLabel={renderTrackLabel}
