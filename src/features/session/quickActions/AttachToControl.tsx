@@ -15,6 +15,8 @@ export interface AttachToControlProps {
   value: AttachToValue;
   /** Called when the user changes the selection. */
   onChange: (value: AttachToValue) => void;
+  /** Default value applied on mount. */
+  defaultValue?: AttachToValue;
 }
 
 /**
@@ -42,7 +44,7 @@ export function resolveAttach(value: AttachToValue): string | null | undefined {
  * shell-level drawers) it falls back to `useCampaignContext().activeSession`
  * and reads the active encounter directly from the repository.
  */
-export function AttachToControl({ value, onChange }: AttachToControlProps) {
+export function AttachToControl({ value, onChange, defaultValue = 'auto' }: AttachToControlProps) {
   const sessionEncounterCtx = useSessionEncounterContextSafe();
   const { activeSession } = useCampaignContext();
   const [fallbackActive, setFallbackActive] = useState<Encounter | null>(null);
@@ -53,7 +55,7 @@ export function AttachToControl({ value, onChange }: AttachToControlProps) {
 
   // Per-entry reset: force default back to 'auto' whenever this control mounts.
   useEffect(() => {
-    onChange('auto');
+    onChange(defaultValue);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

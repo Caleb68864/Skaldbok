@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
+import { useAutosave } from '../hooks/useAutosave';
 import { WeaponCard } from '../components/fields/WeaponCard';
 import { WeaponEditor } from '../components/fields/WeaponEditor';
 import { InventoryList } from '../components/fields/InventoryList';
@@ -16,6 +17,7 @@ import { nowISO } from '../utils/dates';
 import { computeEncumbranceLimit } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
+import * as characterRepository from '../storage/repositories/characterRepository';
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
 
@@ -51,6 +53,7 @@ export default function GearScreen() {
   const [helmetRating, setHelmetRating] = useState(0);
   const [helmetWeight, setHelmetWeight] = useState(0);
   const [helmetEquipped, setHelmetEquipped] = useState(false);
+  useAutosave(character, characterRepository.save, 1000);
 
   // Populate armor form when drawer opens
   useEffect(() => {

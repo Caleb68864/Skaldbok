@@ -326,6 +326,100 @@ class SkaldbokDatabase extends Dexie {
         //    data to preserve; the pre-migration backup above still captured them).
         await tx.table('notes').where('type').equals('combat').delete();
       });
+
+    // --- Version 9: Bestiary soft-delete alignment ---
+    // Converts status='archived' creatureTemplates into soft-deleted rows
+    // (deletedAt + softDeletedBy) and cascade-soft-deletes their `represents`
+    // edges under the same migration txId. Writes a pre-migration JSON
+    // snapshot to `metadata` under key bestiary-pre-v9-snapshot so a bad
+    // migration is recoverable via DevTools.
+    //
+    // IMPORTANT: all writes inside this upgrade use tx.table(...) directly.
+    // Calling repository helpers (metadataRepository, entityLinkRepository,
+    // creatureTemplateRepository) from inside an active upgrade transaction
+    // opens a nested transaction and fails or silently misbehaves.
+    this.version(9)
+      .stores({
+        // Schema shape unchanged from v8 — only data is transformed. Dexie
+        // still requires every table to be re-declared at the new version.
+        campaigns: 'id, status, updatedAt, deletedAt',
+        sessions: 'id, campaignId, status, date, [campaignId+status], deletedAt',
+        notes: 'id, campaignId, sessionId, type, status, pinned, visibility, scope, deletedAt',
+        entityLinks:
+          'id, [fromEntityId+relationshipType], [toEntityId+relationshipType], fromEntityType, toEntityType, deletedAt, softDeletedBy',
+        parties: 'id, campaignId, deletedAt',
+        partyMembers: 'id, partyId, linkedCharacterId, deletedAt',
+        creatureTemplates: 'id, campaignId, category, status, name, deletedAt',
+        encounters: 'id, sessionId, campaignId, type, status, deletedAt',
+        characters: 'id, systemId, updatedAt, deletedAt',
+      })
+      .upgrade(async (tx) => {
+        const migrationTxId = `bestiary-v9-migration-${new Date().toISOString()}`;
+        const migrationTs = new Date().toISOString();
+
+        const creaturesTable = tx.table('creatureTemplates');
+        const entityLinksTable = tx.table('entityLinks');
+        const metadataTable = tx.table('metadata');
+
+        // 1. Pre-migration snapshot. Wrapped in try/catch so a stringify
+        //    failure (or any other snapshot error) does not block the
+        //    migration — losing the recovery path is worse than ideal but
+        //    strictly better than blocking the user at v8 forever.
+        try {
+          const allCreatures = await creaturesTable.toArray();
+          const creatureIds = new Set(allCreatures.map((c: { id: string }) => c.id));
+          const allLinks = await entityLinksTable.toArray();
+          const relatedLinks = allLinks.filter(
+            (l: { fromEntityId?: string; toEntityId?: string }) =>
+              (l.fromEntityId && creatureIds.has(l.fromEntityId)) ||
+              (l.toEntityId && creatureIds.has(l.toEntityId)),
+          );
+          const snapshot = { creatureTemplates: allCreatures, entityLinks: relatedLinks };
+          await metadataTable.put({
+            id: generateId(),
+            key: 'bestiary-pre-v9-snapshot',
+            value: JSON.stringify(snapshot),
+          });
+        } catch (e) {
+          console.error('[bestiary-v9-migration] snapshot failed', e);
+          // continue the migration without a snapshot
+        }
+
+        // 2. Transform archived rows. CreatureTemplate.status is a Zod enum
+        //    of ['active', 'archived']; setting any other value would fail
+        //    future reads. The soft-delete state is carried by deletedAt,
+        //    not status, so migrated rows move to status='active'.
+        const creatures = await creaturesTable.toArray();
+        for (const row of creatures) {
+          if (row.status === 'archived') {
+            await creaturesTable.update(row.id, {
+              deletedAt: migrationTs,
+              softDeletedBy: migrationTxId,
+              status: 'active',
+              updatedAt: migrationTs,
+            });
+            // Cascade represents edges touching this creature (dedupe since
+            // a link could match both fromEntityId and toEntityId queries).
+            const from = await entityLinksTable.where('fromEntityId').equals(row.id).toArray();
+            const to = await entityLinksTable.where('toEntityId').equals(row.id).toArray();
+            const seen = new Set<string>();
+            for (const link of [...from, ...to]) {
+              if (seen.has(link.id)) continue;
+              seen.add(link.id);
+              if (!link.deletedAt) {
+                await entityLinksTable.update(link.id, {
+                  deletedAt: migrationTs,
+                  softDeletedBy: migrationTxId,
+                  updatedAt: migrationTs,
+                });
+              }
+            }
+            console.info('[bestiary-v9-migration] migrated', row.id);
+          } else if (row.status && row.status !== 'active' && row.status !== 'archived') {
+            console.warn('[bestiary-v9-migration] unexpected row, skipping', row.id);
+          }
+        }
+      });
   }
 }
 

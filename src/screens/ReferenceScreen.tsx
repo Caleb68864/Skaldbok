@@ -304,16 +304,30 @@ export default function ReferenceScreen() {
       <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} title={editingNote ? 'Edit Note' : 'New Note'}>
         <div className="flex flex-col gap-[var(--space-md)]">
           <div>
-            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Title</label>
+            <label
+              htmlFor="reference-note-title"
+              className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]"
+            >
+              Title
+            </label>
             <input
+              id="reference-note-title"
+              aria-label="Title"
               value={title}
               onChange={e => setTitle(e.target.value)}
               className={inputClasses}
             />
           </div>
           <div>
-            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Content</label>
+            <label
+              htmlFor="reference-note-content"
+              className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]"
+            >
+              Content
+            </label>
             <textarea
+              id="reference-note-content"
+              aria-label="Content"
               value={content}
               onChange={e => setContent(e.target.value)}
               rows={8}

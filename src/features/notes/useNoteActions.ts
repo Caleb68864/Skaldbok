@@ -4,8 +4,14 @@ import { useToast } from '../../context/ToastContext';
 import * as noteRepository from '../../storage/repositories/noteRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
 import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
-import { listBySession as listEncountersBySession } from '../../storage/repositories/encounterRepository';
+import { getActiveEncounterForSession } from '../../storage/repositories/encounterRepository';
 import type { Note } from '../../types/note';
+import { generateSoftDeleteTxId } from '../../utils/softDelete';
+import {
+  buildNoteRecord,
+  persistCanonicalNoteLinks,
+  resolveEncounterAttachmentTarget,
+} from './noteCreationService';
 
 /**
  * Shape of data required when creating a new note via {@link useNoteActions.createNote}.
@@ -78,70 +84,35 @@ export function useNoteActions() {
       return undefined;
     }
     try {
-      const note = await noteRepository.createNote({
-        scope: 'campaign',
-        ...data,
+      const noteDraft = buildNoteRecord({
         campaignId: activeCampaign.id,
         sessionId: activeSession?.id,
-      } as Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>);
+        title: data.title,
+        type: data.type,
+        body: data.body,
+        typeData: data.typeData,
+        status: data.status,
+        pinned: data.pinned,
+        tags: data.tags,
+        visibility: data.visibility,
+        scope: data.scope ?? 'campaign',
+      });
+      const note = await noteRepository.createNote(noteDraft);
 
-      // Auto-link to active session
-      if (activeSession) {
-        // session → note ("contains")
-        const existingContains = await entityLinkRepository.getLinksFrom(activeSession.id, 'contains');
-        const alreadyLinked = existingContains.some(l => l.toEntityId === note.id);
-        if (!alreadyLinked) {
-          await entityLinkRepository.createLink({
-            fromEntityId: activeSession.id,
-            fromEntityType: 'session',
-            toEntityId: note.id,
-            toEntityType: 'note',
-            relationshipType: 'contains',
-          });
-        }
+      const encounterId = await resolveEncounterAttachmentTarget({
+        sessionId: activeSession?.id,
+        targetEncounterId: options?.targetEncounterId,
+        resolveActiveEncounterId: async (sessionId) => {
+          const encounter = await getActiveEncounterForSession(sessionId);
+          return encounter?.id ?? null;
+        },
+      });
 
-        // Encounter linkage: honor an explicit targetEncounterId override if
-        // provided (Sub-Spec 8), otherwise fall back to the legacy
-        // auto-attach-to-active-encounter behavior.
-        try {
-          let attachEncounterId: string | null = null;
-          if (options && options.targetEncounterId === null) {
-            attachEncounterId = null;
-          } else if (options && typeof options.targetEncounterId === 'string') {
-            attachEncounterId = options.targetEncounterId;
-          } else {
-            const encounters = await listEncountersBySession(activeSession.id);
-            const activeEncounter = encounters.find(e => e.status === 'active');
-            attachEncounterId = activeEncounter?.id ?? null;
-          }
-          if (attachEncounterId) {
-            await entityLinkRepository.createLink({
-              fromEntityId: attachEncounterId,
-              fromEntityType: 'encounter',
-              toEntityId: note.id,
-              toEntityType: 'note',
-              relationshipType: 'contains',
-            });
-          }
-        } catch (linkErr) {
-          console.warn('useNoteActions: encounter auto-link failed', linkErr);
-        }
-
-        // NPC: note → session ("introduced_in")
-        if (note.type === 'npc') {
-          const existingIntroduced = await entityLinkRepository.getLinksFrom(note.id, 'introduced_in');
-          const alreadyIntroduced = existingIntroduced.some(l => l.toEntityId === activeSession.id);
-          if (!alreadyIntroduced) {
-            await entityLinkRepository.createLink({
-              fromEntityId: note.id,
-              fromEntityType: 'note',
-              toEntityId: activeSession.id,
-              toEntityType: 'session',
-              relationshipType: 'introduced_in',
-            });
-          }
-        }
-      }
+      await persistCanonicalNoteLinks({
+        note,
+        sessionId: activeSession?.id,
+        encounterId,
+      });
 
       return note;
     } catch (e) {
@@ -169,29 +140,29 @@ export function useNoteActions() {
   }, [showToast]);
 
   /**
-   * Deletes a note along with all of its entity links and attachments.
+   * Soft-deletes a note along with its entity links and removes attachments.
    *
    * @remarks
-   * Deletion is cascaded in order: entity links first, then attachments,
-   * then the note record itself.
+   * User-facing note deletion follows the app-wide soft-delete convention.
+   * Entity links share a cascade transaction id with the note so future
+   * restore flows can rehydrate the relationship graph atomically. Attachments
+   * are still removed because they do not currently participate in the
+   * domain-level soft-delete model.
    *
    * @param id - ID of the note to delete.
    */
   const deleteNote = useCallback(async (id: string): Promise<void> => {
     try {
-      await entityLinkRepository.deleteLinksForNote(id);
+      const txId = generateSoftDeleteTxId();
+      await entityLinkRepository.deleteLinksForNote(id, txId);
       await attachmentRepository.deleteAttachmentsByNote(id);
-      await noteRepository.deleteNote(id);
+      await noteRepository.softDelete(id, txId);
     } catch (e) {
       showToast('Failed to delete note');
       console.error('useNoteActions.deleteNote failed:', e);
     }
   }, [showToast]);
 
-  /**
-   * Links a note to a session with a `linked_to` relationship, deduplicating
-   * if the link already exists.
-   *
   /**
    * Marks a note as pinned.
    *

@@ -1,6 +1,9 @@
 {
   "project_name": "Skaldbok",
-  "start_command": "C:\\Users\\CalebBennett\\Documents\\GitHub\\Skaldmark\\build-and-run.bat",
+  "start_command": "C:\\Users\\CalebBennett\\Documents\\GitHub\\Skaldbok\\build-and-run.bat",
   "app_url": "https://localhost:4173",
+  "smoke_command": "npx --yes http-server dist -p 4177 -a 127.0.0.1 --cors -c-1",
+  "smoke_url": "http://127.0.0.1:4177",
+  "smoke_script": "output/playwright/session_smoke.cjs",
   "test_tool": "playwright"
 }

@@ -172,6 +172,40 @@ export async function softDeleteLinksForEncounter(
 }
 
 /**
+ * Soft-delete every edge where the given creature template is source or target.
+ *
+ * @remarks
+ * Mirrors {@link softDeleteLinksForEncounter} exactly. All matched edges share
+ * the provided `txId` so they can be restored together via
+ * {@link restoreLinksForTxId}. Already-deleted edges are left alone.
+ */
+export async function softDeleteLinksForCreature(
+  creatureId: string,
+  txId: string,
+  now: string,
+): Promise<void> {
+  try {
+    const fromLinks = await db.entityLinks.where('fromEntityId').equals(creatureId).toArray();
+    const toLinks = await db.entityLinks.where('toEntityId').equals(creatureId).toArray();
+    const byId = new Map<string, EntityLink>();
+    for (const l of [...fromLinks, ...toLinks]) {
+      if (!(l as EntityLink).deletedAt) {
+        byId.set(l.id, l as EntityLink);
+      }
+    }
+    for (const id of byId.keys()) {
+      await db.entityLinks.update(id, {
+        deletedAt: now,
+        softDeletedBy: txId,
+        updatedAt: now,
+      });
+    }
+  } catch (e) {
+    throw new Error(`entityLinkRepository.softDeleteLinksForCreature failed: ${e}`);
+  }
+}
+
+/**
  * Restore every edge that was soft-deleted in the given transaction.
  *
  * @remarks

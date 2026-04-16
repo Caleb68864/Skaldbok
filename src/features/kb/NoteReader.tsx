@@ -18,6 +18,7 @@ import { DescriptorMention } from '../notes/descriptorMentionExtension';
 import Mention from '@tiptap/extension-mention';
 import { getNoteById, createNote } from '../../storage/repositories/noteRepository';
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
+import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
 import { useForwardLinks } from './KnowledgeBaseContext';
 import { BacklinksPanel } from './BacklinksPanel';
 import { PeekCard } from './PeekCard';
@@ -25,6 +26,7 @@ import { db } from '../../storage/db/client';
 import type { Note } from '../../types/note';
 import type { Attachment } from '../../types/attachment';
 import type { KBNode } from '../../storage/db/client';
+import { buildNoteRecord, persistCanonicalNoteLinks } from '../notes/noteCreationService';
 
 interface NoteReaderProps {
   noteId: string;
@@ -134,13 +136,49 @@ export function NoteReader({ noteId }: NoteReaderProps) {
     }
   }, [editor, note]);
 
+  const handleUnresolvedClick = useCallback(
+    async (label: string) => {
+      const confirmed = window.confirm(
+        `Note "${label}" not found. Create it?`
+      );
+      if (!confirmed || !note) return;
+
+      try {
+        const encounterContainerLinks = await entityLinkRepository.getLinksTo(note.id, 'contains');
+        const encounterId =
+          encounterContainerLinks.find((link) => link.fromEntityType === 'encounter')?.fromEntityId ?? null;
+        const noteDraft = buildNoteRecord({
+          campaignId: note.campaignId,
+          sessionId: note.sessionId,
+          title: label,
+          body: null,
+          type: 'generic',
+          typeData: {},
+          status: 'active',
+          pinned: false,
+          scope: 'campaign',
+        });
+        const newNote = await createNote(noteDraft);
+        await persistCanonicalNoteLinks({
+          note: newNote,
+          sessionId: note.sessionId,
+          encounterId,
+        });
+        navigate(`/kb/note-${newNote.id}`);
+      } catch (err) {
+        if (import.meta.env.DEV) console.warn('[NoteReader] Failed to create note', err);
+      }
+    },
+    [note, navigate]
+  );
+
   // Handle clicks on wikilink nodes in the editor
   useEffect(() => {
     if (!editor) return;
 
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      const wikiLink = target.closest('[data-type="wiki-link"]');
+      const wikiLink = target.closest<HTMLElement>('.wiki-link, [data-type="wiki-link"]');
       if (!wikiLink) return;
 
       event.preventDefault();
@@ -162,34 +200,7 @@ export function NoteReader({ noteId }: NoteReaderProps) {
     return () => {
       editorDom.removeEventListener('click', handleClick);
     };
-  }, [editor, navigate]);
-
-  const handleUnresolvedClick = useCallback(
-    async (label: string) => {
-      const confirmed = window.confirm(
-        `Note "${label}" not found. Create it?`
-      );
-      if (!confirmed || !note) return;
-
-      try {
-        const newNote = await createNote({
-          campaignId: note.campaignId,
-          sessionId: note.sessionId,
-          title: label,
-          body: null,
-          type: 'generic',
-          typeData: {},
-          status: 'active',
-          pinned: false,
-          scope: 'campaign',
-        });
-        navigate(`/kb/note-${newNote.id}`);
-      } catch (err) {
-        if (import.meta.env.DEV) console.warn('[NoteReader] Failed to create note', err);
-      }
-    },
-    [note, navigate]
-  );
+  }, [editor, handleUnresolvedClick, navigate]);
 
   if (notFound) {
     return (
