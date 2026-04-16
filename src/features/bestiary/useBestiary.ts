@@ -8,15 +8,18 @@ export type CategoryFilter = 'all' | 'monster' | 'npc' | 'animal';
  * Hook for managing the bestiary UI state: loading, searching, filtering,
  * and CRUD operations on creature templates for a given campaign.
  *
+ * Soft-deleted templates never appear here — they live exclusively on the
+ * Trash screen at /bestiary/trash.
+ *
  * @param campaignId - The active campaign's ID. Templates are scoped to this campaign.
  */
 export function useBestiary(campaignId: string) {
   const [templates, setTemplates] = useState<CreatureTemplate[]>([]);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
-  const [showArchived, setShowArchived] = useState(false);
 
   const loadTemplates = useCallback(async () => {
+    // listByCampaign already filters deletedAt via excludeDeleted.
     const all = await creatureTemplateRepository.listByCampaign(campaignId);
     setTemplates(all);
   }, [campaignId]);
@@ -26,8 +29,6 @@ export function useBestiary(campaignId: string) {
   }, [loadTemplates]);
 
   const filtered = templates.filter((t) => {
-    if (!showArchived && t.status === 'archived') return false;
-    if (showArchived && t.status !== 'archived') return false;
     if (categoryFilter !== 'all' && t.category !== categoryFilter) return false;
     if (search) {
       const q = search.toLowerCase();
@@ -55,9 +56,9 @@ export function useBestiary(campaignId: string) {
     [loadTemplates]
   );
 
-  const archive = useCallback(
+  const softDelete = useCallback(
     async (id: string) => {
-      await creatureTemplateRepository.archive(id);
+      await creatureTemplateRepository.softDelete(id);
       await loadTemplates();
     },
     [loadTemplates]
@@ -70,11 +71,9 @@ export function useBestiary(campaignId: string) {
     setSearch,
     categoryFilter,
     setCategoryFilter,
-    showArchived,
-    setShowArchived,
     create,
     update,
-    archive,
+    softDelete,
     refresh: loadTemplates,
   };
 }
