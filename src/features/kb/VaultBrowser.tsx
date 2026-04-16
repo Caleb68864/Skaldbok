@@ -25,6 +25,9 @@ interface VaultBrowserProps {
   sessionId?: string;
   typeFilter?: string;
   compact?: boolean;
+  searchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
+  refreshToken?: number;
 }
 
 const CATEGORY_TABS = [
@@ -40,10 +43,13 @@ export function VaultBrowser({
   sessionId,
   typeFilter,
   compact,
+  searchQuery: controlledSearchQuery,
+  onSearchQueryChange,
+  refreshToken = 0,
 }: VaultBrowserProps) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>(typeFilter ?? 'all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [nodes, setNodes] = useState<KBNode[]>([]);
   const [linkCounts, setLinkCounts] = useState<Record<string, number>>({});
@@ -53,6 +59,13 @@ export function VaultBrowser({
   const [displayCount, setDisplayCount] = useState(50);
   const searchResults = useKBSearch(debouncedQuery, campaignId);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchQuery = controlledSearchQuery ?? internalSearchQuery;
+  const setSearchQuery = useCallback((nextQuery: string) => {
+    if (controlledSearchQuery === undefined) {
+      setInternalSearchQuery(nextQuery);
+    }
+    onSearchQueryChange?.(nextQuery);
+  }, [controlledSearchQuery, onSearchQueryChange]);
 
   // Debounce search query (200ms)
   useEffect(() => {
@@ -112,7 +125,7 @@ export function VaultBrowser({
     return () => {
       mounted = false;
     };
-  }, [campaignId, sessionId]);
+  }, [campaignId, refreshToken, sessionId]);
 
   // Load link counts for visible nodes
   useEffect(() => {

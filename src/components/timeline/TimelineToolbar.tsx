@@ -1,5 +1,6 @@
 import { startTransition } from 'react';
 import {
+  Plus,
   Eye,
   Filter,
   ListFilter,
@@ -49,6 +50,8 @@ interface TimelineToolbarProps {
   onZoomIn: () => void;
   onZoomOut: () => void;
   onReset: () => void;
+  onAddItem?: () => void;
+  addItemLabel?: string;
 }
 
 function renderToggleLabel(label: string, active: boolean) {
@@ -81,6 +84,8 @@ export function TimelineToolbar({
   onZoomIn,
   onZoomOut,
   onReset,
+  onAddItem,
+  addItemLabel = 'Add to Timeline',
 }: TimelineToolbarProps) {
   return (
     <div className="flex flex-col gap-4 rounded-[var(--radius-lg)] border border-border bg-surface px-4 py-4 texture-card-bevel">
@@ -92,6 +97,12 @@ export function TimelineToolbar({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          {onAddItem ? (
+            <Button variant="default" size="sm" type="button" onClick={onAddItem}>
+              <Plus className="h-4 w-4" />
+              {addItemLabel}
+            </Button>
+          ) : null}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" type="button">

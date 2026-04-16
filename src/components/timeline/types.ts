@@ -183,4 +183,6 @@ export interface TimelineRootProps {
   showDetailsPanel?: boolean;
   showNowMarker?: boolean;
   now?: TimelineDateInput;
+  onAddItem?: () => void;
+  addItemLabel?: string;
 }

@@ -163,13 +163,13 @@ export function GlobalFAB() {
       {menuOpen && (
         <div
           onClick={() => setMenuOpen(false)}
-          className="fixed inset-0 z-[99]"
+          className="fixed inset-0 z-40"
         />
       )}
 
       {/* Action menu */}
       {menuOpen && (
-        <div className="fixed bottom-[136px] right-4 z-[100] flex flex-col gap-2 items-end">
+        <div className="fixed bottom-[136px] right-4 z-40 flex flex-col gap-2 items-end">
           {ACTION_ITEMS.map(item => {
             const Icon = item.icon;
             return (
@@ -191,7 +191,7 @@ export function GlobalFAB() {
         onClick={handleFABPress}
         aria-label={activeSession ? 'Open quick actions' : 'Start a session first'}
         className={cn(
-          'fixed bottom-[68px] right-4 z-[100] w-14 h-14 rounded-full bg-accent text-[var(--color-on-accent,#fff)] border-none shadow-[0_4px_16px_rgba(0,0,0,0.3)] cursor-pointer flex items-center justify-center transition-transform',
+          'fixed bottom-[68px] right-4 z-40 w-14 h-14 rounded-full bg-accent text-[var(--color-on-accent,#fff)] border-none shadow-[0_4px_16px_rgba(0,0,0,0.3)] cursor-pointer flex items-center justify-center transition-transform',
           menuOpen && 'rotate-45',
         )}
       >

@@ -1,0 +1,43 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - button [expanded]:
+          - generic:
+            - generic: No campaign
+          - img
+        - button:
+          - img
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - button:
+                - img
+              - heading [level=1]: Character Library
+            - generic:
+              - button: Import Character
+              - button: + New Character
+          - generic:
+            - paragraph: No characters yet. Create your first character to get started.
+            - button: Create your first character
+      - navigation:
+        - link:
+          - /url: /character/sheet
+          - img
+          - text: Characters
+        - link:
+          - /url: /session
+          - img
+          - text: Session
+        - link:
+          - /url: /reference
+          - img
+          - text: Reference
+      - button:
+        - img
+    - alert
+  - menu "Select campaign" [active] [ref=e40]:
+    - generic [ref=e41]: No campaigns yet
+    - separator [ref=e42]
+    - menuitem "+ Create Campaign" [ref=e43] [cursor=pointer]

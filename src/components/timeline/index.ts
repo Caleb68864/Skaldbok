@@ -12,8 +12,5 @@ export * from './TimelineNowMarker';
 export * from './TimelineLegend';
 export * from './TimelineDetailsPanel';
 export * from './TimelineEmptyState';
-export * from './TimelineExample';
-export * from './mockData';
 export * from './hooks/useTimelineLayout';
 export * from './hooks/useTimelineState';
-export * from './adapters/notesToTimeline';

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { type ReactNode, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronDown, Download, Ellipsis, Menu } from 'lucide-react';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { EndSessionModal } from '../features/campaign/EndSessionModal';
@@ -17,6 +18,15 @@ import {
 } from '../features/session/SessionEncounterContext';
 import { SessionTimelinePanel } from '../features/session/SessionTimelinePanel';
 import { TiptapNoteEditor } from '../components/notes/TiptapNoteEditor';
+import { Button } from '../components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 import { getSessionsByCampaign } from '../storage/repositories/sessionRepository';
 import { getNotesBySession } from '../storage/repositories/noteRepository';
 import * as encounterRepository from '../storage/repositories/encounterRepository';
@@ -41,6 +51,90 @@ function formatDate(iso: string): string {
 
 const actionBtnClass = "min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-medium whitespace-nowrap";
 const primaryBtnClass = "min-h-11 min-w-11 px-5 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer whitespace-nowrap";
+
+interface PastSessionsSectionProps {
+  sessions: Session[];
+  onExportMarkdown: (sessionId: string) => void;
+  onExportBundle: (sessionId: string) => void;
+}
+
+function PastSessionsSection({ sessions, onExportMarkdown, onExportBundle }: PastSessionsSectionProps) {
+  if (sessions.length === 0) {
+    return null;
+  }
+
+  return (
+    <details className="group rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)]/70">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[var(--color-text)]">
+        <div>
+          <p className="m-0 text-sm font-semibold">Past Sessions</p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">
+            {sessions.length} archived session{sessions.length === 1 ? '' : 's'}
+          </p>
+        </div>
+        <ChevronDown className="h-4 w-4 shrink-0 text-[var(--color-text-muted)] transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="border-t border-[var(--color-border)] px-3 py-3">
+        <div className="flex flex-col gap-2">
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]/70 p-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="mb-0.5 truncate font-semibold text-[var(--color-text)]">
+                    {session.title}
+                  </p>
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    {formatDate(session.date)}
+                  </p>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" size="icon" aria-label={`Session actions for ${session.title}`}>
+                      <Ellipsis className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Session Exports</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => onExportMarkdown(session.id)}>
+                      Export Markdown
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => onExportBundle(session.id)}>
+                      Export ZIP Bundle
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function WorkspacePanel({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)]/70 p-4 texture-card-bevel">
+      <div className="mb-3">
+        <p className="m-0 text-sm font-semibold text-[var(--color-text)]">{title}</p>
+        <p className="mt-1 text-sm text-[var(--color-text-muted)]">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
 
 export function SessionScreen() {
   const { activeCampaign, activeSession } = useCampaignContext();
@@ -211,6 +305,12 @@ function ActiveSessionContent() {
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
   const [timelineRefreshToken, setTimelineRefreshToken] = useState(0);
+  const [sessionNotesRefreshToken, setSessionNotesRefreshToken] = useState(0);
+  const [timelineSearchText, setTimelineSearchText] = useState('');
+  const [quickLogAttachTo, setQuickLogAttachTo] = useState<'auto' | string | null>('auto');
+  const [quickLogContextLabel, setQuickLogContextLabel] = useState<string | null>(activeSession?.title ?? null);
+  const [requestedQuickLogAction, setRequestedQuickLogAction] = useState<string | null>(null);
+  const [quickLogRequestNonce, setQuickLogRequestNonce] = useState(0);
 
   const { encounters, refresh: refreshEncounters } = useEncounterList(activeSession?.id ?? null);
   const {
@@ -323,6 +423,11 @@ function ActiveSessionContent() {
 
   if (!activeCampaign || !activeSession) return null;
 
+  const openQuickLogAction = (actionId: string) => {
+    setRequestedQuickLogAction(actionId);
+    setQuickLogRequestNonce((currentNonce) => currentNonce + 1);
+  };
+
   // Show full encounter screen when viewing one. The EncounterScreen sits
   // INSIDE the SessionEncounterProvider so it can call endEncounter via the
   // context.
@@ -369,34 +474,81 @@ function ActiveSessionContent() {
       </div>
 
       <div className="bg-[var(--color-surface-raised)] rounded-lg p-4 mb-4">
-        <div className="flex justify-between items-baseline mb-1">
-          <h3 className="text-[var(--color-text)] m-0">{activeSession.title}</h3>
-          {elapsed && (
-            <span className="text-[var(--color-accent)] text-sm font-semibold tabular-nums">
-              {elapsed}
-            </span>
-          )}
+        <div className="mb-1 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-[var(--color-text)] m-0">{activeSession.title}</h3>
+            <p className="text-[var(--color-text-muted)] mb-3 text-sm">
+              Started: {formatDateTime(activeSession.startedAt)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {elapsed && (
+              <span className="text-[var(--color-accent)] text-sm font-semibold tabular-nums">
+                {elapsed}
+              </span>
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="outline" size="icon" aria-label="Session actions">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Session Actions</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => exportSessionMarkdown(activeSession.id)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Session Markdown
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => exportSessionBundle(activeSession.id)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export Notes ZIP
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => exportSessionSkaldmark(activeSession.id, false)}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Export .skaldbok
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-        <p className="text-[var(--color-text-muted)] mb-3 text-sm">
-          Started: {formatDateTime(activeSession.startedAt)}
-        </p>
+
         <div className="flex gap-3 flex-wrap">
           <button onClick={handleEndSession} className={primaryBtnClass}>
             End Session
           </button>
-          <button onClick={() => exportSessionMarkdown(activeSession.id)} className={actionBtnClass}>
-            Export Session
-          </button>
-          <button onClick={() => exportSessionBundle(activeSession.id)} className={actionBtnClass}>
-            Export + Notes (ZIP)
-          </button>
-          <button onClick={() => exportSessionSkaldmark(activeSession.id, false)} className={actionBtnClass}>
-            Export (.skaldbok)
-          </button>
         </div>
 
-        <div className="mt-4">
-          <SessionQuickActions onLogComplete={() => setTimelineRefreshToken((currentToken) => currentToken + 1)} />
+        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.9fr)]">
+          <WorkspacePanel
+            title="Quick Log"
+            description="Capture beats as they happen. New entries appear in the timeline right away."
+          >
+            <SessionQuickActions
+              onLogComplete={() => {
+                setTimelineRefreshToken((currentToken) => currentToken + 1);
+                setSessionNotesRefreshToken((currentToken) => currentToken + 1);
+              }}
+              preferredAttachTo={quickLogAttachTo}
+              contextLabel={quickLogContextLabel}
+              requestedAction={requestedQuickLogAction}
+              requestNonce={quickLogRequestNonce}
+            />
+          </WorkspacePanel>
+
+          <WorkspacePanel
+            title="Session Notes"
+            description="Search and reopen notes from this session without breaking flow."
+          >
+            <VaultBrowser
+              campaignId={activeCampaign.id}
+              sessionId={activeSession.id}
+              compact
+              searchQuery={timelineSearchText}
+              onSearchQueryChange={setTimelineSearchText}
+              refreshToken={sessionNotesRefreshToken}
+            />
+          </WorkspacePanel>
         </div>
       </div>
 
@@ -412,6 +564,13 @@ function ActiveSessionContent() {
           setTimelineRefreshToken((currentToken) => currentToken + 1);
         }}
         onOpenNote={(noteId) => navigate(`/note/${noteId}/edit`)}
+        searchText={timelineSearchText}
+        onSearchTextChange={setTimelineSearchText}
+        onSelectionContextChange={(context) => {
+          setQuickLogAttachTo(context.attachTo);
+          setQuickLogContextLabel(context.label);
+        }}
+        onAddToTimeline={() => openQuickLogAction('note')}
         refreshToken={timelineRefreshToken}
       />
 
@@ -548,50 +707,15 @@ function ActiveSessionContent() {
         </div>
       )}
 
-      {/* Past sessions list */}
-      {!loadingPast && pastSessions.length > 0 && (
-        <div>
-          <h3 className="text-[var(--color-text)] mb-2">Past Sessions</h3>
-          {pastSessions.map(session => (
-            <div
-              key={session.id}
-              className="bg-[var(--color-surface-raised)] rounded-lg p-3 mb-2"
-            >
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-[var(--color-text)] font-semibold mb-0.5">
-                    {session.title}
-                  </p>
-                  <p className="text-[var(--color-text-muted)] text-xs">
-                    {formatDate(session.date)}
-                  </p>
-                </div>
-                <div className="flex gap-3 shrink-0">
-                  <button
-                    onClick={() => exportSessionMarkdown(session.id)}
-                    className="min-h-11 px-3 py-1.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
-                  >
-                    .md
-                  </button>
-                  <button
-                    onClick={() => exportSessionBundle(session.id)}
-                    className="min-h-11 px-3 py-1.5 bg-transparent border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] cursor-pointer text-xs"
-                  >
-                    .zip
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
+      {!loadingPast ? (
+        <div className="mt-6">
+          <PastSessionsSection
+            sessions={pastSessions}
+            onExportMarkdown={exportSessionMarkdown}
+            onExportBundle={exportSessionBundle}
+          />
         </div>
-      )}
-
-      {/* Vault Browser (compact mode — session-scoped notes) */}
-      <VaultBrowser
-        campaignId={activeCampaign.id}
-        sessionId={activeSession.id}
-        compact
-      />
+      ) : null}
 
       {showEndConfirm && (
         <EndSessionModal
