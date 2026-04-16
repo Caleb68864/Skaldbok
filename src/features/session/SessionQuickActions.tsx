@@ -194,7 +194,7 @@ export function SessionQuickActions({
   const [shopQuantity, setShopQuantity] = useState(1);
 
   const openAction = useCallback((actionId: string) => {
-    setAttachTo(preferredAttachTo);
+    setAttachTo(actionId === 'loot' ? null : preferredAttachTo);
     setActiveDrawer(actionId);
   }, [preferredAttachTo]);
 

@@ -33,21 +33,14 @@ import { getNotesBySession } from '../storage/repositories/noteRepository';
 import * as encounterRepository from '../storage/repositories/encounterRepository';
 import type { Session } from '../types/session';
 import type { Note } from '../types/note';
+import { formatLocalDateOnly, formatLocalDateTime } from '../utils/dates';
 
 function formatDateTime(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+  return formatLocalDateTime(iso);
 }
 
 function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString();
-  } catch {
-    return iso;
-  }
+  return formatLocalDateOnly(iso);
 }
 
 const actionBtnClass = "min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-medium whitespace-nowrap";

@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import * as creatureTemplateRepository from '../../storage/repositories/creatureTemplateRepository';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
+import type { CharacterRecord } from '../../types/character';
+import { useCampaignContext } from '../campaign/CampaignContext';
+import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 
 export interface EncounterParticipantPickerProps {
-  /** Called with the selected (or newly-created) creature template. */
-  onSelect: (template: CreatureTemplate) => Promise<void> | void;
+  /** Called with the selected party character or creature template. */
+  onSelect: (template: CreatureTemplate | CharacterRecord) => Promise<void> | void;
   /** The campaign id needed to create new bestiary entries inline. */
   campaignId: string;
   /** Called when the picker should close (submitted or cancelled). */
@@ -18,9 +21,11 @@ export function EncounterParticipantPicker({
   campaignId,
   onClose,
 }: EncounterParticipantPickerProps) {
+  const { activeCampaign, activeParty } = useCampaignContext();
   const [mode, setMode] = useState<Mode>('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CreatureTemplate[]>([]);
+  const [partyResults, setPartyResults] = useState<CharacterRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,13 +40,33 @@ export function EncounterParticipantPicker({
     const load = async () => {
       setLoading(true);
       try {
-        const all = await creatureTemplateRepository.listByCampaign(campaignId);
+        const [all, partyCharacters] = await Promise.all([
+          creatureTemplateRepository.listByCampaign(campaignId),
+          activeCampaign?.id === campaignId && activeParty
+            ? Promise.all(
+                activeParty.members
+                  .filter((member) => !!member.linkedCharacterId)
+                  .map(async (member) => {
+                    const characterId = member.linkedCharacterId;
+                    if (!characterId) return undefined;
+                    return getCharacterById(characterId);
+                  }),
+              )
+            : Promise.resolve([]),
+        ]);
         if (cancelled) return;
         const trimmed = query.trim().toLowerCase();
         const filtered = trimmed
           ? all.filter((t) => t.name.toLowerCase().includes(trimmed))
           : all;
+        const filteredParty = partyCharacters
+          .filter((record): record is CharacterRecord => record !== undefined)
+          .filter((record) => {
+            if (!trimmed) return true;
+            return record.name.toLowerCase().includes(trimmed);
+          });
         setResults(filtered);
+        setPartyResults(filteredParty);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -50,10 +75,10 @@ export function EncounterParticipantPicker({
     return () => {
       cancelled = true;
     };
-  }, [campaignId, query]);
+  }, [activeCampaign?.id, activeParty, campaignId, query]);
 
   const handleSelectExisting = useCallback(
-    async (template: CreatureTemplate) => {
+    async (template: CreatureTemplate | CharacterRecord) => {
       setSubmitting(true);
       try {
         await onSelect(template);
@@ -169,20 +194,47 @@ export function EncounterParticipantPicker({
         <div className="text-sm text-neutral-500 py-2">Searching…</div>
       ) : (
         <ul className="flex flex-col gap-1 max-h-64 overflow-auto">
-          {results.map((t) => (
-            <li key={t.id}>
-              <button
-                type="button"
-                onClick={() => handleSelectExisting(t)}
-                disabled={submitting}
-                className="w-full text-left px-2 py-1 text-sm hover:bg-neutral-100 rounded"
-              >
-                <span className="font-medium">{t.name}</span>
-                <span className="ml-2 text-xs text-neutral-500">{t.category}</span>
-              </button>
-            </li>
-          ))}
-          {results.length === 0 && !loading && (
+          {partyResults.length > 0 && (
+            <>
+              <li className="px-2 pt-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                Party Characters
+              </li>
+              {partyResults.map((character) => (
+                <li key={character.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectExisting(character)}
+                    disabled={submitting}
+                    className="w-full text-left px-2 py-1 text-sm hover:bg-neutral-100 rounded"
+                  >
+                    <span className="font-medium">{character.name}</span>
+                    <span className="ml-2 text-xs text-neutral-500">pc</span>
+                  </button>
+                </li>
+              ))}
+            </>
+          )}
+          {results.length > 0 && (
+            <>
+              <li className="px-2 pt-1 text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+                Bestiary
+              </li>
+              {results.map((t) => (
+                <li key={t.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectExisting(t)}
+                    disabled={submitting}
+                    className="w-full text-left px-2 py-1 text-sm hover:bg-neutral-100 rounded"
+                  >
+                    <span className="font-medium">{t.name}</span>
+                    <span className="ml-2 text-xs text-neutral-500">{t.category}</span>
+                  </button>
+                </li>
+              ))}
+            </>
+          )}
+          {partyResults.length === 0 && results.length === 0 && !loading && (
             <li className="text-xs text-neutral-500 px-2 py-1">No matches</li>
           )}
         </ul>

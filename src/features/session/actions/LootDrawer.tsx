@@ -56,7 +56,7 @@ export function LootDrawer({ open, onClose, members, selectedMembers, onSelectMe
   const { showToast } = useToast();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
   const [lootName, setLootName] = useState('');
-  const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
+  const [attachTo, setAttachTo] = useState<AttachToValue>(null);
 
   /** Returns the display label for the current member selection. */
   const selectedNames = () => {
@@ -68,7 +68,7 @@ export function LootDrawer({ open, onClose, members, selectedMembers, onSelectMe
   /** Resets the loot name field and closes the drawer. */
   const handleClose = () => {
     setLootName('');
-    setAttachTo('auto');
+    setAttachTo(null);
     onClose();
   };
 
