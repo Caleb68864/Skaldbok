@@ -134,7 +134,21 @@ export function TimelineRoot({
             onZoomIn={state.zoomIn}
             onZoomOut={state.zoomOut}
             onReset={state.resetView}
-            onAddItem={onAddItem}
+            onAddItem={
+              onAddItem
+                ? () => {
+                    // Clear any current item selection before firing the
+                    // consumer's callback. Otherwise TimelineDetailsPanel
+                    // (a Sheet) stays open and a sibling Sheet opened by
+                    // the callback (e.g. the FAB's Quick Log drawer)
+                    // overlaps or renders behind it. Selection clears
+                    // synchronously so only one sheet is open when the
+                    // callback fires.
+                    state.selectItem(null);
+                    onAddItem();
+                  }
+                : undefined
+            }
             addItemLabel={addItemLabel}
           />
         ) : null}
