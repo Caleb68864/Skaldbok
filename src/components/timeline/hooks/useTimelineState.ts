@@ -69,9 +69,15 @@ function buildInitialFilterState(
     .filter((track) => !track.visible)
     .map((track) => track.id);
 
+  // Default-collapse any track whose catalog entry marked it `collapsed`.
+  const defaultCollapsed = tracks
+    .filter((track) => track.collapsed === true)
+    .map((track) => track.id);
+
   return {
     visibleTrackIds: trackIds.filter((trackId) => !hiddenTrackIds.includes(trackId)),
     hiddenTrackIds,
+    collapsedTrackIds: initialFilterState?.collapsedTrackIds ?? defaultCollapsed,
     includedKinds: initialFilterState?.includedKinds ?? [],
     excludedKinds: initialFilterState?.excludedKinds ?? [],
     searchText: initialFilterState?.searchText ?? '',
@@ -226,6 +232,24 @@ export function useTimelineState({
     [setFilterState, tracks],
   );
 
+  /**
+   * Toggle a parent track between collapsed and expanded. Collapsed parents
+   * hide their children's rows; the children's items aggregate onto the
+   * parent row for a compact summary. See {@link TimelineFilterState.collapsedTrackIds}.
+   */
+  const toggleTrackCollapsed = useCallback(
+    (trackId: string) => {
+      setFilterState((currentState) => {
+        const current = currentState.collapsedTrackIds ?? [];
+        const collapsedTrackIds = current.includes(trackId)
+          ? current.filter((id) => id !== trackId)
+          : [...current, trackId];
+        return { ...currentState, collapsedTrackIds };
+      });
+    },
+    [setFilterState],
+  );
+
   const toggleListValue = useCallback(
     (key: 'includedKinds' | 'tagFilters' | 'statusFilters', value: string) => {
       setFilterState((currentState) => {
@@ -304,6 +328,7 @@ export function useTimelineState({
     selectionState: resolvedSelectionState,
     setSearchText,
     toggleTrack,
+    toggleTrackCollapsed,
     toggleKind: (value: string) => toggleListValue('includedKinds', value),
     toggleTag: (value: string) => toggleListValue('tagFilters', value),
     toggleStatus: (value: string) => toggleListValue('statusFilters', value),

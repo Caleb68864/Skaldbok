@@ -40,6 +40,11 @@ export interface TimelineSelectionState {
 export interface TimelineFilterState {
   visibleTrackIds: string[];
   hiddenTrackIds: string[];
+  /**
+   * Parent track ids that are currently collapsed. A parent in this list
+   * hides its children's rows; their items aggregate onto the parent row.
+   */
+  collapsedTrackIds: string[];
   includedKinds: string[];
   excludedKinds: string[];
   searchText: string;
@@ -60,6 +65,13 @@ export interface TimelineTrack {
   height?: number;
   colorToken?: string;
   icon?: ReactNode | string;
+  /**
+   * Optional parent track id. When set, this track renders as an indented
+   * child under the named parent. When the parent is collapsed (via
+   * {@link TimelineFilterState.collapsedTrackIds}), child rows hide and their
+   * items aggregate onto the parent row for a compact summary view.
+   */
+  parentTrackId?: string;
   metadata?: Record<string, unknown>;
 }
 

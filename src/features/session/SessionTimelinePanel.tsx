@@ -147,6 +147,12 @@ export function SessionTimelinePanel({
   const [timelineFilterState, setTimelineFilterState] = useState<TimelineFilterState>(() => ({
     visibleTrackIds: timelineDataset.tracks.filter((track) => track.visible).map((track) => track.id),
     hiddenTrackIds: timelineDataset.tracks.filter((track) => !track.visible).map((track) => track.id),
+    // Tracks flagged with `collapsed: true` in the dataset start collapsed.
+    // The session adapter uses this for the Notes parent so users see the
+    // compact aggregate by default and can drill in when they want per-type rows.
+    collapsedTrackIds: timelineDataset.tracks
+      .filter((track) => track.collapsed === true)
+      .map((track) => track.id),
     includedKinds: [],
     excludedKinds: [],
     searchText,
