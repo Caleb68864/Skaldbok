@@ -191,7 +191,7 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
       <section>
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold text-[var(--color-text)]">
-            Participants ({participants.length})
+            {encounter.type === 'combat' ? 'Participants' : `Participants (${participants.length})`}
           </h2>
           <button
             type="button"
@@ -201,6 +201,12 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
             Add participant
           </button>
         </div>
+
+        {encounter.type === 'combat' && (
+          <p className="mb-3 text-sm text-[var(--color-text-muted)]">
+            Add party characters or bestiary creatures here. One-off enemies can still be entered with Quick Add inside combat.
+          </p>
+        )}
 
         {/* Combat encounters get the combat view inline. Non-combat types get
             a simple participant list. */}
@@ -336,8 +342,8 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
           >
             <EncounterParticipantPicker
               campaignId={encounter.campaignId}
-              onSelect={async (template) => {
-                await addParticipantFromTemplate(template);
+              onSelect={async (entity) => {
+                await addParticipantFromTemplate(entity);
               }}
               onClose={() => setShowParticipantPicker(false)}
             />

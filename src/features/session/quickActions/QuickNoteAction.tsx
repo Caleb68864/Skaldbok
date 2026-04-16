@@ -89,6 +89,7 @@ export function QuickNoteAction({ campaignId, onClose, onSaved, initialAttachTo 
   const [noteType, setNoteType] = useState<NoteType>('generic');
   const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [attachTouched, setAttachTouched] = useState(false);
 
   // Resolve party members — join with linked CharacterRecord where present so
   // we show the PC name rather than the (often blank) party-member slot name.
@@ -131,6 +132,23 @@ export function QuickNoteAction({ campaignId, onClose, onSaved, initialAttachTo 
     });
     return () => { cancelled = true; };
   }, [campaignId]);
+
+  useEffect(() => {
+    setAttachTo(initialAttachTo);
+    setAttachTouched(false);
+  }, [initialAttachTo]);
+
+  useEffect(() => {
+    if (attachTouched) return;
+    if (initialAttachTo !== 'auto') return;
+
+    if (noteType === 'loot' || noteType === 'recap') {
+      setAttachTo(null);
+      return;
+    }
+
+    setAttachTo('auto');
+  }, [attachTouched, initialAttachTo, noteType]);
 
   const [selectedMentionIds, setSelectedMentionIds] = useState<string[]>([]);
   const toggleMention = (id: string) =>
@@ -284,7 +302,14 @@ export function QuickNoteAction({ campaignId, onClose, onSaved, initialAttachTo 
       )}
 
       {/* Attach-to */}
-      <AttachToControl value={attachTo} onChange={setAttachTo} defaultValue={initialAttachTo} />
+      <AttachToControl
+        value={attachTo}
+        onChange={(value) => {
+          setAttachTouched(true);
+          setAttachTo(value);
+        }}
+        defaultValue={initialAttachTo}
+      />
 
       {/* Actions */}
       <div className="flex justify-end gap-2">

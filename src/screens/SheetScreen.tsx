@@ -651,6 +651,15 @@ export default function SheetScreen() {
     <div className="p-[var(--space-sm)]">
       {saveError && <div className="text-[var(--color-danger)] mb-[var(--space-sm)] text-[length:var(--font-size-sm)]">{saveError}</div>}
 
+      {isPlayMode && (
+        <div className="mb-[var(--space-sm)] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-[var(--space-md)] py-[var(--space-sm)]">
+          <p className="m-0 text-sm font-semibold text-[var(--color-text)]">Play Mode is on</p>
+          <p className="mt-1 text-sm text-[var(--color-text-muted)]">
+            Identity and attribute prep fields are locked. Use the top menu&apos;s mode switch to return to Edit Mode when you want to change build details.
+          </p>
+        </div>
+      )}
+
       {isEditMode && (
         <div className="flex justify-end gap-3 mb-[var(--space-sm)]">
           {reorderMode && (

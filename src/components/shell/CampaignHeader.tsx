@@ -132,11 +132,14 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
             <button
               onClick={() => { toggleMode(); setSheetOpen(false); }}
               className={cn(
-                'flex items-center gap-2 w-full text-left px-4 py-3 min-h-[44px] bg-transparent border-none border-b border-border cursor-pointer text-base font-semibold',
+                'flex w-full flex-col items-start gap-1 px-4 py-3 min-h-[44px] bg-transparent border-none border-b border-border cursor-pointer text-base font-semibold',
                 isPlayMode ? 'text-[var(--color-mode-play)]' : 'text-[var(--color-mode-edit)]',
               )}
             >
-              {isPlayMode ? 'PLAY MODE' : 'EDIT MODE'}
+              <span>{isPlayMode ? 'PLAY MODE' : 'EDIT MODE'}</span>
+              <span className="text-sm font-normal text-[var(--color-text-muted)]">
+                {isPlayMode ? 'Switch to Edit Mode to change identity and attributes' : 'Switch to Play Mode to lock prep fields for table use'}
+              </span>
             </button>
 
             <button

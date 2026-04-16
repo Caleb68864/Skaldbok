@@ -34,6 +34,12 @@ interface SessionRefreshContextValue {
    * twice in a row.
    */
   openQuickLog: (actionId?: string | null) => void;
+  /**
+   * Clears the last requested quick-log action so a later remount of the
+   * quick-log surface does not re-open a stale sub-drawer. Call from whoever
+   * closes the drawer.
+   */
+  clearQuickLogRequest: () => void;
   requestedQuickLogAction: string | null;
   requestedQuickLogNonce: number;
 }
@@ -72,6 +78,9 @@ export function SessionRefreshProvider({ children }: { children: ReactNode }) {
     setRequestedQuickLogAction(actionId);
     setRequestedQuickLogNonce((n) => n + 1);
   }, []);
+  const clearQuickLogRequest = useCallback(() => {
+    setRequestedQuickLogAction(null);
+  }, []);
 
   const value = useMemo<SessionRefreshContextValue>(
     () => ({
@@ -81,6 +90,7 @@ export function SessionRefreshProvider({ children }: { children: ReactNode }) {
       bumpSessionNotes,
       bumpAll,
       openQuickLog,
+      clearQuickLogRequest,
       requestedQuickLogAction,
       requestedQuickLogNonce,
     }),
@@ -91,6 +101,7 @@ export function SessionRefreshProvider({ children }: { children: ReactNode }) {
       bumpSessionNotes,
       bumpAll,
       openQuickLog,
+      clearQuickLogRequest,
       requestedQuickLogAction,
       requestedQuickLogNonce,
     ],

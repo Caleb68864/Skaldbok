@@ -12,6 +12,8 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
 import { registerFlush } from '../persistence/autosaveFlush';
+import { useSessionLog } from '../session/useSessionLog';
+import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 
 interface CombatEncounterViewProps {
   encounter: Encounter;
@@ -36,6 +38,8 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   // Map of participant.id -> creatureTemplate.id, sourced from `represents` edges.
   const [participantTemplateMap, setParticipantTemplateMap] = useState<Record<string, string>>({});
   const [showQuickCreate, setShowQuickCreate] = useState(false);
+  const { logToSession } = useSessionLog();
+  const sessionRefresh = useSessionRefreshSafe();
 
   const currentRound = encounter.combatData?.currentRound ?? 1;
   const events = encounter.combatData?.events ?? [];
@@ -116,8 +120,9 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   ) => {
     const participant = participants.find((p) => p.id === participantId);
     if (!participant) return;
+    const prevState = participant.instanceState;
     const updatePromise = encounterRepository.updateParticipant(encounter.id, participantId, {
-      instanceState: { ...participant.instanceState, ...patch },
+      instanceState: { ...prevState, ...patch },
     });
     inFlightParticipantUpdateRef.current = updatePromise
       .catch(() => undefined)
@@ -126,6 +131,57 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       });
     await updatePromise;
     await refresh();
+
+    // Record HP / condition changes as session notes attached to this
+    // encounter so they surface in the timeline and Session Notes panel. HP
+    // edits through the drawer are intentional and infrequent, so we log them
+    // immediately rather than running them through logHPChange's 3s debounce
+    // (which is tuned for character-sheet counter spam, not combat blurs).
+    const templateId = participantTemplateMap[participantId];
+    const template = templateId ? templateCache[templateId] : undefined;
+    const maxHp = template?.stats.hp;
+
+    const notePromises: Promise<unknown>[] = [];
+
+    if (
+      Object.prototype.hasOwnProperty.call(patch, 'currentHp') &&
+      prevState.currentHp !== patch.currentHp
+    ) {
+      const oldHp = prevState.currentHp;
+      const newHp = patch.currentHp;
+      if (typeof oldHp === 'number' && typeof newHp === 'number') {
+        const diff = newHp - oldHp;
+        const suffix = typeof maxHp === 'number' ? ` (${newHp}/${maxHp})` : ` (${newHp} HP)`;
+        const title = diff > 0
+          ? `${participant.name}: Healed ${diff} HP${suffix}`
+          : `${participant.name}: Took ${Math.abs(diff)} damage${suffix}`;
+        notePromises.push(
+          logToSession(title, 'generic', { participant: participant.name, oldHp, newHp, maxHp }, { targetEncounterId: encounter.id }),
+        );
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(patch, 'conditions')) {
+      const prev = new Set(prevState.conditions ?? []);
+      const next = new Set(patch.conditions ?? []);
+      const added = [...next].filter((c) => !prev.has(c));
+      const removed = [...prev].filter((c) => !next.has(c));
+      for (const c of added) {
+        notePromises.push(
+          logToSession(`${participant.name}: Gained ${c}`, 'generic', { participant: participant.name, condition: c }, { targetEncounterId: encounter.id }),
+        );
+      }
+      for (const c of removed) {
+        notePromises.push(
+          logToSession(`${participant.name}: Removed ${c}`, 'generic', { participant: participant.name, condition: c }, { targetEncounterId: encounter.id }),
+        );
+      }
+    }
+
+    if (notePromises.length > 0) {
+      await Promise.allSettled(notePromises);
+      sessionRefresh?.bumpAll();
+    }
   };
 
   // Register with the flush bus so endSession (and other lifecycle operations)
@@ -185,12 +241,6 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
     });
     setShowQuickCreate(false);
     await refresh();
-  };
-
-  const handleEndEncounter = async () => {
-    if (!confirm('End this combat encounter?')) return;
-    await encounterRepository.end(encounter.id);
-    onClose();
   };
 
   return (
@@ -318,16 +368,6 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
         <div className="mb-4">
           <QuickEventAdd onAdd={handleAddEvent} />
         </div>
-      )}
-
-      {/* End encounter */}
-      {encounter.status === 'active' && (
-        <button
-          onClick={handleEndEncounter}
-          className="w-full min-h-11 px-4 py-2 bg-red-600 text-white border-none rounded-lg text-sm font-semibold cursor-pointer"
-        >
-          End Combat
-        </button>
       )}
 
       {/* Participant drawer */}

@@ -13,6 +13,16 @@ import {
   resolveEncounterAttachmentTarget,
 } from './noteCreationService';
 
+// Lazy import to avoid a circular dependency and keep note saves resilient if
+// KB sync ever fails. Mirrors the pattern used in useSessionLog.
+let _syncModule: typeof import('../kb/linkSyncEngine') | null = null;
+async function getSyncModule() {
+  if (!_syncModule) {
+    _syncModule = await import('../kb/linkSyncEngine');
+  }
+  return _syncModule;
+}
+
 /**
  * Shape of data required when creating a new note via {@link useNoteActions.createNote}.
  * Omits fields that are auto-populated by the repository (`id`, `createdAt`,
@@ -113,6 +123,18 @@ export function useNoteActions() {
         sessionId: activeSession?.id,
         encounterId,
       });
+
+      // Create / refresh the note's KB node so session-scoped views that
+      // filter by KB sourceId (VaultBrowser / Session Notes panel) pick it up
+      // on their next refresh. Without this, Quick Log chip actions (skill
+      // checks, damage, conditions, etc.) persist the note but leave the
+      // notes grid stale until a manual rebuild.
+      try {
+        const module = await getSyncModule();
+        await module.syncNote(note.id);
+      } catch {
+        // Note persistence succeeded; KB sync failure must not block the save.
+      }
 
       return note;
     } catch (e) {
