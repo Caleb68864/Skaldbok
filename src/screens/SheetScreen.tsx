@@ -59,7 +59,7 @@ import type { PanelItem } from '../components/panels/DraggableCardContainer';
 export default function SheetScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { settings, updateSettings } = useAppState();
+  const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   const { showToast } = useToast();
@@ -122,12 +122,17 @@ export default function SheetScreen() {
   } | null>(null);
 
   useEffect(() => {
-    if (!isLoading && !character) {
+    const stillLoading = settingsLoading || isLoading;
+    const waitingForCharacter = !settingsLoading && !isLoading && !!settings.activeCharacterId && !character;
+    if (!stillLoading && !waitingForCharacter && !character) {
       navigate('/library');
     }
-  }, [isLoading, character, navigate]);
+  }, [settingsLoading, isLoading, settings.activeCharacterId, character, navigate]);
 
-  if (isLoading) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
+  const stillLoading = settingsLoading || isLoading;
+  const waitingForCharacter = !settingsLoading && !isLoading && !!settings.activeCharacterId && !character;
+
+  if (stillLoading || waitingForCharacter) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
   const isPlayMode = settings.mode === 'play';

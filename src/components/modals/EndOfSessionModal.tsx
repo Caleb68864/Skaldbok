@@ -170,6 +170,8 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     const updatedSkills = { ...skills, [skillId]: updatedSkill };
     setSkills(updatedSkills);
     updateCharacter({ skills: updatedSkills, updatedAt: nowISO() });
+    // Persist immediately so closing the modal mid-flow doesn't leave stale dragonMarks in DB
+    characterRepository.save({ ...character, skills: updatedSkills, updatedAt: nowISO() }).catch(console.error);
     advanceRoll({ skillId, skillName: def?.name ?? skillId, advanced: false, skipped: false, newValue: cs.value });
   }
 

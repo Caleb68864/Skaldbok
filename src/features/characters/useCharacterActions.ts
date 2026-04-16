@@ -34,7 +34,7 @@ export function useCharacterActions() {
 
   async function deleteCharacter(id: string) {
     if (activeCharacter?.id === id) {
-      clearCharacter();
+      await clearCharacter();
     }
     await db.partyMembers.where('linkedCharacterId').equals(id).delete();
     await characterRepository.remove(id);
