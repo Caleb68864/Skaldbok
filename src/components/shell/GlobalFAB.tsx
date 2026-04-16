@@ -41,6 +41,7 @@ export function GlobalFAB() {
   const { showToast } = useToast();
   const {
     bumpAll,
+    clearQuickLogRequest,
     requestedQuickLogAction,
     requestedQuickLogNonce,
   } = useSessionRefresh();
@@ -64,10 +65,17 @@ export function GlobalFAB() {
       showToast('Start a session first');
       return;
     }
+    // Clear any stale requested action before a manual open so the drawer
+    // shows the quick-log grid rather than jumping straight into the last
+    // sub-drawer (e.g. "Add to Timeline" setting 'note').
+    clearQuickLogRequest();
     setDrawerOpen((v) => !v);
   };
 
-  const closeDrawer = () => setDrawerOpen(false);
+  const closeDrawer = () => {
+    setDrawerOpen(false);
+    clearQuickLogRequest();
+  };
 
   return (
     <>

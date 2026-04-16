@@ -46,41 +46,56 @@ export function QuickCreateParticipantFlow({ onSubmit, onCancel }: QuickCreatePa
         className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-[480px] px-4 pt-5 pb-6"
       >
         <h3 className="text-[var(--color-text)] mb-3">Quick Add Participant</h3>
+        <p className="mb-3 text-sm text-[var(--color-text-muted)]">
+          Use this for one-off monsters or NPCs when they are not already in the bestiary or party.
+        </p>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input
-            type="text"
-            placeholder="Name (required)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={inputClass}
-            autoFocus
-            required
-          />
+          <label className="flex flex-col gap-1 text-sm text-[var(--color-text)]">
+            Name
+            <input
+              type="text"
+              placeholder="Name (required)"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+              autoFocus
+              required
+            />
+          </label>
           <div className="grid grid-cols-3 gap-3">
-            <input
-              type="number"
-              placeholder="HP"
-              value={hp}
-              onChange={(e) => setHp(e.target.value)}
-              className={inputClass}
-              min={0}
-            />
-            <input
-              type="number"
-              placeholder="Armor"
-              value={armor}
-              onChange={(e) => setArmor(e.target.value)}
-              className={inputClass}
-              min={0}
-            />
-            <input
-              type="number"
-              placeholder="Movement"
-              value={movement}
-              onChange={(e) => setMovement(e.target.value)}
-              className={inputClass}
-              min={0}
-            />
+            <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
+              HP
+              <input
+                type="number"
+                placeholder="HP"
+                value={hp}
+                onChange={(e) => setHp(e.target.value)}
+                className={inputClass}
+                min={0}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
+              Armor
+              <input
+                type="number"
+                placeholder="Armor"
+                value={armor}
+                onChange={(e) => setArmor(e.target.value)}
+                className={inputClass}
+                min={0}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
+              Movement
+              <input
+                type="number"
+                placeholder="Movement"
+                value={movement}
+                onChange={(e) => setMovement(e.target.value)}
+                className={inputClass}
+                min={0}
+              />
+            </label>
           </div>
           <div className="flex gap-3">
             <button

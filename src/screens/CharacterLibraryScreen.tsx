@@ -50,6 +50,7 @@ export default function CharacterLibraryScreen() {
         // First character: auto-activate (AC3.1)
         await setCharacter(newChar.id);
         showToast('Character created and set as active', 'success');
+        navigate('/character/sheet');
       } else {
         // Subsequent character: offer Set Active? via inline banner (AC3.2)
         setPendingSetActiveId(newChar.id);
@@ -67,6 +68,7 @@ export default function CharacterLibraryScreen() {
     setPendingSetActiveId(null);
     setPendingSetActiveName('');
     showToast('Active character updated', 'success');
+    navigate('/character/sheet');
   }
 
   function dismissPendingSetActive() {
@@ -200,7 +202,10 @@ export default function CharacterLibraryScreen() {
                 </div>
                 <div className="flex gap-3 flex-wrap">
                   {!isActive && (
-                    <Button size="sm" variant="primary" onClick={() => handleSetActive(char.id)}>Set Active</Button>
+                    <Button size="sm" variant="primary" onClick={() => handleSetActive(char.id)}>Set Active &amp; Open</Button>
+                  )}
+                  {isActive && (
+                    <Button size="sm" variant="primary" onClick={() => navigate('/character/sheet')}>Open Sheet</Button>
                   )}
                   <Button size="sm" onClick={() => handleExport(char)}>Export</Button>
                   <Button size="sm" onClick={() => handleDuplicate(char.id)}>Duplicate</Button>
