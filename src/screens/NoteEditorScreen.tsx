@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { TiptapNoteEditor } from '../components/notes/TiptapNoteEditor';
 import { TagPicker } from '../components/notes/TagPicker';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
-import { getNoteById, updateNote, createNote } from '../storage/repositories/noteRepository';
+import { getNoteById, updateNote } from '../storage/repositories/noteRepository';
+import { useNoteActions } from '../features/notes/useNoteActions';
 import { NOTE_TYPES } from '../types/note';
 import type { Note, NoteType } from '../types/note';
 import { generateId } from '../utils/ids';
@@ -48,9 +49,10 @@ import { cn } from '../lib/utils';
 export default function NoteEditorScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { activeCampaign, activeSession } = useCampaignContext();
+  const { isHydrated, activeCampaign, activeSession } = useCampaignContext();
   const { showToast } = useToast();
   const { settings, updateSettings } = useAppState();
+  const { createNote } = useNoteActions();
   const campaignId = activeCampaign?.id ?? null;
   const customTags = campaignId ? (settings.customTags?.[campaignId] ?? []) : [];
   const handleCreateTag = (tag: string) => {
@@ -73,6 +75,9 @@ export default function NoteEditorScreen() {
   useEffect(() => {
     let mounted = true;
     if (isNewNote) {
+      if (!isHydrated) {
+        return () => { mounted = false; };
+      }
       if (!activeCampaign) {
         navigate('/session');
         return;
@@ -95,8 +100,6 @@ export default function NoteEditorScreen() {
         updatedAt: now,
       };
       createNote({
-        campaignId: newNote.campaignId,
-        sessionId: newNote.sessionId,
         title: newNote.title,
         body: newNote.body,
         type: newNote.type,
@@ -105,7 +108,7 @@ export default function NoteEditorScreen() {
         pinned: newNote.pinned,
         scope: newNote.scope,
       }).then(created => {
-        if (mounted) {
+        if (mounted && created) {
           navigate(`/note/${created.id}/edit`, { replace: true });
         }
       }).catch(() => {
@@ -134,7 +137,7 @@ export default function NoteEditorScreen() {
     });
     return () => { mounted = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [activeCampaign, id, isHydrated]);
 
   const scheduleAutosave = useCallback((updates: Partial<Note>) => {
     if (!note) return;

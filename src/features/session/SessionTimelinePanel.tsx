@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarClock, Layers3, NotebookText, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TimelineRoot } from '@/components/timeline';
-import type { TimelineItem, TimelineTrack } from '@/components/timeline';
+import type { TimelineFilterState, TimelineItem, TimelineTrack } from '@/components/timeline';
 import type { Encounter } from '@/types/encounter';
 import type { Session } from '@/types/session';
 import {
@@ -10,6 +10,7 @@ import {
   loadSessionTimelineSourceData,
   type SessionTimelineSourceData,
 } from './sessionTimelineAdapter';
+import type { AttachToValue } from './quickActions/AttachToControl';
 
 interface SessionTimelinePanelProps {
   session: Session;
@@ -19,6 +20,10 @@ interface SessionTimelinePanelProps {
   onOpenEncounter: (encounterId: string) => void;
   onReopenEncounter: (encounterId: string) => Promise<void> | void;
   onOpenNote: (noteId: string) => void;
+  searchText?: string;
+  onSearchTextChange?: (searchText: string) => void;
+  onSelectionContextChange?: (context: { attachTo: AttachToValue; label: string | null }) => void;
+  onAddToTimeline?: () => void;
   refreshToken?: number;
 }
 
@@ -72,6 +77,10 @@ export function SessionTimelinePanel({
   onOpenEncounter,
   onReopenEncounter,
   onOpenNote,
+  searchText = '',
+  onSearchTextChange,
+  onSelectionContextChange,
+  onAddToTimeline,
   refreshToken = 0,
 }: SessionTimelinePanelProps) {
   const [timelineData, setTimelineData] = useState<SessionTimelineSourceData>({
@@ -135,6 +144,44 @@ export function SessionTimelinePanel({
     [encounters, nowValue, session, timelineData],
   );
 
+  const [timelineFilterState, setTimelineFilterState] = useState<TimelineFilterState>(() => ({
+    visibleTrackIds: timelineDataset.tracks.filter((track) => track.visible).map((track) => track.id),
+    hiddenTrackIds: timelineDataset.tracks.filter((track) => !track.visible).map((track) => track.id),
+    includedKinds: [],
+    excludedKinds: [],
+    searchText,
+    tagFilters: [],
+    statusFilters: [],
+  }));
+
+  useEffect(() => {
+    setTimelineFilterState((currentState) => {
+      const nextVisibleTrackIds = timelineDataset.tracks
+        .filter((track) => track.visible && !currentState.hiddenTrackIds.includes(track.id))
+        .map((track) => track.id);
+      const nextHiddenTrackIds = timelineDataset.tracks
+        .filter((track) => !nextVisibleTrackIds.includes(track.id))
+        .map((track) => track.id);
+
+      const visibleUnchanged =
+        nextVisibleTrackIds.length === currentState.visibleTrackIds.length &&
+        nextVisibleTrackIds.every((trackId, index) => currentState.visibleTrackIds[index] === trackId);
+      const hiddenUnchanged =
+        nextHiddenTrackIds.length === currentState.hiddenTrackIds.length &&
+        nextHiddenTrackIds.every((trackId, index) => currentState.hiddenTrackIds[index] === trackId);
+
+      if (visibleUnchanged && hiddenUnchanged) {
+        return currentState;
+      }
+
+      return {
+        ...currentState,
+        visibleTrackIds: nextVisibleTrackIds,
+        hiddenTrackIds: nextHiddenTrackIds,
+      };
+    });
+  }, [timelineDataset.tracks]);
+
   const handleNavigateToSource = useCallback((item: TimelineItem) => {
     if (item.sourceType === 'encounter' && item.sourceId) {
       onOpenEncounter(item.sourceId);
@@ -145,6 +192,63 @@ export function SessionTimelinePanel({
       onOpenNote(item.noteId);
     }
   }, [onOpenEncounter, onOpenNote]);
+
+  useEffect(() => {
+    if (timelineFilterState.searchText === searchText) {
+      return;
+    }
+
+    setTimelineFilterState((currentState) => ({ ...currentState, searchText }));
+  }, [searchText, timelineFilterState]);
+
+  const handleFilterStateChange = useCallback((nextState: TimelineFilterState) => {
+    setTimelineFilterState(nextState);
+    onSearchTextChange?.(nextState.searchText);
+  }, [onSearchTextChange]);
+
+  const handleTimelineItemSelect = useCallback((item: TimelineItem) => {
+    if (!onSelectionContextChange) {
+      return;
+    }
+
+    if (item.sourceType === 'encounter' && item.sourceId) {
+      onSelectionContextChange({ attachTo: item.sourceId, label: item.title });
+      return;
+    }
+
+    if (item.sourceType === 'session') {
+      onSelectionContextChange({ attachTo: null, label: session.title });
+      return;
+    }
+
+    const encounterId = typeof item.metadata?.encounterId === 'string'
+      ? item.metadata.encounterId
+      : null;
+
+    onSelectionContextChange({
+      attachTo: encounterId,
+      label: encounterId ? `${item.title} (${item.metadata?.encounterTitle ?? 'Encounter'})` : session.title,
+    });
+  }, [onSelectionContextChange, session.title]);
+
+  const handleTimelineTrackSelect = useCallback((track: TimelineTrack) => {
+    if (!onSelectionContextChange) {
+      return;
+    }
+
+    if (track.kind === 'encounter') {
+      onSelectionContextChange({
+        attachTo: activeEncounter?.id ?? 'auto',
+        label: activeEncounter?.title ?? 'active encounter',
+      });
+      return;
+    }
+
+    onSelectionContextChange({
+      attachTo: null,
+      label: track.label,
+    });
+  }, [activeEncounter?.id, activeEncounter?.title, onSelectionContextChange]);
 
   const renderItemDetails = useCallback((item: TimelineItem) => {
     if (item.sourceType === 'encounter' && item.sourceId) {
@@ -251,10 +355,16 @@ export function SessionTimelinePanel({
           tracks={timelineDataset.tracks}
           items={timelineDataset.items}
           markers={timelineDataset.markers}
-          toolbarTitle={`${session.title} Timeline`}
+          toolbarTitle="Timeline Workspace"
+          filterState={timelineFilterState}
+          onFilterStateChange={handleFilterStateChange}
           renderTrackLabel={renderTrackLabel}
           renderItemDetails={renderItemDetails}
           onNavigateToSource={handleNavigateToSource}
+          onItemSelect={handleTimelineItemSelect}
+          onTrackSelect={handleTimelineTrackSelect}
+          onAddItem={onAddToTimeline}
+          addItemLabel="Add to Timeline"
           emptyStateTitle="No timeline entries yet"
           emptyStateDescription="Start an encounter or log a note to build the session timeline."
           showNowMarker={!session.endedAt}

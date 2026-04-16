@@ -58,6 +58,8 @@ export function TimelineRoot({
   showDetailsPanel = true,
   showNowMarker = true,
   now,
+  onAddItem,
+  addItemLabel,
 }: TimelineRootProps) {
   const state = useTimelineState({
     tracks,
@@ -132,6 +134,8 @@ export function TimelineRoot({
             onZoomIn={state.zoomIn}
             onZoomOut={state.zoomOut}
             onReset={state.resetView}
+            onAddItem={onAddItem}
+            addItemLabel={addItemLabel}
           />
         ) : null}
 

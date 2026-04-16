@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
 import { db } from '../../storage/db/client';
+import * as metadataRepository from '../../storage/repositories/metadataRepository';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
@@ -78,6 +79,8 @@ export interface ActivePartyWithMembers extends Party {
  * {@link useCampaignContext}.
  */
 export interface CampaignContextValue {
+  /** True once initial campaign/session hydration from storage has completed. */
+  isHydrated: boolean;
   /** The currently active {@link Campaign}, or `null` when none is selected. */
   activeCampaign: Campaign | null;
   /** The currently active {@link Session}, or `null` when no session is running. */
@@ -125,6 +128,7 @@ export interface CampaignContextValue {
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
+const ACTIVE_CAMPAIGN_METADATA_KEY = 'activeCampaignId';
 
 /**
  * Returns the nearest {@link CampaignContextValue} from the React tree.
@@ -187,6 +191,7 @@ async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyW
  */
 export function CampaignProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
+  const [isHydrated, setIsHydrated] = useState(false);
   const [activeCampaign, setActiveCampaign_] = useState<Campaign | null>(null);
   const [activeSession, setActiveSession_] = useState<Session | null>(null);
   const [activeParty, setActiveParty_] = useState<ActivePartyWithMembers | null>(null);
@@ -199,18 +204,26 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
 
     async function hydrate() {
       try {
-        const campaign = await db.campaigns.where('status').equals('active').first();
+        const persistedCampaignId = await metadataRepository.get(ACTIVE_CAMPAIGN_METADATA_KEY);
+        const campaign = persistedCampaignId
+          ? await db.campaigns.get(persistedCampaignId)
+          : await db.campaigns.where('status').equals('active').first();
         if (!mounted) return;
 
         if (!campaign) {
+          if (persistedCampaignId) {
+            await metadataRepository.set(ACTIVE_CAMPAIGN_METADATA_KEY, '');
+          }
           setActiveCampaign_(null);
           setActiveSession_(null);
           setActiveParty_(null);
           setActiveCharacterInCampaign_(null);
+          setIsHydrated(true);
           return;
         }
 
         setActiveCampaign_(campaign);
+        await metadataRepository.set(ACTIVE_CAMPAIGN_METADATA_KEY, campaign.id);
 
         const session = await db.sessions
           .where({ campaignId: campaign.id, status: 'active' })
@@ -236,6 +249,10 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         }
       } catch (e) {
         console.error('CampaignProvider hydration failed:', e);
+      } finally {
+        if (mounted) {
+          setIsHydrated(true);
+        }
       }
     }
 
@@ -327,6 +344,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       }
 
       setActiveCampaign_(campaign);
+      await metadataRepository.set(ACTIVE_CAMPAIGN_METADATA_KEY, campaign.id);
 
       const session = await db.sessions
         .where({ campaignId, status: 'active' })
@@ -391,6 +409,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   return (
     <CampaignContext.Provider
       value={{
+        isHydrated,
         activeCampaign,
         activeSession,
         activeParty,

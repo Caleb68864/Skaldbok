@@ -12,6 +12,8 @@ export interface QuickNoteActionProps {
   onClose: () => void;
   /** Optional callback fired after a successful save. */
   onSaved?: () => void;
+  /** Optional starting attach target inherited from timeline context. */
+  initialAttachTo?: AttachToValue;
 }
 
 /**
@@ -21,13 +23,13 @@ export interface QuickNoteActionProps {
  * the {@link AttachToControl} per-entry attach-to-encounter override. Fires a
  * success toast after a successful write.
  */
-export function QuickNoteAction({ campaignId, onClose, onSaved }: QuickNoteActionProps) {
+export function QuickNoteAction({ campaignId, onClose, onSaved, initialAttachTo = 'auto' }: QuickNoteActionProps) {
   const { logGenericNote } = useSessionLog();
   const { showToast } = useToast();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
   const [title, setTitle] = useState('');
   const [body, setBody] = useState<unknown>(undefined);
-  const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
+  const [attachTo, setAttachTo] = useState<AttachToValue>(initialAttachTo);
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async () => {
@@ -73,7 +75,7 @@ export function QuickNoteAction({ campaignId, onClose, onSaved }: QuickNoteActio
         showToolbar
         minHeight="120px"
       />
-      <AttachToControl value={attachTo} onChange={setAttachTo} />
+      <AttachToControl value={attachTo} onChange={setAttachTo} defaultValue={initialAttachTo} />
       <div className="flex justify-end gap-2">
         <button
           type="button"
