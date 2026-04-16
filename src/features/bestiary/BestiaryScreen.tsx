@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useBestiary, type CategoryFilter } from './useBestiary';
 import { CreatureTemplateCard } from './CreatureTemplateCard';
 import { CreatureTemplateForm } from './CreatureTemplateForm';
@@ -39,12 +40,11 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
     setSearch,
     categoryFilter,
     setCategoryFilter,
-    showArchived,
-    setShowArchived,
     create,
     update,
-    archive,
+    softDelete,
   } = useBestiary(campaignId);
+  const navigate = useNavigate();
 
   const [showForm, setShowForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CreatureTemplate | null>(null);
@@ -62,9 +62,9 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
     setViewingTemplate(null);
   };
 
-  const handleArchive = async (id: string) => {
-    if (!confirm('Archive this creature? It can be restored later.')) return;
-    await archive(id);
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this creature? It can be restored from Trash.')) return;
+    await softDelete(id);
     setViewingTemplate(null);
   };
 
@@ -73,6 +73,13 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[var(--color-text)] m-0">Bestiary</h2>
         <div className="flex gap-2">
+          <button
+            onClick={() => navigate('/bestiary/trash')}
+            className="min-h-11 px-3 py-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs cursor-pointer"
+            title="View deleted creatures"
+          >
+            View Trash
+          </button>
           {onClose && (
             <button onClick={onClose} className="min-h-11 px-3 py-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs cursor-pointer">
               Back
@@ -106,17 +113,6 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
             {c.label}
           </button>
         ))}
-        <button
-          onClick={() => setShowArchived(!showArchived)}
-          className={cn(
-            pillClass,
-            showArchived
-              ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
-              : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
-          )}
-        >
-          {showArchived ? 'Showing Archived' : 'Show Archived'}
-        </button>
       </div>
 
       {/* New creature button */}
@@ -130,9 +126,7 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
           <p className="text-[var(--color-text-muted)] text-sm text-center py-8">
             {search || categoryFilter !== 'all'
               ? 'No creatures match your filters.'
-              : showArchived
-                ? 'No archived creatures.'
-                : 'No creatures yet. Create your first!'}
+              : 'No creatures yet. Create your first!'}
           </p>
         ) : (
           templates.map((t) => (
@@ -285,14 +279,12 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
               >
                 Edit
               </button>
-              {viewingTemplate.status !== 'archived' && (
-                <button
-                  onClick={() => handleArchive(viewingTemplate.id)}
-                  className="min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer"
-                >
-                  Archive
-                </button>
-              )}
+              <button
+                onClick={() => handleDelete(viewingTemplate.id)}
+                className="min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer"
+              >
+                Delete
+              </button>
               <button
                 onClick={() => setViewingTemplate(null)}
                 className="min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer"
