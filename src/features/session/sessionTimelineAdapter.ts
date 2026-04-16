@@ -6,8 +6,9 @@ import * as entityLinkRepository from '@/storage/repositories/entityLinkReposito
 import type { Encounter } from '@/types/encounter';
 import type { Note } from '@/types/note';
 import type { Session } from '@/types/session';
-import { CalendarClock, NotebookText, Swords } from 'lucide-react';
-import { resolveSessionTimelineTrackKind } from './sessionTimelineConfig';
+import { CalendarClock, Swords } from 'lucide-react';
+import { resolveSessionTimelineTrackKind, NOTE_CHILD_TRACK_KINDS } from './sessionTimelineConfig';
+import { sessionTimelineIcon } from './sessionTimelineIcons';
 
 export interface SessionTimelineSourceData {
   notes: Note[];
@@ -38,8 +39,11 @@ function buildTrack(kind: string): TimelineTrack {
     order: catalogEntry.order ?? 99,
     visible: catalogEntry.visible ?? true,
     collapsible: catalogEntry.collapsible,
+    collapsed: catalogEntry.collapsed,
     colorToken: catalogEntry.colorToken,
     description: catalogEntry.description,
+    parentTrackId: catalogEntry.parentTrackId,
+    icon: sessionTimelineIcon(catalogEntry.kind ?? kind),
   };
 }
 
@@ -145,19 +149,21 @@ export function buildSessionTimelineDataset({
     });
   }
 
-  const noteTrackKinds = [...new Set(
-    timelineData.notes
-      .filter((note) => !note.deletedAt && note.status === 'active')
-      .map((note) => resolveSessionTimelineTrackKind(note)),
-  )].sort((left, right) => {
-    const leftOrder = DEFAULT_TIMELINE_TRACK_CATALOG[left]?.order ?? 99;
-    const rightOrder = DEFAULT_TIMELINE_TRACK_CATALOG[right]?.order ?? 99;
-    return leftOrder - rightOrder || left.localeCompare(right);
-  });
+  // Assemble note-bucket tracks. We always emit the `notes` parent + every
+  // child kind from NOTE_CHILD_TRACK_KINDS so the hierarchy is visible even
+  // before the user has logged anything of that type. The `npc` track is
+  // kept as a top-level sibling (not under Notes) per the default catalog.
+  const activeNotes = timelineData.notes.filter((note) => !note.deletedAt && note.status === 'active');
+  const noteTrackKinds = new Set(activeNotes.map((note) => resolveSessionTimelineTrackKind(note)));
 
-  noteTrackKinds.forEach((kind) => {
-    tracks.push(buildTrack(kind));
-  });
+  tracks.push(buildTrack('notes'));
+  for (const childKind of NOTE_CHILD_TRACK_KINDS) {
+    tracks.push(buildTrack(childKind));
+  }
+  // `npc` is a first-class top-level track — add only if notes of that kind exist.
+  if (noteTrackKinds.has('npc')) {
+    tracks.push(buildTrack('npc'));
+  }
 
   items.push({
     id: `session-${session.id}`,
@@ -244,7 +250,7 @@ export function buildSessionTimelineDataset({
         noteId: note.id,
         tags: note.tags,
         variant: getNoteVariant(note),
-        icon: createElement(NotebookText, { className: 'h-3.5 w-3.5 text-text-muted' }),
+        icon: sessionTimelineIcon(trackKind),
         metadata: {
           encounterId: noteEncounterId,
           encounterTitle: noteEncounter?.title,

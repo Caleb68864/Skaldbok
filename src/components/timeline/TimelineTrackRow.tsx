@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ChevronRight, Layers3 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Layers3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TimelineGrid } from './TimelineGrid';
 import { TimelineItemBar } from './TimelineItemBar';
@@ -37,6 +37,17 @@ interface TimelineTrackRowProps {
   onItemSelect: (itemId: string) => void;
   onItemHoverChange: (itemId: string | null) => void;
   onTrackSelect: (trackId: string) => void;
+  /**
+   * Zero for top-level tracks, 1+ for nested children. Each level adds a
+   * visual indent to the label column.
+   */
+  indentLevel?: number;
+  /** `true` if this track has child tracks (expand/collapse affordance). */
+  hasChildren?: boolean;
+  /** `true` if this parent track is currently collapsed. */
+  isCollapsed?: boolean;
+  /** Toggle callback when the expand/collapse affordance is activated. */
+  onToggleCollapsed?: () => void;
 }
 
 export function TimelineTrackRow({
@@ -54,6 +65,10 @@ export function TimelineTrackRow({
   onItemSelect,
   onItemHoverChange,
   onTrackSelect,
+  indentLevel = 0,
+  hasChildren = false,
+  isCollapsed = false,
+  onToggleCollapsed,
 }: TimelineTrackRowProps) {
   return (
     <div
@@ -67,7 +82,42 @@ export function TimelineTrackRow({
           selectedTrackId === layout.track.id && 'bg-surface-alt',
         )}
         onClick={() => onTrackSelect(layout.track.id)}
+        // Left-indent child rows via padding-left so the visual tree is
+        // clear without reflowing the grid column.
+        style={indentLevel > 0 ? { paddingLeft: 16 + indentLevel * 20 } : undefined}
       >
+        {/* Expand/collapse affordance for parent tracks with children.
+            Stops click propagation so tapping the chevron doesn't also
+            fire onTrackSelect (which would select the row). */}
+        {hasChildren ? (
+          <span
+            role="button"
+            tabIndex={0}
+            aria-label={isCollapsed ? 'Expand track' : 'Collapse track'}
+            aria-expanded={!isCollapsed}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleCollapsed?.();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleCollapsed?.();
+              }
+            }}
+            className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-surface-alt cursor-pointer"
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4 text-text-muted" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-text-muted" />
+            )}
+          </span>
+        ) : (
+          // Non-parent rows reserve the same width so labels align.
+          <span className="mt-0.5 h-6 w-6 shrink-0" aria-hidden />
+        )}
         <span
           className="mt-1 h-3 w-3 rounded-full border border-border"
           style={layout.track.colorToken ? { backgroundColor: resolveTrackColor(layout.track.colorToken) } : undefined}

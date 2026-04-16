@@ -168,6 +168,8 @@ export function TimelineRoot({
                 onTrackSelect?.(track);
               }
             }}
+            onTrackToggleCollapsed={state.toggleTrackCollapsed}
+            collapsedTrackIds={state.filterState.collapsedTrackIds ?? []}
           />
         ) : (
           <TimelineEmptyState title={emptyStateTitle} description={emptyStateDescription} />

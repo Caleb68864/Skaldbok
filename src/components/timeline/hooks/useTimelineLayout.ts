@@ -66,13 +66,61 @@ export function useTimelineLayout({
       Math.round((visibleRange.durationMs / scale.unitMs) * scale.pixelsPerUnit),
     );
 
-    const visibleTracks = sortTracks(tracks).filter(
-      (track) => track.visible && !filterState.hiddenTrackIds.includes(track.id),
-    );
-    const activeTrackIds = visibleTracks.map((track) => track.id);
-    const filteredItems = filterItems(items, filterState, activeTrackIds);
+    // --- Hierarchy: parent/child tracks -----------------------------------
+    //
+    // A track may declare `parentTrackId`. When its parent appears in
+    // `filterState.collapsedTrackIds`, the child row is hidden AND its items
+    // re-point to the parent so the parent row shows a compact aggregate.
+    //
+    // This pass runs BEFORE visibility filtering so the visible-track list
+    // is already reduced to the expanded tracks + non-child tracks.
+    const collapsedIds = new Set(filterState.collapsedTrackIds ?? []);
+    const tracksById = new Map(tracks.map((track) => [track.id, track]));
+
+    // Build child -> aggregation-parent map. If a track's parent is
+    // collapsed, route its items to the parent's id. Grandchildren roll up
+    // to the nearest collapsed ancestor.
+    const itemTrackRedirect = new Map<string, string>();
+    for (const track of tracks) {
+      let cursor: typeof track | undefined = track;
+      let redirectTo: string | null = null;
+      while (cursor?.parentTrackId) {
+        const parent = tracksById.get(cursor.parentTrackId);
+        if (!parent) break;
+        if (collapsedIds.has(parent.id)) redirectTo = parent.id;
+        cursor = parent;
+      }
+      if (redirectTo) itemTrackRedirect.set(track.id, redirectTo);
+    }
+
+    // A track renders as a row iff it's visible AND none of its ancestors
+    // are collapsed.
+    const rowVisibleTracks = sortTracks(tracks).filter((track) => {
+      if (!track.visible || filterState.hiddenTrackIds.includes(track.id)) {
+        return false;
+      }
+      // Walk ancestors: if any is collapsed, hide this row.
+      let cursor = track.parentTrackId ? tracksById.get(track.parentTrackId) : undefined;
+      while (cursor) {
+        if (collapsedIds.has(cursor.id)) return false;
+        cursor = cursor.parentTrackId ? tracksById.get(cursor.parentTrackId) : undefined;
+      }
+      return true;
+    });
+
+    // After redirection, an item's effective trackId may differ from the
+    // item's raw trackId. Apply the redirect BEFORE filtering + grouping so
+    // aggregation lands on the right row.
+    const redirectedItems = items.map((item) => {
+      const redirect = itemTrackRedirect.get(item.trackId);
+      return redirect ? { ...item, trackId: redirect } : item;
+    });
+
+    const activeTrackIds = rowVisibleTracks.map((track) => track.id);
+    const filteredItems = filterItems(redirectedItems, filterState, activeTrackIds);
     const visibleItems = computeVisibleItems(filteredItems, visibleRange);
     const groupedItems = groupItemsByTrack(visibleItems);
+    const visibleTracks = rowVisibleTracks;
 
     const trackLayouts: TimelineTrackLayout[] = visibleTracks.map((track) => {
       const trackItems = groupedItems[track.id] ?? [];

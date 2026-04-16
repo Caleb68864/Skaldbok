@@ -22,6 +22,8 @@ interface TimelineViewportProps {
   onItemSelect: (itemId: string) => void;
   onItemHoverChange: (itemId: string | null) => void;
   onTrackSelect: (trackId: string) => void;
+  onTrackToggleCollapsed: (trackId: string) => void;
+  collapsedTrackIds: string[];
 }
 
 export function TimelineViewport({
@@ -40,6 +42,8 @@ export function TimelineViewport({
   onItemSelect,
   onItemHoverChange,
   onTrackSelect,
+  onTrackToggleCollapsed,
+  collapsedTrackIds,
 }: TimelineViewportProps) {
   return (
     <div className="overflow-auto rounded-[var(--radius-lg)] border border-border bg-surface texture-card-bevel [touch-action:pan-x_pinch-zoom] overscroll-x-contain">
@@ -66,6 +70,8 @@ export function TimelineViewport({
           onItemSelect={onItemSelect}
           onItemHoverChange={onItemHoverChange}
           onTrackSelect={onTrackSelect}
+          onTrackToggleCollapsed={onTrackToggleCollapsed}
+          collapsedTrackIds={collapsedTrackIds}
         />
       </div>
     </div>
