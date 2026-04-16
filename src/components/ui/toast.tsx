@@ -2,6 +2,7 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
+import type { ToastAction } from "./toaster";
 
 const toastVariants = cva(
   "pointer-events-auto rounded-[var(--radius-md)] px-5 py-3 text-bg shadow-[var(--shadow-medium)] text-center text-[length:var(--size-md)] font-[family-name:var(--font-ui)] min-w-[200px] animate-in slide-in-from-top-2 fade-in-0 data-[state=closed]:animate-out data-[state=closed]:slide-out-to-top-2 data-[state=closed]:fade-out-0",
@@ -27,17 +28,32 @@ export interface ToastProps
     VariantProps<typeof toastVariants> {
   id: string;
   message: string;
+  action?: ToastAction;
 }
 
 const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
-  ({ className, variant, message, ...props }, ref) => {
+  ({ className, variant, message, action, ...props }, ref) => {
     return (
       <div
         ref={ref}
-        className={cn(toastVariants({ variant, className }))}
+        className={cn(
+          toastVariants({ variant, className }),
+          action && "flex items-center justify-center gap-3",
+        )}
         {...props}
       >
-        {message}
+        <span>{message}</span>
+        {action && (
+          <button
+            type="button"
+            onClick={() => {
+              void action.onClick();
+            }}
+            className="pointer-events-auto ml-2 rounded-[var(--radius-sm)] bg-white/10 px-3 py-1 text-sm font-semibold hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/40"
+          >
+            {action.label}
+          </button>
+        )}
       </div>
     );
   },
