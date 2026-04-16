@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Encounter, EncounterParticipant } from '../../types/encounter';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import * as creatureTemplateRepository from '../../storage/repositories/creatureTemplateRepository';
@@ -11,6 +11,7 @@ import { QuickCreateParticipantFlow } from './QuickCreateParticipantFlow';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
+import { registerFlush } from '../persistence/autosaveFlush';
 
 interface CombatEncounterViewProps {
   encounter: Encounter;
@@ -104,17 +105,39 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
     await refresh();
   };
 
+  // Tracks the latest in-flight participant update so flushAll() can wait for
+  // it before session-end mutations proceed. Set while the update is pending,
+  // cleared on settle.
+  const inFlightParticipantUpdateRef = useRef<Promise<void> | null>(null);
+
   const handleUpdateParticipantState = async (
     participantId: string,
     patch: Partial<EncounterParticipant['instanceState']>
   ) => {
     const participant = participants.find((p) => p.id === participantId);
     if (!participant) return;
-    await encounterRepository.updateParticipant(encounter.id, participantId, {
+    const updatePromise = encounterRepository.updateParticipant(encounter.id, participantId, {
       instanceState: { ...participant.instanceState, ...patch },
     });
+    inFlightParticipantUpdateRef.current = updatePromise
+      .catch(() => undefined)
+      .then(() => {
+        inFlightParticipantUpdateRef.current = null;
+      });
+    await updatePromise;
     await refresh();
   };
+
+  // Register with the flush bus so endSession (and other lifecycle operations)
+  // wait for any in-flight participant update before proceeding. No-op when
+  // nothing is in flight.
+  useEffect(() => {
+    const { unregister } = registerFlush(async () => {
+      const inFlight = inFlightParticipantUpdateRef.current;
+      if (inFlight) await inFlight;
+    });
+    return unregister;
+  }, []);
 
   const handleQuickCreate = async (name: string, stats: { hp?: number; armor?: number; movement?: number }) => {
     // Check if a creature template with this name already exists

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CharacterRecord } from '../types/character';
+import { registerFlush } from '../features/persistence/autosaveFlush';
 
 export function useAutosave(
   character: CharacterRecord | null,
@@ -59,6 +60,25 @@ export function useAutosave(
         }
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Register with the flush bus so lifecycle operations (endSession,
+  // clearCharacter, deleteCharacter) can wait for pending debounced saves
+  // before mutating state.
+  //
+  // Register ONCE on mount with an empty dep array. The flush closure reads
+  // pendingRef.current at flush time (stable ref). saveFn must be a stable
+  // reference (module-level function or memoized callback); inline arrows
+  // captured here will go stale.
+  useEffect(() => {
+    const { unregister } = registerFlush(async () => {
+      if (pendingRef.current) {
+        await saveFn(pendingRef.current);
+        pendingRef.current = null;
+      }
+    });
+    return unregister;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

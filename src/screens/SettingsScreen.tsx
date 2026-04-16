@@ -55,9 +55,10 @@ export default function SettingsScreen() {
 
   async function handleClearAll() {
     if (confirmText !== 'DELETE') return;
-    // Clear in-memory character and flush the activeCharacterId=null settings write
-    // BEFORE opening the transaction, so the pending appSettings put doesn't queue
-    // behind the rw-lock and re-insert a row after the clear.
+    // clearCharacter() already awaits flushAll(), so pending character autosaves
+    // are flushed before we clear state. No double-flush needed here.
+    // The activeCharacterId=null settings write is also awaited inside
+    // clearCharacter() so it can't queue behind the rw-transaction lock.
     await clearCharacter();
     await db.transaction(
       'rw',
