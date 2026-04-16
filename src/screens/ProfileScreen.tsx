@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useIsEditMode } from '../utils/modeGuards';
@@ -58,11 +58,16 @@ export default function ProfileScreen() {
   const { showToast } = useToast();
   useAutosave(character, characterRepository.save, 1000);
 
+  useEffect(() => {
+    if (!isLoading && !character) {
+      navigate('/library', { replace: true });
+    }
+  }, [character, isLoading, navigate]);
+
   if (isLoading) {
     return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   }
   if (!character) {
-    navigate('/library');
     return null;
   }
 

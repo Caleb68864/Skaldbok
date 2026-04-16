@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
+import { useAppState } from '../context/AppStateContext';
 import { MagicSpellCard } from '../components/fields/MagicSpellCard';
 import { AbilityCard } from '../components/fields/AbilityCard';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { Button } from '../components/primitives/Button';
 import { Drawer } from '../components/primitives/Drawer';
+import { useAutosave } from '../hooks/useAutosave';
 import type { Spell, HeroicAbility, TempModifier } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
@@ -14,6 +16,7 @@ import { useToast } from '../context/ToastContext';
 import { useIsEditMode } from '../utils/modeGuards';
 import { computeMaxPreparedSpells } from '../utils/derivedValues';
 import { isMetalEquipped } from '../utils/metalDetection';
+import * as characterRepository from '../storage/repositories/characterRepository';
 
 type PrepFilter = 'prepared' | 'grimoire';
 
@@ -26,8 +29,10 @@ const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-bord
 export default function MagicScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
+  const { isLoading: settingsLoading, settings } = useAppState();
   const isEditMode = useIsEditMode();
   const { showToast } = useToast();
+  useAutosave(character, characterRepository.save, 1000);
 
   // Preparation filter tab
   const [filter, setFilter] = useState<PrepFilter>('prepared');
@@ -70,12 +75,17 @@ export default function MagicScreen() {
   }, [abilityDrawerOpen, editingAbility]);
 
   useEffect(() => {
-    if (!isLoading && !character) {
+    const stillLoading = settingsLoading || isLoading;
+    const waitingForCharacter = !settingsLoading && !isLoading && !!settings.activeCharacterId && !character;
+    if (!stillLoading && !waitingForCharacter && !character) {
       navigate('/library');
     }
-  }, [isLoading, character, navigate]);
+  }, [settingsLoading, isLoading, settings.activeCharacterId, character, navigate]);
 
-  if (isLoading) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
+  const stillLoading = settingsLoading || isLoading;
+  const waitingForCharacter = !settingsLoading && !isLoading && !!settings.activeCharacterId && !character;
+
+  if (stillLoading || waitingForCharacter) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
   // ── Derived values ────────────────────────────────────────────────
@@ -98,7 +108,25 @@ export default function MagicScreen() {
   }
 
   function handleSpellSave() {
-    const spell: Spell = { id: editingSpell?.id ?? generateId(), name: sName, school: sSchool, powerLevel: 1, wpCost: 2, range: sRange, duration: sDuration, summary: sSummary };
+    const spell: Spell = editingSpell
+      ? {
+          ...editingSpell,
+          name: sName,
+          school: sSchool,
+          range: sRange,
+          duration: sDuration,
+          summary: sSummary,
+        }
+      : {
+          id: generateId(),
+          name: sName,
+          school: sSchool,
+          powerLevel: 1,
+          wpCost: 2,
+          range: sRange,
+          duration: sDuration,
+          summary: sSummary,
+        };
     const spells = editingSpell ? character!.spells.map(s => s.id === spell.id ? spell : s) : [...character!.spells, spell];
     updateCharacter({ spells, updatedAt: nowISO() });
     setSpellDrawerOpen(false);
@@ -109,7 +137,17 @@ export default function MagicScreen() {
   }
 
   function handleAbilitySave() {
-    const ability: HeroicAbility = { id: editingAbility?.id ?? generateId(), name: aName, summary: aSummary };
+    const ability: HeroicAbility = editingAbility
+      ? {
+          ...editingAbility,
+          name: aName,
+          summary: aSummary,
+        }
+      : {
+          id: generateId(),
+          name: aName,
+          summary: aSummary,
+        };
     const heroicAbilities = editingAbility
       ? character!.heroicAbilities.map(a => a.id === ability.id ? ability : a)
       : [...character!.heroicAbilities, ability];

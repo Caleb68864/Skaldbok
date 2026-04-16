@@ -10,7 +10,7 @@ interface ActiveCharacterContextValue {
   character: CharacterRecord | null;
   setCharacter: (id: string) => Promise<void>;
   updateCharacter: (partialOrFn: CharacterUpdater) => void;
-  clearCharacter: () => void;
+  clearCharacter: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -21,12 +21,17 @@ interface ActiveCharacterProviderProps {
 }
 
 export function ActiveCharacterProvider({ children }: ActiveCharacterProviderProps) {
-  const { settings, updateSettings } = useAppState();
+  const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
   const [character, setCharacterState] = useState<CharacterRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load active character on mount / when activeCharacterId changes
   useEffect(() => {
+    if (settingsLoading) {
+      setIsLoading(true);
+      return;
+    }
+
     if (!settings.activeCharacterId) {
       setCharacterState(null);
       setIsLoading(false);
@@ -53,7 +58,7 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
     });
     return () => { mounted = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.activeCharacterId]);
+  }, [settings.activeCharacterId, settingsLoading]);
 
   const setCharacter = useCallback(async (id: string) => {
     const char = await characterRepository.getById(id);
@@ -71,9 +76,9 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
     });
   }, []);
 
-  const clearCharacter = useCallback(() => {
+  const clearCharacter = useCallback(async () => {
     setCharacterState(null);
-    updateSettings({ activeCharacterId: null }).catch(console.error);
+    await updateSettings({ activeCharacterId: null });
   }, [updateSettings]);
 
   return (

@@ -13,7 +13,14 @@ export function useAutosave(
   const pendingRef = useRef<CharacterRecord | null>(null);
 
   useEffect(() => {
-    if (!character) return;
+    if (!character) {
+      pendingRef.current = null;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      return;
+    }
     pendingRef.current = character;
 
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -33,7 +40,10 @@ export function useAutosave(
 
     return () => {
       // Cancel pending debounce timer on re-render or dependency change
-      if (timerRef.current) clearTimeout(timerRef.current);
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
     };
   // We deliberately key on character object identity (not deep comparison) for debounce
   // eslint-disable-next-line react-hooks/exhaustive-deps
