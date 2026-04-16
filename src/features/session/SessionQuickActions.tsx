@@ -1109,7 +1109,7 @@ export function SessionQuickActions({
         <Drawer
           open={true}
           onClose={close}
-          title={activeDrawer === 'note' ? 'Quick Note' : 'NPC / Monster'}
+          title={activeDrawer === 'note' ? 'New Timeline Entry' : 'NPC / Monster'}
         >
           {activeDrawer === 'note' ? (
             <QuickNoteAction

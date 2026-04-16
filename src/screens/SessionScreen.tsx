@@ -7,10 +7,10 @@ import { EndSessionModal } from '../features/campaign/EndSessionModal';
 import { useExportActions } from '../features/export/useExportActions';
 import { useToast } from '../context/ToastContext';
 import { flushAll } from '../features/persistence/autosaveFlush';
+import { useSessionRefresh } from '../features/session/SessionRefreshContext';
 // NotesGrid kept for rollback safety — file not deleted per spec
 // import { NotesGrid } from '../features/notes/NotesGrid';
 import { VaultBrowser } from '../features/kb/VaultBrowser';
-import { SessionQuickActions } from '../features/session/SessionQuickActions';
 import { useEncounterList } from '../features/encounters/useEncounterList';
 import { EncounterScreen } from '../features/encounters/EncounterScreen';
 import {
@@ -306,13 +306,9 @@ function ActiveSessionContent() {
   const [submittingEncounter, setSubmittingEncounter] = useState(false);
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
-  const [timelineRefreshToken, setTimelineRefreshToken] = useState(0);
-  const [sessionNotesRefreshToken, setSessionNotesRefreshToken] = useState(0);
   const [timelineSearchText, setTimelineSearchText] = useState('');
-  const [quickLogAttachTo, setQuickLogAttachTo] = useState<'auto' | string | null>('auto');
-  const [quickLogContextLabel, setQuickLogContextLabel] = useState<string | null>(activeSession?.title ?? null);
-  const [requestedQuickLogAction, setRequestedQuickLogAction] = useState<string | null>(null);
-  const [quickLogRequestNonce, setQuickLogRequestNonce] = useState(0);
+  const { timelineRefreshToken, sessionNotesRefreshToken, bumpTimeline, openQuickLog } =
+    useSessionRefresh();
 
   const { encounters, refresh: refreshEncounters } = useEncounterList(activeSession?.id ?? null);
   const {
@@ -434,18 +430,13 @@ function ActiveSessionContent() {
       setShowStartEncounter(false);
       resetStartEncounterForm();
       refreshEncounters();
-      setTimelineRefreshToken((currentToken) => currentToken + 1);
+      bumpTimeline();
     } finally {
       setSubmittingEncounter(false);
     }
   };
 
   if (!activeCampaign || !activeSession) return null;
-
-  const openQuickLogAction = (actionId: string) => {
-    setRequestedQuickLogAction(actionId);
-    setQuickLogRequestNonce((currentNonce) => currentNonce + 1);
-  };
 
   // Show full encounter screen when viewing one. The EncounterScreen sits
   // INSIDE the SessionEncounterProvider so it can call endEncounter via the
@@ -459,7 +450,7 @@ function ActiveSessionContent() {
         onClose={() => {
           setViewingEncounterId(null);
           refreshEncounters();
-          setTimelineRefreshToken((currentToken) => currentToken + 1);
+          bumpTimeline();
         }}
       />
     );
@@ -537,40 +528,10 @@ function ActiveSessionContent() {
             End Session
           </button>
         </div>
-
-        <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.9fr)]">
-          <WorkspacePanel
-            title="Quick Log"
-            description="Capture beats as they happen. New entries appear in the timeline right away."
-          >
-            <SessionQuickActions
-              onLogComplete={() => {
-                setTimelineRefreshToken((currentToken) => currentToken + 1);
-                setSessionNotesRefreshToken((currentToken) => currentToken + 1);
-              }}
-              preferredAttachTo={quickLogAttachTo}
-              contextLabel={quickLogContextLabel}
-              requestedAction={requestedQuickLogAction}
-              requestNonce={quickLogRequestNonce}
-            />
-          </WorkspacePanel>
-
-          <WorkspacePanel
-            title="Session Notes"
-            description="Search and reopen notes from this session without breaking flow."
-          >
-            <VaultBrowser
-              campaignId={activeCampaign.id}
-              sessionId={activeSession.id}
-              compact
-              searchQuery={timelineSearchText}
-              onSearchQueryChange={setTimelineSearchText}
-              refreshToken={sessionNotesRefreshToken}
-            />
-          </WorkspacePanel>
-        </div>
       </div>
 
+      {/* Timeline first — it's the primary session view now that Quick Log
+          lives in the FAB star menu. */}
       <SessionTimelinePanel
         session={activeSession}
         encounters={encounters}
@@ -580,18 +541,30 @@ function ActiveSessionContent() {
         onReopenEncounter={async (encounterId) => {
           await reopenEncounter(encounterId);
           await refreshEncounters();
-          setTimelineRefreshToken((currentToken) => currentToken + 1);
+          bumpTimeline();
         }}
         onOpenNote={(noteId) => navigate(`/note/${noteId}/edit`)}
         searchText={timelineSearchText}
         onSearchTextChange={setTimelineSearchText}
-        onSelectionContextChange={(context) => {
-          setQuickLogAttachTo(context.attachTo);
-          setQuickLogContextLabel(context.label);
-        }}
-        onAddToTimeline={() => openQuickLogAction('note')}
+        onAddToTimeline={() => openQuickLog('note')}
         refreshToken={timelineRefreshToken}
       />
+
+      <div className="p-4">
+        <WorkspacePanel
+          title="Session Notes"
+          description="Search and reopen notes from this session without breaking flow."
+        >
+          <VaultBrowser
+            campaignId={activeCampaign.id}
+            sessionId={activeSession.id}
+            compact
+            searchQuery={timelineSearchText}
+            onSearchQueryChange={setTimelineSearchText}
+            refreshToken={sessionNotesRefreshToken}
+          />
+        </WorkspacePanel>
+      </div>
 
       {/* Start encounter modal */}
       {showStartEncounter && (
