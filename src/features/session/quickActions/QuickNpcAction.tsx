@@ -7,6 +7,10 @@ import { AttachToControl, resolveAttach, type AttachToValue } from './AttachToCo
 export interface QuickNpcActionProps {
   /** Called when the user cancels or after a successful save. */
   onClose: () => void;
+  /** Optional callback fired after a successful save. */
+  onSaved?: () => void;
+  /** Optional starting attach target inherited from timeline context. */
+  initialAttachTo?: AttachToValue;
 }
 
 type NpcCategory = 'monster' | 'npc' | 'animal';
@@ -19,7 +23,7 @@ type NpcCategory = 'monster' | 'npc' | 'animal';
  * {@link AttachToControl} per-entry attach-to-encounter override and fires a
  * success toast after a successful write.
  */
-export function QuickNpcAction({ onClose }: QuickNpcActionProps) {
+export function QuickNpcAction({ onClose, onSaved, initialAttachTo = 'auto' }: QuickNpcActionProps) {
   const { logNpcCapture } = useSessionLog();
   const { showToast } = useToast();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
@@ -27,7 +31,7 @@ export function QuickNpcAction({ onClose }: QuickNpcActionProps) {
   const [category, setCategory] = useState<NpcCategory>('npc');
   const [hp, setHp] = useState('');
   const [description, setDescription] = useState('');
-  const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
+  const [attachTo, setAttachTo] = useState<AttachToValue>(initialAttachTo);
   const [saving, setSaving] = useState(false);
 
   const canSubmit = name.trim().length > 0 && !saving;
@@ -59,6 +63,7 @@ export function QuickNpcAction({ onClose }: QuickNpcActionProps) {
       } else {
         showToast('Logged to session', 'success', 2000);
       }
+      onSaved?.();
       onClose();
     } finally {
       setSaving(false);
@@ -107,7 +112,7 @@ export function QuickNpcAction({ onClose }: QuickNpcActionProps) {
           rows={2}
         />
       </label>
-      <AttachToControl value={attachTo} onChange={setAttachTo} />
+      <AttachToControl value={attachTo} onChange={setAttachTo} defaultValue={initialAttachTo} />
       <div className="flex justify-end gap-2">
         <button
           type="button"

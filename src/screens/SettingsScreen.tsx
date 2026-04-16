@@ -34,7 +34,7 @@ const THEMES: { value: ThemeName; label: string; description: string }[] = [
 export default function SettingsScreen() {
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings } = useAppState();
-  const { character, updateCharacter } = useActiveCharacter();
+  const { character, updateCharacter, clearCharacter } = useActiveCharacter();
   const navigate = useNavigate();
   const { canInstall, install: installPwa } = usePwaInstall();
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0);
@@ -55,19 +55,51 @@ export default function SettingsScreen() {
 
   async function handleClearAll() {
     if (confirmText !== 'DELETE') return;
-    await db.characters.clear();
-    await db.referenceNotes.clear();
-    await db.appSettings.clear();
-    await db.campaigns.clear();
-    await db.sessions.clear();
-    await db.notes.clear();
-    await db.entityLinks.clear();
-    await db.parties.clear();
-    await db.partyMembers.clear();
-    await db.attachments.clear();
+    // clearCharacter() already awaits flushAll(), so pending character autosaves
+    // are flushed before we clear state. No double-flush needed here.
+    // The activeCharacterId=null settings write is also awaited inside
+    // clearCharacter() so it can't queue behind the rw-transaction lock.
+    await clearCharacter();
+    await db.transaction(
+      'rw',
+      [
+        db.characters,
+        db.referenceNotes,
+        db.appSettings,
+        db.metadata,
+        db.campaigns,
+        db.sessions,
+        db.notes,
+        db.entityLinks,
+        db.parties,
+        db.partyMembers,
+        db.attachments,
+        db.creatureTemplates,
+        db.encounters,
+        db.kb_nodes,
+        db.kb_edges,
+      ],
+      async () => {
+        await db.characters.clear();
+        await db.referenceNotes.clear();
+        await db.appSettings.clear();
+        await db.metadata.clear();
+        await db.campaigns.clear();
+        await db.sessions.clear();
+        await db.notes.clear();
+        await db.entityLinks.clear();
+        await db.parties.clear();
+        await db.partyMembers.clear();
+        await db.attachments.clear();
+        await db.creatureTemplates.clear();
+        await db.encounters.clear();
+        await db.kb_nodes.clear();
+        await db.kb_edges.clear();
+      }
+    );
     setClearStep(0);
     setConfirmText('');
-    navigate('/library');
+    window.location.replace('/library');
   }
 
   return (

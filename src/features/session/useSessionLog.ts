@@ -3,10 +3,24 @@ import { useCampaignContext } from '../campaign/CampaignContext';
 import { db } from '../../storage/db/client';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
-import type { Note } from '../../types/note';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { generateSoftDeleteTxId } from '../../utils/softDelete';
+import {
+  buildNoteRecord,
+  persistCanonicalNoteLinks,
+  resolveEncounterAttachmentTarget,
+} from '../notes/noteCreationService';
+
+// Lazy import to avoid circular dependency and keep note saves resilient if
+// KB sync fails for any reason.
+let _syncModule: typeof import('../kb/linkSyncEngine') | null = null;
+async function getSyncModule() {
+  if (!_syncModule) {
+    _syncModule = await import('../kb/linkSyncEngine');
+  }
+  return _syncModule;
+}
 
 /**
  * Options accepted by {@link useSessionLog.logToSession} and the typed log
@@ -134,71 +148,45 @@ export function useSessionLog() {
       return undefined;
     }
 
-    const now = nowISO();
-    const noteId = generateId();
+    let noteId: string | undefined;
+    await db.transaction('rw', [db.notes, db.entityLinks, db.encounters], async () => {
+      const attachTo = await resolveEncounterAttachmentTarget({
+        sessionId: activeSession.id,
+        targetEncounterId: options?.targetEncounterId,
+        resolveActiveEncounterId: async (sessionId) => {
+          const encounter = await encounterRepository.getActiveEncounterForSession(sessionId);
+          return encounter?.id ?? null;
+        },
+      });
 
-    await db.transaction('rw', [db.notes, db.entityLinks], async () => {
-      // Resolve the encounter target inside the transaction.
-      let attachTo: string | null;
-      if (options && options.targetEncounterId === null) {
-        attachTo = null;
-      } else if (options && typeof options.targetEncounterId === 'string') {
-        attachTo = options.targetEncounterId;
-      } else {
-        const active = await encounterRepository.getActiveEncounterForSession(activeSession.id);
-        attachTo = active ? active.id : null;
-      }
-
-      // Pull the body out of typeData so generic notes can carry a
-      // ProseMirror body without changing the signature for every caller.
-      let body: unknown = null;
-      let storedTypeData: unknown = typeData;
-      if (typeData && typeof typeData === 'object' && 'body' in (typeData as Record<string, unknown>)) {
-        const td = typeData as Record<string, unknown>;
-        body = td.body ?? null;
-        const { body: _omit, ...rest } = td;
-        void _omit;
-        storedTypeData = rest;
-      }
-
-      const note: Note = {
-        id: noteId,
+      const note = buildNoteRecord({
         campaignId: activeSession.campaignId,
         sessionId: activeSession.id,
         title,
-        body,
         type,
-        typeData: storedTypeData,
+        typeData,
         status: 'active',
         pinned: false,
-        visibility: 'public',
         scope: 'campaign',
-        schemaVersion: 1,
-        createdAt: now,
-        updatedAt: now,
-      };
-      await db.notes.add(note);
-
-      // Always link the note to the session itself so session exports still
-      // see it (parity with useNoteActions.createNote).
-      await entityLinkRepository.createLink({
-        fromEntityId: activeSession.id,
-        fromEntityType: 'session',
-        toEntityId: noteId,
-        toEntityType: 'note',
-        relationshipType: 'contains',
       });
+      await db.notes.add(note);
+      noteId = note.id;
 
-      if (attachTo) {
-        await entityLinkRepository.createLink({
-          fromEntityId: attachTo,
-          fromEntityType: 'encounter',
-          toEntityId: noteId,
-          toEntityType: 'note',
-          relationshipType: 'contains',
-        });
-      }
+      await persistCanonicalNoteLinks({
+        note,
+        sessionId: activeSession.id,
+        encounterId: attachTo,
+      });
     });
+
+    if (noteId) {
+      try {
+        const module = await getSyncModule();
+        await module.syncNote(noteId);
+      } catch {
+        // Note persistence succeeded; KB sync failure should not block logging.
+      }
+    }
 
     return noteId;
   }, [activeSession]);
@@ -488,14 +476,14 @@ export function useSessionLog() {
       throw new Error('useSessionLog.logNpcCapture: no active session');
     }
 
-    const now = nowISO();
     const creatureId = generateId();
-    const noteId = generateId();
+    let noteId: string | undefined;
 
     await db.transaction(
       'rw',
-      [db.creatureTemplates, db.notes, db.entityLinks],
+      [db.creatureTemplates, db.notes, db.entityLinks, db.encounters],
       async () => {
+        const now = nowISO();
         // 1. Create the bestiary entry
         await db.creatureTemplates.add({
           id: creatureId,
@@ -518,64 +506,47 @@ export function useSessionLog() {
           updatedAt: now,
         });
 
+        const attachTo = await resolveEncounterAttachmentTarget({
+          sessionId: activeSession.id,
+          targetEncounterId: options?.targetEncounterId,
+          resolveActiveEncounterId: async (sessionId) => {
+            const encounter = await encounterRepository.getActiveEncounterForSession(sessionId);
+            return encounter?.id ?? null;
+          },
+        });
+
         // 2. Create the note
-        const npcNote: Note = {
-          id: noteId,
+        const npcNote = buildNoteRecord({
           campaignId: activeSession.campaignId,
           sessionId: activeSession.id,
           title: input.name,
-          body: null,
           type: 'npc',
           typeData: { creatureTemplateId: creatureId, description: input.description },
           status: 'active',
           pinned: false,
-          visibility: 'public',
           scope: 'campaign',
-          schemaVersion: 1,
-          createdAt: now,
-          updatedAt: now,
-        };
+        });
         await db.notes.add(npcNote);
+        noteId = npcNote.id;
 
-        // 3. session → note ("contains") for baseline session export parity
-        await entityLinkRepository.createLink({
-          fromEntityId: activeSession.id,
-          fromEntityType: 'session',
-          toEntityId: noteId,
-          toEntityType: 'note',
-          relationshipType: 'contains',
+        await persistCanonicalNoteLinks({
+          note: npcNote,
+          sessionId: activeSession.id,
+          encounterId: attachTo,
         });
-
-        // 4. note → session ("introduced_in")
-        await entityLinkRepository.createLink({
-          fromEntityId: noteId,
-          fromEntityType: 'note',
-          toEntityId: activeSession.id,
-          toEntityType: 'session',
-          relationshipType: 'introduced_in',
-        });
-
-        // 5. contains edge to active encounter if applicable
-        let attachTo: string | null;
-        if (options && options.targetEncounterId === null) {
-          attachTo = null;
-        } else if (options && typeof options.targetEncounterId === 'string') {
-          attachTo = options.targetEncounterId;
-        } else {
-          const active = await encounterRepository.getActiveEncounterForSession(activeSession.id);
-          attachTo = active ? active.id : null;
-        }
-        if (attachTo) {
-          await entityLinkRepository.createLink({
-            fromEntityId: attachTo,
-            fromEntityType: 'encounter',
-            toEntityId: noteId,
-            toEntityType: 'note',
-            relationshipType: 'contains',
-          });
-        }
       },
     );
+
+    if (!noteId) {
+      throw new Error('useSessionLog.logNpcCapture: note creation failed');
+    }
+
+    try {
+      const module = await getSyncModule();
+      await module.syncNote(noteId);
+    } catch {
+      // NPC + note persistence succeeded; leave the note available even if KB sync fails.
+    }
 
     return { noteId, creatureId };
   }, [activeSession]);

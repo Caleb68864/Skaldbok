@@ -14,7 +14,7 @@ const CHARACTER_TABS = [
   { to: '/character/sheet', label: 'Sheet', icon: 'scroll-unfurled' },
   { to: '/character/skills', label: 'Skills', icon: 'perspective-dice-six-faces-random' },
   { to: '/character/gear', label: 'Gear', icon: 'knapsack' },
-  { to: '/character/magic', label: 'Magic', icon: 'spell-book' },
+  { to: '/character/magic', label: 'Abilities / Magic', icon: 'spell-book' },
 ] as const;
 
 /**

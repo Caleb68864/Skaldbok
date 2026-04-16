@@ -4,6 +4,7 @@ import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
+import * as entityLinkRepository from './entityLinkRepository';
 
 /**
  * Creates a new creature template in IndexedDB.
@@ -97,43 +98,70 @@ export async function update(id: string, patch: Partial<CreatureTemplate>): Prom
 }
 
 /**
- * Archives a creature template (sets status to 'archived').
- *
- * @param id - The ID of the template to archive.
+ * Soft-deletes a creature template and cascades the delete to every entity
+ * link edge the template is part of (source or target). All cascaded rows
+ * share the same `softDeletedBy` UUID so {@link restore} can bring them back
+ * atomically. Idempotent and a silent no-op on already-deleted rows.
  */
-export async function archive(id: string): Promise<void> {
-  await db.creatureTemplates.update(id, { status: 'archived', updatedAt: nowISO() });
-}
-
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
-    const row = await db.creatureTemplates.get(id);
-    if (!row) return;
-    if ((row as CreatureTemplate).deletedAt) return;
     const finalTxId = txId ?? generateSoftDeleteTxId();
     const now = nowISO();
-    await db.creatureTemplates.update(id, {
-      deletedAt: now,
-      softDeletedBy: finalTxId,
-      updatedAt: now,
+    await db.transaction('rw', [db.creatureTemplates, db.entityLinks], async () => {
+      const row = await db.creatureTemplates.get(id);
+      if (!row) return;
+      if ((row as CreatureTemplate).deletedAt) return;
+      await db.creatureTemplates.update(id, {
+        deletedAt: now,
+        softDeletedBy: finalTxId,
+        updatedAt: now,
+      });
+      await entityLinkRepository.softDeleteLinksForCreature(id, finalTxId, now);
     });
   } catch (e) {
     throw new Error(`creatureTemplateRepository.softDelete failed: ${e}`);
   }
 }
 
+/**
+ * Restores a soft-deleted creature template and every edge cascaded with it.
+ * Reads the `softDeletedBy` UUID off the row, then clears deletedAt /
+ * softDeletedBy on the row and every edge sharing that UUID. Single transaction.
+ */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.creatureTemplates.get(id);
     if (!row) return;
     if (!(row as CreatureTemplate).deletedAt) return;
-    await db.creatureTemplates.update(id, {
-      deletedAt: undefined,
-      softDeletedBy: undefined,
-      updatedAt: nowISO(),
+    const txId = (row as CreatureTemplate).softDeletedBy;
+    const now = nowISO();
+    await db.transaction('rw', [db.creatureTemplates, db.entityLinks], async () => {
+      await db.creatureTemplates.update(id, {
+        deletedAt: undefined,
+        softDeletedBy: undefined,
+        updatedAt: now,
+      });
+      if (txId) {
+        await entityLinkRepository.restoreLinksForTxId(txId);
+      }
     });
   } catch (e) {
     throw new Error(`creatureTemplateRepository.restore failed: ${e}`);
+  }
+}
+
+/**
+ * Returns every soft-deleted creature template, sorted by most-recent
+ * deletion first. Used by TrashScreen to populate the restore UI.
+ */
+export async function getDeleted(): Promise<CreatureTemplate[]> {
+  try {
+    const rows = await db.creatureTemplates.toArray();
+    return rows
+      .filter((r): r is CreatureTemplate => !!(r as CreatureTemplate).deletedAt)
+      .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
+  } catch (e) {
+    throw new Error(`creatureTemplateRepository.getDeleted failed: ${e}`);
   }
 }
 

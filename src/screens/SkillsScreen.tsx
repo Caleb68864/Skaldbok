@@ -5,6 +5,7 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useFieldEditable } from '../utils/modeGuards';
+import { useAutosave } from '../hooks/useAutosave';
 import { SkillList } from '../components/fields/SkillList';
 import { Chip } from '../components/primitives/Chip';
 import { GameIcon } from '../components/primitives/GameIcon';
@@ -20,6 +21,7 @@ import type { CharacterSkill } from '../types/character';
 import type { ConditionDefinition, AttributeDefinition } from '../types/system';
 import { nowISO } from '../utils/dates';
 import { computeSkillValue } from '../utils/derivedValues';
+import * as characterRepository from '../storage/repositories/characterRepository';
 
 /**
  * The Skills screen — lists all skills for the active character with roll-under
@@ -54,17 +56,29 @@ export default function SkillsScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
-  const { sessionState, setGlobalBoonBane, setSkillOverride } = useAppState();
+  const {
+    sessionState,
+    setGlobalBoonBane,
+    setSkillOverride,
+    isLoading: settingsLoading,
+    settings,
+  } = useAppState();
   const skillsEditable = useFieldEditable('skills.any');
   const [filter, setFilter] = useState<'all' | 'relevant'>('relevant');
+  useAutosave(character, characterRepository.save, 1000);
 
   useEffect(() => {
-    if (!isLoading && !character) {
+    const stillLoading = settingsLoading || isLoading;
+    const waitingForCharacter = !settingsLoading && !isLoading && !!settings.activeCharacterId && !character;
+    if (!stillLoading && !waitingForCharacter && !character) {
       navigate('/library');
     }
-  }, [isLoading, character, navigate]);
+  }, [settingsLoading, isLoading, settings.activeCharacterId, character, navigate]);
 
-  if (isLoading) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
+  const stillLoading = settingsLoading || isLoading;
+  const waitingForCharacter = !settingsLoading && !isLoading && !!settings.activeCharacterId && !character;
+
+  if (stillLoading || waitingForCharacter) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
   function handleSkillChange(skillId: string, value: CharacterSkill) {

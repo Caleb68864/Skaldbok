@@ -316,6 +316,44 @@ export async function endActiveSegment(encounterId: string): Promise<void> {
 }
 
 /**
+ * Atomically close any currently-open encounter on the session and open the
+ * target encounter in a single rw-transaction. Rolls back on any throw so
+ * the DB never ends in a state where the prior encounter is closed but the
+ * target is not reopened (or vice versa).
+ */
+export async function reopenEncounter(
+  sessionId: string,
+  targetEncounterId: string,
+): Promise<void> {
+  try {
+    await db.transaction('rw', [db.encounters], async () => {
+      const existing = await db.encounters.get(targetEncounterId);
+      if (!existing) {
+        throw new Error(
+          `encounterRepository.reopenEncounter: encounter ${targetEncounterId} not found`,
+        );
+      }
+      if ((existing as Encounter).deletedAt) {
+        throw new Error(
+          `encounterRepository.reopenEncounter: encounter ${targetEncounterId} is deleted`,
+        );
+      }
+      const priorActive = await getActiveEncounterForSession(sessionId);
+      if (priorActive && priorActive.id !== targetEncounterId) {
+        await endActiveSegment(priorActive.id);
+      }
+      await pushSegment(targetEncounterId, { startedAt: nowISO() });
+      await db.encounters.update(targetEncounterId, {
+        status: 'active',
+        updatedAt: nowISO(),
+      });
+    });
+  } catch (e) {
+    throw new Error(`encounterRepository.reopenEncounter failed: ${e}`);
+  }
+}
+
+/**
  * Soft-deletes an encounter and cascades the delete to every associated
  * entity link edge in a single transaction.
  *

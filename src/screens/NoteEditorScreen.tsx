@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { TiptapNoteEditor } from '../components/notes/TiptapNoteEditor';
 import { TagPicker } from '../components/notes/TagPicker';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
-import { getNoteById, updateNote, createNote } from '../storage/repositories/noteRepository';
+import { getNoteById, updateNote } from '../storage/repositories/noteRepository';
+import { useNoteActions } from '../features/notes/useNoteActions';
 import { NOTE_TYPES } from '../types/note';
 import type { Note, NoteType } from '../types/note';
 import { generateId } from '../utils/ids';
@@ -11,6 +12,7 @@ import { nowISO } from '../utils/dates';
 import { useToast } from '../context/ToastContext';
 import { useAppState } from '../context/AppStateContext';
 import { cn } from '../lib/utils';
+import { registerFlush } from '../features/persistence/autosaveFlush';
 
 /**
  * Full-screen note editor — creates or edits a single {@link Note} for the active campaign.
@@ -48,9 +50,10 @@ import { cn } from '../lib/utils';
 export default function NoteEditorScreen() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { activeCampaign, activeSession } = useCampaignContext();
+  const { isHydrated, activeCampaign, activeSession } = useCampaignContext();
   const { showToast } = useToast();
   const { settings, updateSettings } = useAppState();
+  const { createNote } = useNoteActions();
   const campaignId = activeCampaign?.id ?? null;
   const customTags = campaignId ? (settings.customTags?.[campaignId] ?? []) : [];
   const handleCreateTag = (tag: string) => {
@@ -67,12 +70,22 @@ export default function NoteEditorScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Holds unsaved field updates between keystrokes. Debounce timer AND the
+  // flush-bus-registered flush read from this ref so the latest state always
+  // lands, even if a lifecycle operation fires mid-debounce.
+  const pendingUpdatesRef = useRef<Partial<Note>>({});
+  // Mirror of `note` state for the flush closure (register-once-on-mount needs
+  // a stable ref, not closed-over state).
+  const noteRef = useRef<Note | null>(null);
   const isNewNote = !id || id === 'new';
 
   // Load or create note
   useEffect(() => {
     let mounted = true;
     if (isNewNote) {
+      if (!isHydrated) {
+        return () => { mounted = false; };
+      }
       if (!activeCampaign) {
         navigate('/session');
         return;
@@ -95,8 +108,6 @@ export default function NoteEditorScreen() {
         updatedAt: now,
       };
       createNote({
-        campaignId: newNote.campaignId,
-        sessionId: newNote.sessionId,
         title: newNote.title,
         body: newNote.body,
         type: newNote.type,
@@ -105,7 +116,7 @@ export default function NoteEditorScreen() {
         pinned: newNote.pinned,
         scope: newNote.scope,
       }).then(created => {
-        if (mounted) {
+        if (mounted && created) {
           navigate(`/note/${created.id}/edit`, { replace: true });
         }
       }).catch(() => {
@@ -134,15 +145,18 @@ export default function NoteEditorScreen() {
     });
     return () => { mounted = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [activeCampaign, id, isHydrated]);
 
-  const scheduleAutosave = useCallback((updates: Partial<Note>) => {
+  const scheduleAutosave = useCallback(() => {
     if (!note) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(async () => {
+      const pending = pendingUpdatesRef.current;
+      if (!pending || Object.keys(pending).length === 0) return;
       setSaving(true);
       try {
-        await updateNote(note.id, updates);
+        await updateNote(note.id, pending);
+        pendingUpdatesRef.current = {};
       } catch (e) {
         console.error('NoteEditorScreen: autosave failed', e);
       } finally {
@@ -151,32 +165,63 @@ export default function NoteEditorScreen() {
     }, 800);
   }, [note]);
 
-  // Flush on unmount
+  // Keep noteRef in sync with note state so the flush closure (registered
+  // once on mount) always operates on the latest note.
   useEffect(() => {
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    noteRef.current = note;
+  }, [note]);
+
+  // Register with the flush bus on mount, AND flush on unmount. Reads current
+  // state via refs so the empty-dep registration stays stable.
+  useEffect(() => {
+    const flush = async () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      const currentNote = noteRef.current;
+      const pending = pendingUpdatesRef.current;
+      if (currentNote && pending && Object.keys(pending).length > 0) {
+        try {
+          await updateNote(currentNote.id, pending);
+          pendingUpdatesRef.current = {};
+        } catch (e) {
+          console.error('NoteEditorScreen: flush failed', e);
+        }
+      }
     };
+    const { unregister } = registerFlush(flush);
+    return () => {
+      unregister();
+      // Unmount also awaits a final flush so navigation persists pending edits.
+      flush();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleTitleChange = (newTitle: string) => {
     setTitle(newTitle);
-    scheduleAutosave({ title: newTitle });
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, title: newTitle };
+    scheduleAutosave();
   };
 
   const handleBodyChange = (newBody: unknown) => {
     setBody(newBody);
-    scheduleAutosave({ body: newBody });
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, body: newBody };
+    scheduleAutosave();
   };
 
   const handleTagToggle = (tag: string) => {
     const newTags = tags.includes(tag) ? tags.filter(t => t !== tag) : [...tags, tag];
     setTags(newTags);
-    scheduleAutosave({ tags: newTags });
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, tags: newTags };
+    scheduleAutosave();
   };
 
   const handleTypeChange = (newType: NoteType) => {
     setNoteType(newType);
-    scheduleAutosave({ type: newType });
+    pendingUpdatesRef.current = { ...pendingUpdatesRef.current, type: newType };
+    scheduleAutosave();
   };
 
   if (loading) {

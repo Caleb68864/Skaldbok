@@ -3,11 +3,17 @@ import { Toast } from "./toast";
 
 export type ToastVariant = "success" | "error" | "warning" | "info";
 
+export interface ToastAction {
+  label: string;
+  onClick: () => void | Promise<void>;
+}
+
 export interface ToastItem {
   id: string;
   message: string;
   variant: ToastVariant;
   duration: number;
+  action?: ToastAction;
 }
 
 interface ToasterProps {
@@ -30,6 +36,7 @@ export function Toaster({ toasts }: ToasterProps) {
           id={toast.id}
           message={toast.message}
           variant={toast.variant}
+          action={toast.action}
         />
       ))}
     </div>

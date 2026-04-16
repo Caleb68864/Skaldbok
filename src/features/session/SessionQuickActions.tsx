@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Ellipsis, Plus } from 'lucide-react';
 import { Drawer } from '../../components/primitives/Drawer';
 import { useNoteActions } from '../notes/useNoteActions';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
@@ -17,6 +18,13 @@ import { PartyPicker } from '../../components/fields/PartyPicker';
 import type { ResolvedMember } from '../../components/fields/PartyPicker';
 import { CounterControl } from '../../components/primitives/CounterControl';
 import { cn } from '../../lib/utils';
+import { Button } from '../../components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu';
 
 // ── Dragonbane Data ──────────────────────────────────────────────
 
@@ -144,7 +152,21 @@ function formatModTags(mods: { boon: boolean; bane: boolean; pushed: boolean }):
 
 // ── Main Component ──────────────────────────────────────────────
 
-export function SessionQuickActions() {
+interface SessionQuickActionsProps {
+  onLogComplete?: () => void;
+  preferredAttachTo?: AttachToValue;
+  contextLabel?: string | null;
+  requestedAction?: string | null;
+  requestNonce?: number;
+}
+
+export function SessionQuickActions({
+  onLogComplete,
+  preferredAttachTo = 'auto',
+  contextLabel,
+  requestedAction,
+  requestNonce,
+}: SessionQuickActionsProps) {
   const { createNote } = useNoteActions();
   const { character } = useActiveCharacter();
   const { activeCampaign, activeParty, activeCharacterInCampaign } = useCampaignContext();
@@ -170,6 +192,11 @@ export function SessionQuickActions() {
   const [shopSilver, setShopSilver] = useState(0);
   const [shopCopper, setShopCopper] = useState(0);
   const [shopQuantity, setShopQuantity] = useState(1);
+
+  const openAction = useCallback((actionId: string) => {
+    setAttachTo(preferredAttachTo);
+    setActiveDrawer(actionId);
+  }, [preferredAttachTo]);
 
   // Resolve party member names from linked characters
   useEffect(() => {
@@ -246,8 +273,20 @@ export function SessionQuickActions() {
     setShopSilver(0);
     setShopCopper(0);
     setShopQuantity(1);
-    setAttachTo('auto');
+    setAttachTo(preferredAttachTo);
   };
+
+  useEffect(() => {
+    setAttachTo(preferredAttachTo);
+  }, [preferredAttachTo]);
+
+  useEffect(() => {
+    if (!requestedAction) {
+      return;
+    }
+
+    openAction(requestedAction);
+  }, [openAction, requestNonce, requestedAction]);
 
   /**
    * Fires the Sub-Spec 8 success toast: "Logged to {encounter}" when attached
@@ -288,7 +327,7 @@ export function SessionQuickActions() {
     const who = selectedNames();
     const fullTitle = who ? `${who}: ${title}` : title;
     const currentAttach = attachTo;
-    await createNote(
+    const createdNote = await createNote(
       {
         title: fullTitle,
         type: type as 'skill-check' | 'generic' | 'loot' | 'quote' | 'rumor',
@@ -300,7 +339,11 @@ export function SessionQuickActions() {
       },
       { targetEncounterId: resolveAttach(currentAttach) },
     );
+    if (!createdNote) {
+      return;
+    }
     fireQuickLogToast(currentAttach);
+    onLogComplete?.();
     close();
   };
 
@@ -954,22 +997,32 @@ export function SessionQuickActions() {
 
   const actions = [
     { id: 'skill', label: 'Skill Check' },
+    { id: 'note', label: 'Note' },
+    { id: 'npc', label: 'NPC / Monster' },
+    { id: 'encounter', label: 'Encounter' },
+    { id: 'damage', label: 'Damage' },
+    { id: 'quote', label: 'Quote' },
     { id: 'spell', label: 'Cast Spell' },
     { id: 'ability', label: 'Ability' },
     { id: 'condition', label: 'Condition' },
-    { id: 'damage', label: 'Damage' },
     { id: 'death', label: 'Death Roll' },
     { id: 'rest', label: 'Rest' },
     { id: 'camp', label: 'Camp' },
     { id: 'travel', label: 'Travel' },
-    { id: 'quote', label: 'Quote' },
     { id: 'rumor', label: 'Rumor' },
     { id: 'shopping', label: 'Shopping' },
-    { id: 'encounter', label: 'Encounter' },
     { id: 'loot', label: 'Loot' },
-    { id: 'note', label: 'Note' },
-    { id: 'npc', label: 'NPC / Monster' },
   ];
+
+  const primaryActionIds = ['note', 'encounter', 'damage', 'quote', 'npc', 'skill'];
+  const primaryActions = useMemo(
+    () => actions.filter((action) => primaryActionIds.includes(action.id)),
+    [actions],
+  );
+  const secondaryActions = useMemo(
+    () => actions.filter((action) => !primaryActionIds.includes(action.id)),
+    [actions],
+  );
 
   const drawerContent: Record<string, { title: string; render: () => React.JSX.Element }> = {
     skill: { title: 'Skill Check', render: renderSkillPicker },
@@ -995,15 +1048,44 @@ export function SessionQuickActions() {
 
   return (
     <>
-      <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
-        Quick Log
-      </p>
-      <div className="flex gap-2 flex-wrap mb-4">
-        {actions.map(a => (
-          <button key={a.id} onClick={() => setActiveDrawer(a.id)} className={chipClasses}>
-            {a.label}
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
+            Quick Log
+          </p>
+          {contextLabel ? (
+            <p className="text-sm text-[var(--color-text-muted)]">
+              Adding to <span className="font-semibold text-[var(--color-text)]">{contextLabel}</span>
+            </p>
+          ) : null}
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={() => openAction('note')}>
+          <Plus className="h-4 w-4" />
+          Add Note
+        </Button>
+      </div>
+
+      <div className="mb-4 flex gap-2 flex-wrap items-center">
+        {primaryActions.map((action) => (
+          <button key={action.id} onClick={() => openAction(action.id)} className={chipClasses}>
+            {action.label}
           </button>
         ))}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className={chipClasses}>
+              <Ellipsis className="h-4 w-4" />
+              More
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            {secondaryActions.map((action) => (
+              <DropdownMenuItem key={action.id} onSelect={() => openAction(action.id)}>
+                {action.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {activeDrawer && drawerContent[activeDrawer] && (
@@ -1013,7 +1095,7 @@ export function SessionQuickActions() {
           title={drawerContent[activeDrawer].title}
         >
           {drawerContent[activeDrawer].render()}
-          <AttachToControl value={attachTo} onChange={setAttachTo} />
+          <AttachToControl value={attachTo} onChange={setAttachTo} defaultValue={preferredAttachTo} />
           <TagPicker
             selected={selectedTags}
             onToggle={tag => setSelectedTags(prev =>
@@ -1027,15 +1109,17 @@ export function SessionQuickActions() {
         <Drawer
           open={true}
           onClose={close}
-          title={activeDrawer === 'note' ? 'Quick Note' : 'NPC / Monster'}
+          title={activeDrawer === 'note' ? 'New Timeline Entry' : 'NPC / Monster'}
         >
           {activeDrawer === 'note' ? (
             <QuickNoteAction
               campaignId={activeCampaign?.id ?? null}
               onClose={close}
+              onSaved={onLogComplete}
+              initialAttachTo={preferredAttachTo}
             />
           ) : (
-            <QuickNpcAction onClose={close} />
+            <QuickNpcAction onClose={close} onSaved={onLogComplete} initialAttachTo={preferredAttachTo} />
           )}
         </Drawer>
       )}

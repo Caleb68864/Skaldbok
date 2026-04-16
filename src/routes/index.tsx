@@ -13,6 +13,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 import CharacterLibraryScreen from '../screens/CharacterLibraryScreen';
 import PrintableSheetScreen from '../screens/PrintableSheetScreen';
 import { BestiaryScreenRoute } from '../features/bestiary/BestiaryScreenRoute';
+import TrashScreen from '../screens/TrashScreen';
 import KnowledgeBaseScreen from '../screens/KnowledgeBaseScreen';
 import type { RouteObject } from 'react-router-dom';
 
@@ -74,6 +75,7 @@ export const routes: RouteObject[] = [
       { path: '/kb', element: <KnowledgeBaseScreen /> },
       { path: '/kb/:nodeId', element: <KnowledgeBaseScreen /> },
       { path: '/bestiary', element: <BestiaryScreenRoute /> },
+      { path: '/bestiary/trash', element: <TrashScreen /> },
       { path: '/reference', element: <ReferenceScreen /> },
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/profile', element: <ProfileScreen /> },
