@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import { useAppState } from './AppStateContext';
 import * as characterRepository from '../storage/repositories/characterRepository';
+import { flushAll } from '../features/persistence/autosaveFlush';
 import type { CharacterRecord } from '../types/character';
 
 type CharacterUpdater = Partial<CharacterRecord> | ((prev: CharacterRecord) => Partial<CharacterRecord>);
@@ -77,6 +78,9 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
   }, []);
 
   const clearCharacter = useCallback(async () => {
+    // Flush any pending character autosave before mutating state, so a
+    // debounced save doesn't fire after the clear and re-insert data.
+    await flushAll();
     setCharacterState(null);
     await updateSettings({ activeCharacterId: null });
   }, [updateSettings]);

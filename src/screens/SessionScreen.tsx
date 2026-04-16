@@ -6,6 +6,7 @@ import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { EndSessionModal } from '../features/campaign/EndSessionModal';
 import { useExportActions } from '../features/export/useExportActions';
 import { useToast } from '../context/ToastContext';
+import { flushAll } from '../features/persistence/autosaveFlush';
 // NotesGrid kept for rollback safety — file not deleted per spec
 // import { NotesGrid } from '../features/notes/NotesGrid';
 import { VaultBrowser } from '../features/kb/VaultBrowser';
@@ -292,6 +293,7 @@ function ActiveSessionContent() {
   const { showToast } = useToast();
 
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  const [endingSession, setEndingSession] = useState(false);
   const [elapsed, setElapsed] = useState('');
   const [viewingEncounterId, setViewingEncounterId] = useState<string | null>(null);
   const [showStartEncounter, setShowStartEncounter] = useState(false);
@@ -360,13 +362,30 @@ function ActiveSessionContent() {
   };
 
   const confirmEndSession = async () => {
-    // End any active encounters before ending the session
-    if (activeEncounter) {
-      await encounterRepository.end(activeEncounter.id);
-      refreshEncounters();
+    if (endingSession) return;
+    setEndingSession(true);
+    try {
+      // Wait for pending debounced writes (notes, character autosaves, in-flight
+      // combat participant updates) before mutating session state. If any flush
+      // rejects, abort and surface a toast so we never silently lose data.
+      const results = await flushAll();
+      const rejected = results.filter(r => r.status === 'rejected');
+      if (rejected.length > 0) {
+        console.error('[end-session] flush failures:', rejected);
+        showToast("Couldn't save changes — session not ended. Try again.", 'error');
+        return;
+      }
+
+      // End any active encounters before ending the session.
+      if (activeEncounter) {
+        await encounterRepository.end(activeEncounter.id);
+        refreshEncounters();
+      }
+      await endSession();
+      setShowEndConfirm(false);
+    } finally {
+      setEndingSession(false);
     }
-    await endSession();
-    setShowEndConfirm(false);
   };
 
   const resetStartEncounterForm = () => {
@@ -721,6 +740,7 @@ function ActiveSessionContent() {
         <EndSessionModal
           sessionTitle={activeSession.title}
           hasActiveEncounter={!!activeEncounter}
+          busy={endingSession}
           onConfirm={confirmEndSession}
           onCancel={() => setShowEndConfirm(false)}
         />

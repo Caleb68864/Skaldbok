@@ -170,31 +170,7 @@ export function useSessionEncounter(sessionId: string): UseSessionEncounterResul
 
   const reopenEncounter = useCallback(
     async (id: string): Promise<void> => {
-      const existing = await db.encounters.get(id);
-      if (!existing) {
-        throw new Error(`useSessionEncounter.reopenEncounter: encounter ${id} not found`);
-      }
-      if ((existing as Encounter).deletedAt) {
-        throw new Error(`useSessionEncounter.reopenEncounter: encounter ${id} is deleted`);
-      }
-
-      await db.transaction('rw', [db.encounters], async () => {
-        // End any other active encounter first
-        const priorActive = await encounterRepository.getActiveEncounterForSession(sessionId);
-        if (priorActive && priorActive.id !== id) {
-          await encounterRepository.endActiveSegment(priorActive.id);
-        }
-
-        // Push a new open segment onto the target
-        await encounterRepository.pushSegment(id, { startedAt: nowISO() });
-
-        // Update status back to active
-        await db.encounters.update(id, {
-          status: 'active',
-          updatedAt: nowISO(),
-        });
-      });
-
+      await encounterRepository.reopenEncounter(sessionId, id);
       await refresh();
     },
     [sessionId, refresh],

@@ -4,6 +4,7 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { db } from '../../storage/db/client';
+import { flushAll } from '../persistence/autosaveFlush';
 
 export function useCharacterActions() {
   const { clearCharacter, character: activeCharacter } = useActiveCharacter();
@@ -34,7 +35,12 @@ export function useCharacterActions() {
 
   async function deleteCharacter(id: string) {
     if (activeCharacter?.id === id) {
+      // clearCharacter awaits flushAll internally.
       await clearCharacter();
+    } else {
+      // Non-active character: still flush so a pending autosave for this
+      // character lands before we remove the row.
+      await flushAll();
     }
     await db.partyMembers.where('linkedCharacterId').equals(id).delete();
     await characterRepository.remove(id);
