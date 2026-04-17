@@ -15,9 +15,8 @@ import { registerFlush } from '../persistence/autosaveFlush';
 import { useSessionLog } from '../session/useSessionLog';
 import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 import { useCampaignContext } from '../campaign/CampaignContext';
-import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 import { useToast } from '../../context/ToastContext';
-import type { CharacterRecord } from '../../types/character';
+import { addPartyCharactersToEncounter } from './addPartyCharactersToEncounter';
 
 interface CombatEncounterViewProps {
   encounter: Encounter;
@@ -267,63 +266,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       showToast('No linked party characters to add');
       return;
     }
-
-    const now = nowISO();
-    let addedCount = 0;
-    const characters = (
-      await Promise.all(partyCharacterIds.map((id) => getCharacterById(id)))
-    ).filter((character): character is CharacterRecord => character !== undefined);
-
-    await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
-      const enc = await db.encounters.get(encounter.id);
-      if (!enc) throw new Error(`encounter ${encounter.id} not found`);
-
-      const participantIds = new Set((enc.participants ?? []).map((p) => p.id));
-      const existingLinks = await db.entityLinks.toArray();
-
-      const existingCharacterIds = new Set(
-        existingLinks
-          .filter((link) =>
-            !link.deletedAt
-            && link.toEntityType === 'character'
-            && participantIds.has(link.fromEntityId),
-          )
-          .map((link) => link.toEntityId),
-      );
-
-      let updatedParticipants = [...(enc.participants ?? [])];
-
-      for (const character of characters) {
-        if (existingCharacterIds.has(character.id)) continue;
-
-        const participantId = generateId();
-        updatedParticipants.push({
-          id: participantId,
-          name: character.name,
-          type: 'pc',
-          instanceState: {},
-          sortOrder: updatedParticipants.length + 1,
-        });
-
-        await entityLinkRepository.createLink({
-          fromEntityId: participantId,
-          fromEntityType: 'encounterParticipant',
-          toEntityId: character.id,
-          toEntityType: 'character',
-          relationshipType: 'represents',
-        });
-
-        existingCharacterIds.add(character.id);
-        addedCount += 1;
-      }
-
-      if (addedCount > 0) {
-        await db.encounters.update(encounter.id, {
-          participants: updatedParticipants,
-          updatedAt: now,
-        });
-      }
-    });
+    const addedCount = await addPartyCharactersToEncounter(encounter.id, partyCharacterIds);
 
     if (addedCount > 0) {
       await refresh();

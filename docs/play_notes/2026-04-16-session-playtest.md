@@ -234,3 +234,26 @@ Updated status:
 - The stacked-modal Quick Log note issue is fixed.
 - The Session Notes empty-state guidance issue is fixed.
 - The "party system and encounter system feel like separate islands" problem is improved again with a direct full-party import during combat setup.
+
+## Verification After Next 3 Follow-Ups
+
+I implemented and tested the next three highest-impact improvements after that pass.
+
+Verified improvements:
+
+- Start Encounter can now preload the active party.
+  - I started `Social Party Autofill Retest` with `Include active party` left on.
+  - The social encounter opened with both `Rurik Retest` and `Brynja Retest` already present as participants.
+- Non-combat encounters now support `Add Entire Party` too.
+  - I started `Exploration Manual Party Retest` with `Include active party` turned off.
+  - It opened with `Participants (0)`.
+  - Pressing `Add Entire Party` added both party characters immediately.
+- Newly created characters now land in edit mode when promoted into use.
+  - I created `Edit Mode Retest`, used `Set Active & Edit`, and landed on the character sheet with editable fields exposed instead of the play-mode lock state.
+
+Implementation summary:
+
+- extracted shared `addPartyCharactersToEncounter` helper so combat, non-combat, and encounter-start seeding all use the same duplicate-safe logic
+- added `Include active party` to the Start Encounter flow
+- added `Add Entire Party` to non-combat encounter screens
+- updated newly-created-character activation flow to switch into edit mode before opening the sheet
