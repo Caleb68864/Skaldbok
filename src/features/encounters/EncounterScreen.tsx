@@ -6,6 +6,9 @@ import { TiptapNoteEditor } from '../../components/notes/TiptapNoteEditor';
 import { useSessionEncounterContext } from '../session/SessionEncounterContext';
 import { useSessionLog } from '../session/useSessionLog';
 import type { Encounter } from '../../types/encounter';
+import { useCampaignContext } from '../campaign/CampaignContext';
+import { useToast } from '../../context/ToastContext';
+import { addPartyCharactersToEncounter } from './addPartyCharactersToEncounter';
 import {
   Dialog,
   DialogContent,
@@ -52,6 +55,8 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
 
   const { endEncounter, recentEnded, activeEncounter } = useSessionEncounterContext();
   const { reassignNote } = useSessionLog();
+  const { activeParty } = useCampaignContext();
+  const { showToast } = useToast();
 
   const [showParticipantPicker, setShowParticipantPicker] = useState(false);
   const [showEndDialog, setShowEndDialog] = useState(false);
@@ -94,6 +99,9 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
   }
 
   const participants = encounter.participants ?? [];
+  const partyCharacterIds = (activeParty?.members ?? [])
+    .map((member) => member.linkedCharacterId)
+    .filter((id): id is string => Boolean(id));
 
   // In-session encounters available as Move-to targets. Union of
   // activeEncounter + recentEnded, minus the current encounter.
@@ -121,6 +129,26 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
     } finally {
       setSubmittingEnd(false);
     }
+  };
+
+  const handleAddWholeParty = async () => {
+    if (partyCharacterIds.length === 0) {
+      showToast('No linked party characters to add');
+      return;
+    }
+    const addedCount = await addPartyCharactersToEncounter(encounterId, partyCharacterIds);
+    await refreshEncounter();
+
+    if (addedCount > 0) {
+      showToast(
+        addedCount === 1 ? 'Added 1 party character' : `Added ${addedCount} party characters`,
+        'success',
+        2000,
+      );
+      return;
+    }
+
+    showToast('Party is already in this encounter', 'info', 2000);
   };
 
   return (
@@ -244,6 +272,15 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
                   </button>
                 </div>
               ))}
+            {encounter.status === 'active' && partyCharacterIds.length > 0 && (
+              <button
+                type="button"
+                onClick={handleAddWholeParty}
+                className={cn(actionBtnClass, 'w-full mt-2')}
+              >
+                Add Entire Party
+              </button>
+            )}
           </div>
         )}
       </section>

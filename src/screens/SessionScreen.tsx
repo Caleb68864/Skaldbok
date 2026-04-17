@@ -34,6 +34,7 @@ import * as encounterRepository from '../storage/repositories/encounterRepositor
 import type { Session } from '../types/session';
 import type { Note } from '../types/note';
 import { formatLocalDateOnly, formatLocalDateTime } from '../utils/dates';
+import { addPartyCharactersToEncounter } from '../features/encounters/addPartyCharactersToEncounter';
 
 function formatDateTime(iso: string): string {
   return formatLocalDateTime(iso);
@@ -281,7 +282,7 @@ function NoActiveSessionContent() {
  */
 function ActiveSessionContent() {
   const navigate = useNavigate();
-  const { activeCampaign, activeSession, endSession } = useCampaignContext();
+  const { activeCampaign, activeSession, activeParty, endSession } = useCampaignContext();
   const { exportSessionMarkdown, exportSessionBundle, exportSessionSkaldmark } = useExportActions();
   const { showToast } = useToast();
 
@@ -296,6 +297,7 @@ function ActiveSessionContent() {
   const [newEncounterTagsInput, setNewEncounterTagsInput] = useState('');
   const [newEncounterLocation, setNewEncounterLocation] = useState('');
   const [newEncounterParentOverride, setNewEncounterParentOverride] = useState<'auto' | 'none' | string>('auto');
+  const [includePartyInEncounter, setIncludePartyInEncounter] = useState(true);
   const [submittingEncounter, setSubmittingEncounter] = useState(false);
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
@@ -383,6 +385,7 @@ function ActiveSessionContent() {
     setNewEncounterTagsInput('');
     setNewEncounterLocation('');
     setNewEncounterParentOverride('auto');
+    setIncludePartyInEncounter(true);
     setNewEncounterType('combat');
   };
 
@@ -415,6 +418,13 @@ function ActiveSessionContent() {
         location: newEncounterLocation.trim() || undefined,
         parentOverride,
       });
+
+      const partyCharacterIds = (activeParty?.members ?? [])
+        .map((member) => member.linkedCharacterId)
+        .filter((id): id is string => Boolean(id));
+      if (includePartyInEncounter && partyCharacterIds.length > 0) {
+        await addPartyCharactersToEncounter(newEnc.id, partyCharacterIds);
+      }
 
       if (prior && prior.id !== newEnc.id) {
         showToast(`${prior.title} ended, ${newEnc.title} started`, 'info', 3000);
@@ -663,6 +673,23 @@ function ActiveSessionContent() {
                 <option key={opt.id} value={opt.id}>{opt.label}</option>
               ))}
             </select>
+
+            <label className="mb-3 flex items-start gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includePartyInEncounter}
+                onChange={(e) => setIncludePartyInEncounter(e.target.checked)}
+                className="mt-1 h-4 w-4"
+              />
+              <span>
+                <span className="block text-sm font-semibold text-[var(--color-text)]">
+                  Include active party
+                </span>
+                <span className="block text-xs text-[var(--color-text-muted)]">
+                  Start this scene with linked party characters already added as participants.
+                </span>
+              </span>
+            </label>
 
             <div className="flex gap-3">
               <button
