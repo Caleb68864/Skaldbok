@@ -280,7 +280,6 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
 
     showToast('Party is already in this encounter', 'info', 2000);
   };
-
   return (
     <div className="p-4">
       {/* Header */}
