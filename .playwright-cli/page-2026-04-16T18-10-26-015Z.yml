@@ -1,0 +1,37 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e7]: No campaign
+        - img [ref=e8]
+      - button "Menu" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+    - main [ref=e12]:
+      - generic [ref=e13]:
+        - generic [ref=e14]:
+          - generic [ref=e15]:
+            - button "Back" [ref=e16] [cursor=pointer]:
+              - img [ref=e17]
+            - heading "Character Library" [level=1] [ref=e19]
+          - generic [ref=e20]:
+            - button "Import Character" [ref=e21] [cursor=pointer]
+            - button "+ New Character" [ref=e22] [cursor=pointer]
+        - generic [ref=e23]:
+          - paragraph [ref=e24]: No characters yet. Create your first character to get started.
+          - button "Create your first character" [ref=e25] [cursor=pointer]
+    - navigation "Main navigation" [ref=e26]:
+      - link "Characters" [ref=e27] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e28]
+        - text: Characters
+      - link "Session" [ref=e31] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e32]
+        - text: Session
+      - link "Reference" [ref=e34] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e35]
+        - text: Reference
+    - button "Start a session first" [ref=e37] [cursor=pointer]:
+      - img [ref=e38]
+  - alert

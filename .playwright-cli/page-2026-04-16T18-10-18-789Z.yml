@@ -1,0 +1,166 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e7]:
+          - generic [ref=e8]: Ashes of Rime
+          - generic [ref=e9]: Session 1 — 2026-04-16
+        - img [ref=e11]
+      - button "Menu" [ref=e13] [cursor=pointer]:
+        - img [ref=e14]
+    - tablist [ref=e16]:
+      - tab "Sheet" [selected] [ref=e17] [cursor=pointer]:
+        - img [ref=e18]
+        - text: Sheet
+      - tab "Skills" [ref=e20] [cursor=pointer]
+      - tab "Gear" [ref=e21] [cursor=pointer]
+      - tab "Abilities / Magic" [ref=e22] [cursor=pointer]:
+        - img [ref=e23]
+        - text: Abilities / Magic
+    - main [ref=e25]:
+      - generic [ref=e27]:
+        - generic [ref=e29]:
+          - button "Identity" [expanded] [ref=e30] [cursor=pointer]:
+            - heading "Identity" [level=3] [ref=e31]:
+              - img [ref=e33]
+              - text: Identity
+            - img [ref=e36]
+          - generic [ref=e41]:
+            - button "Brynja Frostvein portrait placeholder" [ref=e43]:
+              - generic [ref=e44]: BF
+            - generic [ref=e45]:
+              - generic [ref=e46]:
+                - generic [ref=e47]: Name
+                - textbox [disabled] [ref=e48]: Brynja Frostvein
+              - generic [ref=e49]:
+                - generic [ref=e50]:
+                  - generic [ref=e51]: Kin
+                  - textbox "Kin" [disabled] [ref=e52]
+                - generic [ref=e53]:
+                  - generic [ref=e54]: Profession
+                  - textbox "Profession" [disabled] [ref=e55]
+                - generic [ref=e56]:
+                  - generic [ref=e57]: Age
+                  - textbox "Age" [disabled] [ref=e58]: Adult
+              - generic [ref=e59]:
+                - generic [ref=e60]: Weakness
+                - textbox "Weakness" [disabled] [ref=e61]
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - button "Attributes (locked in Play Mode) p. 28-29" [expanded] [ref=e64] [cursor=pointer]:
+              - heading "Attributes (locked in Play Mode) p. 28-29" [level=3] [ref=e65]:
+                - img [ref=e67]
+                - text: Attributes (locked in Play Mode)
+                - generic [ref=e69]: p. 28-29
+              - img [ref=e71]
+            - generic [ref=e76]:
+              - generic [ref=e77]:
+                - generic [ref=e78]: STR
+                - generic [ref=e79]: "10"
+                - switch "Exhausted condition (STR)" [ref=e81] [cursor=pointer]: Exhausted
+              - generic [ref=e82]:
+                - generic [ref=e83]: CON
+                - generic [ref=e84]: "10"
+                - switch "Sickly condition (CON)" [ref=e86] [cursor=pointer]: Sickly
+              - generic [ref=e87]:
+                - generic [ref=e88]: AGL
+                - generic [ref=e89]: "10"
+                - switch "Dazed condition (AGL)" [ref=e91] [cursor=pointer]: Dazed
+              - generic [ref=e92]:
+                - generic [ref=e93]: INT
+                - generic [ref=e94]: "10"
+                - switch "Angry condition (INT)" [ref=e96] [cursor=pointer]: Angry
+              - generic [ref=e97]:
+                - generic [ref=e98]: WIL
+                - generic [ref=e99]: "10"
+                - switch "Scared condition (WIL)" [ref=e101] [cursor=pointer]: Scared
+              - generic [ref=e102]:
+                - generic [ref=e103]: CHA
+                - generic [ref=e104]: "10"
+                - switch "Disheartened condition (CHA)" [ref=e106] [cursor=pointer]: Disheartened
+          - button "+" [ref=e108] [cursor=pointer]
+        - generic [ref=e110]:
+          - button "Resources p. 55" [expanded] [ref=e111] [cursor=pointer]:
+            - heading "Resources p. 55" [level=3] [ref=e112]:
+              - img [ref=e114]
+              - text: Resources
+              - generic [ref=e116]: p. 55
+            - img [ref=e118]
+          - generic [ref=e123]:
+            - generic [ref=e124]:
+              - generic [ref=e125]: Hit Points
+              - generic [ref=e126]:
+                - button "Decrease Hit Points" [ref=e127] [cursor=pointer]: −
+                - generic [ref=e128]: "10"
+                - button "Increase Hit Points" [disabled] [ref=e129] [cursor=pointer]: +
+                - generic [ref=e130]: /
+                - generic [ref=e131]: "10"
+            - generic [ref=e132]:
+              - generic [ref=e133]: Willpower Points
+              - generic [ref=e134]:
+                - button "Decrease Willpower Points" [ref=e135] [cursor=pointer]: −
+                - generic [ref=e136]: "10"
+                - button "Increase Willpower Points" [disabled] [ref=e137] [cursor=pointer]: +
+                - generic [ref=e138]: /
+                - generic [ref=e139]: "10"
+        - generic [ref=e141]:
+          - button "Derived Values" [expanded] [ref=e142] [cursor=pointer]:
+            - heading "Derived Values" [level=3] [ref=e143]:
+              - img [ref=e145]
+              - text: Derived Values
+            - img [ref=e148]
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - generic [ref=e155]: Movement
+              - generic [ref=e157]: "10"
+            - generic [ref=e158]:
+              - generic [ref=e159]: HP Max
+              - generic [ref=e161]: "10"
+            - generic [ref=e162]:
+              - generic [ref=e163]: WP Max
+              - generic [ref=e165]: "10"
+            - generic [ref=e166]:
+              - generic [ref=e167]: STR Damage Bonus
+              - generic [ref=e169]: "+0"
+            - generic [ref=e170]:
+              - generic [ref=e171]: AGL Damage Bonus
+              - generic [ref=e173]: "+0"
+        - generic [ref=e175]:
+          - button "Rest & Recovery p. 55, 57" [expanded] [ref=e176] [cursor=pointer]:
+            - heading "Rest & Recovery p. 55, 57" [level=3] [ref=e177]:
+              - img [ref=e179]
+              - text: Rest & Recovery
+              - generic [ref=e181]: p. 55, 57
+            - img [ref=e183]
+          - generic [ref=e188]:
+            - button "Round Rest" [ref=e189]
+            - button "Stretch Rest" [ref=e190]
+            - button "Shift Rest" [ref=e191]
+    - navigation "Main navigation" [ref=e192]:
+      - link "Characters" [ref=e193] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e195]
+        - text: Characters
+      - link "Session" [ref=e198] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e199]
+        - text: Session
+      - link "Reference" [ref=e201] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e202]
+        - text: Reference
+    - button "Open quick log" [ref=e204] [cursor=pointer]:
+      - img [ref=e205]
+    - dialog "Manage party" [ref=e234]:
+      - generic [ref=e235]:
+        - generic [ref=e236]:
+          - heading "Manage Party" [level=2] [ref=e237]
+          - button "✕" [ref=e238] [cursor=pointer]
+        - heading "Current Members" [level=3] [ref=e239]
+        - generic [ref=e245]:
+          - generic [ref=e246]: Brynja Frostvein
+          - button "Set mine" [ref=e247] [cursor=pointer]
+          - button "Remove" [ref=e248] [cursor=pointer]
+        - heading "Add Character" [level=3] [ref=e241]
+        - paragraph [ref=e249]: No characters available to add.
+  - alert

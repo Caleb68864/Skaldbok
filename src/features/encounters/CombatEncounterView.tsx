@@ -14,6 +14,9 @@ import { cn } from '../../lib/utils';
 import { registerFlush } from '../persistence/autosaveFlush';
 import { useSessionLog } from '../session/useSessionLog';
 import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
+import { useCampaignContext } from '../campaign/CampaignContext';
+import { useToast } from '../../context/ToastContext';
+import { addPartyCharactersToEncounter } from './addPartyCharactersToEncounter';
 
 interface CombatEncounterViewProps {
   encounter: Encounter;
@@ -32,6 +35,8 @@ const actionBtnClass = 'min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] bo
  * event timeline, and stat drawer on participant tap.
  */
 export function CombatEncounterView({ encounter: initialEncounter, onClose }: CombatEncounterViewProps) {
+  const { activeParty } = useCampaignContext();
+  const { showToast } = useToast();
   const [encounter, setEncounter] = useState<Encounter>(initialEncounter);
   const [selectedParticipant, setSelectedParticipant] = useState<EncounterParticipant | null>(null);
   const [templateCache, setTemplateCache] = useState<Record<string, CreatureTemplate>>({});
@@ -44,6 +49,19 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   const currentRound = encounter.combatData?.currentRound ?? 1;
   const events = encounter.combatData?.events ?? [];
   const participants = encounter.participants;
+  const partyCharacterIds = (activeParty?.members ?? [])
+    .map((member) => member.linkedCharacterId)
+    .filter((id): id is string => Boolean(id));
+
+  // Keep the local combat state aligned with parent-driven encounter updates,
+  // such as participants added from EncounterScreen's picker.
+  useEffect(() => {
+    setEncounter(initialEncounter);
+    setSelectedParticipant((current) => {
+      if (!current) return null;
+      return initialEncounter.participants.find((p) => p.id === current.id) ?? null;
+    });
+  }, [initialEncounter]);
 
   // Walk `represents` edges to map participants -> creature templates, then
   // fetch any templates we haven't loaded yet. Runs whenever the participant
@@ -243,6 +261,25 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
     await refresh();
   };
 
+  const handleAddWholeParty = async () => {
+    if (partyCharacterIds.length === 0) {
+      showToast('No linked party characters to add');
+      return;
+    }
+    const addedCount = await addPartyCharactersToEncounter(encounter.id, partyCharacterIds);
+
+    if (addedCount > 0) {
+      await refresh();
+      showToast(
+        addedCount === 1 ? 'Added 1 party character' : `Added ${addedCount} party characters`,
+        'success',
+        2000,
+      );
+      return;
+    }
+
+    showToast('Party is already in this encounter', 'info', 2000);
+  };
   return (
     <div className="p-4">
       {/* Header */}
@@ -329,12 +366,22 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
             })}
         </div>
         {encounter.status === 'active' && (
-          <button
-            onClick={() => setShowQuickCreate(true)}
-            className={cn(actionBtnClass, 'w-full mt-2')}
-          >
-            Quick Add Participant
-          </button>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+            {partyCharacterIds.length > 0 && (
+              <button
+                onClick={handleAddWholeParty}
+                className={cn(actionBtnClass, 'w-full')}
+              >
+                Add Entire Party
+              </button>
+            )}
+            <button
+              onClick={() => setShowQuickCreate(true)}
+              className={cn(actionBtnClass, 'w-full')}
+            >
+              Quick Add Participant
+            </button>
+          </div>
         )}
       </div>
 

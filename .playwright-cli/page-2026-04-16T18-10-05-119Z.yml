@@ -1,0 +1,225 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - button:
+          - generic:
+            - generic: Ashes of Rime
+            - generic: Session 1 — 2026-04-16
+          - img
+        - button [expanded]:
+          - img
+      - generic:
+        - tablist:
+          - tab [selected]:
+            - img
+            - text: Sheet
+          - tab: Skills
+          - tab: Gear
+          - tab:
+            - img
+            - text: Abilities / Magic
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - button [expanded]:
+                  - heading [level=3]:
+                    - generic:
+                      - img
+                    - text: Identity
+                  - generic:
+                    - img
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - button:
+                            - generic: BF
+                        - generic:
+                          - generic:
+                            - generic: Name
+                            - textbox [disabled]: Brynja Frostvein
+                          - generic:
+                            - generic:
+                              - generic: Kin
+                              - textbox [disabled]
+                            - generic:
+                              - generic: Profession
+                              - textbox [disabled]
+                            - generic:
+                              - generic: Age
+                              - textbox [disabled]: Adult
+                          - generic:
+                            - generic: Weakness
+                            - textbox [disabled]
+            - generic:
+              - generic:
+                - button [expanded]:
+                  - heading [level=3]:
+                    - generic:
+                      - img
+                    - text: Attributes (locked in Play Mode)
+                    - generic: p. 28-29
+                  - generic:
+                    - img
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: STR
+                          - generic: "10"
+                          - generic:
+                            - switch: Exhausted
+                        - generic:
+                          - generic: CON
+                          - generic: "10"
+                          - generic:
+                            - switch: Sickly
+                        - generic:
+                          - generic: AGL
+                          - generic: "10"
+                          - generic:
+                            - switch: Dazed
+                        - generic:
+                          - generic: INT
+                          - generic: "10"
+                          - generic:
+                            - switch: Angry
+                        - generic:
+                          - generic: WIL
+                          - generic: "10"
+                          - generic:
+                            - switch: Scared
+                        - generic:
+                          - generic: CHA
+                          - generic: "10"
+                          - generic:
+                            - switch: Disheartened
+              - generic:
+                - button: +
+            - generic:
+              - generic:
+                - button [expanded]:
+                  - heading [level=3]:
+                    - generic:
+                      - img
+                    - text: Resources
+                    - generic: p. 55
+                  - generic:
+                    - img
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Hit Points
+                          - generic:
+                            - button: −
+                            - generic: "10"
+                            - button [disabled]: +
+                            - generic: /
+                            - generic: "10"
+                        - generic:
+                          - generic: Willpower Points
+                          - generic:
+                            - button: −
+                            - generic: "10"
+                            - button [disabled]: +
+                            - generic: /
+                            - generic: "10"
+            - generic:
+              - generic:
+                - button [expanded]:
+                  - heading [level=3]:
+                    - generic:
+                      - img
+                    - text: Derived Values
+                  - generic:
+                    - img
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - generic: Movement
+                          - generic:
+                            - generic: "10"
+                        - generic:
+                          - generic: HP Max
+                          - generic:
+                            - generic: "10"
+                        - generic:
+                          - generic: WP Max
+                          - generic:
+                            - generic: "10"
+                        - generic:
+                          - generic: STR Damage Bonus
+                          - generic:
+                            - generic: "+0"
+                        - generic:
+                          - generic: AGL Damage Bonus
+                          - generic:
+                            - generic: "+0"
+            - generic:
+              - generic:
+                - button [expanded]:
+                  - heading [level=3]:
+                    - generic:
+                      - img
+                    - text: Rest & Recovery
+                    - generic: p. 55, 57
+                  - generic:
+                    - img
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - button: Round Rest
+                        - button: Stretch Rest
+                        - button: Shift Rest
+      - navigation:
+        - link:
+          - /url: /character/sheet
+          - img
+          - text: Characters
+        - link:
+          - /url: /session
+          - img
+          - text: Session
+        - link:
+          - /url: /reference
+          - img
+          - text: Reference
+      - button:
+        - img
+    - alert
+  - dialog "Menu" [ref=e209]:
+    - generic [ref=e212]:
+      - heading "Menu" [level=2] [ref=e213]
+      - button "Close" [active] [ref=e214] [cursor=pointer]:
+        - img [ref=e215]
+        - generic [ref=e218]: Close
+    - generic [ref=e219]:
+      - button "PLAY MODE" [ref=e220] [cursor=pointer]
+      - button "Manage Party" [ref=e221] [cursor=pointer]
+      - link "Settings" [ref=e222] [cursor=pointer]:
+        - /url: /settings
+      - link "Reference" [ref=e223] [cursor=pointer]:
+        - /url: /reference
+      - link "Character Library" [ref=e224] [cursor=pointer]:
+        - /url: /library
+      - link "Profile" [ref=e225] [cursor=pointer]:
+        - /url: /profile
+      - button "Fullscreen" [ref=e226] [cursor=pointer]
+      - button "Wake Lock Off" [ref=e227] [cursor=pointer]
+      - generic [ref=e228]: Data
+      - button "Export All Notes (.zip)" [ref=e229] [cursor=pointer]
+      - button "Export Campaign (.skaldbok)" [ref=e230] [cursor=pointer]
+      - button "Import (.skaldbok)" [ref=e231] [cursor=pointer]
+      - generic [ref=e232]:
+        - checkbox "Include private notes" [ref=e233]
+        - text: Include private notes
