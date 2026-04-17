@@ -2,7 +2,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppProviders } from './app/AppProviders';
 import { App } from './app/App';
-import { registerPwa } from './pwa/registerPwa';
 import './styles/tailwind.css';
 import './styles/fonts.css';
 
@@ -17,4 +16,5 @@ createRoot(rootElement).render(
   </StrictMode>
 );
 
-registerPwa();
+// Service-worker registration is owned by the PWA module — mounted via
+// <UpdatePrompt /> inside <App />. See src/pwa/README.md.

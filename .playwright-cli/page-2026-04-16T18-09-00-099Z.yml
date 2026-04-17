@@ -1,0 +1,38 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e8]: Ashes of Rime
+        - img [ref=e9]
+      - button "Menu" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+    - main [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - generic [ref=e16]:
+            - button "Back" [ref=e17] [cursor=pointer]:
+              - img [ref=e18]
+            - heading "Character Library" [level=1] [ref=e20]
+          - generic [ref=e21]:
+            - button "Import Character" [ref=e22] [cursor=pointer]
+            - button "+ New Character" [ref=e23] [cursor=pointer]
+        - generic [ref=e24]:
+          - paragraph [ref=e25]: No characters yet. Create your first character to get started.
+          - button "Create your first character" [ref=e26] [cursor=pointer]
+    - navigation "Main navigation" [ref=e27]:
+      - link "Characters" [ref=e28] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e29]
+        - text: Characters
+      - link "Session" [ref=e32] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e33]
+        - text: Session
+      - link "Reference" [ref=e35] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e36]
+        - text: Reference
+    - button "Start a session first" [active] [ref=e38] [cursor=pointer]:
+      - img [ref=e39]
+  - alert:
+    - generic [ref=e57]: Start a session first

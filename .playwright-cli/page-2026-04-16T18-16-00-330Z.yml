@@ -1,0 +1,280 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - button:
+          - generic:
+            - generic: Ashes of Rime
+            - generic: Session 1 — 2026-04-16
+          - img
+        - button:
+          - img
+      - main:
+        - generic:
+          - generic:
+            - heading [level=2]: Ashes of Rime
+            - button: Bestiary
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=3]: Session 1 — 2026-04-16
+                - paragraph: "Started: 4/16/2026, 1:09:15 PM"
+              - generic:
+                - generic: 6m
+                - button:
+                  - img
+            - generic:
+              - button: End Session
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - text: Session Timeline
+                - paragraph: Follow the session arc, encounters, and quick-log notes in one place.
+              - generic:
+                - button: Open Active Encounter
+                - button: Start Encounter
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=2]: Timeline
+                    - paragraph: 4 visible tracks and 3 visible events.
+                  - generic:
+                    - button:
+                      - img
+                      - text: Add to Timeline
+                    - button:
+                      - img
+                      - text: Tracks
+                    - button:
+                      - img
+                      - text: Filters
+                    - button:
+                      - img
+                      - text: Scale
+                    - button:
+                      - img
+                      - text: Zoom Out
+                    - button:
+                      - img
+                      - text: Zoom In
+                    - button:
+                      - img
+                      - text: Reset
+                - generic:
+                  - generic:
+                    - img
+                  - textbox:
+                    - /placeholder: Search timeline events, tags, or kinds
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                      - generic:
+                        - paragraph: Timeline
+                        - paragraph: minute
+                    - generic:
+                      - generic: Apr 16, 12:45 PM
+                      - generic: Apr 16, 1:00 PM
+                      - generic: Apr 16, 1:15 PM
+                      - generic: Apr 16, 1:30 PM
+                      - generic: Apr 16, 1:45 PM
+                      - generic: Start
+                  - generic:
+                    - generic:
+                      - button:
+                        - generic:
+                          - generic:
+                            - generic: Session
+                            - generic:
+                              - img
+                              - text: Overall session span
+                        - img
+                      - generic:
+                        - generic: Now
+                        - button:
+                          - generic:
+                            - img
+                          - generic:
+                            - generic: Session 1 —...
+                            - generic: 2026-04-16
+                          - img
+                    - generic:
+                      - button:
+                        - generic:
+                          - generic:
+                            - generic: Encounters
+                            - generic:
+                              - img
+                              - text: Encounter beats
+                        - img
+                      - generic:
+                        - generic: Now
+                        - button:
+                          - generic:
+                            - img
+                        - button:
+                          - generic:
+                            - img
+                    - generic:
+                      - button:
+                        - generic:
+                          - generic:
+                            - generic: Locations
+                            - generic:
+                              - img
+                              - text: Session log entries
+                        - img
+                      - generic:
+                        - generic: Now
+                        - generic: No events on this track in the current view.
+                    - generic:
+                      - button:
+                        - button:
+                          - img
+                        - generic:
+                          - generic:
+                            - generic: Notes
+                            - generic:
+                              - img
+                              - text: Session log entries
+                        - img
+                      - generic:
+                        - generic: Now
+                        - generic: No events on this track in the current view.
+              - generic:
+                - generic:
+                  - generic: Session
+                - generic:
+                  - generic: Encounters
+          - generic:
+            - generic:
+              - generic:
+                - paragraph: Session Notes
+                - paragraph: Search and reopen notes from this session without breaking flow.
+              - generic:
+                - generic:
+                  - textbox:
+                    - /placeholder: Search notes, characters, locations...
+                - generic:
+                  - button: Open Knowledge Base →
+                - generic:
+                  - generic: No notes yet. Create one to get started.
+      - navigation:
+        - link:
+          - /url: /character/sheet
+          - img
+          - text: Characters
+        - link:
+          - /url: /session
+          - img
+          - text: Session
+        - link:
+          - /url: /reference
+          - img
+          - text: Reference
+      - button:
+        - img
+    - alert
+  - dialog:
+    - generic:
+      - heading [level=2]: Quick Log
+      - button:
+        - img
+        - generic: Close
+    - paragraph: Quick Log
+    - generic:
+      - generic:
+        - generic:
+          - paragraph: Quick Log
+        - button:
+          - img
+          - text: Add Note
+      - generic:
+        - button: Skill Check
+        - button: Note
+        - button: NPC / Monster
+        - button: Encounter
+        - button: Damage
+        - button: Quote
+        - button:
+          - img
+          - text: More
+  - dialog "New Timeline Entry" [ref=e433]:
+    - generic [ref=e436]:
+      - heading "New Timeline Entry" [level=2] [ref=e437]
+      - button "Close" [ref=e438] [cursor=pointer]:
+        - img [ref=e439]
+        - generic [ref=e442]: Close
+    - paragraph [ref=e443]: New Timeline Entry
+    - generic [ref=e445]:
+      - textbox "Title (optional)" [ref=e446]: Loot from the bridge ambush
+      - generic [ref=e447]:
+        - generic [ref=e448]: Type
+        - generic [ref=e449]:
+          - button "Note" [ref=e450] [cursor=pointer]
+          - button "Location" [ref=e451] [cursor=pointer]
+          - button "Loot" [active] [ref=e452] [cursor=pointer]
+          - button "Rumor" [ref=e453] [cursor=pointer]
+          - button "Quote" [ref=e454] [cursor=pointer]
+          - button "Recap" [ref=e455] [cursor=pointer]
+      - generic [ref=e456]:
+        - generic [ref=e457]:
+          - button "B" [ref=e458] [cursor=pointer]
+          - button "I" [ref=e459] [cursor=pointer]:
+            - emphasis [ref=e460]: I
+          - button "H2" [ref=e461] [cursor=pointer]
+          - button "H3" [ref=e462] [cursor=pointer]
+          - button "• List" [ref=e463] [cursor=pointer]
+          - button "1. List" [ref=e464] [cursor=pointer]
+          - button "❝" [ref=e465] [cursor=pointer]
+          - button "Link" [ref=e466] [cursor=pointer]
+        - textbox [ref=e468]:
+          - paragraph [ref=e469]
+      - generic [ref=e470]:
+        - paragraph [ref=e471]: Tags
+        - generic [ref=e472]:
+          - button "tense" [ref=e473] [cursor=pointer]
+          - button "funny" [ref=e474] [cursor=pointer]
+          - button "dramatic" [ref=e475] [cursor=pointer]
+          - button "sad" [ref=e476] [cursor=pointer]
+          - button "victorious" [ref=e477] [cursor=pointer]
+          - button "combat" [ref=e478] [cursor=pointer]
+          - button "exploration" [ref=e479] [cursor=pointer]
+          - button "social" [ref=e480] [cursor=pointer]
+          - button "mystery" [ref=e481] [cursor=pointer]
+          - button "travel" [ref=e482] [cursor=pointer]
+          - button "downtime" [ref=e483] [cursor=pointer]
+          - button "important" [ref=e484] [cursor=pointer]
+          - button "follow-up" [ref=e485] [cursor=pointer]
+          - button "plot-hook" [ref=e486] [cursor=pointer]
+          - button "lore" [ref=e487] [cursor=pointer]
+          - button "treasure" [ref=e488] [cursor=pointer]
+          - button "npc" [ref=e489] [cursor=pointer]
+          - button "location" [ref=e490] [cursor=pointer]
+          - button "rumor" [ref=e491] [cursor=pointer]
+          - button "quest" [ref=e492] [cursor=pointer]
+          - button "loot" [ref=e493] [cursor=pointer]
+          - button "skill-check" [ref=e494] [cursor=pointer]
+          - button "spell" [ref=e495] [cursor=pointer]
+          - button "ability" [ref=e496] [cursor=pointer]
+          - button "death" [ref=e497] [cursor=pointer]
+          - button "rest" [ref=e498] [cursor=pointer]
+        - generic [ref=e499]:
+          - textbox "Add custom tag..." [ref=e500]
+          - button "+" [disabled] [ref=e501] [cursor=pointer]
+      - generic [ref=e502]:
+        - generic [ref=e503]: Player Characters
+        - button "Brynja Frostvein" [ref=e505] [cursor=pointer]
+      - generic [ref=e506]:
+        - text: Attach to
+        - combobox "Attach to" [ref=e507]:
+          - 'option "Active: Questioning the Courier" [selected]'
+          - option "Bridge Ambush (active)"
+          - option "Session only (no encounter)"
+      - generic [ref=e508]:
+        - button "Cancel" [ref=e509] [cursor=pointer]
+        - button "Save" [ref=e510] [cursor=pointer]

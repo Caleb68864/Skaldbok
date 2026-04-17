@@ -1,0 +1,54 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e8]: Ashes of Rime
+        - img [ref=e11]
+      - button "Menu" [ref=e13] [cursor=pointer]:
+        - img [ref=e14]
+    - main [ref=e15]:
+      - generic [ref=e250]:
+        - generic [ref=e251]:
+          - heading "Ashes of Rime" [level=2] [ref=e252]
+          - button "Bestiary" [ref=e253] [cursor=pointer]
+        - generic [ref=e254]:
+          - generic [ref=e255]:
+            - paragraph [ref=e256]: Last Session
+            - paragraph [ref=e257]: Session 1 — 2026-04-16
+            - paragraph [ref=e258]: 4/15/2026 · 1 note
+          - button "Start Session" [ref=e259] [cursor=pointer]
+        - generic [ref=e260]:
+          - heading "Past Sessions" [level=3] [ref=e261]
+          - generic [ref=e263]:
+            - generic [ref=e264]:
+              - paragraph [ref=e265]: Session 1 — 2026-04-16
+              - paragraph [ref=e266]: 4/15/2026
+            - generic [ref=e267]:
+              - button "Resume" [ref=e268] [cursor=pointer]
+              - button ".md" [ref=e269] [cursor=pointer]
+              - button ".zip" [ref=e270] [cursor=pointer]
+        - generic [ref=e271]:
+          - textbox "Search notes, characters, locations..." [ref=e273]
+          - button "Open Knowledge Base →" [ref=e275] [cursor=pointer]
+          - button "Loot from the bridge ambush item 1m ago" [ref=e277] [cursor=pointer]:
+            - generic [ref=e279]:
+              - heading "Loot from the bridge ambush" [level=3] [ref=e280]
+              - generic [ref=e281]:
+                - generic [ref=e282]: item
+                - generic [ref=e283]: 1m ago
+    - navigation "Main navigation" [ref=e227]:
+      - link "Characters" [ref=e228] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e229]
+        - text: Characters
+      - link "Session" [ref=e232] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e234]
+        - text: Session
+      - link "Reference" [ref=e236] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e237]
+        - text: Reference
+    - button "Start a session first" [ref=e284] [cursor=pointer]:
+      - img [ref=e285]
+  - alert

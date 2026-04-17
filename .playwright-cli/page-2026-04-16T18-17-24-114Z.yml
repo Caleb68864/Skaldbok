@@ -1,0 +1,176 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e7]:
+          - generic [ref=e8]: Ashes of Rime
+          - generic [ref=e9]: Session 1 — 2026-04-16
+        - img [ref=e11]
+      - button "Menu" [ref=e13] [cursor=pointer]:
+        - img [ref=e14]
+    - main [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]:
+          - heading "Ashes of Rime" [level=2] [ref=e18]
+          - button "Bestiary" [ref=e19] [cursor=pointer]
+        - generic [ref=e20]:
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - heading "Session 1 — 2026-04-16" [level=3] [ref=e23]
+              - paragraph [ref=e24]: "Started: 4/16/2026, 1:09:15 PM"
+            - generic [ref=e25]:
+              - generic [ref=e26]: 8m
+              - button "Session actions" [ref=e27] [cursor=pointer]:
+                - img [ref=e28]
+          - button "End Session" [active] [ref=e30] [cursor=pointer]
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]:
+              - generic [ref=e34]:
+                - img [ref=e35]
+                - text: Session Timeline
+              - paragraph [ref=e39]: Follow the session arc, encounters, and quick-log notes in one place.
+            - button "Start Encounter" [ref=e41] [cursor=pointer]
+          - generic [ref=e42]:
+            - generic [ref=e43]:
+              - generic [ref=e44]:
+                - generic [ref=e45]:
+                  - heading "Timeline" [level=2] [ref=e46]
+                  - paragraph [ref=e47]: 4 visible tracks and 4 visible events.
+                - generic [ref=e48]:
+                  - button "Add to Timeline" [ref=e49] [cursor=pointer]:
+                    - img [ref=e50]
+                    - text: Add to Timeline
+                  - button "Tracks" [ref=e51] [cursor=pointer]:
+                    - img [ref=e52]
+                    - text: Tracks
+                  - button "Filters" [ref=e55] [cursor=pointer]:
+                    - img [ref=e56]
+                    - text: Filters
+                  - button "Scale" [ref=e58] [cursor=pointer]:
+                    - img [ref=e59]
+                    - text: Scale
+                  - button "Zoom Out" [ref=e60] [cursor=pointer]:
+                    - img [ref=e61]
+                    - text: Zoom Out
+                  - button "Zoom In" [ref=e64] [cursor=pointer]:
+                    - img [ref=e65]
+                    - text: Zoom In
+                  - button "Reset" [ref=e68] [cursor=pointer]:
+                    - img [ref=e69]
+                    - text: Reset
+              - generic [ref=e72]:
+                - img [ref=e74]
+                - textbox "Search timeline events" [ref=e77]:
+                  - /placeholder: Search timeline events, tags, or kinds
+            - generic [ref=e79]:
+              - generic [ref=e80]:
+                - generic [ref=e81]:
+                  - img [ref=e82]
+                  - generic [ref=e84]:
+                    - paragraph [ref=e85]: Timeline
+                    - paragraph [ref=e86]: minute
+                - generic [ref=e87]:
+                  - generic [ref=e88]: Apr 16, 12:45 PM
+                  - generic [ref=e89]: Apr 16, 1:00 PM
+                  - generic [ref=e90]: Apr 16, 1:15 PM
+                  - generic [ref=e91]: Apr 16, 1:30 PM
+                  - generic [ref=e92]: Apr 16, 1:45 PM
+                  - generic [ref=e93]: Start
+              - generic [ref=e94]:
+                - generic [ref=e95]:
+                  - button "Session Overall session span" [ref=e96]:
+                    - generic [ref=e100]:
+                      - generic [ref=e101]: Session
+                      - generic [ref=e102]:
+                        - img [ref=e103]
+                        - text: Overall session span
+                    - img [ref=e107]
+                  - generic [ref=e109]:
+                    - generic: Now
+                    - button "Session 1 — 2026-04-16 on Session" [ref=e110]:
+                      - img [ref=e112]
+                      - generic [ref=e116]:
+                        - generic [ref=e117]: Session 1 — 2026...
+                        - generic [ref=e118]: 2026-04-16
+                      - img [ref=e119]
+                - generic [ref=e122]:
+                  - button "Encounters Encounter beats" [ref=e123]:
+                    - generic [ref=e127]:
+                      - generic [ref=e128]: Encounters
+                      - generic [ref=e129]:
+                        - img [ref=e130]
+                        - text: Encounter beats
+                    - img [ref=e139]
+                  - generic [ref=e141]:
+                    - generic: Now
+                    - button "Bridge Ambush on Encounters" [ref=e142]:
+                      - img [ref=e144]
+                    - button "Questioning the Courier on Encounters" [ref=e153]:
+                      - img [ref=e155]
+                - generic [ref=e164]:
+                  - button "Locations Session log entries" [ref=e165]:
+                    - generic [ref=e169]:
+                      - generic [ref=e170]: Locations
+                      - generic [ref=e171]:
+                        - img [ref=e172]
+                        - text: Session log entries
+                    - img [ref=e174]
+                  - generic [ref=e176]:
+                    - generic: Now
+                    - generic [ref=e177]: No events on this track in the current view.
+                - generic [ref=e178]:
+                  - button "Expand track Notes Session log entries" [ref=e179]:
+                    - button "Expand track" [ref=e180] [cursor=pointer]:
+                      - img [ref=e181]
+                    - generic [ref=e185]:
+                      - generic [ref=e186]: Notes
+                      - generic [ref=e187]:
+                        - img [ref=e188]
+                        - text: Session log entries
+                    - img [ref=e190]
+                  - generic [ref=e192]:
+                    - generic: Now
+                    - button "Loot from the bridge ambush on Notes" [ref=e193]:
+                      - img [ref=e194]
+                      - img [ref=e196]
+            - generic [ref=e199]:
+              - generic [ref=e202]: Session
+              - generic [ref=e205]: Encounters
+              - generic [ref=e208]: Loot
+        - generic [ref=e210]:
+          - generic [ref=e211]:
+            - paragraph [ref=e212]: Session Notes
+            - paragraph [ref=e213]: Search and reopen notes from this session without breaking flow.
+          - generic [ref=e214]:
+            - textbox "Search notes, characters, locations..." [ref=e216]
+            - button "Open Knowledge Base →" [ref=e218] [cursor=pointer]
+            - button "Loot from the bridge ambush item just now" [ref=e220] [cursor=pointer]:
+              - generic [ref=e222]:
+                - heading "Loot from the bridge ambush" [level=3] [ref=e223]
+                - generic [ref=e224]:
+                  - generic [ref=e225]: item
+                  - generic [ref=e226]: just now
+        - dialog "End session confirmation" [ref=e243]:
+          - generic [ref=e244]:
+            - heading "End this session?" [level=3] [ref=e245]
+            - paragraph [ref=e246]: Session 1 — 2026-04-16
+            - generic [ref=e247]:
+              - button "Confirm" [ref=e248] [cursor=pointer]
+              - button "Cancel" [ref=e249] [cursor=pointer]
+    - navigation "Main navigation" [ref=e227]:
+      - link "Characters" [ref=e228] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e229]
+        - text: Characters
+      - link "Session" [ref=e232] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e234]
+        - text: Session
+      - link "Reference" [ref=e236] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e237]
+        - text: Reference
+    - button "Open quick log" [ref=e239] [cursor=pointer]:
+      - img [ref=e240]
+  - alert

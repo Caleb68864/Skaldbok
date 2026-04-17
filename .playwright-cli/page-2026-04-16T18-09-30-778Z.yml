@@ -1,0 +1,52 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - button:
+          - generic:
+            - generic: Ashes of Rime
+            - generic: Session 1 — 2026-04-16
+          - img
+        - button:
+          - img
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - button:
+                - img
+              - heading [level=1]: Character Library
+            - generic:
+              - button: Import Character
+              - button: + New Character
+          - generic:
+            - paragraph: No characters yet. Create your first character to get started.
+            - button: Create your first character
+      - navigation:
+        - link:
+          - /url: /character/sheet
+          - img
+          - text: Characters
+        - link:
+          - /url: /session
+          - img
+          - text: Session
+        - link:
+          - /url: /reference
+          - img
+          - text: Reference
+      - button:
+        - img
+    - alert
+  - dialog "New Character" [ref=e259]:
+    - heading "New Character" [level=2] [ref=e261]
+    - paragraph [ref=e262]: New Character
+    - generic [ref=e263]:
+      - paragraph [ref=e264]: Enter a name for your character.
+      - textbox "Character name" [active] [ref=e265]
+    - generic [ref=e266]:
+      - button "Cancel" [ref=e267] [cursor=pointer]
+      - button "Create" [disabled]
+    - button "Close" [ref=e268] [cursor=pointer]:
+      - img [ref=e269]
+      - generic [ref=e272]: Close

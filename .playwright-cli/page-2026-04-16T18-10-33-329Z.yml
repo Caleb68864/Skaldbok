@@ -1,0 +1,60 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - button:
+          - generic:
+            - generic: Ashes of Rime
+            - generic: Session 1 — 2026-04-16
+          - img
+        - button:
+          - img
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - button:
+                - img
+              - heading [level=1]: Character Library
+            - generic:
+              - button: Import Character
+              - button: + New Character
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - heading [level=2]: Brynja Frostvein(Active)
+                  - paragraph: No details
+                  - paragraph: "Updated: 4/16/2026"
+                - generic:
+                  - button: Export
+                  - button: Duplicate
+                  - button: Delete
+      - navigation:
+        - link:
+          - /url: /character/sheet
+          - img
+          - text: Characters
+        - link:
+          - /url: /session
+          - img
+          - text: Session
+        - link:
+          - /url: /reference
+          - img
+          - text: Reference
+      - button:
+        - img
+    - alert
+  - dialog "New Character" [ref=e57]:
+    - heading "New Character" [level=2] [ref=e59]
+    - paragraph [ref=e60]: New Character
+    - generic [ref=e61]:
+      - paragraph [ref=e62]: Enter a name for your character.
+      - textbox "Character name" [active] [ref=e63]
+    - generic [ref=e64]:
+      - button "Cancel" [ref=e65] [cursor=pointer]
+      - button "Create" [disabled]
+    - button "Close" [ref=e66] [cursor=pointer]:
+      - img [ref=e67]
+      - generic [ref=e70]: Close

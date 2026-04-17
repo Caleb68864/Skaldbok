@@ -10,6 +10,7 @@ import { Button } from '../components/primitives/Button';
 import { Modal } from '../components/primitives/Modal';
 import { useToast } from '../context/ToastContext';
 import { cn } from '../lib/utils';
+import { useAppState } from '../context/AppStateContext';
 
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
@@ -21,6 +22,7 @@ export default function CharacterLibraryScreen() {
   const { character: activeCharacter, setCharacter } = useActiveCharacter();
   const { createCharacter, duplicateCharacter, deleteCharacter } = useCharacterActions();
   const { showToast } = useToast();
+  const { updateSettings } = useAppState();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +51,7 @@ export default function CharacterLibraryScreen() {
       if (!hadActiveCharacter) {
         // First character: auto-activate (AC3.1)
         await setCharacter(newChar.id);
+        await updateSettings({ mode: 'edit' });
         showToast('Character created and set as active', 'success');
         navigate('/character/sheet');
       } else {
@@ -65,6 +68,7 @@ export default function CharacterLibraryScreen() {
   async function handlePendingSetActive() {
     if (!pendingSetActiveId) return;
     await setCharacter(pendingSetActiveId);
+    await updateSettings({ mode: 'edit' });
     setPendingSetActiveId(null);
     setPendingSetActiveName('');
     showToast('Active character updated', 'success');
@@ -161,7 +165,7 @@ export default function CharacterLibraryScreen() {
             {pendingSetActiveName} created — Set Active?
           </span>
           <div className="flex gap-3 shrink-0">
-            <Button size="sm" variant="primary" onClick={handlePendingSetActive}>Set Active</Button>
+            <Button size="sm" variant="primary" onClick={handlePendingSetActive}>Set Active &amp; Edit</Button>
             <Button size="sm" variant="secondary" onClick={dismissPendingSetActive}>Dismiss</Button>
           </div>
         </div>
