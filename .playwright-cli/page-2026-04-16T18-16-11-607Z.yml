@@ -1,0 +1,215 @@
+- generic [active]:
+  - generic:
+    - generic:
+      - generic:
+        - button:
+          - generic:
+            - generic: Ashes of Rime
+            - generic: Session 1 — 2026-04-16
+          - img
+        - button:
+          - img
+      - main:
+        - generic:
+          - generic:
+            - heading [level=2]: Ashes of Rime
+            - button: Bestiary
+          - generic:
+            - generic:
+              - generic:
+                - heading [level=3]: Session 1 — 2026-04-16
+                - paragraph: "Started: 4/16/2026, 1:09:15 PM"
+              - generic:
+                - generic: 6m
+                - button:
+                  - img
+            - generic:
+              - button: End Session
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - img
+                  - text: Session Timeline
+                - paragraph: Follow the session arc, encounters, and quick-log notes in one place.
+              - generic:
+                - button: Open Active Encounter
+                - button: Start Encounter
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=2]: Timeline
+                    - paragraph: 4 visible tracks and 4 visible events.
+                  - generic:
+                    - button:
+                      - img
+                      - text: Add to Timeline
+                    - button:
+                      - img
+                      - text: Tracks
+                    - button:
+                      - img
+                      - text: Filters
+                    - button:
+                      - img
+                      - text: Scale
+                    - button:
+                      - img
+                      - text: Zoom Out
+                    - button:
+                      - img
+                      - text: Zoom In
+                    - button:
+                      - img
+                      - text: Reset
+                - generic:
+                  - generic:
+                    - img
+                  - textbox:
+                    - /placeholder: Search timeline events, tags, or kinds
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - img
+                      - generic:
+                        - paragraph: Timeline
+                        - paragraph: minute
+                    - generic:
+                      - generic: Apr 16, 12:45 PM
+                      - generic: Apr 16, 1:00 PM
+                      - generic: Apr 16, 1:15 PM
+                      - generic: Apr 16, 1:30 PM
+                      - generic: Apr 16, 1:45 PM
+                      - generic: Start
+                  - generic:
+                    - generic:
+                      - button:
+                        - generic:
+                          - generic:
+                            - generic: Session
+                            - generic:
+                              - img
+                              - text: Overall session span
+                        - img
+                      - generic:
+                        - generic: Now
+                        - button:
+                          - generic:
+                            - img
+                          - generic:
+                            - generic: Session 1 — 2...
+                            - generic: 2026-04-16
+                          - img
+                    - generic:
+                      - button:
+                        - generic:
+                          - generic:
+                            - generic: Encounters
+                            - generic:
+                              - img
+                              - text: Encounter beats
+                        - img
+                      - generic:
+                        - generic: Now
+                        - button:
+                          - generic:
+                            - img
+                        - button:
+                          - generic:
+                            - img
+                    - generic:
+                      - button:
+                        - generic:
+                          - generic:
+                            - generic: Locations
+                            - generic:
+                              - img
+                              - text: Session log entries
+                        - img
+                      - generic:
+                        - generic: Now
+                        - generic: No events on this track in the current view.
+                    - generic:
+                      - button:
+                        - button:
+                          - img
+                        - generic:
+                          - generic:
+                            - generic: Notes
+                            - generic:
+                              - img
+                              - text: Session log entries
+                        - img
+                      - generic:
+                        - generic: Now
+                        - button:
+                          - img
+                          - img
+              - generic:
+                - generic:
+                  - generic: Session
+                - generic:
+                  - generic: Encounters
+                - generic:
+                  - generic: Loot
+          - generic:
+            - generic:
+              - generic:
+                - paragraph: Session Notes
+                - paragraph: Search and reopen notes from this session without breaking flow.
+              - generic:
+                - generic:
+                  - textbox:
+                    - /placeholder: Search notes, characters, locations...
+                - generic:
+                  - button: Open Knowledge Base →
+                - generic:
+                  - button:
+                    - generic:
+                      - generic:
+                        - heading [level=3]: Loot from the bridge ambush
+                        - generic:
+                          - generic: item
+                          - generic: just now
+      - navigation:
+        - link:
+          - /url: /character/sheet
+          - img
+          - text: Characters
+        - link:
+          - /url: /session
+          - img
+          - text: Session
+        - link:
+          - /url: /reference
+          - img
+          - text: Reference
+      - button:
+        - img
+    - alert:
+      - generic [ref=e511]: Loot logged to session
+  - dialog "Quick Log" [ref=e403]:
+    - generic [ref=e406]:
+      - heading "Quick Log" [level=2] [ref=e407]
+      - button "Close" [ref=e408] [cursor=pointer]:
+        - img [ref=e409]
+        - generic [ref=e412]: Close
+    - paragraph [ref=e413]: Quick Log
+    - generic [ref=e414]:
+      - generic [ref=e415]:
+        - paragraph [ref=e417]: Quick Log
+        - button "Add Note" [ref=e418] [cursor=pointer]:
+          - img [ref=e419]
+          - text: Add Note
+      - generic [ref=e420]:
+        - button "Skill Check" [ref=e421] [cursor=pointer]
+        - button "Note" [ref=e422] [cursor=pointer]
+        - button "NPC / Monster" [ref=e423] [cursor=pointer]
+        - button "Encounter" [ref=e424] [cursor=pointer]
+        - button "Damage" [ref=e425] [cursor=pointer]
+        - button "Quote" [ref=e426] [cursor=pointer]
+        - button "More" [ref=e427] [cursor=pointer]:
+          - img [ref=e428]
+          - text: More

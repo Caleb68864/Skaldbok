@@ -1,0 +1,101 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - button:
+          - generic:
+            - generic: Ashes of Rime
+            - generic: Session 1 — 2026-04-16
+          - img
+        - button:
+          - img
+      - main:
+        - generic:
+          - generic:
+            - generic:
+              - heading [level=1]: Questioning the Courier
+              - paragraph:
+                - text: social · active
+                - generic: · Started 1:15:31 PM
+            - button: Back
+          - generic:
+            - heading [level=2]: Narrative
+            - generic: Description (set at start)
+            - generic:
+              - generic:
+                - textbox:
+                  - paragraph
+            - generic: Live notes
+            - generic:
+              - generic:
+                - button: B
+                - button:
+                  - emphasis: I
+                - button: H2
+                - button: H3
+                - button: • List
+                - button: 1. List
+                - button: ❝
+                - button: Link
+              - generic:
+                - textbox:
+                  - paragraph: The courier cracks after seeing the raven key and admits the delivery was meant for a smuggler ring in Frosthollow.
+            - generic: Summary (write at end)
+            - generic:
+              - generic:
+                - textbox:
+                  - paragraph: The party gains a lead on Frosthollow and keeps the coded letter as evidence.
+          - generic:
+            - generic:
+              - heading [level=2]: Participants (0)
+              - button: Add participant
+            - generic:
+              - paragraph: No participants yet.
+          - generic:
+            - heading [level=2]: Attached log
+            - list:
+              - listitem:
+                - generic:
+                  - generic:
+                    - strong: loot
+                    - text: Loot from the bridge ambush1:16:10 PM
+                  - button: Move to…
+          - generic:
+            - heading [level=2]: Relations
+            - generic:
+              - generic:
+                - generic: "Started during:"
+                - generic: Bridge Ambush
+              - generic:
+                - generic: "Sub-encounters:"
+                - generic: —
+          - generic:
+            - button: End Encounter
+      - navigation:
+        - link:
+          - /url: /character/sheet
+          - img
+          - text: Characters
+        - link:
+          - /url: /session
+          - img
+          - text: Session
+        - link:
+          - /url: /reference
+          - img
+          - text: Reference
+      - button:
+        - img
+    - alert
+  - dialog "End Encounter" [ref=e988]:
+    - heading "End Encounter" [level=2] [ref=e990]
+    - generic [ref=e991]:
+      - paragraph [ref=e992]: Optional summary — what happened?
+      - textbox [active] [ref=e995]:
+        - paragraph [ref=e996]
+    - generic [ref=e997]:
+      - button "Cancel" [ref=e998] [cursor=pointer]
+      - button "End Encounter" [ref=e999] [cursor=pointer]
+    - button "Close" [ref=e1000] [cursor=pointer]:
+      - img [ref=e1001]
+      - generic [ref=e1004]: Close

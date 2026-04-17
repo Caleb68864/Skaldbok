@@ -1,0 +1,46 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e7]:
+          - generic [ref=e8]: Ashes of Rime
+          - generic [ref=e73]: Session 1 — 2026-04-16
+        - img [ref=e9]
+      - button "Menu" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+    - main [ref=e13]:
+      - generic [ref=e245]:
+        - generic [ref=e246]:
+          - generic [ref=e247]:
+            - button "Back" [ref=e248] [cursor=pointer]:
+              - img [ref=e249]
+            - heading "Character Library" [level=1] [ref=e251]
+          - generic [ref=e252]:
+            - button "Import Character" [ref=e253] [cursor=pointer]
+            - button "+ New Character" [ref=e254] [cursor=pointer]
+        - generic [ref=e276]:
+          - generic [ref=e277]:
+            - heading "Brynja Frostvein(Active)" [level=2] [ref=e278]
+            - paragraph [ref=e279]: No details
+            - paragraph [ref=e280]: "Updated: 4/16/2026"
+          - generic [ref=e281]:
+            - button "Export" [ref=e282] [cursor=pointer]
+            - button "Duplicate" [ref=e283] [cursor=pointer]
+            - button "Delete" [ref=e284] [cursor=pointer]
+    - navigation "Main navigation" [ref=e27]:
+      - link "Characters" [ref=e28] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e29]
+        - text: Characters
+      - link "Session" [ref=e32] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e33]
+        - text: Session
+      - link "Reference" [ref=e35] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e36]
+        - text: Reference
+    - button "Open quick log" [ref=e241] [cursor=pointer]:
+      - img [ref=e242]
+  - alert:
+    - generic [ref=e285]: Character created and set as active

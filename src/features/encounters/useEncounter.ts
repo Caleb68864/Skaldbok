@@ -121,6 +121,24 @@ export function useEncounter(
           ? ((template as CreatureTemplate).category === 'monster' ? 'monster' : 'npc')
           : 'pc';
 
+        // PCs should only appear once in an encounter. Creature templates are
+        // intentionally allowed to repeat so the GM can add multiple goblins,
+        // wolves, etc.
+        if (!isCreature) {
+          const participantIds = new Set((enc.participants ?? []).map((p) => p.id));
+          const links = await db.entityLinks
+            .where('toEntityId')
+            .equals(template.id)
+            .toArray();
+          const alreadyPresent = links.some((link) =>
+            !link.deletedAt
+            && link.relationshipType === 'represents'
+            && link.toEntityType === 'character'
+            && participantIds.has(link.fromEntityId),
+          );
+          if (alreadyPresent) return;
+        }
+
         const hp = isCreature
           ? (template as CreatureTemplate).stats?.hp
           : undefined;

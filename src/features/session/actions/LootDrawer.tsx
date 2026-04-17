@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Drawer } from '../../../components/primitives/Drawer';
 import { PartyPicker } from '../../../components/fields/PartyPicker';
 import type { ResolvedMember } from '../../../components/fields/PartyPicker';
@@ -57,6 +57,11 @@ export function LootDrawer({ open, onClose, members, selectedMembers, onSelectMe
   const sessionEncounterCtx = useSessionEncounterContextSafe();
   const [lootName, setLootName] = useState('');
   const [attachTo, setAttachTo] = useState<AttachToValue>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setAttachTo(null);
+  }, [open]);
 
   /** Returns the display label for the current member selection. */
   const selectedNames = () => {
@@ -118,7 +123,7 @@ export function LootDrawer({ open, onClose, members, selectedMembers, onSelectMe
         autoFocus
         className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
       />
-      <AttachToControl value={attachTo} onChange={setAttachTo} />
+      <AttachToControl value={attachTo} onChange={setAttachTo} defaultValue={null} />
       <button
         onClick={handleLog}
         disabled={!lootName.trim()}

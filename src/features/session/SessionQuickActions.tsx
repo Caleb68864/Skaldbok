@@ -1044,7 +1044,34 @@ export function SessionQuickActions({
   // The Note / NPC drawers render their own self-contained forms (including
   // AttachToControl and the save/cancel footer) so they are routed separately
   // from the shared drawer content above.
-  const isSelfContainedDrawer = activeDrawer === 'note' || activeDrawer === 'npc';
+  const isNpcDrawer = activeDrawer === 'npc';
+
+  if (activeDrawer === 'note') {
+    return (
+      <div className="flex flex-col gap-3">
+        <div>
+          <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
+            Quick Log
+          </p>
+          <p className="text-sm font-semibold text-[var(--color-text)]">
+            New Timeline Entry
+          </p>
+          <p className="text-sm text-[var(--color-text-muted)]">
+            Capture a session-level note without opening another sheet on top of Quick Log.
+          </p>
+        </div>
+        <QuickNoteAction
+          campaignId={activeCampaign?.id ?? null}
+          onClose={() => setActiveDrawer(null)}
+          onSaved={() => {
+            onLogComplete?.();
+            close();
+          }}
+          initialAttachTo={preferredAttachTo}
+        />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -1095,7 +1122,11 @@ export function SessionQuickActions({
           title={drawerContent[activeDrawer].title}
         >
           {drawerContent[activeDrawer].render()}
-          <AttachToControl value={attachTo} onChange={setAttachTo} defaultValue={preferredAttachTo} />
+          <AttachToControl
+            value={attachTo}
+            onChange={setAttachTo}
+            defaultValue={activeDrawer === 'loot' ? null : preferredAttachTo}
+          />
           <TagPicker
             selected={selectedTags}
             onToggle={tag => setSelectedTags(prev =>
@@ -1105,22 +1136,13 @@ export function SessionQuickActions({
         </Drawer>
       )}
 
-      {isSelfContainedDrawer && (
+      {isNpcDrawer && (
         <Drawer
           open={true}
           onClose={close}
-          title={activeDrawer === 'note' ? 'New Timeline Entry' : 'NPC / Monster'}
+          title="NPC / Monster"
         >
-          {activeDrawer === 'note' ? (
-            <QuickNoteAction
-              campaignId={activeCampaign?.id ?? null}
-              onClose={close}
-              onSaved={onLogComplete}
-              initialAttachTo={preferredAttachTo}
-            />
-          ) : (
-            <QuickNpcAction onClose={close} onSaved={onLogComplete} initialAttachTo={preferredAttachTo} />
-          )}
+          <QuickNpcAction onClose={close} onSaved={onLogComplete} initialAttachTo={preferredAttachTo} />
         </Drawer>
       )}
     </>
