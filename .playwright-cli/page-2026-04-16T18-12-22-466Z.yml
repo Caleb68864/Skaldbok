@@ -1,0 +1,98 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Ashes of Rime
+          - generic [ref=e38]: Session 1 — 2026-04-16
+        - img [ref=e8]
+      - button "Menu" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+    - main [ref=e22]:
+      - generic [ref=e611]:
+        - generic [ref=e612]:
+          - generic [ref=e613]:
+            - heading "Bridge Ambush" [level=1] [ref=e614]
+            - paragraph [ref=e615]:
+              - text: combat · active
+              - generic [ref=e616]: · Started 1:11:57 PM
+          - button "Back" [ref=e617] [cursor=pointer]
+        - generic [ref=e618]:
+          - heading "Narrative" [level=2] [ref=e619]
+          - generic [ref=e620]: Description (set at start)
+          - textbox [ref=e623]:
+            - paragraph [ref=e624]
+          - generic [ref=e625]: Live notes
+          - generic [ref=e626]:
+            - generic [ref=e627]:
+              - button "B" [ref=e628] [cursor=pointer]
+              - button "I" [ref=e629] [cursor=pointer]:
+                - emphasis [ref=e630]: I
+              - button "H2" [ref=e631] [cursor=pointer]
+              - button "H3" [ref=e632] [cursor=pointer]
+              - button "• List" [ref=e633] [cursor=pointer]
+              - button "1. List" [ref=e634] [cursor=pointer]
+              - button "❝" [ref=e635] [cursor=pointer]
+              - button "Link" [ref=e636] [cursor=pointer]
+            - textbox [ref=e638]:
+              - paragraph [ref=e639]
+          - generic [ref=e640]: Summary (write at end)
+          - textbox [ref=e643]:
+            - paragraph [ref=e644]
+        - generic [ref=e645]:
+          - generic [ref=e646]:
+            - heading "Participants (0)" [level=2] [ref=e647]
+            - button "Add participant" [ref=e648] [cursor=pointer]
+          - generic [ref=e649]:
+            - generic [ref=e650]:
+              - generic [ref=e651]:
+                - heading "Bridge Ambush" [level=3] [ref=e652]
+                - generic [ref=e653]: Combat · Round 1
+              - button "Back" [ref=e654] [cursor=pointer]
+            - generic [ref=e655]:
+              - generic [ref=e656]: Round 1
+              - button "Next Round" [ref=e657] [cursor=pointer]
+            - generic [ref=e658]:
+              - heading "Participants (0)" [level=4] [ref=e659]
+              - button "Quick Add Participant" [ref=e660] [cursor=pointer]
+            - generic [ref=e662]:
+              - combobox [ref=e663]:
+                - option "attack" [selected]
+                - option "spell"
+                - option "ability"
+                - option "damage"
+                - option "heal"
+                - option "condition"
+                - option "note"
+              - textbox "Event description..." [ref=e664]
+              - button "Add" [disabled] [ref=e665] [cursor=pointer]
+            - button "End Combat" [ref=e666] [cursor=pointer]
+        - generic [ref=e667]:
+          - heading "Attached log" [level=2] [ref=e668]
+          - paragraph [ref=e669]: No notes attached yet.
+        - generic [ref=e670]:
+          - heading "Relations" [level=2] [ref=e671]
+          - generic [ref=e672]:
+            - generic [ref=e673]:
+              - generic [ref=e674]: "Started during:"
+              - generic [ref=e675]: —
+            - generic [ref=e676]:
+              - generic [ref=e677]: "Sub-encounters:"
+              - generic [ref=e678]: —
+        - button "End Encounter" [ref=e680] [cursor=pointer]
+    - navigation "Main navigation" [ref=e24]:
+      - link "Characters" [ref=e25] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e27]
+        - text: Characters
+      - link "Session" [ref=e30] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e31]
+        - text: Session
+      - link "Reference" [ref=e33] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e34]
+        - text: Reference
+    - button "Open quick log" [ref=e205] [cursor=pointer]:
+      - img [ref=e206]
+  - alert

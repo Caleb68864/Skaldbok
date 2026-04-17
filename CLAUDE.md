@@ -1,4 +1,49 @@
-# Skaldbok — Project Notes for Claude
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What Skaldbok Is
+
+Skaldbok is a local-first, offline-capable PWA for tabletop RPG play — currently targeting the Dragonbane system. It runs entirely in the browser: React 19 + Vite + Tailwind v4 on the UI side, Dexie (IndexedDB) for persistence, `vite-plugin-pwa` for installability, and `@vitejs/plugin-basic-ssl` so tablets can install it over LAN HTTPS. No backend.
+
+`AGENTS.md` is a near-verbatim copy of this file for Codex; keep the two in sync when editing conventions here.
+
+## Commands
+
+- `npm run dev` — Vite dev server (HTTPS via self-signed cert).
+- `npm run build` — `tsc -b` project references build, then `vite build`. **This is the only type-check command** — there is no standalone `lint` or `typecheck` script; rely on `tsc -b` via build.
+- `npm run preview` — serve the built bundle (used by `build-and-run.bat` for LAN tablet testing on port 4173).
+- `npm run docs` / `npm run docs:open` — TypeDoc API docs into `docs/api/`.
+
+There is **no JS/TS test runner wired up**. The `tests/` directory contains a Python Playwright E2E script (`e2e_full_test.py`) that drives the running app. Do not assume `npm test` exists.
+
+## Architecture Big Picture
+
+### Entry, providers, routing
+- `src/main.tsx` → `AppProviders` → `App`. `AppProviders` nests `BrowserRouter` → `ThemeProvider` → `AppStateProvider` → `ActiveCharacterProvider` → `ToastProvider` → `CampaignProvider`. Anything that needs the active campaign or character goes inside that tree.
+- Routes live in `src/routes/index.tsx`. Two layers: a shell-less `/print` route, and everything else under `<ShellLayout />` (persistent bottom-nav shell). Legacy `/sheet`, `/skills`, `/gear`, `/magic`, `/combat` are permanent redirects into `/character/*` — keep them.
+
+### Storage layer (Dexie / IndexedDB)
+- `src/storage/db/client.ts` defines the `SkaldbokDatabase` Dexie class and all `version(n).stores(...)` migrations. **Schema changes = add a new `version()` block; never edit an old one.** See the existing compound indexes on `entityLinks` (`[fromEntityId+relationshipType]`, `[toEntityId+relationshipType]`) — any new link-lookup pattern wants a matching compound index.
+- Every domain entity is accessed through a repository in `src/storage/repositories/*.ts`. UI code and hooks call repositories; they **never** touch the Dexie tables directly. If you find yourself reaching into `db.notes.where(...)` from a component, stop and add/extend a repo method.
+- Shared utilities live in `src/utils/` — notably `softDelete.ts` (`excludeDeleted` helper) and `ids.ts` (`generateId`). The ID generator is used for both entity IDs and soft-delete transaction IDs.
+
+### Domain model
+- Entities: `Campaign` → `Session` → `Note` / `Encounter`; `Character`, `Party`/`PartyMember`, `CreatureTemplate` (bestiary), `Attachment`, `EntityLink` (generic graph edge), plus KB graph (`kb_nodes`, `kb_edges`) and app metadata/settings.
+- Relationships between entities are almost always expressed via `entityLinks` rows rather than FK columns. See the **Entity Linking** section below — this is the single most important convention to internalize before adding cross-entity features.
+
+### Game system as data
+- The active RPG system (fields, skills, abilities, resources) is a `SystemDefinition` loaded from JSON — `src/systems/dragonbane/system.json` — not a set of hardcoded types. `src/systems/dragonbane/index.ts` just re-exports it. Zod schemas in `schemas/` validate character / system / settings shapes on import. Adding rules content is usually a JSON edit, not a code change.
+
+### Feature vs. component layout
+- `src/components/` — presentational, reusable UI (shell, layout, primitives, ui, fields, modals, timeline, notes).
+- `src/features/` — feature-scoped logic: each subdir (`session`, `combat`, `encounters`, `bestiary`, `campaign`, `characters`, `notes`, `kb`, `export`, `import`, `persistence`, `settings`, `systems`) owns its screens, hooks, and adapters. Hooks like `useEncounter`, `useSessionEncounter`, `useSessionLog` are where repo calls get composed into UI-ready state.
+- `src/screens/` — top-level route destinations. Thin: compose features + components. Business logic belongs in feature hooks.
+- `src/context/` — cross-cutting providers (`AppStateContext`, `ActiveCharacterContext`, `ToastContext`). `CampaignContext` lives under `src/features/campaign/`.
+
+### PWA / offline
+- `vite-plugin-pwa` is configured in `vite.config.ts` with `registerType: 'prompt'`. Service-worker / install lifecycle code lives in `src/pwa/`. Because the app is entirely local-first, treat IndexedDB as the source of truth; there is no server reconciliation to defer to.
+- `@` is aliased to `src/` in `vite.config.ts` — prefer relative imports when both work, but `@/` is available.
 
 ## Entity Linking
 

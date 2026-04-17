@@ -1,0 +1,36 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e5]:
+      - button "Select campaign" [ref=e6] [cursor=pointer]:
+        - generic [ref=e8]: Ashes of Rime
+        - img [ref=e9]
+      - button "Menu" [ref=e11] [cursor=pointer]:
+        - img [ref=e12]
+    - main [ref=e13]:
+      - generic [ref=e58]:
+        - generic [ref=e59]:
+          - heading "Ashes of Rime" [level=2] [ref=e60]
+          - button "Bestiary" [ref=e61] [cursor=pointer]
+        - generic [ref=e62]:
+          - paragraph [ref=e63]: No sessions yet.
+          - button "Start Session" [ref=e64] [cursor=pointer]
+        - generic [ref=e65]:
+          - textbox "Search notes, characters, locations..." [ref=e67]
+          - button "Open Knowledge Base →" [ref=e69] [cursor=pointer]
+          - generic [ref=e71]: No notes yet. Create one to get started.
+    - navigation "Main navigation" [ref=e27]:
+      - link "Characters" [ref=e28] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e29]
+        - text: Characters
+      - link "Session" [active] [ref=e32] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e33]
+        - text: Session
+      - link "Reference" [ref=e35] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e36]
+        - text: Reference
+    - button "Start a session first" [ref=e38] [cursor=pointer]:
+      - img [ref=e39]
+  - alert

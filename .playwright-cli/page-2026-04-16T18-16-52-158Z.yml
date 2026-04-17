@@ -1,0 +1,81 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Ashes of Rime
+          - generic [ref=e8]: Session 1 — 2026-04-16
+        - img [ref=e10]
+      - button "Menu" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+    - main [ref=e14]:
+      - generic [ref=e928]:
+        - generic [ref=e929]:
+          - generic [ref=e930]:
+            - heading "Questioning the Courier" [level=1] [ref=e931]
+            - paragraph [ref=e932]:
+              - text: social · active
+              - generic [ref=e933]: · Started 1:15:31 PM
+          - button "Back" [ref=e934] [cursor=pointer]
+        - generic [ref=e935]:
+          - heading "Narrative" [level=2] [ref=e936]
+          - generic [ref=e937]: Description (set at start)
+          - textbox [ref=e940]:
+            - paragraph [ref=e941]
+          - generic [ref=e942]: Live notes
+          - generic [ref=e943]:
+            - generic [ref=e944]:
+              - button "B" [ref=e945] [cursor=pointer]
+              - button "I" [ref=e946] [cursor=pointer]:
+                - emphasis [ref=e947]: I
+              - button "H2" [ref=e948] [cursor=pointer]
+              - button "H3" [ref=e949] [cursor=pointer]
+              - button "• List" [ref=e950] [cursor=pointer]
+              - button "1. List" [ref=e951] [cursor=pointer]
+              - button "❝" [ref=e952] [cursor=pointer]
+              - button "Link" [ref=e953] [cursor=pointer]
+            - textbox [ref=e955]:
+              - paragraph [ref=e956]
+          - generic [ref=e957]: Summary (write at end)
+          - textbox [ref=e960]:
+            - paragraph [ref=e961]
+        - generic [ref=e962]:
+          - generic [ref=e963]:
+            - heading "Participants (0)" [level=2] [ref=e964]
+            - button "Add participant" [ref=e965] [cursor=pointer]
+          - paragraph [ref=e967]: No participants yet.
+        - generic [ref=e968]:
+          - heading "Attached log" [level=2] [ref=e969]
+          - list [ref=e970]:
+            - listitem [ref=e971]:
+              - generic [ref=e972]:
+                - generic [ref=e973]:
+                  - strong [ref=e974]: loot
+                  - text: Loot from the bridge ambush1:16:10 PM
+                - button "Move to…" [ref=e975]
+        - generic [ref=e976]:
+          - heading "Relations" [level=2] [ref=e977]
+          - generic [ref=e978]:
+            - generic [ref=e979]:
+              - generic [ref=e980]: "Started during:"
+              - generic [ref=e981]: Bridge Ambush
+            - generic [ref=e982]:
+              - generic [ref=e983]: "Sub-encounters:"
+              - generic [ref=e984]: —
+        - button "End Encounter" [ref=e986] [cursor=pointer]
+    - navigation "Main navigation" [ref=e201]:
+      - link "Characters" [ref=e202] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e203]
+        - text: Characters
+      - link "Session" [ref=e206] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e208]
+        - text: Session
+      - link "Reference" [ref=e210] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e211]
+        - text: Reference
+    - button "Open quick log" [ref=e213] [cursor=pointer]:
+      - img [ref=e214]
+  - alert

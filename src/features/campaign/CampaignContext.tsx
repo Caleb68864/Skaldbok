@@ -8,7 +8,7 @@ import type { Encounter } from '../../types/encounter';
 import { db } from '../../storage/db/client';
 import * as metadataRepository from '../../storage/repositories/metadataRepository';
 import { generateId } from '../../utils/ids';
-import { nowISO } from '../../utils/dates';
+import { localDateOnlyISO, nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
 import type { Campaign } from '../../types/campaign';
 import type { Session } from '../../types/session';
@@ -315,7 +315,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     try {
       const sessionCount = await db.sessions.where('campaignId').equals(activeCampaign.id).count();
       const now = nowISO();
-      const dateStr = now.slice(0, 10);
+      const dateStr = localDateOnlyISO();
       const title = `Session ${sessionCount + 1} — ${dateStr}`;
 
       const newSession: Session = {

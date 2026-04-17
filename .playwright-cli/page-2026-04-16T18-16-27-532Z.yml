@@ -1,0 +1,48 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - button "Select campaign" [ref=e5] [cursor=pointer]:
+        - generic [ref=e6]:
+          - generic [ref=e7]: Ashes of Rime
+          - generic [ref=e8]: Session 1 — 2026-04-16
+        - img [ref=e10]
+      - button "Menu" [ref=e12] [cursor=pointer]:
+        - img [ref=e13]
+    - main [ref=e14]:
+      - generic [ref=e686]:
+        - button "Back" [ref=e687] [cursor=pointer]:
+          - img [ref=e688]
+        - heading "Knowledge Base" [level=2] [ref=e690]
+        - button "+ Note" [ref=e691] [cursor=pointer]
+        - button "Graph view" [ref=e692] [cursor=pointer]:
+          - img [ref=e693]
+          - text: Graph
+      - generic [ref=e699]:
+        - button "Back" [ref=e700] [cursor=pointer]:
+          - img [ref=e701]
+          - text: Back
+        - generic [ref=e703]:
+          - heading "Loot from the bridge ambush" [level=1] [ref=e704]
+          - button "Edit" [ref=e705] [cursor=pointer]
+        - generic [ref=e707]: item
+        - textbox [ref=e710]:
+          - paragraph [ref=e711]: Recovered a satchel with 18 silver, a coded courier letter, and a brass key stamped with a raven sigil.
+        - generic [ref=e712]:
+          - heading "Backlinks (0)" [level=3] [ref=e713]
+          - paragraph [ref=e714]: No notes link here yet.
+    - navigation "Main navigation" [ref=e201]:
+      - link "Characters" [ref=e202] [cursor=pointer]:
+        - /url: /character/sheet
+        - img [ref=e203]
+        - text: Characters
+      - link "Session" [ref=e206] [cursor=pointer]:
+        - /url: /session
+        - img [ref=e208]
+        - text: Session
+      - link "Reference" [ref=e210] [cursor=pointer]:
+        - /url: /reference
+        - img [ref=e211]
+        - text: Reference
+    - button "Open quick log" [ref=e213] [cursor=pointer]:
+      - img [ref=e214]
+  - alert

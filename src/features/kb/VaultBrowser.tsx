@@ -19,6 +19,7 @@ import { getEdgesFromNode, getEdgesToNode } from '../../storage/repositories/kbE
 import { getNotesBySession } from '../../storage/repositories/noteRepository';
 import { useKBSearch } from './useKBSearch';
 import { VaultCard } from './VaultCard';
+import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 
 interface VaultBrowserProps {
   campaignId: string;
@@ -48,6 +49,7 @@ export function VaultBrowser({
   refreshToken = 0,
 }: VaultBrowserProps) {
   const navigate = useNavigate();
+  const sessionRefresh = useSessionRefreshSafe();
   const [activeTab, setActiveTab] = useState<string>(typeFilter ?? 'all');
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -296,11 +298,40 @@ export function VaultBrowser({
         onScroll={handleScroll}
       >
         {displayedNodes.length === 0 ? (
-          <div className="py-8 text-center text-sm text-[var(--color-text-muted)]">
-            {debouncedQuery.trim()
-              ? `No results for "${debouncedQuery}"`
-              : 'No notes yet. Create one to get started.'}
-          </div>
+          debouncedQuery.trim() ? (
+            <div className="py-8 text-center text-sm text-[var(--color-text-muted)]">
+              {`No results for "${debouncedQuery}"`}
+            </div>
+          ) : compact ? (
+            <div className="rounded-lg border border-dashed border-[var(--color-border)] bg-[var(--color-surface-raised)]/60 px-4 py-5">
+              <p className="mb-2 text-sm font-semibold text-[var(--color-text)]">
+                No session notes yet
+              </p>
+              <p className="mb-1 text-sm text-[var(--color-text-muted)]">
+                Use Quick Log for fast captures during play, encounter logs for scene-specific details, and session notes for recap, clues, and cleanup.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => sessionRefresh?.openQuickLog('note')}
+                  className="min-h-11 min-w-11 px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-sm font-semibold cursor-pointer"
+                >
+                  Quick Log Note
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/kb')}
+                  className="min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-medium"
+                >
+                  Open Knowledge Base
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-8 text-center text-sm text-[var(--color-text-muted)]">
+              No notes yet. Create one to get started.
+            </div>
+          )
         ) : (
           displayedNodes.map((node) => (
             <VaultCard
