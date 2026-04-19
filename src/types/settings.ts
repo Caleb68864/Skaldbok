@@ -69,4 +69,11 @@ export interface AppSettings extends Versioned {
    * focused screen. Users toggle it per-app via the checkbox on that screen.
    */
   showCharacterMagic?: boolean;
+  /**
+   * If `true` (default), the floating Quick Log button is shown in the app
+   * shell. Set to `false` to hide it for a cleaner character-sheet-only
+   * experience; the Quick Log surface is still reachable from the session
+   * screen.
+   */
+  showGlobalFAB?: boolean;
 }

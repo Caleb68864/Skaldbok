@@ -53,7 +53,7 @@ export function ShellLayout() {
           onManageParty={() => setShowManageParty(true)}
         />
         {isCharacterTab && <CharacterSubNav />}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-[140px]">
           <Outlet />
         </main>
         <BottomNav />

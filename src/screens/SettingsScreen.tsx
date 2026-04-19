@@ -78,6 +78,7 @@ export default function SettingsScreen() {
         db.encounters,
         db.kb_nodes,
         db.kb_edges,
+        db.inventoryContainers,
       ],
       async () => {
         await db.characters.clear();
@@ -95,6 +96,7 @@ export default function SettingsScreen() {
         await db.encounters.clear();
         await db.kb_nodes.clear();
         await db.kb_edges.clear();
+        await db.inventoryContainers.clear();
       }
     );
     setClearStep(0);
@@ -168,6 +170,29 @@ export default function SettingsScreen() {
               {m}
             </button>
           ))}
+        </div>
+      </Card>
+
+      {/* Quick Log Button */}
+      <Card>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">Quick Log Button</h2>
+        <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
+          Show the floating ⭐ Quick Log button in the corner. Hide it if you want a clean character sheet and only log from the Session screen.
+        </p>
+        <div className="flex justify-between items-center px-[var(--space-md)] py-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] min-h-[var(--touch-target-min)]">
+          <span className="text-[var(--color-text)] font-[var(--weight-medium)]">Show Quick Log button</span>
+          <button
+            onClick={() => updateSettings({ showGlobalFAB: settings.showGlobalFAB === false }).catch(console.error)}
+            aria-pressed={settings.showGlobalFAB !== false}
+            className={cn(
+              'inline-flex items-center justify-center min-w-16 min-h-[var(--touch-target-min)] px-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] cursor-pointer font-bold text-[length:var(--font-size-sm)]',
+              settings.showGlobalFAB !== false
+                ? 'bg-[var(--color-success)] text-[var(--color-bg)]'
+                : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
+            )}
+          >
+            {settings.showGlobalFAB !== false ? 'ON' : 'OFF'}
+          </button>
         </div>
       </Card>
 

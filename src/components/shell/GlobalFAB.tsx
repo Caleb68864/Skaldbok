@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Plus, Sparkles } from 'lucide-react';
 import { useCampaignContext } from '../../features/campaign/CampaignContext';
+import { useAppState } from '../../context/AppStateContext';
 import { useToast } from '../../context/ToastContext';
 import { SessionQuickActions } from '../../features/session/SessionQuickActions';
 import { useSessionRefresh } from '../../features/session/SessionRefreshContext';
@@ -38,6 +39,7 @@ import { cn } from '@/lib/utils';
  */
 export function GlobalFAB() {
   const { activeSession } = useCampaignContext();
+  const { settings } = useAppState();
   const { showToast } = useToast();
   const {
     bumpAll,
@@ -76,6 +78,8 @@ export function GlobalFAB() {
     setDrawerOpen(false);
     clearQuickLogRequest();
   };
+
+  if (settings.showGlobalFAB === false) return null;
 
   return (
     <>

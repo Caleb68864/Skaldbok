@@ -20,6 +20,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   mode: 'play',
   wakeLockEnabled: false,
   bottomNavTabs: DEFAULT_BOTTOM_NAV_TABS,
+  showGlobalFAB: true,
 };
 
 export function useAppSettings() {
