@@ -169,6 +169,12 @@ export interface Spell {
   effects?: SpellEffect[];
   /** Short descriptions of what each power level does, indexed 0=PL1, 1=PL2, 2=PL3. */
   powerScaling?: [string, string, string];
+  /**
+   * If `true`, this spell appears as a stamp in the Quick Log PC tray even
+   * when it is not currently `prepared`. Useful for rituals or utility spells
+   * the player casts often but doesn't want taking a prepared slot.
+   */
+  pinnedAsStamp?: boolean;
 }
 
 /**
@@ -193,6 +199,12 @@ export interface HeroicAbility {
   requirementSkillId?: string | null;
   /** Minimum skill value required for {@link requirementSkillId}. */
   requirementSkillLevel?: number | null;
+  /**
+   * If `true`, this heroic ability is pinned to the Quick Log PC tray.
+   * All heroic abilities appear in the tray by default, so this field is
+   * reserved for future use (e.g. a "hide from tray" inverse).
+   */
+  pinnedAsStamp?: boolean;
 }
 
 /** Flat stat key namespace resolved by getEffectiveValue(). */

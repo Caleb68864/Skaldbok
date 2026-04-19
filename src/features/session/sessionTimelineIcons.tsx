@@ -7,9 +7,11 @@ import {
   MapPin,
   NotebookText,
   Quote,
+  Sparkles,
   StickyNote,
   Swords,
   User,
+  Zap,
 } from 'lucide-react';
 
 /**
@@ -37,6 +39,10 @@ export function sessionTimelineIcon(kind: string, className = 'h-3.5 w-3.5 text-
       return createElement(Quote, { className });
     case 'skill-check':
       return createElement(Dices, { className });
+    case 'spell-cast':
+      return createElement(Sparkles, { className });
+    case 'ability-use':
+      return createElement(Zap, { className });
     case 'recap':
       return createElement(BookOpen, { className });
     case 'notes':

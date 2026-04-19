@@ -9,6 +9,7 @@ import { useSessionEncounterContextSafe } from './SessionEncounterContext';
 import { AttachToControl, resolveAttach, type AttachToValue } from './quickActions/AttachToControl';
 import { QuickNoteAction } from './quickActions/QuickNoteAction';
 import { QuickNpcAction } from './quickActions/QuickNpcAction';
+import { QuickLogPCTray } from './quickLog/QuickLogPCTray';
 import { getById as getCharacterById, save as saveCharacter } from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
@@ -996,14 +997,12 @@ export function SessionQuickActions({
   // ── Render ────────────────────────────────────────────────────
 
   const actions = [
-    { id: 'skill', label: 'Skill Check' },
+    { id: 'quickLog', label: 'Quick Log' },
     { id: 'note', label: 'Note' },
     { id: 'npc', label: 'NPC / Monster' },
     { id: 'encounter', label: 'Encounter' },
     { id: 'damage', label: 'Damage' },
     { id: 'quote', label: 'Quote' },
-    { id: 'spell', label: 'Cast Spell' },
-    { id: 'ability', label: 'Ability' },
     { id: 'condition', label: 'Condition' },
     { id: 'death', label: 'Death Roll' },
     { id: 'rest', label: 'Rest' },
@@ -1014,7 +1013,7 @@ export function SessionQuickActions({
     { id: 'loot', label: 'Loot' },
   ];
 
-  const primaryActionIds = ['note', 'encounter', 'damage', 'quote', 'npc', 'skill'];
+  const primaryActionIds = ['quickLog', 'note', 'encounter', 'damage', 'quote', 'npc'];
   const primaryActions = useMemo(
     () => actions.filter((action) => primaryActionIds.includes(action.id)),
     [actions],
@@ -1024,10 +1023,22 @@ export function SessionQuickActions({
     [actions],
   );
 
+  const renderQuickLog = () => (
+    <QuickLogPCTray
+      onLogged={() => onLogComplete?.()}
+      onClose={() => close()}
+    />
+  );
+
+  // Legacy render functions retained for possible future re-wiring — the
+  // PC-tray flow supersedes the old per-action drawers for skill / spell /
+  // ability. Silence "unused" by referencing them here.
+  void renderSkillPicker;
+  void renderSpellPicker;
+  void renderAbilityPicker;
+
   const drawerContent: Record<string, { title: string; render: () => React.JSX.Element }> = {
-    skill: { title: 'Skill Check', render: renderSkillPicker },
-    spell: { title: 'Cast Spell', render: renderSpellPicker },
-    ability: { title: 'Heroic Ability', render: renderAbilityPicker },
+    quickLog: { title: 'Quick Log', render: renderQuickLog },
     condition: { title: 'Condition', render: renderConditionPicker },
     rest: { title: 'Rest', render: renderRestPicker },
     damage: { title: 'Damage', render: renderDamagePicker },

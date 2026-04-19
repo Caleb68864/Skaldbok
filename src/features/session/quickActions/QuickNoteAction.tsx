@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TiptapNoteEditor } from '../../../components/notes/TiptapNoteEditor';
+import { useNavigate } from 'react-router-dom';
 import { TagPicker } from '../../../components/notes/TagPicker';
 import { useSessionLog } from '../useSessionLog';
 import { useToast } from '../../../context/ToastContext';
@@ -77,6 +77,7 @@ interface MentionChip {
  * `CLAUDE.md` and the comment at the top of `entityLinkRepository.ts`.
  */
 export function QuickNoteAction({ campaignId, onClose, onSaved, initialAttachTo = 'auto' }: QuickNoteActionProps) {
+  const navigate = useNavigate();
   const { logToSession } = useSessionLog();
   const { showToast } = useToast();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
@@ -84,12 +85,12 @@ export function QuickNoteAction({ campaignId, onClose, onSaved, initialAttachTo 
   const { activeParty } = useCampaignContext();
 
   const [title, setTitle] = useState('');
-  const [body, setBody] = useState<unknown>(undefined);
   const [attachTo, setAttachTo] = useState<AttachToValue>(initialAttachTo);
   const [noteType, setNoteType] = useState<NoteType>('generic');
   const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [attachTouched, setAttachTouched] = useState(false);
+  const [showMore, setShowMore] = useState(false);
 
   // Resolve party members — join with linked CharacterRecord where present so
   // we show the PC name rather than the (often blank) party-member slot name.
@@ -164,48 +165,67 @@ export function QuickNoteAction({ campaignId, onClose, onSaved, initialAttachTo 
     }).catch(console.error);
   };
 
+  const buildPayload = () => {
+    const allChips = [...partyChips, ...npcChips];
+    const mentions = selectedMentionIds
+      .map((id) => allChips.find((c) => c.id === id))
+      .filter((c): c is MentionChip => c !== undefined)
+      .map((c) => ({ id: c.id, name: c.name, kind: c.kind }));
+    const typeLabel = SELECTABLE_NOTE_TYPES.find((t) => t.value === noteType)?.label ?? 'Note';
+    const finalTitle = title.trim() || typeLabel;
+    return {
+      finalTitle,
+      typeLabel,
+      typeData: {
+        tags: tags.length > 0 ? tags : undefined,
+        mentions: mentions.length > 0 ? mentions : undefined,
+      },
+    };
+  };
+
   const handleSubmit = async () => {
     if (saving) return;
     setSaving(true);
     try {
-      // Build the mentions array from the selected chip ids. Keep only chips
-      // that still resolve — a stale selection (chip list changed while the
-      // drawer was open) is silently dropped.
-      const allChips = [...partyChips, ...npcChips];
-      const mentions = selectedMentionIds
-        .map((id) => allChips.find((c) => c.id === id))
-        .filter((c): c is MentionChip => c !== undefined)
-        .map((c) => ({ id: c.id, name: c.name, kind: c.kind }));
-
       const target = resolveAttach(attachTo);
-      const typeLabel = SELECTABLE_NOTE_TYPES.find((t) => t.value === noteType)?.label ?? 'Note';
-      const finalTitle = title.trim() || typeLabel;
+      const { finalTitle, typeLabel, typeData } = buildPayload();
 
-      await logToSession(
-        finalTitle,
-        noteType,
-        {
-          body,
-          tags: tags.length > 0 ? tags : undefined,
-          mentions: mentions.length > 0 ? mentions : undefined,
-        },
-        { targetEncounterId: target },
-      );
+      await logToSession(finalTitle, noteType, typeData, { targetEncounterId: target });
 
-      // Success toast tells the user where it landed.
       let encounterTitle: string | null = null;
       if (attachTo === 'auto') {
         encounterTitle = sessionEncounterCtx?.activeEncounter?.title ?? null;
       } else if (typeof attachTo === 'string') {
         encounterTitle = 'encounter';
       }
-      if (encounterTitle) {
-        showToast(`${typeLabel} logged to ${encounterTitle}`, 'success', 2000);
-      } else {
-        showToast(`${typeLabel} logged to session`, 'success', 2000);
-      }
+      showToast(
+        encounterTitle
+          ? `${typeLabel} logged to ${encounterTitle}`
+          : `${typeLabel} logged to session`,
+        'success',
+        2000,
+      );
       onSaved?.();
       onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenInRichEditor = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const target = resolveAttach(attachTo);
+      const { finalTitle, typeData } = buildPayload();
+      const newNoteId = await logToSession(finalTitle, noteType, typeData, {
+        targetEncounterId: target,
+      });
+      onSaved?.();
+      onClose();
+      if (newNoteId) {
+        navigate(`/note/${newNoteId}/edit`);
+      }
     } finally {
       setSaving(false);
     }
@@ -267,58 +287,66 @@ export function QuickNoteAction({ campaignId, onClose, onSaved, initialAttachTo 
         </div>
       </div>
 
-      {/* Body */}
-      <TiptapNoteEditor
-        initialContent={body}
-        onChange={setBody}
-        campaignId={campaignId}
-        placeholder="Details…"
-        showToolbar
-        minHeight="120px"
-      />
+      {/* More… disclosure — tags, mentions, attach target all live behind this
+          so the default view stays a one-field quick entry. */}
+      <button
+        type="button"
+        onClick={() => setShowMore(v => !v)}
+        className="self-start text-[length:var(--font-size-sm)] text-[var(--color-accent)] bg-transparent border-none cursor-pointer px-0 py-[var(--space-xs)]"
+      >
+        {showMore ? 'Hide extras' : 'More…'}
+      </button>
 
-      {/* Tags — TagPicker renders its own "Tags" heading */}
-      <TagPicker
-        selected={tags}
-        onToggle={(tag) => setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))}
-        customTags={customTags}
-        onCreateTag={handleCreateTag}
-      />
+      {showMore && (
+        <>
+          <TagPicker
+            selected={tags}
+            onToggle={(tag) => setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]))}
+            customTags={customTags}
+            onCreateTag={handleCreateTag}
+          />
 
-      {/* PC chips */}
-      {partyChips.length > 0 && (
-        <div>
-          <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wider mb-1.5">Player Characters</div>
-          {renderChipRow(partyChips)}
-        </div>
+          {partyChips.length > 0 && (
+            <div>
+              <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wider mb-1.5">Player Characters</div>
+              {renderChipRow(partyChips)}
+            </div>
+          )}
+
+          {npcChips.length > 0 && (
+            <div>
+              <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wider mb-1.5">NPCs</div>
+              {renderChipRow(npcChips)}
+            </div>
+          )}
+
+          <AttachToControl
+            value={attachTo}
+            onChange={(value) => {
+              setAttachTouched(true);
+              setAttachTo(value);
+            }}
+            defaultValue={initialAttachTo}
+          />
+        </>
       )}
-
-      {/* NPC chips */}
-      {npcChips.length > 0 && (
-        <div>
-          <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wider mb-1.5">NPCs</div>
-          {renderChipRow(npcChips)}
-        </div>
-      )}
-
-      {/* Attach-to */}
-      <AttachToControl
-        value={attachTo}
-        onChange={(value) => {
-          setAttachTouched(true);
-          setAttachTo(value);
-        }}
-        defaultValue={initialAttachTo}
-      />
 
       {/* Actions */}
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <button
           type="button"
           onClick={onClose}
           className="min-h-11 px-4 py-2 bg-[var(--color-surface-raised)] text-[var(--color-text)] border border-[var(--color-border)] rounded-lg text-sm font-semibold cursor-pointer"
         >
           Cancel
+        </button>
+        <button
+          type="button"
+          onClick={handleOpenInRichEditor}
+          disabled={saving}
+          className="min-h-11 px-4 py-2 bg-transparent text-[var(--color-accent)] border border-[var(--color-accent)] rounded-lg text-sm font-semibold cursor-pointer disabled:opacity-60"
+        >
+          Open in rich editor
         </button>
         <button
           type="button"
