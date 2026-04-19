@@ -8,7 +8,6 @@ import { WeaponEditor } from '../components/fields/WeaponEditor';
 import { InventoryList } from '../components/fields/InventoryList';
 import { InventoryItemEditor } from '../components/fields/InventoryItemEditor';
 import { SectionPanel } from '../components/primitives/SectionPanel';
-import { CounterControl } from '../components/primitives/CounterControl';
 import { Button } from '../components/primitives/Button';
 import { Drawer } from '../components/primitives/Drawer';
 import type { Weapon, InventoryItem, ArmorPiece } from '../types/character';
@@ -17,6 +16,7 @@ import { nowISO } from '../utils/dates';
 import { computeEncumbranceLimit } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
+import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
 import * as characterRepository from '../storage/repositories/characterRepository';
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
@@ -32,6 +32,7 @@ export default function GearScreen() {
   const helmetEquipEditable = useFieldEditable('helmet.equipped');
   const { logToSession, logCoinChange } = useSessionLog();
 
+  const [activeTab, setActiveTab] = useState<'mine' | 'party'>('mine');
   const [weaponDrawerOpen, setWeaponDrawerOpen] = useState(false);
   const [editingWeapon, setEditingWeapon] = useState<Weapon | null>(null);
   const [inventoryDrawerOpen, setInventoryDrawerOpen] = useState(false);
@@ -140,14 +141,26 @@ export default function GearScreen() {
     }
   }
 
-  function updateCoin(coin: 'gold' | 'silver' | 'copper', value: number) {
+  function adjustCoin(coin: 'gold' | 'silver' | 'copper', delta: number) {
     if (!character) return;
-    const old = character.coins[coin] ?? 0;
-    updateCharacter({ coins: { ...character.coins, [coin]: value }, updatedAt: nowISO() });
-    const diff = value - old;
-    if (diff !== 0) {
-      logCoinChange(character.name, coin, diff);
-    }
+    let { gold, silver, copper } = character.coins;
+    if (coin === 'gold') gold += delta;
+    else if (coin === 'silver') silver += delta;
+    else copper += delta;
+    // Borrow from higher denominations if the requested coin went negative.
+    // Dragonbane: 1 gold = 10 silver, 1 silver = 10 copper.
+    while (copper < 0 && silver > 0) { copper += 10; silver -= 1; }
+    while (copper < 0 && gold > 0) { gold -= 1; silver += 9; copper += 10; }
+    while (silver < 0 && gold > 0) { gold -= 1; silver += 10; }
+    if (gold < 0 || silver < 0 || copper < 0) return; // not enough total coin
+    updateCharacter({ coins: { gold, silver, copper }, updatedAt: nowISO() });
+    if (delta !== 0) logCoinChange(character.name, coin, delta);
+  }
+
+  function handleInventoryQuantity(id: string, quantity: number) {
+    if (!character) return;
+    const inventory = character.inventory.map(i => i.id === id ? { ...i, quantity } : i);
+    updateCharacter({ inventory, updatedAt: nowISO() });
   }
 
   function addTinyItem() {
@@ -205,7 +218,7 @@ export default function GearScreen() {
     setHelmetDrawerOpen(true);
   }
 
-  const totalWeight = character.inventory.reduce((sum, i) => sum + i.weight, 0)
+  const totalWeight = character.inventory.reduce((sum, i) => sum + (i.tiny ? 0 : i.weight), 0)
     + (character.armor?.weight ?? 0)
     + (character.helmet?.weight ?? 0);
   const encumbranceLimit = computeEncumbranceLimit(character);
@@ -214,6 +227,30 @@ export default function GearScreen() {
     <div className="p-[var(--space-md)]">
       <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] mb-[var(--space-md)]">Gear</h1>
 
+      {/* Tab bar */}
+      <div className="flex rounded-[var(--radius-md)] overflow-hidden border border-[var(--color-border)] mb-[var(--space-md)]" role="tablist" aria-label="Gear view">
+        {(['mine', 'party'] as const).map(tab => (
+          <button
+            key={tab}
+            role="tab"
+            aria-selected={activeTab === tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'flex-1 px-4 py-2 min-h-[44px] text-sm font-semibold border-none cursor-pointer transition-colors',
+              activeTab === tab
+                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
+            )}
+          >
+            {tab === 'mine' ? 'My Gear' : 'Party'}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'party' ? (
+        <PartyInventoryTab />
+      ) : (
+        <>
       <SectionPanel title="Weapons" subtitle="p. 73-76" collapsible defaultOpen>
         {character.weapons.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No weapons.</p>}
         <div className="flex flex-col gap-[var(--space-md)]">
@@ -297,15 +334,38 @@ export default function GearScreen() {
           onEdit={item => { setEditingItem(item); setInventoryDrawerOpen(true); }}
           onDelete={handleInventoryDelete}
           onAdd={() => { setEditingItem(null); setInventoryDrawerOpen(true); }}
+          onQuantityChange={handleInventoryQuantity}
           isEditMode={isEditMode}
         />
       </SectionPanel>
 
-      <SectionPanel title="Coins" collapsible defaultOpen>
+      <SectionPanel title="Coins" subtitle="1 gold = 10 silver = 100 copper" collapsible defaultOpen>
         <div className="flex flex-col gap-3">
-          <CounterControl label="Gold" value={character.coins.gold} min={0} onChange={v => updateCoin('gold', v)} />
-          <CounterControl label="Silver" value={character.coins.silver} min={0} onChange={v => updateCoin('silver', v)} />
-          <CounterControl label="Copper" value={character.coins.copper} min={0} onChange={v => updateCoin('copper', v)} />
+          {(['gold', 'silver', 'copper'] as const).map(coin => {
+            const value = character.coins[coin];
+            const label = coin.charAt(0).toUpperCase() + coin.slice(1);
+            const totalCopper = character.coins.gold * 100 + character.coins.silver * 10 + character.coins.copper;
+            const canDecrement = totalCopper > 0;
+            return (
+              <div key={coin} className="flex items-center gap-[var(--space-sm)]">
+                <span className="text-sm text-[var(--color-text-muted)] min-w-[60px]">{label}</span>
+                <button
+                  type="button"
+                  aria-label={`Spend 1 ${coin}`}
+                  onClick={() => adjustCoin(coin, -1)}
+                  disabled={!canDecrement}
+                  className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
+                >−</button>
+                <span className="min-w-[40px] text-center text-lg font-bold text-[var(--color-text)]">{value}</span>
+                <button
+                  type="button"
+                  aria-label={`Gain 1 ${coin}`}
+                  onClick={() => adjustCoin(coin, 1)}
+                  className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110"
+                >+</button>
+              </div>
+            );
+          })}
         </div>
       </SectionPanel>
 
@@ -445,6 +505,8 @@ export default function GearScreen() {
           </div>
         </div>
       </Drawer>
+        </>
+      )}
     </div>
   );
 }

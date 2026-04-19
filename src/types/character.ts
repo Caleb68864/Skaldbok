@@ -121,6 +121,17 @@ export interface InventoryItem {
   quantity: number;
   /** Free-text description or notes about the item. */
   description: string;
+  /**
+   * If `true`, the item is a "tiny" item — its weight is ignored for
+   * encumbrance regardless of the stored {@link weight} value.
+   */
+  tiny?: boolean;
+  /**
+   * If `true`, the item is consumable — the inventory list shows inline
+   * quantity +/- controls in play mode so rations, torches, arrows, etc.
+   * can be adjusted without entering edit mode.
+   */
+  consumable?: boolean;
 }
 
 /**

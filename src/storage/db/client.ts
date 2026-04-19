@@ -11,6 +11,7 @@ import type { Party, PartyMember } from '../../types/party';
 import type { Attachment } from '../../types/attachment';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { Encounter } from '../../types/encounter';
+import type { InventoryContainer } from '../../types/inventoryContainer';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
@@ -59,6 +60,7 @@ class SkaldbokDatabase extends Dexie {
   encounters!: Table<Encounter, string>;
   kb_nodes!: Table<KBNode, string>;
   kb_edges!: Table<KBEdge, string>;
+  inventoryContainers!: Table<InventoryContainer, string>;
 
   constructor() {
     super('skaldbok-db');
@@ -420,6 +422,13 @@ class SkaldbokDatabase extends Dexie {
           }
         }
       });
+
+    // --- Version 10: Party inventory containers ---
+    // Adds inventoryContainers table (coffer/animal/npc/other carriers with
+    // shared items + coin, scoped per campaign). No data migration needed.
+    this.version(10).stores({
+      inventoryContainers: 'id, campaignId, kind, deletedAt',
+    });
   }
 }
 
