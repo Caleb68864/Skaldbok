@@ -4,7 +4,7 @@
   "systemId": "dragonbane",
   "name": "Viktor Vale",
   "createdAt": "2026-04-06T00:00:00.000Z",
-  "updatedAt": "2026-04-06T00:00:00.000Z",
+  "updatedAt": "2026-04-18T18:50:49.386Z",
   "metadata": {
     "kin": "Human",
     "profession": "Mage",
@@ -30,45 +30,156 @@
     "disheartened": false
   },
   "resources": {
-    "hp": { "current": 13, "max": 13 },
-    "wp": { "current": 17, "max": 17 },
-    "deathRolls": { "current": 0, "max": 3 },
-    "deathSuccesses": { "current": 0, "max": 3 }
+    "hp": {
+      "current": 13,
+      "max": 13
+    },
+    "wp": {
+      "current": 17,
+      "max": 17
+    },
+    "deathRolls": {
+      "current": 0,
+      "max": 3
+    },
+    "deathSuccesses": {
+      "current": 0,
+      "max": 3
+    }
   },
   "skills": {
-    "acrobatics":     { "value": 5,  "trained": false },
-    "awareness":      { "value": 14, "trained": true },
-    "bartering":      { "value": 5,  "trained": false },
-    "beastLore":      { "value": 14, "trained": true },
-    "bluffing":       { "value": 10, "trained": true },
-    "bushcraft":      { "value": 8,  "trained": false },
-    "crafting":       { "value": 5,  "trained": false },
-    "evade":          { "value": 10, "trained": true },
-    "healing":        { "value": 14, "trained": true },
-    "huntingFishing": { "value": 5,  "trained": false },
-    "languages":      { "value": 15, "trained": true },
-    "mythsLegends":   { "value": 14, "trained": true },
-    "performance":    { "value": 5,  "trained": false },
-    "persuasion":     { "value": 5,  "trained": false },
-    "riding":         { "value": 5,  "trained": false },
-    "seamanship":     { "value": 7,  "trained": false },
-    "sleightOfHand":  { "value": 5,  "trained": false },
-    "sneaking":       { "value": 5,  "trained": false },
-    "spotHidden":     { "value": 14, "trained": true },
-    "swimming":       { "value": 5,  "trained": false },
-    "axes":           { "value": 5,  "trained": false },
-    "bows":           { "value": 5,  "trained": false },
-    "brawling":       { "value": 10, "trained": true },
-    "crossbows":      { "value": 5,  "trained": false },
-    "hammers":        { "value": 5,  "trained": false },
-    "knives":         { "value": 5,  "trained": false },
-    "slings":         { "value": 6,  "trained": false },
-    "spears":         { "value": 5,  "trained": false },
-    "staves":         { "value": 5,  "trained": false },
-    "swords":         { "value": 5,  "trained": false },
-    "animism":        { "value": 0,  "trained": false },
-    "elementalism":   { "value": 0,  "trained": false },
-    "mentalism":      { "value": 14, "trained": true }
+    "acrobatics": {
+      "value": 5,
+      "trained": false
+    },
+    "awareness": {
+      "value": 14,
+      "trained": true
+    },
+    "bartering": {
+      "value": 5,
+      "trained": false
+    },
+    "beastLore": {
+      "value": 14,
+      "trained": true
+    },
+    "bluffing": {
+      "value": 10,
+      "trained": true
+    },
+    "bushcraft": {
+      "value": 8,
+      "trained": false
+    },
+    "crafting": {
+      "value": 5,
+      "trained": false
+    },
+    "evade": {
+      "value": 10,
+      "trained": true
+    },
+    "healing": {
+      "value": 14,
+      "trained": true
+    },
+    "huntingFishing": {
+      "value": 5,
+      "trained": false
+    },
+    "languages": {
+      "value": 15,
+      "trained": true
+    },
+    "mythsLegends": {
+      "value": 14,
+      "trained": true
+    },
+    "performance": {
+      "value": 5,
+      "trained": false
+    },
+    "persuasion": {
+      "value": 5,
+      "trained": false
+    },
+    "riding": {
+      "value": 5,
+      "trained": false
+    },
+    "seamanship": {
+      "value": 7,
+      "trained": false
+    },
+    "sleightOfHand": {
+      "value": 5,
+      "trained": false
+    },
+    "sneaking": {
+      "value": 5,
+      "trained": false
+    },
+    "spotHidden": {
+      "value": 14,
+      "trained": true
+    },
+    "swimming": {
+      "value": 5,
+      "trained": false
+    },
+    "axes": {
+      "value": 5,
+      "trained": false
+    },
+    "bows": {
+      "value": 5,
+      "trained": false
+    },
+    "brawling": {
+      "value": 10,
+      "trained": true
+    },
+    "crossbows": {
+      "value": 5,
+      "trained": false
+    },
+    "hammers": {
+      "value": 5,
+      "trained": false
+    },
+    "knives": {
+      "value": 5,
+      "trained": false
+    },
+    "slings": {
+      "value": 6,
+      "trained": false
+    },
+    "spears": {
+      "value": 5,
+      "trained": false
+    },
+    "staves": {
+      "value": 5,
+      "trained": false
+    },
+    "swords": {
+      "value": 5,
+      "trained": false
+    },
+    "animism": {
+      "value": 0,
+      "trained": false
+    },
+    "elementalism": {
+      "value": 0,
+      "trained": false
+    },
+    "mentalism": {
+      "value": 14,
+      "trained": true
+    }
   },
   "weapons": [
     {
@@ -101,16 +212,76 @@
   },
   "helmet": null,
   "inventory": [
-    { "id": "inv-orbuculum",    "name": "Orbuculum",        "weight": 1, "quantity": 1, "description": "Magical implement for Mentalism spells" },
-    { "id": "inv-grimoire",     "name": "Grimoire",         "weight": 1, "quantity": 1, "description": "Spellbook containing Viktor's known spells and notes" },
-    { "id": "inv-torch",        "name": "Torch",            "weight": 1, "quantity": 1, "description": "Provides light in darkness" },
-    { "id": "inv-flint",        "name": "Flint & Tinder",   "weight": 0, "quantity": 1, "description": "For starting fires" },
-    { "id": "inv-rations",      "name": "Food Rations",     "weight": 1, "quantity": 5, "description": "Trail rations — one day's sustenance each" },
-    { "id": "inv-lamp-oil",     "name": "Lamp Oil",         "weight": 1, "quantity": 1, "description": "Fuel for a lantern" },
-    { "id": "inv-cloak",        "name": "Cloak",            "weight": 1, "quantity": 1, "description": "Protection from weather" },
-    { "id": "inv-furs",         "name": "Furs",             "weight": 1, "quantity": 1, "description": "Warm pelts for cold weather" },
-    { "id": "inv-boots",        "name": "Boots",            "weight": 1, "quantity": 1, "description": "Sturdy traveling boots" },
-    { "id": "inv-blanket",      "name": "Blanket",          "weight": 1, "quantity": 1, "description": "For camping" }
+    {
+      "id": "inv-orbuculum",
+      "name": "Orbuculum",
+      "weight": 1,
+      "quantity": 1,
+      "description": "Magical implement for Mentalism spells"
+    },
+    {
+      "id": "inv-grimoire",
+      "name": "Grimoire",
+      "weight": 1,
+      "quantity": 1,
+      "description": "Spellbook containing Viktor's known spells and notes"
+    },
+    {
+      "id": "inv-torch",
+      "name": "Torch",
+      "weight": 1,
+      "quantity": 1,
+      "description": "Provides light in darkness"
+    },
+    {
+      "id": "inv-flint",
+      "name": "Flint & Tinder",
+      "weight": 0,
+      "quantity": 1,
+      "description": "For starting fires"
+    },
+    {
+      "id": "inv-rations",
+      "name": "Food Rations",
+      "weight": 1,
+      "quantity": 5,
+      "description": "Trail rations — one day's sustenance each"
+    },
+    {
+      "id": "inv-lamp-oil",
+      "name": "Lamp Oil",
+      "weight": 1,
+      "quantity": 1,
+      "description": "Fuel for a lantern"
+    },
+    {
+      "id": "inv-cloak",
+      "name": "Cloak",
+      "weight": 1,
+      "quantity": 1,
+      "description": "Protection from weather"
+    },
+    {
+      "id": "inv-furs",
+      "name": "Furs",
+      "weight": 1,
+      "quantity": 1,
+      "description": "Warm pelts for cold weather"
+    },
+    {
+      "id": "inv-boots",
+      "name": "Boots",
+      "weight": 1,
+      "quantity": 1,
+      "description": "Sturdy traveling boots"
+    },
+    {
+      "id": "inv-blanket",
+      "name": "Blanket",
+      "weight": 1,
+      "quantity": 1,
+      "description": "For camping"
+    }
   ],
   "tinyItems": [],
   "memento": "A smooth, holed river stone on a leather cord — a keepsake from his wandering mentor, Master Orsin. No practical use, just sentiment. Once per session: recover an extra condition during a stretch rest.",
@@ -131,7 +302,11 @@
       "summary": "Your unarmed attack damage increases by D6 per power level. Requires word and gesture to cast.",
       "castingTime": "action",
       "rank": 1,
-      "powerScaling": ["+D6 unarmed damage", "+2D6 unarmed damage", "+3D6 unarmed damage"]
+      "powerScaling": [
+        "+D6 unarmed damage",
+        "+2D6 unarmed damage",
+        "+3D6 unarmed damage"
+      ]
     },
     {
       "id": "spell-levitate",
@@ -144,7 +319,11 @@
       "summary": "Levitate yourself, another person, or object (up to human size) and float it up to 6m in any direction, then land gently or drop. Each additional power level adds 2m of movement or levitates an additional person/object. Levitating an unwilling creature gives a bane to the roll. Requires word and gesture.",
       "castingTime": "action",
       "rank": 1,
-      "powerScaling": ["6m / 1 target", "8m / 2 targets", "10m / 3 targets"]
+      "powerScaling": [
+        "6m / 1 target",
+        "8m / 2 targets",
+        "10m / 3 targets"
+      ]
     },
     {
       "id": "spell-stone-skin",
@@ -157,7 +336,11 @@
       "summary": "The target's skin turns hard and gray, gaining armor rating 4. Each additional power level increases armor by 2. If wearing armor, only the highest armor rating counts. Requires word, gesture, and a stone as ingredient.",
       "castingTime": "action",
       "rank": 1,
-      "powerScaling": ["AR 4", "AR 6", "AR 8"]
+      "powerScaling": [
+        "AR 4",
+        "AR 6",
+        "AR 8"
+      ]
     },
     {
       "id": "trick-fetch",
