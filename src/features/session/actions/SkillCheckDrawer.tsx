@@ -6,6 +6,7 @@ import { useNoteActions } from '../../notes/useNoteActions';
 import { useToast } from '../../../context/ToastContext';
 import { useSessionEncounterContextSafe } from '../SessionEncounterContext';
 import { AttachToControl, resolveAttach, type AttachToValue } from '../quickActions/AttachToControl';
+import { formatModTags as sharedFormatModTags } from './formatSkillCheckTitle';
 import { cn } from '../../../lib/utils';
 
 /**
@@ -77,19 +78,7 @@ function RollModifiers({
   );
 }
 
-/**
- * Converts the active modifier flags to a parenthetical tag string.
- *
- * @param mods - Active modifier flags.
- * @returns A string like `" (Boon, Pushed)"` or an empty string when no modifiers are active.
- */
-function formatModTags(mods: { boon: boolean; bane: boolean; pushed: boolean }): string {
-  const tags: string[] = [];
-  if (mods.boon) tags.push('Boon');
-  if (mods.bane) tags.push('Bane');
-  if (mods.pushed) tags.push('Pushed');
-  return tags.length > 0 ? ` (${tags.join(', ')})` : '';
-}
+const formatModTags = sharedFormatModTags;
 
 /**
  * Props for the {@link SkillCheckDrawer} component.
@@ -224,6 +213,7 @@ export function SkillCheckDrawer({ open, onClose, members, selectedMembers, onSe
                   skill: selectedSkill,
                   result,
                   character: selectedNames(),
+                  mods: { ...rollMods },
                 })}
                 className={cn(
                   'min-h-11 min-w-11 px-4 border-none rounded-lg cursor-pointer text-sm font-semibold',

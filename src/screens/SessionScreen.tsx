@@ -18,6 +18,8 @@ import {
   useSessionEncounterContext,
 } from '../features/session/SessionEncounterContext';
 import { SessionTimelinePanel } from '../features/session/SessionTimelinePanel';
+import { useNoteOpenDispatcher } from '../features/notes/openNoteForEdit';
+import { SkillCheckEditDrawer } from '../features/session/actions/SkillCheckEditDrawer';
 import { TiptapNoteEditor } from '../components/notes/TiptapNoteEditor';
 import { Button } from '../components/ui/button';
 import {
@@ -282,6 +284,7 @@ function NoActiveSessionContent() {
  */
 function ActiveSessionContent() {
   const navigate = useNavigate();
+  const { openNote, skillCheckNote, closeSkillCheckEditor } = useNoteOpenDispatcher();
   const { activeCampaign, activeSession, activeParty, endSession } = useCampaignContext();
   const { exportSessionMarkdown, exportSessionBundle, exportSessionSkaldmark } = useExportActions();
   const { showToast } = useToast();
@@ -546,7 +549,7 @@ function ActiveSessionContent() {
           await refreshEncounters();
           bumpTimeline();
         }}
-        onOpenNote={(noteId) => navigate(`/note/${noteId}/edit`)}
+        onOpenNote={(noteId) => openNote(noteId)}
         searchText={timelineSearchText}
         onSearchTextChange={setTimelineSearchText}
         onAddToTimeline={() => openQuickLog('note')}
@@ -738,6 +741,13 @@ function ActiveSessionContent() {
           onCancel={() => setShowEndConfirm(false)}
         />
       )}
+
+      <SkillCheckEditDrawer
+        open={!!skillCheckNote}
+        onClose={closeSkillCheckEditor}
+        note={skillCheckNote}
+        onSaved={bumpTimeline}
+      />
     </div>
   );
 }
