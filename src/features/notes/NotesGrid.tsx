@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { NoteItem } from './NoteItem';
 import { useNoteActions } from './useNoteActions';
+import { useNoteOpenDispatcher } from './openNoteForEdit';
+import { SkillCheckEditDrawer } from '../session/actions/SkillCheckEditDrawer';
 import { useExportActions } from '../export/useExportActions';
 import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
 import { getSessionsByCampaign } from '../../storage/repositories/sessionRepository';
@@ -62,6 +64,7 @@ interface NotesGridProps {
  */
 export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
   const navigate = useNavigate();
+  const { openNote, skillCheckNote, closeSkillCheckEditor } = useNoteOpenDispatcher();
   const { pinNote, unpinNote, deleteNote } = useNoteActions();
   const { exportNote, copyNoteAsMarkdown } = useExportActions();
   const [notes, setNotes] = useState<Note[]>([]);
@@ -234,7 +237,7 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
         filteredNotes.map(note => (
           <div
             key={note.id}
-            onClick={() => navigate(`/note/${note.id}/edit`)}
+            onClick={() => openNote(note.id)}
             className="cursor-pointer"
           >
             <NoteItem
@@ -248,6 +251,13 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
           </div>
         ))
       )}
+
+      <SkillCheckEditDrawer
+        open={!!skillCheckNote}
+        onClose={closeSkillCheckEditor}
+        note={skillCheckNote}
+        onSaved={refreshNotes}
+      />
     </div>
   );
 }
