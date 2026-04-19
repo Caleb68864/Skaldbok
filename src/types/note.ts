@@ -14,7 +14,7 @@ import { z } from 'zod';
  * - `'skill-check'` — record of a skill roll outcome (system-generated).
  * - `'recap'`       — session recap summary (auto or manual).
  */
-export const NOTE_TYPES = ['generic', 'npc', 'combat', 'location', 'loot', 'rumor', 'quote', 'skill-check', 'recap'] as const;
+export const NOTE_TYPES = ['generic', 'npc', 'combat', 'location', 'loot', 'rumor', 'quote', 'skill-check', 'spell-cast', 'ability-use', 'recap'] as const;
 
 /**
  * Union of all valid note type strings derived from {@link NOTE_TYPES}.

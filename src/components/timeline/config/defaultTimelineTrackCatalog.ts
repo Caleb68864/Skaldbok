@@ -135,6 +135,22 @@ export const DEFAULT_TIMELINE_TRACK_CATALOG: Record<string, TimelineTrackCatalog
     collapsible: true,
     parentTrackId: 'track-notes',
   },
+  'spell-cast': {
+    label: 'Spells Cast',
+    kind: 'spell-cast',
+    order: 16.5,
+    visible: true,
+    collapsible: true,
+    parentTrackId: 'track-notes',
+  },
+  'ability-use': {
+    label: 'Abilities Used',
+    kind: 'ability-use',
+    order: 16.6,
+    visible: true,
+    collapsible: true,
+    parentTrackId: 'track-notes',
+  },
   recap: {
     label: 'Recaps',
     kind: 'recap',

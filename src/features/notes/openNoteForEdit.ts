@@ -28,7 +28,7 @@ export function useNoteOpenDispatcher() {
           navigate(`/note/${noteId}/edit`);
           return;
         }
-        if (note.type === 'skill-check') {
+        if (note.type === 'skill-check' || note.type === 'spell-cast' || note.type === 'ability-use') {
           setSkillCheckNote(note);
           return;
         }

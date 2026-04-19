@@ -6,14 +6,13 @@ import { useToast } from '../../../context/ToastContext';
 import { cn } from '../../../lib/utils';
 import type { Note } from '../../../types/note';
 import {
-  formatSkillCheckTitle,
-  parseModsFromTitle,
-  type SkillCheckMods,
-  type SkillCheckResult,
-  type SkillCheckTypeData,
+  formatOutcomeTitle,
+  readOutcomeTypeData,
+  type OutcomeMods,
+  type OutcomeResult,
 } from './formatSkillCheckTitle';
 
-const RESULTS: SkillCheckResult[] = ['success', 'failure', 'dragon', 'demon'];
+const RESULTS: OutcomeResult[] = ['success', 'failure', 'dragon', 'demon'];
 
 export interface SkillCheckEditDrawerProps {
   open: boolean;
@@ -22,32 +21,44 @@ export interface SkillCheckEditDrawerProps {
   onSaved: () => void;
 }
 
+function drawerTitle(noteType: string | undefined): string {
+  if (noteType === 'spell-cast') return 'Edit spell cast';
+  if (noteType === 'ability-use') return 'Edit ability use';
+  return 'Edit skill check';
+}
+
+function subjectLabel(noteType: string | undefined): string {
+  if (noteType === 'spell-cast') return 'Spell';
+  if (noteType === 'ability-use') return 'Ability';
+  return 'Skill';
+}
+
 /**
- * Structural editor for a previously-logged skill-check note. Lets the user
- * fix the recorded result and modifier flags without ever touching the
- * Tiptap rich-text editor — which was useless for correcting a
- * mis-pressed outcome button during play.
+ * Structural editor for any previously-logged "outcome" note
+ * (`skill-check`, `spell-cast`, `ability-use`). Lets the user fix the
+ * recorded result and modifier flags without ever touching the Tiptap
+ * rich-text editor — which was useless for correcting a mis-pressed
+ * outcome button during play.
  */
 export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillCheckEditDrawerProps) {
   const { showToast } = useToast();
-  const [skill, setSkill] = useState('');
-  const [character, setCharacter] = useState('');
-  const [result, setResult] = useState<SkillCheckResult>('success');
-  const [mods, setMods] = useState<SkillCheckMods>({ boon: false, bane: false, pushed: false });
+  const [subject, setSubject] = useState('');
+  const [actor, setActor] = useState('');
+  const [result, setResult] = useState<OutcomeResult>('success');
+  const [mods, setMods] = useState<OutcomeMods>({ boon: false, bane: false, pushed: false });
 
   useEffect(() => {
     if (!open || !note) return;
-    const data = (note.typeData ?? {}) as Partial<SkillCheckTypeData>;
-    const fallbackMods = parseModsFromTitle(note.title);
-    setSkill(data.skill ?? '');
-    setCharacter(data.character ?? '');
-    setResult(data.result ?? 'success');
-    setMods(data.mods ?? fallbackMods);
+    const data = readOutcomeTypeData(note.typeData, note.title);
+    setSubject(data.subject);
+    setActor(data.actor);
+    setResult(data.result);
+    setMods(data.mods ?? { boon: false, bane: false, pushed: false });
   }, [open, note]);
 
   if (!note) {
     return (
-      <Drawer open={open} onClose={onClose} title="Edit skill check">
+      <Drawer open={open} onClose={onClose} title="Edit">
         <div />
       </Drawer>
     );
@@ -55,11 +66,11 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
 
   async function handleSave() {
     if (!note) return;
-    const nextTypeData: SkillCheckTypeData = { skill, character, result, mods };
-    const title = formatSkillCheckTitle(nextTypeData);
+    const title = formatOutcomeTitle({ actor, subject, result, mods });
+    const nextTypeData = { subject, actor, result, mods };
     try {
       await updateNote(note.id, { title, typeData: nextTypeData });
-      showToast('Skill check updated', 'success', 2000);
+      showToast('Updated', 'success', 2000);
       onSaved();
       onClose();
     } catch (e) {
@@ -70,7 +81,7 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
 
   async function handleDelete() {
     if (!note) return;
-    if (!confirm('Delete this skill check entry?')) return;
+    if (!confirm('Delete this entry?')) return;
     try {
       await softDeleteNote(note.id);
       showToast('Entry deleted', 'success', 2000);
@@ -82,7 +93,7 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
     }
   }
 
-  const modChip = (key: keyof SkillCheckMods, label: string, activeColor: string) => (
+  const modChip = (key: keyof OutcomeMods, label: string, activeColor: string) => (
     <button
       key={key}
       type="button"
@@ -99,7 +110,7 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
   );
 
   return (
-    <Drawer open={open} onClose={onClose} title="Edit skill check">
+    <Drawer open={open} onClose={onClose} title={drawerTitle(note.type)}>
       <div className="flex flex-col gap-4">
         <div>
           <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
@@ -108,20 +119,20 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
           <input
             type="text"
             className="w-full p-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-base"
-            value={character}
-            onChange={e => setCharacter(e.target.value)}
+            value={actor}
+            onChange={e => setActor(e.target.value)}
           />
         </div>
 
         <div>
           <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
-            Skill
+            {subjectLabel(note.type)}
           </div>
           <input
             type="text"
             className="w-full p-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-base"
-            value={skill}
-            onChange={e => setSkill(e.target.value)}
+            value={subject}
+            onChange={e => setSubject(e.target.value)}
           />
         </div>
 
@@ -169,7 +180,7 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
           <Button variant="danger" onClick={handleDelete}>Delete entry</Button>
           <div className="flex gap-3">
             <Button variant="secondary" onClick={onClose}>Cancel</Button>
-            <Button variant="primary" onClick={handleSave} disabled={!skill.trim()}>Save</Button>
+            <Button variant="primary" onClick={handleSave} disabled={!subject.trim()}>Save</Button>
           </div>
         </div>
       </div>

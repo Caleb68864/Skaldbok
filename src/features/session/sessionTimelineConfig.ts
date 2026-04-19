@@ -19,6 +19,8 @@ export const DEFAULT_SESSION_TIMELINE_NOTE_TRACKS: Record<string, string> = {
   rumor: 'rumor',
   quote: 'quote',
   'skill-check': 'skill-check',
+  'spell-cast': 'spell-cast',
+  'ability-use': 'ability-use',
   recap: 'recap',
 };
 
@@ -35,6 +37,8 @@ export const NOTE_CHILD_TRACK_KINDS = [
   'rumor',
   'quote',
   'skill-check',
+  'spell-cast',
+  'ability-use',
   'recap',
 ] as const;
 
