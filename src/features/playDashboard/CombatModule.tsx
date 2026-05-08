@@ -9,27 +9,27 @@ export function CombatModule({ character, updateCharacter }: PlayModuleProps) {
   const equipped = character.weapons.filter(w => w.equipped).slice(0, 6);
 
   function adjustCoin(coin: 'gold' | 'silver' | 'copper', delta: number) {
-    const totalCopper = character.coins.gold * 100 + character.coins.silver * 10 + character.coins.copper;
-    if (delta < 0) {
-      const coinValue = coin === 'gold' ? 100 : coin === 'silver' ? 10 : 1;
-      if (totalCopper < coinValue) return;
-    }
+    let changed = false;
+    const coinValue = coin === 'gold' ? 100 : coin === 'silver' ? 10 : 1;
 
-    let { gold, silver, copper } = character.coins;
-    if (coin === 'gold') gold += delta;
-    if (coin === 'silver') silver += delta;
-    if (coin === 'copper') copper += delta;
+    updateCharacter(prev => {
+      const totalCopper = prev.coins.gold * 100 + prev.coins.silver * 10 + prev.coins.copper;
+      const nextTotal = totalCopper + delta * coinValue;
+      if (nextTotal < 0) return {};
 
-    while (copper < 0 && silver > 0) { copper += 10; silver -= 1; }
-    while (copper < 0 && gold > 0) { gold -= 1; silver += 9; copper += 10; }
-    while (silver < 0 && gold > 0) { gold -= 1; silver += 10; }
-    if (gold < 0 || silver < 0 || copper < 0) return;
-
-    updateCharacter({
-      coins: { gold, silver, copper },
-      updatedAt: nowISO(),
+      const gold = Math.floor(nextTotal / 100);
+      const silver = Math.floor((nextTotal % 100) / 10);
+      const copper = nextTotal % 10;
+      changed = true;
+      return {
+        coins: { gold, silver, copper },
+        updatedAt: nowISO(),
+      };
     });
-    logCoinChange(character.name, coin, delta);
+
+    if (changed) {
+      logCoinChange(character.name, coin, delta);
+    }
   }
 
   return (
