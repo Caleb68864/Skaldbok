@@ -41,7 +41,7 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
           const fallback = { value, trained: stored?.trained ?? false };
           const mark = stored?.dragonMarked ? 'Dragon' : stored?.demonMarked ? 'Demon' : 'Mark';
           return (
-            <div key={skill.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)]">
+            <div key={skill.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)] min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
               <div className="min-w-0">
                 <div className="flex items-baseline gap-2 flex-wrap">
                   <p className="m-0 font-semibold text-[var(--color-text)]">{skill.name}</p>
@@ -49,7 +49,7 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
                 </div>
                 <p className="m-0 text-xs text-[var(--color-text-muted)]">{probability(value)}</p>
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex items-center gap-2 flex-wrap min-[520px]:shrink-0">
                 <Button size="sm" variant="secondary" onClick={() => cycleMark(skill.id, fallback)}>{mark}</Button>
               </div>
             </div>
