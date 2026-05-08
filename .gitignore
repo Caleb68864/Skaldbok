@@ -3,13 +3,12 @@ dist/
 .claude-terminal/
 .playwright-mcp/
 tests/screenshots/
-docs/tests/screenshots/
+docs/
 bash.exe.stackdump
 tmp-backup/
 *.log
 *.png
 !public/**/*.png
-!docs/assets/skaldbok-app-icon-source.png
 local-references/
 dragonbane-reference-print.html
 initial brain dump.md
