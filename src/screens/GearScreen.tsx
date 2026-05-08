@@ -256,7 +256,7 @@ export default function GearScreen() {
         <PartyInventoryTab />
       ) : (
         <>
-      <SectionPanel title="Weapons" subtitle="p. 73-76" collapsible defaultOpen>
+      <SectionPanel title="Weapons" collapsible defaultOpen>
         {character.weapons.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No weapons.</p>}
         <div className="flex flex-col gap-[var(--space-md)]">
           {character.weapons.map(weapon => (
@@ -277,7 +277,7 @@ export default function GearScreen() {
         )}
       </SectionPanel>
 
-      <SectionPanel title="Armor &amp; Helmet" subtitle="p. 77" collapsible defaultOpen>
+      <SectionPanel title="Armor &amp; Helmet" collapsible defaultOpen>
         <div className="flex flex-col gap-[var(--space-md)]">
           {character.armor ? (
             <div className="flex justify-between items-center">
@@ -333,7 +333,7 @@ export default function GearScreen() {
         </div>
       </SectionPanel>
 
-      <SectionPanel title="Inventory" subtitle="p. 32" collapsible defaultOpen>
+      <SectionPanel title="Inventory" collapsible defaultOpen>
         <InventoryList
           items={character.inventory}
           onEdit={item => { setEditingItem(item); setInventoryDrawerOpen(true); }}
@@ -420,7 +420,7 @@ export default function GearScreen() {
         )}
       </SectionPanel>
 
-      <SectionPanel title="Encumbrance" subtitle="p. 32" collapsible defaultOpen>
+      <SectionPanel title="Encumbrance" collapsible defaultOpen>
         <p className={cn(
           "text-[length:var(--font-size-md)]",
           totalWeight > encumbranceLimit ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"

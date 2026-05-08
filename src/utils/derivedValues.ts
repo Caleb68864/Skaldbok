@@ -17,7 +17,7 @@ export interface DerivedValueResult {
 }
 
 /**
- * Base chance from attribute value. Dragonbane Core Rules p. 28.
+ * Base chance from attribute value.
  * Attr 1-5 → 3, 6-8 → 4, 9-12 → 5, 13-15 → 6, 16-18 → 7.
  */
 export function computeBaseChance(attributeValue: number): number {
@@ -37,25 +37,23 @@ export function computeSkillValue(attributeValue: number, trained: boolean): num
   return trained ? base * 2 : base;
 }
 
-/** HP Max = CON attribute value. Dragonbane Core Rules p. 26. */
+/** HP Max = CON attribute value. */
 export function computeHPMax(character: CharacterRecord): number {
   return character.attributes['con'] ?? 10;
 }
 
-/** WP Max = WIL attribute value. Dragonbane Core Rules p. 26. */
+/** WP Max = WIL attribute value. */
 export function computeWPMax(character: CharacterRecord): number {
   return character.attributes['wil'] ?? 10;
 }
 
-/** Base movement = 10. Dragonbane Core Rules p. 44. */
+/** Base movement = 10. */
 export function computeMovement(_character: CharacterRecord): number {
   return 10;
 }
 
 /**
- * Damage Bonus: STR 17+ → +D6, STR 13-16 → +D4, STR ≤12 → +0. Dragonbane Core Rules p. 40.
- * Note: thresholds >=17 and >=13 match core rules (STR 13-16 → +D4, STR 17+ → +D6).
- * The NPC attribute guidelines use a reverse lookup (inferring STR from damage bonus) — not used here.
+ * Damage Bonus: STR 17+ → +D6, STR 13-16 → +D4, STR ≤12 → +0.
  */
 export function computeDamageBonus(character: CharacterRecord): string {
   const str = character.attributes['str'] ?? 10;
@@ -66,7 +64,7 @@ export function computeDamageBonus(character: CharacterRecord): string {
 
 /**
  * AGL Damage Bonus: AGL 17+ → +D6, AGL 13-16 → +D4, AGL ≤12 → +0.
- * Uses the same threshold logic as STR damage bonus. Dragonbane Core Rules p. 40.
+ * Uses the same threshold logic as STR damage bonus.
  */
 export function computeAGLDamageBonus(character: CharacterRecord): string {
   const agl = character.attributes['agl'] ?? 10;
@@ -75,7 +73,7 @@ export function computeAGLDamageBonus(character: CharacterRecord): string {
   return '+0';
 }
 
-/** Encumbrance Limit = STR / 2 (rounded up). Dragonbane Core Rules p. 46. */
+/** Encumbrance Limit = STR / 2 (rounded up). */
 export function computeEncumbranceLimit(character: CharacterRecord): number {
   const str = character.attributes['str'] ?? 10;
   return Math.ceil(str / 2);
@@ -83,7 +81,6 @@ export function computeEncumbranceLimit(character: CharacterRecord): number {
 
 /**
  * Skill base chance by attribute value.
- * Dragonbane Reference Sheet: skill_level_base_chance table.
  *   Attribute 1-5 → base chance 3
  *   Attribute 6-8 → base chance 4
  *   Attribute 9-12 → base chance 5
@@ -99,7 +96,7 @@ export function getSkillBaseChance(attributeValue: number): number {
 }
 
 /**
- * Max prepared spells = INT base chance (3–7). Dragonbane Core Rules.
+ * Max prepared spells = INT base chance (3–7).
  * Uses the standard skill base chance table applied to the INT attribute.
  * Defaults to 5 (equivalent to INT 10) if INT is undefined.
  */

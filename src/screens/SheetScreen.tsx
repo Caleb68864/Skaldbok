@@ -47,8 +47,7 @@ function clamp(value: number, min: number, max: number): number {
  * conditions, rest buttons, and derived-value overrides remain interactive.
  *
  * **Death Rolls panel** — automatically inserted after the Resources panel
- * when the character's HP reaches 0.  Tracks both failure and success pips
- * (Dragonbane p. 55).
+ * when the character's HP reaches 0.  Tracks both failure and success pips.
  *
  * **Rest modals** — Round Rest and Stretch Rest open modal dialogs that accept
  * a d6 roll and apply the appropriate recovery rules.  Shift Rest is applied
@@ -407,7 +406,7 @@ export default function SheetScreen() {
 
   const attributesPanel = (
     <>
-      <SectionPanel title={`Attributes${isPlayMode ? ' (locked in Play Mode)' : ''}`} subtitle="p. 28-29" icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
+      <SectionPanel title={`Attributes${isPlayMode ? ' (locked in Play Mode)' : ''}`} icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
         <div className="flex flex-wrap gap-[var(--space-md)] justify-center">
           {system?.attributes.map(attr => {
             const ev = getEffectiveValue(attr.id, character);
@@ -444,7 +443,7 @@ export default function SheetScreen() {
         const orphanConditions = system.conditions.filter(c => !linkedAttrIds.has(c.linkedAttributeId));
         if (orphanConditions.length === 0) return null;
         return (
-          <SectionPanel title="Conditions" subtitle="p. 56" collapsible defaultOpen>
+          <SectionPanel title="Conditions" collapsible defaultOpen>
             <ConditionToggleGroup
               conditions={character.conditions}
               definitions={orphanConditions}
@@ -457,7 +456,7 @@ export default function SheetScreen() {
   );
 
   const resourcesPanel = (
-    <SectionPanel title="Resources" subtitle="p. 55" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+    <SectionPanel title="Resources" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-md)]">
         {['hp', 'wp'].map(resId => {
           const res = character.resources[resId];
@@ -508,7 +507,7 @@ export default function SheetScreen() {
   );
 
   const restPanel = (
-    <SectionPanel title="Rest & Recovery" subtitle="p. 55, 57" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+    <SectionPanel title="Rest & Recovery" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
       <div className="flex gap-[var(--space-md)] flex-wrap">
         <button
           type="button"
@@ -546,7 +545,7 @@ export default function SheetScreen() {
   const deathSuccessMax = deathSuccesses.max;
 
   const deathRollsPanel = isDown ? (
-    <SectionPanel title="Death Rolls" subtitle="p. 55" collapsible defaultOpen>
+    <SectionPanel title="Death Rolls" collapsible defaultOpen>
       <div className="p-[var(--space-sm)] rounded-[var(--radius-md)] border-2 border-[var(--color-danger)] bg-[rgba(224,85,85,0.1)]">
         <p className="text-[var(--color-danger)] font-bold text-[length:var(--font-size-md)] text-center mb-[var(--space-sm)]">
           Character is DOWN!

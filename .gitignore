@@ -2,6 +2,7 @@ node_modules/
 dist/
 .claude-terminal/
 .playwright-mcp/
+.playwright-cli/
 tests/screenshots/
 docs/
 bash.exe.stackdump

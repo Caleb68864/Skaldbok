@@ -258,7 +258,7 @@ export default function MagicScreen() {
 
       {/* ── Heroic Abilities section (always shown — this is the primary
              content for non-casters and the default view) ── */}
-      <SectionPanel title="Heroic Abilities" subtitle="p. 30-31" collapsible defaultOpen>
+      <SectionPanel title="Heroic Abilities" collapsible defaultOpen>
         <div className="flex justify-end mb-[var(--space-sm)]">
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingAbility(null); setAbilityDrawerOpen(true); }}>+ Add Ability</Button>}
         </div>
@@ -270,7 +270,7 @@ export default function MagicScreen() {
 
       {/* ── Spells section (hidden unless "Show Magic" is toggled on) ── */}
       {showMagic && (
-      <SectionPanel title="Spells" subtitle="p. 63-64" collapsible defaultOpen>
+      <SectionPanel title="Spells" collapsible defaultOpen>
         <div className="flex justify-end mb-[var(--space-sm)]">
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingSpell(null); setSpellDrawerOpen(true); }}>+ Add Spell</Button>}
         </div>

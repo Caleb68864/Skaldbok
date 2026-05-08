@@ -43,9 +43,6 @@ export interface CharacterSkill {
 
 /**
  * A weapon carried by the character.
- *
- * @remarks
- * Refer to Dragonbane core rules pp. 73-76 for weapon stat definitions.
  */
 export interface Weapon {
   /** Unique identifier for the weapon entry. */
@@ -80,7 +77,6 @@ export interface Weapon {
  * A piece of armour or a helmet worn by the character.
  *
  * @remarks
- * Refer to Dragonbane core rules p. 77 for armour stats.
  * Both `armor` and `helmet` on {@link CharacterRecord} use this type.
  */
 export interface ArmorPiece {
@@ -108,7 +104,7 @@ export interface ArmorPiece {
  * An item in the character's general inventory.
  *
  * @remarks
- * Weight is counted toward encumbrance (see Dragonbane p. 32).
+ * Weight is counted toward encumbrance.
  */
 export interface InventoryItem {
   /** Unique identifier for the inventory entry. */
