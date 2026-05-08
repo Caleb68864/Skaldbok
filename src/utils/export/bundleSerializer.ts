@@ -11,7 +11,7 @@ export interface SerializeOptions {
  * @remarks
  * Converts attachment Blobs to base64 (if present), computes a SHA-256
  * content hash when the Web Crypto API is available, and wraps everything
- * in a version 1 envelope with `system: 'dragonbane'`.
+ * in a version 1 envelope with `system: 'default'`.
  *
  * @param type - The export scope: character, session, or campaign.
  * @param contents - The collected (and optionally privacy-filtered) bundle contents.
@@ -45,7 +45,7 @@ export async function serializeBundle(
     type,
     exportedAt: new Date().toISOString(),
     exportedBy: options.exportedBy,
-    system: 'dragonbane',
+    system: 'default',
     contentHash: contentHash ?? undefined,
     contents: processedContents,
   };

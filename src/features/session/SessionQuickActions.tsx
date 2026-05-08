@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu';
 
-// ── Dragonbane Data ──────────────────────────────────────────────
+// ── System Data ──────────────────────────────────────────────
 
 const CORE_SKILLS = [
   'ACROBATICS', 'AWARENESS', 'BARTERING', 'BEAST LORE', 'BLUFFING',

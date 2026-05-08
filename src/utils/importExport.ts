@@ -83,7 +83,7 @@ export async function importCharacter(file: File): Promise<ImportResult> {
   character = { ...character, createdAt: nowISO(), updatedAt: nowISO() };
 
   let warning: string | undefined;
-  const knownSystems = ['dragonbane'];
+  const knownSystems = ['default'];
   if (!knownSystems.includes(character.systemId)) {
     warning = `Unknown system "${character.systemId}". The character was imported but may not display correctly.`;
   }

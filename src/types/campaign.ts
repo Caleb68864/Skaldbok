@@ -6,7 +6,7 @@ export const campaignSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
-  system: z.string().default('dragonbane'),
+  system: z.string().default('default'),
   status: z.enum(['active', 'archived']),
   activeSessionId: z.string().optional(),
   activePartyId: z.string().optional(),

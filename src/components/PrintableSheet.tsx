@@ -32,10 +32,11 @@ interface PrintableSheetProps {
 // Section 1 — Sheet Header (SS-04)
 // ──────────────────────────────────────────────
 
-function SheetHeader({ character }: { character: CharacterRecord }): React.ReactElement {
+function SheetHeader({ character, system }: { character: CharacterRecord; system: SystemDefinition | null }): React.ReactElement {
+  const title = (system?.displayName ?? 'Character Sheet').toUpperCase();
   return (
     <div className="sheet-header">
-      <div className="sheet-title">DRAGONBANE</div>
+      <div className="sheet-title">{title}</div>
       <div className="sheet-header-bar" />
       <div className="sheet-identity-row">
         <div className="sheet-field">
@@ -555,7 +556,7 @@ export default function PrintableSheet({
   return (
     <div className={sheetClass}>
       {/* 1. Header */}
-      <SheetHeader character={character} />
+      <SheetHeader character={character} system={system} />
 
       {/* 2. Attribute Band + Conditions (SS-05) */}
       <AttributeBand character={character} />

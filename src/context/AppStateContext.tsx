@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useAppSettings } from '../features/settings/useAppSettings';
 import { useTheme } from '../theme/ThemeProvider';
 import * as systemRepository from '../storage/repositories/systemRepository';
-import { dragonbaneSystem } from '../systems/dragonbane';
+import { defaultSystem } from '../systems/default';
 import type { AppSettings, ModeName, BoonBaneState, SessionState } from '../types/settings';
 
 interface AppStateContextValue {
@@ -41,11 +41,11 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     }
   }, [isLoading, settings.theme, setTheme]);
 
-  // Seed Dragonbane system if absent
+  // Seed default system if absent
   useEffect(() => {
-    systemRepository.getById('dragonbane').then(existing => {
+    systemRepository.getById('default').then(existing => {
       if (!existing) {
-        systemRepository.save(dragonbaneSystem).catch(console.error);
+        systemRepository.save(defaultSystem).catch(console.error);
       }
     }).catch(console.error);
   }, []);

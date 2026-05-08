@@ -26,7 +26,7 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
       const campaign = await createCampaign({
         name: name.trim(),
         description: description.trim() || undefined,
-        system: 'dragonbane',
+        system: 'default',
         status: 'active',
       });
 

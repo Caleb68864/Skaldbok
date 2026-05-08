@@ -153,7 +153,7 @@ export default function GearScreen() {
     else if (coin === 'silver') silver += delta;
     else copper += delta;
     // Borrow from higher denominations if the requested coin went negative.
-    // Dragonbane: 1 gold = 10 silver, 1 silver = 10 copper.
+    // Coin denominations: 1 gold = 10 silver, 1 silver = 10 copper.
     while (copper < 0 && silver > 0) { copper += 10; silver -= 1; }
     while (copper < 0 && gold > 0) { gold -= 1; silver += 9; copper += 10; }
     while (silver < 0 && gold > 0) { gold -= 1; silver += 10; }

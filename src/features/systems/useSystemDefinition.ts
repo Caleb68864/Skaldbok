@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as systemRepository from '../../storage/repositories/systemRepository';
-import { dragonbaneSystem } from '../../systems/dragonbane';
+import { defaultSystem } from '../../systems/default';
 import type { SystemDefinition } from '../../types/system';
 
 export function useSystemDefinition(systemId: string) {
@@ -14,9 +14,9 @@ export function useSystemDefinition(systemId: string) {
       if (!mounted) return;
       if (stored) {
         setSystem(stored);
-      } else if (systemId === 'dragonbane') {
-        await systemRepository.save(dragonbaneSystem);
-        setSystem(dragonbaneSystem);
+      } else if (systemId === 'default') {
+        await systemRepository.save(defaultSystem);
+        setSystem(defaultSystem);
       } else {
         setError(`Unknown system: ${systemId}`);
       }

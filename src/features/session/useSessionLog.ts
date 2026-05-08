@@ -192,7 +192,7 @@ export function useSessionLog() {
   }, [activeSession]);
 
   /**
-   * Logs a Dragonbane skill-check result for a character.
+   * Logs a skill-check result for a character.
    *
    * @param characterName - Display name of the character who made the roll.
    * @param skillName - Name of the skill that was checked.
@@ -338,7 +338,7 @@ export function useSessionLog() {
   }, [activeSession, flushResourceBuffer]);
 
   /**
-   * Logs a Dragonbane death roll attempt and its outcome.
+   * Logs a death roll attempt and its outcome.
    *
    * @param characterName - Display name of the character making the death roll.
    * @param rollNumber - Sequential number of this death roll (1–3).

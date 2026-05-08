@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What Skaldbok Is
 
-Skaldbok is a local-first, offline-capable PWA for tabletop RPG play — currently targeting the Dragonbane system. It runs entirely in the browser: React 19 + Vite + Tailwind v4 on the UI side, Dexie (IndexedDB) for persistence, `vite-plugin-pwa` for installability, and `@vitejs/plugin-basic-ssl` so tablets can install it over LAN HTTPS. No backend.
+Skaldbok is a local-first, offline-capable PWA for tabletop RPG play. It ships with a generic bundled system; users can import or author their own. It runs entirely in the browser: React 19 + Vite + Tailwind v4 on the UI side, Dexie (IndexedDB) for persistence, `vite-plugin-pwa` for installability, and `@vitejs/plugin-basic-ssl` so tablets can install it over LAN HTTPS. No backend.
 
 `AGENTS.md` is a near-verbatim copy of this file for Codex; keep the two in sync when editing conventions here.
 
@@ -33,7 +33,7 @@ There is **no JS/TS test runner wired up**. The `tests/` directory contains a Py
 - Relationships between entities are almost always expressed via `entityLinks` rows rather than FK columns. See the **Entity Linking** section below — this is the single most important convention to internalize before adding cross-entity features.
 
 ### Game system as data
-- The active RPG system (fields, skills, abilities, resources) is a `SystemDefinition` loaded from JSON — `src/systems/dragonbane/system.json` — not a set of hardcoded types. `src/systems/dragonbane/index.ts` just re-exports it. Zod schemas in `schemas/` validate character / system / settings shapes on import. Adding rules content is usually a JSON edit, not a code change.
+- The active RPG system (fields, skills, abilities, resources) is a `SystemDefinition` loaded from JSON — `src/systems/default/system.json` — not a set of hardcoded types. `src/systems/default/index.ts` just re-exports it. Zod schemas in `schemas/` validate character / system / settings shapes on import. Adding rules content is usually a JSON edit, not a code change.
 
 ### Feature vs. component layout
 - `src/components/` — presentational, reusable UI (shell, layout, primitives, ui, fields, modals, timeline, notes).

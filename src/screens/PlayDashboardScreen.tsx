@@ -17,7 +17,7 @@ export default function PlayDashboardScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { settings, isLoading: settingsLoading } = useAppState();
-  const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
+  const { system } = useSystemDefinition(character?.systemId ?? 'default');
   const { error } = useAutosave(character, characterRepository.save, 500);
 
   useEffect(() => {

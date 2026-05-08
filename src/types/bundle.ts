@@ -68,8 +68,8 @@ export const bundleEnvelopeSchema = z.object({
   exportedAt: z.string(),
   /** Optional name/identifier of who created the export. */
   exportedBy: z.string().optional(),
-  /** Game system identifier — always `'dragonbane'` for Skaldmark. */
-  system: z.literal('dragonbane'),
+  /** Game system identifier — always `'default'` for Skaldmark. */
+  system: z.literal('default'),
   /** Optional SHA-256 hex digest of `JSON.stringify(contents)` for integrity verification. */
   contentHash: z.string().optional(),
   /** The actual entity data payload. */

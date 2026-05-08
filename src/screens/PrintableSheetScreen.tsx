@@ -20,7 +20,7 @@ export default function PrintableSheetScreen() {
   const navigate = useNavigate();
   const { isLoading: settingsLoading, settings } = useAppState();
   const { character, isLoading: characterLoading } = useActiveCharacter();
-  const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
+  const { system } = useSystemDefinition(character?.systemId ?? 'default');
   const [colorMode, setColorMode] = useState<'color' | 'bw'>('color');
 
   // Wait for settings to load, then wait for character to load.

@@ -45,7 +45,7 @@ function clampSkillValue(value: number): number {
  *   shield icon in Play Mode.
  * - **Skill value input** — numeric roll-under target, editable in Edit Mode.
  * - **Dragon / Demon mark toggle** — cycles unmarked → dragon-marked → demon-marked →
- *   unmarked in Play Mode to track session advancement (Dragonbane rules).
+ *   unmarked in Play Mode to track session advancement .
  *
  * Probability strings are computed from {@link calcNormalProb}, {@link calcBoonProb},
  * and {@link calcBaneProb}, resolved through {@link resolveEffectiveBoonBane}.
@@ -60,7 +60,7 @@ function clampSkillValue(value: number): number {
 export default function SkillsScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { system } = useSystemDefinition(character?.systemId ?? 'dragonbane');
+  const { system } = useSystemDefinition(character?.systemId ?? 'default');
   const {
     sessionState,
     setGlobalBoonBane,

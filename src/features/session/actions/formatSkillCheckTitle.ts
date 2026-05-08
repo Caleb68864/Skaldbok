@@ -1,5 +1,5 @@
 /**
- * The four Dragonbane outcomes applicable to skill checks, spell casts, and
+ * The four outcomes applicable to skill checks, spell casts, and
  * heroic ability uses.
  */
 export type OutcomeResult = 'success' | 'failure' | 'dragon' | 'demon';

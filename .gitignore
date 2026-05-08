@@ -3,6 +3,7 @@ dist/
 .claude-terminal/
 .playwright-mcp/
 .playwright-cli/
+vault/
 tests/screenshots/
 docs/
 bash.exe.stackdump

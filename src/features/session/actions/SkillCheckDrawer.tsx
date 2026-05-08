@@ -10,7 +10,7 @@ import { formatModTags as sharedFormatModTags } from './formatSkillCheckTitle';
 import { cn } from '../../../lib/utils';
 
 /**
- * Dragonbane core skills (non-weapon) available for selection in the skill-check flow.
+ * Core skills (non-weapon) available for selection in the skill-check flow.
  * @internal
  */
 const CORE_SKILLS = [
@@ -22,7 +22,7 @@ const CORE_SKILLS = [
 ] as const;
 
 /**
- * Dragonbane weapon skills available for selection in the skill-check flow.
+ * Weapon skills available for selection in the skill-check flow.
  * @internal
  */
 const WEAPON_SKILLS = [
@@ -31,7 +31,7 @@ const WEAPON_SKILLS = [
 ] as const;
 
 /**
- * All possible outcomes for a Dragonbane skill check roll.
+ * All possible outcomes for a skill check roll.
  * @internal
  */
 const RESULTS = ['success', 'failure', 'dragon', 'demon'] as const;
@@ -99,7 +99,7 @@ export interface SkillCheckDrawerProps {
 }
 
 /**
- * Two-step drawer for logging a Dragonbane skill check result as a session note.
+ * Two-step drawer for logging a skill check result as a session note.
  *
  * @remarks
  * **Step 1 — skill selection**: displays the character's own skills (if a single

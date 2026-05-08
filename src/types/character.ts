@@ -309,7 +309,7 @@ export interface CharacterResource {
 export interface CharacterRecord extends Versioned, Timestamped {
   /** Unique identifier for this character. */
   id: ID;
-  /** ID of the game-system definition used for attribute/skill/condition lookups (e.g. `"dragonbane"`). */
+  /** ID of the game-system definition used for attribute/skill/condition lookups (e.g. `"default"`). */
   systemId: string;
   /** Display name of the character. */
   name: string;

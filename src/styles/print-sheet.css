@@ -1,6 +1,6 @@
 /* ============================================================
    print-sheet.css
-   Print-optimized styles for the Dragonbane character sheet.
+   Print-optimized styles for the character sheet.
    Intentional exception to inline-styles convention:
    @page and @media print cannot be expressed as inline styles.
    ============================================================ */

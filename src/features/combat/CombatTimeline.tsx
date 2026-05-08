@@ -10,7 +10,7 @@ import { SpellPicker } from './SpellPicker';
 import { cn } from '../../lib/utils';
 import type { CombatEvent, CombatTypeData } from '../../types/noteValidators';
 
-const DRAGONBANE_CONDITIONS = [
+const DEFAULT_CONDITIONS = [
   { name: 'Exhausted', attribute: 'STR' },
   { name: 'Sickly', attribute: 'CON' },
   { name: 'Dazed', attribute: 'AGL' },
@@ -430,7 +430,7 @@ function ConditionPicker({ onSelect, onClose }: ConditionPickerProps) {
         className="block w-full px-3 py-2.5 min-h-11 mb-3 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
       />
       <div className="flex flex-col gap-0.5">
-        {DRAGONBANE_CONDITIONS.map(c => (
+        {DEFAULT_CONDITIONS.map(c => (
           <button
             key={c.name}
             onClick={() => { onSelect(c.name, c.attribute, target.trim()); onClose(); }}
