@@ -12,6 +12,7 @@ import { CombatModule } from '../features/playDashboard/CombatModule';
 import { AbilityModule } from '../features/playDashboard/AbilityModule';
 import { MagicModule } from '../features/playDashboard/MagicModule';
 import { RestModule } from '../features/playDashboard/RestModule';
+import { DerivedStatsModule } from '../features/playDashboard/DerivedStatsModule';
 
 export default function PlayDashboardScreen() {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ export default function PlayDashboardScreen() {
       <div className="flex flex-col gap-[var(--space-sm)] md:gap-[var(--space-md)]">
         <div className="grid gap-[var(--space-sm)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
           <ResourceModule {...moduleProps} />
+          <DerivedStatsModule {...moduleProps} />
           <ConditionModule {...moduleProps} />
           <RestModule {...moduleProps} />
         </div>
