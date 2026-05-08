@@ -112,7 +112,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
     logRest(character.name, 'Shift Rest', 'Fully recovered');
   }
 
-  const btnBase = 'min-h-[var(--touch-target-min)] px-[var(--space-md)] py-[var(--space-sm)] rounded-[var(--radius-sm)] border text-[length:var(--font-size-md)] font-medium cursor-pointer transition-colors flex items-center gap-[var(--space-xs)]';
+  const btnBase = 'min-h-[var(--touch-target-min)] w-full justify-center px-[var(--space-md)] py-[var(--space-sm)] rounded-[var(--radius-sm)] border text-[length:var(--font-size-md)] font-medium cursor-pointer transition-colors flex items-center gap-[var(--space-xs)]';
   const unusedClass = 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] hover:bg-[var(--color-surface)]';
   const usedClass = 'border-[var(--color-success,#27ae60)] bg-[var(--color-success,#27ae60)] text-white opacity-70';
 
@@ -142,7 +142,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
 
   return (
     <SectionPanel title="Rest" collapsible defaultOpen>
-      <div className="flex gap-3 flex-wrap items-center">
+      <div className="grid gap-2 w-full max-w-[16rem]">
         {restButton('round', 'Round Rest', () => setRoundOpen(true))}
         {restButton('stretch', 'Stretch Rest', () => setStretchOpen(true))}
         {restButton('shift', 'Shift Rest', applyShift)}

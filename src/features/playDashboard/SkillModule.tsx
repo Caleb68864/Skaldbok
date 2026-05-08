@@ -33,7 +33,7 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
 
   return (
     <SectionPanel title="Skills" collapsible defaultOpen>
-      <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+      <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
         {visible.map(skill => {
           const stored = character.skills[skill.id];
           const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 0;

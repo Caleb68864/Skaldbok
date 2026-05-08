@@ -32,7 +32,7 @@ export function MagicModule({ character, updateCharacter }: PlayModuleProps) {
 
   return (
     <SectionPanel title="Prepared Magic" collapsible defaultOpen>
-      <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
+      <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
         {spells.map(spell => {
           const trick = isMagicTrick(spell.powerLevel, spell.school);
           const powerLevel = powerLevels[spell.id] ?? 1;
