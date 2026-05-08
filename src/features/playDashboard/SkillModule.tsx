@@ -32,7 +32,7 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
   }
 
   return (
-    <SectionPanel title="Fast Skills" collapsible defaultOpen>
+    <SectionPanel title="Skills" collapsible defaultOpen>
       <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
         {visible.map(skill => {
           const stored = character.skills[skill.id];
