@@ -5,20 +5,24 @@ import type { PlayModuleProps } from './types';
 export function CombatModule({ character, updateCharacter }: PlayModuleProps) {
   const equipped = character.weapons.filter(w => w.equipped).slice(0, 6);
 
+  if (equipped.length === 0) return null;
+
   return (
     <SectionPanel title="Ready Gear" collapsible defaultOpen>
-      {equipped.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No equipped weapons.</p>}
-      <div className="flex flex-col gap-2">
+      <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
         {equipped.map(weapon => (
-          <div key={weapon.id} className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] py-2">
+          <div key={weapon.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)]">
             <div className="min-w-0">
-              <p className="m-0 font-semibold text-[var(--color-text)]">{weapon.name}</p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="m-0 font-semibold text-[var(--color-text)]">{weapon.name}</p>
+                {weapon.damaged && <span className="text-xs text-[var(--color-danger)] font-semibold">Damaged</span>}
+              </div>
               <p className="m-0 text-xs text-[var(--color-text-muted)]">{weapon.damage} · {weapon.range} · durability {weapon.durability}</p>
             </div>
-            {weapon.damaged && <span className="text-xs text-[var(--color-danger)] font-semibold">Damaged</span>}
             <Button
               size="sm"
               variant="secondary"
+              className="self-start"
               onClick={() => updateCharacter(prev => ({
                 weapons: prev.weapons.map(w => w.id === weapon.id ? { ...w, damaged: !w.damaged } : w),
                 updatedAt: new Date().toISOString(),

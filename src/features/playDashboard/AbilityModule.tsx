@@ -8,6 +8,8 @@ export function AbilityModule({ character, updateCharacter }: PlayModuleProps) {
   const { showToast } = useToast();
   const abilities = character.heroicAbilities.slice(0, 8);
 
+  if (abilities.length === 0) return null;
+
   function spendWp(cost: number | undefined, label: string) {
     const wp = character.resources.wp;
     if (!cost || !wp) {
@@ -27,15 +29,14 @@ export function AbilityModule({ character, updateCharacter }: PlayModuleProps) {
 
   return (
     <SectionPanel title="Abilities" collapsible defaultOpen>
-      {abilities.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No heroic abilities.</p>}
-      <div className="flex flex-col gap-2">
+      <div className="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
         {abilities.map(ability => (
-          <div key={ability.id} className="flex items-start justify-between gap-3 border-b border-[var(--color-border)] py-2">
-            <div>
+          <div key={ability.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)]">
+            <div className="min-w-0">
               <p className="m-0 font-semibold text-[var(--color-text)]">{ability.name}</p>
               {ability.summary && <p className="m-0 text-xs text-[var(--color-text-muted)]">{ability.summary}</p>}
             </div>
-            <Button size="sm" variant="secondary" onClick={() => spendWp(ability.wpCost, ability.name)}>
+            <Button size="sm" variant="secondary" className="self-start" onClick={() => spendWp(ability.wpCost, ability.name)}>
               {ability.wpCost ? `${ability.wpCost} WP` : 'Use'}
             </Button>
           </div>
