@@ -102,7 +102,15 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
         wp: { ...prev.resources.wp, current: prev.resources.wp?.max ?? 0 },
       },
       conditions: Object.fromEntries(Object.keys(prev.conditions).map(id => [id, false])),
-      uiState: { ...prev.uiState, restsUsed: { ...(prev.uiState.restsUsed ?? {}), shift: true } },
+      uiState: {
+        ...prev.uiState,
+        restsUsed: {
+          ...(prev.uiState.restsUsed ?? {}),
+          round: false,
+          stretch: false,
+          shift: true,
+        },
+      },
       updatedAt: nowISO(),
     }));
     showToast(`Shift rest: ${result.hpRestored} HP and ${result.wpRestored} WP restored.`, 'success');

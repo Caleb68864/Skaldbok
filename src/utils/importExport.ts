@@ -12,9 +12,22 @@ function stripHtml(str: string): string {
   return str.replace(/<[^>]*>/g, '').replace(/javascript:/gi, '');
 }
 
+const KNOWN_SYSTEM_IDS = ['classic-fantasy'];
+const SYSTEM_ID_ALIASES: Record<string, string> = {
+  'classic-fantasy': 'classic-fantasy',
+  'dragon-bane': 'classic-fantasy',
+  dragonbane: 'classic-fantasy',
+};
+
+function normalizeSystemId(systemId: string): string {
+  const normalized = stripHtml(systemId).trim().toLowerCase();
+  return SYSTEM_ID_ALIASES[normalized] ?? normalized;
+}
+
 function sanitizeCharacterStrings(char: CharacterRecord): CharacterRecord {
   return {
     ...char,
+    systemId: normalizeSystemId(char.systemId),
     name: stripHtml(char.name),
     metadata: {
       kin: stripHtml(char.metadata.kin),
@@ -83,8 +96,7 @@ export async function importCharacter(file: File): Promise<ImportResult> {
   character = { ...character, createdAt: nowISO(), updatedAt: nowISO() };
 
   let warning: string | undefined;
-  const knownSystems = ['classic-fantasy'];
-  if (!knownSystems.includes(character.systemId)) {
+  if (!KNOWN_SYSTEM_IDS.includes(character.systemId)) {
     warning = `Unknown system "${character.systemId}". The character was imported but may not display correctly.`;
   }
 
