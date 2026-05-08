@@ -33,7 +33,7 @@ There is **no JS/TS test runner wired up**. The `tests/` directory contains a Py
 - Relationships between entities are almost always expressed via `entityLinks` rows rather than FK columns. See the **Entity Linking** section below — this is the single most important convention to internalize before adding cross-entity features.
 
 ### Game system as data
-- The active RPG system (fields, skills, abilities, resources) is a `SystemDefinition` loaded from JSON — `src/systems/default/system.json` — not a set of hardcoded types. `src/systems/default/index.ts` just re-exports it. Zod schemas in `schemas/` validate character / system / settings shapes on import. Adding rules content is usually a JSON edit, not a code change.
+- The active RPG system (fields, skills, abilities, resources) is a `SystemDefinition` loaded from JSON — `src/systems/classic-fantasy/system.json` — not a set of hardcoded types. `src/systems/classic-fantasy/index.ts` just re-exports it. Zod schemas in `schemas/` validate character / system / settings shapes on import. Adding rules content is usually a JSON edit, not a code change. Additional systems can be added as sibling folders under `src/systems/` and selected via a character's `systemId`.
 
 ### Feature vs. component layout
 - `src/components/` — presentational, reusable UI (shell, layout, primitives, ui, fields, modals, timeline, notes).

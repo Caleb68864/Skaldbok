@@ -33,7 +33,7 @@ const btnBaseClass = "min-h-11 min-w-11 px-[var(--space-md)] rounded-[var(--radi
 
 export function EndOfSessionModal({ open, onClose }: Props) {
   const { character, updateCharacter } = useActiveCharacter();
-  const { system } = useSystemDefinition(character?.systemId ?? 'default');
+  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [checks, setChecks] = useState<Record<string, boolean>>({});

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as systemRepository from '../../storage/repositories/systemRepository';
-import { defaultSystem } from '../../systems/default';
+import { classicFantasySystem } from '../../systems/classic-fantasy';
 import type { SystemDefinition } from '../../types/system';
 
 export function useSystemDefinition(systemId: string) {
@@ -14,9 +14,9 @@ export function useSystemDefinition(systemId: string) {
       if (!mounted) return;
       if (stored) {
         setSystem(stored);
-      } else if (systemId === 'default') {
-        await systemRepository.save(defaultSystem);
-        setSystem(defaultSystem);
+      } else if (systemId === 'classic-fantasy') {
+        await systemRepository.save(classicFantasySystem);
+        setSystem(classicFantasySystem);
       } else {
         setError(`Unknown system: ${systemId}`);
       }

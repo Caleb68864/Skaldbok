@@ -10,7 +10,7 @@ export function useCharacterActions() {
   const { clearCharacter, character: activeCharacter } = useActiveCharacter();
 
   async function createCharacter(name?: string) {
-    const newChar = createBlankCharacter('default');
+    const newChar = createBlankCharacter('classic-fantasy');
     // If a name is provided and non-empty, use it; otherwise keep the blank template default
     if (name && name.trim().length > 0) {
       newChar.name = name.trim();

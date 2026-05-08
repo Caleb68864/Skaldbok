@@ -60,7 +60,7 @@ function clampSkillValue(value: number): number {
 export default function SkillsScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { system } = useSystemDefinition(character?.systemId ?? 'default');
+  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   const {
     sessionState,
     setGlobalBoonBane,

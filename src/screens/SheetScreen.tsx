@@ -64,7 +64,7 @@ export default function SheetScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
-  const { system } = useSystemDefinition(character?.systemId ?? 'default');
+  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   const { showToast } = useToast();
   const { logHPChange, logDeathRoll, logRest } = useSessionLog();

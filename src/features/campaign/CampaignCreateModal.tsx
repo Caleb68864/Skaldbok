@@ -26,7 +26,7 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
       const campaign = await createCampaign({
         name: name.trim(),
         description: description.trim() || undefined,
-        system: 'default',
+        system: 'classic-fantasy',
         status: 'active',
       });
 

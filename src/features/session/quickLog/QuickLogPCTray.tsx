@@ -448,7 +448,7 @@ function SkillsSubStep({
   onBack: () => void;
   onPick: (skillName: string) => void;
 }) {
-  const { system } = useSystemDefinition(character.systemId ?? 'default');
+  const { system } = useSystemDefinition(character.systemId ?? 'classic-fantasy');
   const skillNames = useMemo(() => {
     if (!system) return CORE_SKILLS_FALLBACK;
     return system.skillCategories.flatMap(c => c.skills.map(s => s.name));

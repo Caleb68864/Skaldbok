@@ -1,8 +1,8 @@
 {
-  "id": "default",
+  "id": "classic-fantasy",
   "version": 1,
-  "name": "default",
-  "displayName": "Default",
+  "name": "classic-fantasy",
+  "displayName": "Classic Fantasy",
   "attributes": [
     { "id": "str", "name": "Strength", "abbreviation": "STR", "min": 3, "max": 18 },
     { "id": "con", "name": "Constitution", "abbreviation": "CON", "min": 3, "max": 18 },

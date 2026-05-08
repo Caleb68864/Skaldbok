@@ -126,7 +126,7 @@ function handleLegacySkaldbok(obj: Record<string, unknown>): ParsedBundleResult 
     version: 1,
     type: 'character',
     exportedAt: new Date().toISOString(),
-    system: 'default',
+    system: 'classic-fantasy',
     contents: {
       characters: [obj],
     },

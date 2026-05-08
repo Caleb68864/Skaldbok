@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { useAppSettings } from '../features/settings/useAppSettings';
 import { useTheme } from '../theme/ThemeProvider';
 import * as systemRepository from '../storage/repositories/systemRepository';
-import { defaultSystem } from '../systems/default';
+import { classicFantasySystem } from '../systems/classic-fantasy';
 import type { AppSettings, ModeName, BoonBaneState, SessionState } from '../types/settings';
 
 interface AppStateContextValue {
@@ -43,9 +43,9 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
 
   // Seed default system if absent
   useEffect(() => {
-    systemRepository.getById('default').then(existing => {
+    systemRepository.getById('classic-fantasy').then(existing => {
       if (!existing) {
-        systemRepository.save(defaultSystem).catch(console.error);
+        systemRepository.save(classicFantasySystem).catch(console.error);
       }
     }).catch(console.error);
   }, []);
