@@ -37,19 +37,19 @@ export default function PlayDashboardScreen() {
   const moduleProps = { character, system, updateCharacter };
 
   return (
-    <div className="p-[var(--space-md)]">
-      <div className="mb-[var(--space-md)]">
+    <div className="p-[var(--space-sm)] md:p-[var(--space-md)]">
+      <div className="mb-[var(--space-sm)]">
         <h1 className="m-0 text-[length:var(--font-size-xl)] text-[var(--color-text)]">Play Dashboard</h1>
         <p className="mt-1 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">{character.name}</p>
       </div>
       {error && <div className="mb-[var(--space-sm)] text-[var(--color-danger)] text-[length:var(--font-size-sm)]">{error}</div>}
-      <div className="grid gap-[var(--space-md)] xl:grid-cols-2">
-        <div className="flex flex-col gap-[var(--space-md)]">
+      <div className="flex flex-col gap-[var(--space-sm)] md:gap-[var(--space-md)]">
+        <div className="grid gap-[var(--space-sm)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]">
           <ResourceModule {...moduleProps} />
           <ConditionModule {...moduleProps} />
           <RestModule {...moduleProps} />
         </div>
-        <div className="flex flex-col gap-[var(--space-md)]">
+        <div className="grid gap-[var(--space-sm)] md:gap-[var(--space-md)] xl:grid-cols-2">
           <SkillModule {...moduleProps} />
           <CombatModule {...moduleProps} />
           <AbilityModule {...moduleProps} />

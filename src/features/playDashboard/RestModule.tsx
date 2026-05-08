@@ -104,12 +104,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
       conditions: Object.fromEntries(Object.keys(prev.conditions).map(id => [id, false])),
       uiState: {
         ...prev.uiState,
-        restsUsed: {
-          ...(prev.uiState.restsUsed ?? {}),
-          round: false,
-          stretch: false,
-          shift: true,
-        },
+        restsUsed: {},
       },
       updatedAt: nowISO(),
     }));
