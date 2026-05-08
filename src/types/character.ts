@@ -282,6 +282,12 @@ export interface CharacterUiState {
   combatCardOrder?: string[];
   /** Visibility flags for individual panels on the combat view; keyed by panel ID. */
   combatPanelVisibility?: Record<string, boolean>;
+  /**
+   * Per-rest-type usage marks for the play dashboard rest module.
+   * `true` means the rest has been used since the last reset; the
+   * Reset button clears all three back to undefined.
+   */
+  restsUsed?: { round?: boolean; stretch?: boolean; shift?: boolean };
 }
 
 /**
