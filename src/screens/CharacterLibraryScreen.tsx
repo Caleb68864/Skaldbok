@@ -11,6 +11,7 @@ import { Modal } from '../components/primitives/Modal';
 import { useToast } from '../context/ToastContext';
 import { cn } from '../lib/utils';
 import { useAppState } from '../context/AppStateContext';
+import { AppLogo } from '../components/primitives/AppLogo';
 
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
@@ -140,7 +141,11 @@ export default function CharacterLibraryScreen() {
           <button onClick={() => navigate(-1)} className="min-h-11 min-w-11 flex items-center justify-center bg-transparent border-none cursor-pointer text-[var(--color-text)]" aria-label="Back">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           </button>
-          <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] m-0">Character Library</h1>
+          <AppLogo size="md" />
+          <div>
+            <p className="m-0 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">Skaldbok</p>
+            <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] m-0">Character Library</h1>
+          </div>
         </div>
         <div className="flex gap-3 flex-wrap">
           <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Import Character</Button>

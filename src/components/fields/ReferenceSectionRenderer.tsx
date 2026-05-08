@@ -1,4 +1,4 @@
-import type { ReferenceSection } from '../../data/dragonbaneReference';
+import type { ReferenceSection } from '../../types/reference';
 
 interface ReferenceSectionRendererProps {
   section: ReferenceSection;

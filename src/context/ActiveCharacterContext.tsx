@@ -4,6 +4,7 @@ import { useAppState } from './AppStateContext';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { flushAll } from '../features/persistence/autosaveFlush';
 import type { CharacterRecord } from '../types/character';
+import { normalizeCharacter } from '../utils/characterNormalization';
 
 type CharacterUpdater = Partial<CharacterRecord> | ((prev: CharacterRecord) => Partial<CharacterRecord>);
 
@@ -44,7 +45,7 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
     characterRepository.getById(settings.activeCharacterId).then(char => {
       if (!mounted) return;
       if (char) {
-        setCharacterState(char);
+        setCharacterState(normalizeCharacter(char));
       } else {
         // Character was deleted; clear activeCharacterId
         updateSettings({ activeCharacterId: null }).catch(console.error);
@@ -64,7 +65,7 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
   const setCharacter = useCallback(async (id: string) => {
     const char = await characterRepository.getById(id);
     if (char) {
-      setCharacterState(char);
+      setCharacterState(normalizeCharacter(char));
       await updateSettings({ activeCharacterId: id });
     }
   }, [updateSettings]);

@@ -13,18 +13,19 @@ export default defineConfig({
     basicSsl(),
     VitePWA({
       registerType: 'prompt',
-      includeAssets: ['favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'],
       manifest: {
         name: "Skaldbok: The Adventurer's Ledger",
         short_name: 'Skaldbok',
-        description: 'Dragonbane character sheet PWA',
-        theme_color: '#1a1a2e',
-        background_color: '#1a1a2e',
+        description: 'Local-first tabletop character sheet PWA',
+        theme_color: '#111a17',
+        background_color: '#111a17',
         display: 'standalone',
         start_url: '/',
         icons: [
           { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

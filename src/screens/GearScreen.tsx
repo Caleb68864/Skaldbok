@@ -21,6 +21,11 @@ import * as characterRepository from '../storage/repositories/characterRepositor
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
 
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
 /**
  * The Gear screen — manages all equipment for the active character.
  */
@@ -159,7 +164,7 @@ export default function GearScreen() {
 
   function handleInventoryQuantity(id: string, quantity: number) {
     if (!character) return;
-    const inventory = character.inventory.map(i => i.id === id ? { ...i, quantity } : i);
+    const inventory = character.inventory.map(i => i.id === id ? { ...i, quantity: clamp(quantity, 0, 999) } : i);
     updateCharacter({ inventory, updatedAt: nowISO() });
   }
 
@@ -182,12 +187,12 @@ export default function GearScreen() {
     const armor: ArmorPiece = {
       id: existingId,
       name: armorName,
-      rating: armorRating,
+      rating: clamp(armorRating, 0, 99),
       features: character.armor?.features ?? '',
       equipped: armorEquipped,
-      weight: armorWeight,
+      weight: clamp(armorWeight, 0, 999),
       bodyPart: armorBodyPart,
-      movementPenalty: armorMovementPenalty,
+      movementPenalty: clamp(armorMovementPenalty, 0, 99),
     };
     updateCharacter({ armor, updatedAt: nowISO() });
     setArmorDrawerOpen(false);
@@ -199,10 +204,10 @@ export default function GearScreen() {
     const helmet: ArmorPiece = {
       id: existingId,
       name: helmetName,
-      rating: helmetRating,
+      rating: clamp(helmetRating, 0, 99),
       features: character.helmet?.features ?? '',
       equipped: helmetEquipped,
-      weight: helmetWeight,
+      weight: clamp(helmetWeight, 0, 999),
     };
     updateCharacter({ helmet, updatedAt: nowISO() });
     setHelmetDrawerOpen(false);

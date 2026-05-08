@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
  * active-state calculation.
  */
 const CHARACTER_TABS = [
+  { to: '/character/play', label: 'Play', icon: 'perspective-dice-six-faces-random' },
   { to: '/character/sheet', label: 'Sheet', icon: 'scroll-unfurled' },
   { to: '/character/skills', label: 'Skills', icon: 'perspective-dice-six-faces-random' },
   { to: '/character/gear', label: 'Gear', icon: 'knapsack' },

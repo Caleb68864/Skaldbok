@@ -6,6 +6,7 @@ import SheetScreen from '../screens/SheetScreen';
 import SkillsScreen from '../screens/SkillsScreen';
 import GearScreen from '../screens/GearScreen';
 import MagicScreen from '../screens/MagicScreen';
+import PlayDashboardScreen from '../screens/PlayDashboardScreen';
 import NoteEditorScreen from '../screens/NoteEditorScreen';
 import ReferenceScreen from '../screens/ReferenceScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -60,6 +61,7 @@ export const routes: RouteObject[] = [
         path: '/character',
         children: [
           { index: true, element: <Navigate to="/character/sheet" replace /> },
+          { path: 'play', element: <PlayDashboardScreen /> },
           { path: 'sheet', element: <SheetScreen /> },
           { path: 'skills', element: <SkillsScreen /> },
           { path: 'gear', element: <GearScreen /> },

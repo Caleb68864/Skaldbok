@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import type { Campaign } from '../../types/campaign';
+import { AppLogo } from '../primitives/AppLogo';
 
 // ── Campaign Header ─────────────────────────────────────────────
 
@@ -64,8 +65,9 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
         <DropdownMenuTrigger asChild>
           <button
             aria-label="Select campaign"
-            className="flex flex-1 items-center px-3 py-2 min-h-[44px] bg-transparent border-none cursor-pointer text-text text-sm font-semibold"
+            className="flex flex-1 items-center gap-2 px-3 py-2 min-h-[44px] bg-transparent border-none cursor-pointer text-text text-sm font-semibold"
           >
+            <AppLogo size="sm" className="shadow-sm shadow-black/30" />
             <span className="flex flex-1 items-center text-left gap-2">
               <span className="font-[family-name:var(--font-display)]">
                 {activeCampaign ? activeCampaign.name : 'No campaign'}
@@ -124,7 +126,10 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
         </SheetTrigger>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Menu</SheetTitle>
+            <div className="flex items-center gap-3">
+              <AppLogo size="sm" />
+              <SheetTitle>Menu</SheetTitle>
+            </div>
             <SheetCloseButton />
           </SheetHeader>
           <SheetBody className="flex flex-col gap-0 p-0">

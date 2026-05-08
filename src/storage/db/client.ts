@@ -12,6 +12,7 @@ import type { Attachment } from '../../types/attachment';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { Encounter } from '../../types/encounter';
 import type { InventoryContainer } from '../../types/inventoryContainer';
+import type { ReferenceGroup, ReferenceSection } from '../../types/reference';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
@@ -48,6 +49,8 @@ class SkaldbokDatabase extends Dexie {
   systems!: Table<SystemDefinition, string>;
   appSettings!: Table<AppSettings, string>;
   referenceNotes!: Table<ReferenceNote, string>;
+  referenceSections!: Table<ReferenceSection, string>;
+  referenceGroups!: Table<ReferenceGroup, string>;
   metadata!: Dexie.Table<MetadataRecord, string>;
   campaigns!: Table<Campaign, string>;
   sessions!: Table<Session, string>;
@@ -428,6 +431,19 @@ class SkaldbokDatabase extends Dexie {
     // shared items + coin, scoped per campaign). No data migration needed.
     this.version(10).stores({
       inventoryContainers: 'id, campaignId, kind, deletedAt',
+    });
+
+    // --- Version 11: User-owned reference sections ---
+    // Rules/reference content is no longer bundled in application code. Users
+    // can import or author their own local reference sections instead.
+    this.version(11).stores({
+      referenceSections: 'id, category, order, updatedAt',
+    });
+
+    // --- Version 12: Reference cards/groups ---
+    // Adds reorderable user-owned grouping cards for local reference sections.
+    this.version(12).stores({
+      referenceGroups: 'id, title, order, updatedAt',
     });
   }
 }

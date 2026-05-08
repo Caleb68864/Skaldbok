@@ -2,6 +2,7 @@ import { db } from '../db/client';
 import type { CharacterRecord } from '../../types/character';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
+import { normalizeCharacter } from '../../utils/characterNormalization';
 
 /**
  * Retrieves all {@link CharacterRecord} entries stored in IndexedDB.
@@ -64,7 +65,7 @@ export async function getById(id: string, options?: { includeDeleted?: boolean }
  */
 export async function save(character: CharacterRecord): Promise<void> {
   try {
-    await db.characters.put(character);
+    await db.characters.put(normalizeCharacter(character));
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
       throw new Error('Storage is full. Please free up space and try again.');

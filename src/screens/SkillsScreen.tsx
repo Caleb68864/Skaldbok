@@ -23,6 +23,11 @@ import { nowISO } from '../utils/dates';
 import { computeSkillValue } from '../utils/derivedValues';
 import * as characterRepository from '../storage/repositories/characterRepository';
 
+function clampSkillValue(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(20, Math.max(0, Math.round(value)));
+}
+
 /**
  * The Skills screen — lists all skills for the active character with roll-under
  * probability display and boon/bane modifiers.
@@ -83,7 +88,7 @@ export default function SkillsScreen() {
 
   function handleSkillChange(skillId: string, value: CharacterSkill) {
     if (!character) return;
-    updateCharacter({ skills: { ...character.skills, [skillId]: value }, updatedAt: nowISO() });
+    updateCharacter({ skills: { ...character.skills, [skillId]: { ...value, value: clampSkillValue(value.value) } }, updatedAt: nowISO() });
   }
 
   function cycleSkillMark(skillId: string) {
@@ -313,7 +318,7 @@ export default function SkillsScreen() {
                         min={0}
                         max={20}
                         disabled={!skillsEditable}
-                        onChange={e => handleSkillChange(skill.id, { value: Number(e.target.value), trained: cs?.trained ?? false })}
+                        onChange={e => handleSkillChange(skill.id, { value: clampSkillValue(Number(e.target.value)), trained: cs?.trained ?? false })}
                         className={cn(
                           "w-[52px] h-10 text-center text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)]",
                           skillsEditable

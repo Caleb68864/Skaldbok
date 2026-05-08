@@ -26,6 +26,11 @@ import { useSessionLog } from '../features/session/useSessionLog';
 import DraggableCardContainer from '../components/panels/DraggableCardContainer';
 import type { PanelItem } from '../components/panels/DraggableCardContainer';
 
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
 /**
  * The character Sheet screen — shows the full character sheet for the active character.
  *
@@ -144,7 +149,8 @@ export default function SheetScreen() {
     if (!character) return;
     updateCharacter(prev => {
       const current = prev.attributes[id] ?? 10;
-      return { attributes: { ...prev.attributes, [id]: current + delta }, updatedAt: nowISO() };
+      const attrDef = system?.attributes.find(attr => attr.id === id);
+      return { attributes: { ...prev.attributes, [id]: clamp(current + delta, attrDef?.min ?? 1, attrDef?.max ?? 30) }, updatedAt: nowISO() };
     });
   }
 
@@ -159,7 +165,8 @@ export default function SheetScreen() {
     const maxVal = character.resources[id]?.max ?? 0;
     updateCharacter(prev => {
       const current = prev.resources[id]?.current ?? 0;
-      return { resources: { ...prev.resources, [id]: { ...prev.resources[id], current: current + delta } }, updatedAt: nowISO() };
+      const max = prev.resources[id]?.max ?? 0;
+      return { resources: { ...prev.resources, [id]: { ...prev.resources[id], current: clamp(current + delta, 0, max) } }, updatedAt: nowISO() };
     });
     // Auto-log HP and WP changes to active session (debounced)
     if (id === 'hp' || id === 'wp') {
@@ -171,7 +178,9 @@ export default function SheetScreen() {
     if (!character) return;
     updateCharacter(prev => {
       const max = prev.resources[id]?.max ?? 0;
-      return { resources: { ...prev.resources, [id]: { ...prev.resources[id], max: max + delta } }, updatedAt: nowISO() };
+      const nextMax = clamp(max + delta, 0, 999);
+      const nextCurrent = clamp(prev.resources[id]?.current ?? 0, 0, nextMax);
+      return { resources: { ...prev.resources, [id]: { ...prev.resources[id], current: nextCurrent, max: nextMax } }, updatedAt: nowISO() };
     });
   }
 

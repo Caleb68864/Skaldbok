@@ -9,3 +9,9 @@ tmp-backup/
 *.log
 *.png
 !public/**/*.png
+!docs/assets/skaldbok-app-icon-source.png
+local-references/
+dragonbane-reference-print.html
+initial brain dump.md
+snd brain dump.md
+sample-data/examples/viktor-vale.skaldbok.json
