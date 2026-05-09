@@ -16,7 +16,7 @@ export function SectionPanel({ title, subtitle, icon, children, collapsible = fa
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border border-border rounded-[var(--radius-md)] mb-0 overflow-hidden">
+    <div className="border border-border rounded-[var(--radius-md)] mb-0 overflow-hidden flex flex-col h-full">
       <div
         className={cn(
           "flex items-center justify-between px-[var(--space-sm)] py-[var(--space-xs)]",
@@ -44,11 +44,11 @@ export function SectionPanel({ title, subtitle, icon, children, collapsible = fa
         )}
       </div>
       <div
-        className="grid transition-[grid-template-rows] duration-300 ease-in-out"
+        className="grid transition-[grid-template-rows] duration-300 ease-in-out flex-1 min-h-0"
         style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
       >
         <div className="overflow-hidden">
-          <div className="p-[var(--space-sm)]">
+          <div className="p-[var(--space-sm)] h-full">
             {children}
           </div>
         </div>

@@ -22,7 +22,7 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
 
   return (
     <SectionPanel title="Vitals" collapsible defaultOpen>
-      <div className="grid grid-cols-1 gap-[var(--space-sm)] 2xl:grid-cols-2">
+      <div className="flex flex-col gap-[var(--space-sm)] h-full justify-around 2xl:grid 2xl:grid-cols-2">
         {['hp', 'wp'].map(id => {
           const resource = character.resources[id];
           if (!resource) return null;
