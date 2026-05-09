@@ -8,7 +8,7 @@ export function ConditionModule({ character, system, updateCharacter }: PlayModu
 
   return (
     <SectionPanel title="Conditions" collapsible defaultOpen>
-      <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,7rem),1fr))]">
+      <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(6rem,1fr))]">
         {system.conditions.map(condition => {
           const active = !!character.conditions[condition.id];
           return (
