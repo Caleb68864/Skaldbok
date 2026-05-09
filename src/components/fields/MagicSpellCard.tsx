@@ -1,5 +1,6 @@
 import { cn } from '../../lib/utils';
 import type { Spell } from '../../types/character';
+import { formatCastingTime, formatRequirements, getSpellRank } from '../../utils/spells';
 import { Button } from '../primitives/Button';
 import { Card } from '../primitives/Card';
 
@@ -25,6 +26,9 @@ export function MagicSpellCard({
   const atLimit = preparedCount >= maxPrepared;
   const isReaction = spell.castingTime === 'reaction';
   const wpCost = isTrick ? 1 : powerLevel * 2;
+  const rank = getSpellRank(spell);
+  const requirements = formatRequirements(spell.requirements);
+  const castingTime = formatCastingTime(spell.castingTime);
 
   const editButtons = (onEdit || onDelete) ? (
     <div className="flex gap-3 shrink-0">
@@ -44,8 +48,16 @@ export function MagicSpellCard({
               <span className="text-[var(--color-accent)] text-[length:var(--font-size-sm)] ml-[var(--space-sm)]">{spell.school}</span>
             </h3>
             <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
-              1 WP · Always available · Auto-succeed
+              Rank: {rank} · 1 WP · Always available · Auto-succeed
             </p>
+            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
+              Range: {spell.range} · Duration: {spell.duration} · Casting Time: {castingTime}
+            </p>
+            {requirements && (
+              <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
+                Prerequisite: {requirements}
+              </p>
+            )}
             {spell.summary && (
               <p className="text-[var(--color-text)] text-[length:var(--font-size-sm)]">{spell.summary}</p>
             )}
@@ -71,8 +83,16 @@ export function MagicSpellCard({
               {isReaction && <span className="text-[length:var(--font-size-xs,0.75rem)] text-[var(--color-warning)] font-semibold border border-[var(--color-warning)] rounded-full px-2 py-0.5">Must be prepared</span>}
             </h3>
             <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
-              Range: {spell.range} · Duration: {spell.duration}
+              Rank: {rank}
             </p>
+            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
+              Range: {spell.range} · Duration: {spell.duration} · Casting Time: {castingTime}
+            </p>
+            {requirements && (
+              <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
+                Prerequisite: {requirements}
+              </p>
+            )}
             {spell.summary && (
               <p className={cn(
                 "text-[length:var(--font-size-sm)]",

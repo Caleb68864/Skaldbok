@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
+import { compareSpellsByRankThenName, formatCastingTime } from '../../utils/spells';
 import { clamp, type PlayModuleProps } from './types';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
@@ -13,7 +14,10 @@ function isMagicTrick(powerLevel: number, school: string): boolean {
 export function MagicModule({ character, updateCharacter }: PlayModuleProps) {
   const { showToast } = useToast();
   const [powerLevels, setPowerLevels] = useState<Record<string, number>>({});
-  const spells = character.spells.filter(spell => spell.prepared || spell.pinnedAsStamp || spell.powerLevel === 0).slice(0, 8);
+  const spells = character.spells
+    .filter(spell => spell.prepared || spell.pinnedAsStamp || spell.powerLevel === 0)
+    .sort(compareSpellsByRankThenName)
+    .slice(0, 8);
   const wp = character.resources.wp;
 
   if (spells.length === 0) return null;
@@ -46,7 +50,9 @@ export function MagicModule({ character, updateCharacter }: PlayModuleProps) {
                     {cost} WP
                   </Button>
                 </div>
-                <p className="m-0 text-xs text-[var(--color-text-muted)]">{spell.school} · {spell.range} · {spell.duration}</p>
+                <p className="m-0 text-xs text-[var(--color-text-muted)]">
+                  {spell.school} · {spell.range} · {spell.duration} · Casting Time: {formatCastingTime(spell.castingTime)}
+                </p>
               </div>
               {!trick && (
                 <div className="flex items-center gap-2 flex-wrap" role="group" aria-label={`${spell.name} power level`}>

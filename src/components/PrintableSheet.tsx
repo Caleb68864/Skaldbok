@@ -7,6 +7,7 @@ import type {
   HeroicAbility,
 } from '../types/character';
 import type { SystemDefinition, SkillDefinition } from '../types/system';
+import { compareSpellsByRankThenName, formatCastingTime, formatRequirements, getSpellRank } from '../utils/spells';
 
 // ──────────────────────────────────────────────
 // Exported types (consumed by SS-02 screen)
@@ -160,7 +161,7 @@ function AbilitiesSpells({
   character: CharacterRecord;
 }): React.ReactElement {
   const abilities: HeroicAbility[] = character.heroicAbilities ?? [];
-  const spells: Spell[] = character.spells ?? [];
+  const spells: Spell[] = [...(character.spells ?? [])].sort(compareSpellsByRankThenName);
 
   return (
     <div className="sheet-abilities-spells">
@@ -177,8 +178,12 @@ function AbilitiesSpells({
 
       <div className="sheet-section-header">Spells</div>
       {spells.map((spell, i) => (
-        <div key={i} className="sheet-ability-row">
-          {spell.name}
+        <div key={i} className="sheet-ability-row sheet-spell-row">
+          <span className="sheet-spell-name">{spell.name}</span>
+          <span className="sheet-spell-meta">
+            Rank {getSpellRank(spell)} · {formatCastingTime(spell.castingTime)} · {spell.range} · {spell.duration}
+            {formatRequirements(spell.requirements) ? ` · Prereq: ${formatRequirements(spell.requirements)}` : ''}
+          </span>
         </div>
       ))}
       {/* Blank filler lines for spells */}

@@ -16,13 +16,10 @@ import { useToast } from '../context/ToastContext';
 import { useIsEditMode } from '../utils/modeGuards';
 import { computeMaxPreparedSpells } from '../utils/derivedValues';
 import { isMetalEquipped } from '../utils/metalDetection';
+import { compareSpellsByRankThenName, isMagicTrick } from '../utils/spells';
 import * as characterRepository from '../storage/repositories/characterRepository';
 
 type PrepFilter = 'prepared' | 'grimoire';
-
-function isMagicTrick(s: Spell): boolean {
-  return s.powerLevel === 0 || s.school.toLowerCase().includes('trick');
-}
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
 
@@ -49,9 +46,13 @@ export default function MagicScreen() {
   // Spell form state
   const [sName, setSName] = useState('');
   const [sSchool, setSSchool] = useState('');
+  const [sRank, setSRank] = useState('1');
+  const [sRequirements, setSRequirements] = useState('');
+  const [sCastingTime, setSCastingTime] = useState<NonNullable<Spell['castingTime']>>('action');
   const [sRange, setSRange] = useState('');
   const [sDuration, setSDuration] = useState('');
   const [sSummary, setSSummary] = useState('');
+  const [sPowerScaling, setSPowerScaling] = useState<[string, string, string]>(['', '', '']);
 
   // Ability form state
   const [aName, setAName] = useState('');
@@ -60,10 +61,14 @@ export default function MagicScreen() {
   useEffect(() => {
     if (spellDrawerOpen && editingSpell) {
       setSName(editingSpell.name); setSSchool(editingSpell.school);
+      setSRank(String(editingSpell.rank ?? (isMagicTrick(editingSpell) ? 0 : editingSpell.powerLevel ?? 1)));
+      setSRequirements(editingSpell.requirements?.join(', ') ?? '');
+      setSCastingTime(editingSpell.castingTime ?? 'action');
       setSRange(editingSpell.range); setSDuration(editingSpell.duration);
       setSSummary(editingSpell.summary);
+      setSPowerScaling(editingSpell.powerScaling ?? ['', '', '']);
     } else if (spellDrawerOpen && !editingSpell) {
-      setSName(''); setSSchool(''); setSRange(''); setSDuration(''); setSSummary('');
+      setSName(''); setSSchool(''); setSRank('1'); setSRequirements(''); setSCastingTime('action'); setSRange(''); setSDuration(''); setSSummary(''); setSPowerScaling(['', '', '']);
     }
   }, [spellDrawerOpen, editingSpell]);
 
@@ -96,9 +101,10 @@ export default function MagicScreen() {
   const currentWP = character.resources?.wp?.current ?? 0;
   const overLimit = preparedCount > maxPrepared;
 
-  const visibleSpells = filter === 'prepared'
+  const visibleSpells = (filter === 'prepared'
     ? character.spells.filter(s => s.prepared === true || isMagicTrick(s))
-    : character.spells;
+    : character.spells
+  ).slice().sort(compareSpellsByRankThenName);
 
   // ── Handlers ──────────────────────────────────────────────────────
   function handleTogglePrepare(spell: Spell) {
@@ -109,24 +115,41 @@ export default function MagicScreen() {
   }
 
   function handleSpellSave() {
+    const rank = Number.parseInt(sRank, 10);
+    const normalizedRank = Number.isFinite(rank) ? Math.max(0, rank) : undefined;
+    const requirements = sRequirements
+      .split(/[\n,]/)
+      .map(req => req.trim())
+      .filter(Boolean);
+    const powerScaling = sPowerScaling.some(text => text.trim())
+      ? sPowerScaling.map(text => text.trim()) as [string, string, string]
+      : undefined;
     const spell: Spell = editingSpell
       ? {
           ...editingSpell,
           name: sName,
           school: sSchool,
+          rank: normalizedRank,
+          requirements,
+          castingTime: sCastingTime,
           range: sRange,
           duration: sDuration,
           summary: sSummary,
+          powerScaling,
         }
       : {
           id: generateId(),
           name: sName,
           school: sSchool,
           powerLevel: 1,
+          rank: normalizedRank ?? 1,
+          requirements,
+          castingTime: sCastingTime,
           wpCost: 2,
           range: sRange,
           duration: sDuration,
           summary: sSummary,
+          powerScaling,
         };
     const spells = editingSpell ? character!.spells.map(s => s.id === spell.id ? spell : s) : [...character!.spells, spell];
     updateCharacter({ spells, updatedAt: nowISO() });
@@ -311,9 +334,43 @@ export default function MagicScreen() {
             </div>
           ))}
           <div>
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Rank</label>
+            <input className={inputClasses} type="number" min={0} step={1} value={sRank} onChange={e => setSRank(e.target.value)} />
+          </div>
+          <div>
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Prerequisites</label>
+            <input className={inputClasses} value={sRequirements} onChange={e => setSRequirements(e.target.value)} placeholder="Any School of Magic" />
+          </div>
+          <div>
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Casting Time</label>
+            <select className={inputClasses} value={sCastingTime} onChange={e => setSCastingTime(e.target.value as NonNullable<Spell['castingTime']>)}>
+              <option value="action">Action</option>
+              <option value="reaction">Reaction</option>
+              <option value="ritual">Ritual</option>
+            </select>
+          </div>
+          <div>
             <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
               WP cost: 2 per power level (selected at cast time). Tricks always cost 1 WP.
             </p>
+          </div>
+          <div>
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Power Level Effects</label>
+            <div className="flex flex-col gap-[var(--space-sm)]">
+              {([0, 1, 2] as const).map(index => (
+                <input
+                  key={index}
+                  className={inputClasses}
+                  value={sPowerScaling[index]}
+                  onChange={e => setSPowerScaling(prev => {
+                    const next: [string, string, string] = [...prev];
+                    next[index] = e.target.value;
+                    return next;
+                  })}
+                  placeholder={`Power level ${index + 1} effect`}
+                />
+              ))}
+            </div>
           </div>
           <div>
             <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Summary</label>

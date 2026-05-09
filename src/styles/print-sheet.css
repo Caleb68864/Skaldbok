@@ -406,6 +406,26 @@
   white-space: nowrap;
 }
 
+.sheet-spell-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.05;
+}
+
+.sheet-spell-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-spell-meta {
+  font-size: 6.5pt;
+  opacity: 0.72;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .sheet-blank-row {
   /* Same dimensions as .sheet-ability-row — blank lines must still render */
   color: transparent; /* hides &nbsp; visually while maintaining height */
