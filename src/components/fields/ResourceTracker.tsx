@@ -24,7 +24,7 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
     if (!maxDisabled && !disabled) onMaxChange?.(1);
   }
 
-  const bigBtnClass = "min-w-[52px] min-h-[52px] text-[length:var(--size-2xl)] font-bold bg-[var(--color-surface-alt)] border-2 border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-text)] cursor-pointer flex items-center justify-center select-none leading-none";
+  const bigBtnClass = "min-w-[44px] min-h-[44px] text-[length:var(--size-2xl)] font-bold bg-[var(--color-surface-alt)] border-2 border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-text)] cursor-pointer flex items-center justify-center select-none leading-none";
 
   const smallBtnClass = "min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] text-[length:var(--size-lg)] bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text-muted)] cursor-pointer flex items-center justify-center select-none leading-none";
 
