@@ -142,7 +142,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
 
   return (
     <SectionPanel title="Rest" collapsible defaultOpen>
-      <div className="grid gap-2 w-full max-w-[16rem]">
+      <div className="grid gap-2 w-full">
         {restButton('round', 'Round Rest', () => setRoundOpen(true))}
         {restButton('stretch', 'Stretch Rest', () => setStretchOpen(true))}
         {restButton('shift', 'Shift Rest', applyShift)}

@@ -33,7 +33,7 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
       <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-bold">{label}</span>
 
       {/* Current value — big prominent +/- */}
-      <div className="flex items-center gap-[var(--space-sm)]">
+      <div className="flex items-center justify-between gap-[var(--space-sm)]">
         <button
           type="button"
           aria-label={`Decrease ${label}`}
