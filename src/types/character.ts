@@ -128,6 +128,12 @@ export interface InventoryItem {
    * can be adjusted without entering edit mode.
    */
   consumable?: boolean;
+  /**
+   * Extra weight units this item adds to the carrier's encumbrance limit
+   * while carried (e.g. a backpack adding +5). Multiplied by quantity, so
+   * two backpacks grant double the bonus.
+   */
+  capacityBonus?: number;
 }
 
 /**

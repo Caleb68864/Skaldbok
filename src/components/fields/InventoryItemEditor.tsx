@@ -20,6 +20,7 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
   const [description, setDescription] = useState('');
   const [tiny, setTiny] = useState(false);
   const [consumable, setConsumable] = useState(false);
+  const [capacityBonus, setCapacityBonus] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -29,6 +30,7 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
       setDescription(item?.description ?? '');
       setTiny(item?.tiny ?? false);
       setConsumable(item?.consumable ?? false);
+      setCapacityBonus(item?.capacityBonus ?? 0);
     }
   }, [open, item]);
 
@@ -41,6 +43,7 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
       description,
       tiny,
       consumable,
+      capacityBonus: capacityBonus > 0 ? capacityBonus : undefined,
     });
     onClose();
   }
@@ -87,6 +90,18 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
           />
           Consumable (show +/− quantity buttons in play mode)
         </label>
+        <div>
+          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
+            Capacity bonus (e.g. backpack: +5)
+          </label>
+          <input
+            type="number"
+            className={inputClasses}
+            value={capacityBonus}
+            min={0}
+            onChange={e => setCapacityBonus(Math.max(0, Number(e.target.value)))}
+          />
+        </div>
         <div>
           <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Description</label>
           <textarea className={`${inputClasses} resize-y`} value={description} rows={3} onChange={e => setDescription(e.target.value)} />

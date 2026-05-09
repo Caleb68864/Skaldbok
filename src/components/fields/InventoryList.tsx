@@ -30,6 +30,11 @@ export function InventoryList({ items, onEdit, onDelete, onAdd, onQuantityChange
               {isConsumable && (
                 <span className="ml-[var(--space-xs)] text-[length:var(--font-size-xs)] text-[var(--color-text-muted)] border border-[var(--color-border)] rounded-[var(--radius-sm)] px-1 py-0.5">consumable</span>
               )}
+              {!!item.capacityBonus && item.capacityBonus > 0 && (
+                <span className="ml-[var(--space-xs)] text-[length:var(--font-size-xs)] text-[var(--color-accent)] border border-[var(--color-accent)] rounded-[var(--radius-sm)] px-1 py-0.5">
+                  +{item.capacityBonus} capacity
+                </span>
+              )}
               <span className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] ml-[var(--space-sm)]">
                 x{item.quantity} · {item.tiny ? '0' : item.weight} wt
               </span>

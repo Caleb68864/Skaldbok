@@ -73,10 +73,18 @@ export function computeAGLDamageBonus(character: CharacterRecord): string {
   return '+0';
 }
 
-/** Encumbrance Limit = STR / 2 (rounded up). */
+/**
+ * Encumbrance Limit = ceil(STR / 2) plus capacity bonuses from carried items
+ * (e.g. backpacks). Each item contributes `capacityBonus * quantity`.
+ */
 export function computeEncumbranceLimit(character: CharacterRecord): number {
   const str = character.attributes['str'] ?? 10;
-  return Math.ceil(str / 2);
+  const base = Math.ceil(str / 2);
+  const bonus = (character.inventory ?? []).reduce(
+    (sum, i) => sum + (i.capacityBonus ?? 0) * (i.quantity ?? 0),
+    0,
+  );
+  return base + bonus;
 }
 
 /**
