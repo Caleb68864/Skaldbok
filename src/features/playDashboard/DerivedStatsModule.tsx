@@ -13,7 +13,7 @@ export function DerivedStatsModule({ character }: PlayModuleProps) {
 
   return (
     <SectionPanel title="Derived Stats" collapsible defaultOpen>
-      <div className="grid grid-cols-2 gap-1.5">
+      <div className="grid gap-1.5">
         {stats.map(stat => (
           <div
             key={stat.label}
