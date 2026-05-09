@@ -29,7 +29,7 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
   const smallBtnClass = "min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] text-[length:var(--size-lg)] bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text-muted)] cursor-pointer flex items-center justify-center select-none leading-none";
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 w-full">
       <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-bold">{label}</span>
 
       {/* Current value — big prominent +/- */}

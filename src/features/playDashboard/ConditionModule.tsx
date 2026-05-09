@@ -8,7 +8,7 @@ export function ConditionModule({ character, system, updateCharacter }: PlayModu
 
   return (
     <SectionPanel title="Conditions" collapsible defaultOpen>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,7rem),1fr))]">
         {system.conditions.map(condition => {
           const active = !!character.conditions[condition.id];
           return (
@@ -16,7 +16,7 @@ export function ConditionModule({ character, system, updateCharacter }: PlayModu
               key={condition.id}
               type="button"
               className={cn(
-                'min-h-[44px] w-full rounded-[var(--radius-lg)] border border-border px-2.5 py-1 text-sm transition-colors',
+                'min-h-[44px] w-full rounded-[var(--radius-lg)] border border-border px-1 py-1 text-sm transition-colors whitespace-nowrap',
                 active
                   ? 'bg-accent text-bg font-bold'
                   : 'bg-surface-alt text-text font-normal'

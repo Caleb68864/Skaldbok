@@ -41,7 +41,7 @@ export default function PlayDashboardScreen() {
     <div className="p-[var(--space-xs)] md:p-[var(--space-sm)]">
       {error && <div className="mb-[var(--space-sm)] text-[var(--color-danger)] text-[length:var(--font-size-sm)]">{error}</div>}
       <div className="flex flex-col gap-[var(--space-sm)] md:gap-[var(--space-md)]">
-        <div className="grid gap-[var(--space-xs)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr))] min-[900px]:grid-cols-4">
+        <div className="grid gap-[var(--space-xs)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr))] min-[640px]:grid-cols-4">
           <ResourceModule {...moduleProps} />
           <DerivedStatsModule {...moduleProps} />
           <ConditionModule {...moduleProps} />
