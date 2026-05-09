@@ -28,12 +28,14 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
 
   const smallBtnClass = "min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] text-[length:var(--size-lg)] bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text-muted)] cursor-pointer flex items-center justify-center select-none leading-none";
 
+  const stackedMax = !(onMaxChange && maxEditable);
+
   return (
     <div className="flex flex-col gap-2 w-full">
       <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-bold">{label}</span>
 
       {/* Current value — big prominent +/- */}
-      <div className="flex items-center justify-between gap-[var(--space-sm)]">
+      <div className={`flex items-center gap-[var(--space-sm)] ${stackedMax ? 'justify-center' : 'justify-between'}`}>
         <button
           type="button"
           aria-label={`Decrease ${label}`}
@@ -43,9 +45,20 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
         >
           −
         </button>
-        <span className="min-w-12 text-center text-[length:var(--size-2xl)] font-bold text-[var(--color-text)] font-[family-name:var(--font-display)]">
-          {current}
-        </span>
+        {stackedMax ? (
+          <div className="flex flex-col items-center leading-none">
+            <span className="min-w-12 text-center text-[length:var(--size-2xl)] font-bold text-[var(--color-text)] font-[family-name:var(--font-display)]">
+              {current}
+            </span>
+            <span className="text-[length:var(--font-size-sm)] font-bold text-[var(--color-text-muted)] mt-0.5">
+              /{max}
+            </span>
+          </div>
+        ) : (
+          <span className="min-w-12 text-center text-[length:var(--size-2xl)] font-bold text-[var(--color-text)] font-[family-name:var(--font-display)]">
+            {current}
+          </span>
+        )}
         <button
           type="button"
           aria-label={`Increase ${label}`}
@@ -56,39 +69,35 @@ export function ResourceTracker({ label, current, max, onCurrentChange, onMaxCha
           +
         </button>
 
-        <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] ml-[var(--space-xs)]">
-          /
-        </span>
-
-        {/* Max value — inline after slash */}
-        {onMaxChange && maxEditable ? (
-          <div className="flex items-center gap-[var(--space-xs)]">
-            <button
-              type="button"
-              aria-label={`Decrease ${label} max`}
-              onClick={decrementMax}
-              disabled={maxDisabled || disabled || max <= 0}
-              className={smallBtnClass}
-            >
-              −
-            </button>
-            <span className="min-w-7 text-center text-[length:var(--size-lg)] font-bold text-[var(--color-text-muted)]">
-              {max}
+        {!stackedMax && (
+          <>
+            <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] ml-[var(--space-xs)]">
+              /
             </span>
-            <button
-              type="button"
-              aria-label={`Increase ${label} max`}
-              onClick={incrementMax}
-              disabled={maxDisabled || disabled}
-              className={smallBtnClass}
-            >
-              +
-            </button>
-          </div>
-        ) : (
-          <span className="text-[length:var(--size-lg)] font-bold text-[var(--color-text-muted)]">
-            {max}
-          </span>
+            <div className="flex items-center gap-[var(--space-xs)]">
+              <button
+                type="button"
+                aria-label={`Decrease ${label} max`}
+                onClick={decrementMax}
+                disabled={maxDisabled || disabled || max <= 0}
+                className={smallBtnClass}
+              >
+                −
+              </button>
+              <span className="min-w-7 text-center text-[length:var(--size-lg)] font-bold text-[var(--color-text-muted)]">
+                {max}
+              </span>
+              <button
+                type="button"
+                aria-label={`Increase ${label} max`}
+                onClick={incrementMax}
+                disabled={maxDisabled || disabled}
+                className={smallBtnClass}
+              >
+                +
+              </button>
+            </div>
+          </>
         )}
       </div>
     </div>
