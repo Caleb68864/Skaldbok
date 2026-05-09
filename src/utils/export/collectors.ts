@@ -12,6 +12,7 @@ import { getPartyByCampaign, getPartyMembers } from '../../storage/repositories/
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
 import { getById as getCreatureTemplateById, listByCampaign as listCreatureTemplatesByCampaign } from '../../storage/repositories/creatureTemplateRepository';
 import { listBySession as listEncountersBySession, listByCampaign as listEncountersByCampaign } from '../../storage/repositories/encounterRepository';
+import { list as listInventoryContainersByCampaign } from '../../storage/repositories/inventoryContainerRepository';
 
 /**
  * Result of a scope collection operation.
@@ -164,6 +165,11 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
       await Promise.all(noteIds.map((id) => getAttachmentsByNote(id)))
     ).flat();
 
+    // 9. Load inventory containers for the campaign — they belong to the
+    //    party, not the session, but a session export should bring the
+    //    party's shared loot, pack animals, etc. along with it.
+    const inventoryContainers = await listInventoryContainersByCampaign(session.campaignId);
+
     return {
       success: true,
       contents: {
@@ -176,6 +182,7 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
         characters: characters.map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
         attachments: attachments.map(toBundleAttachment),
+        inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
       },
     };
   } catch (err) {
@@ -245,6 +252,9 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
       await Promise.all(noteIds.map((id) => getAttachmentsByNote(id)))
     ).flat();
 
+    // 10. All inventory containers (party coffer, pack animals, hirelings).
+    const inventoryContainers = await listInventoryContainersByCampaign(campaignId);
+
     return {
       success: true,
       contents: {
@@ -258,6 +268,7 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
         characters: characters.map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
         attachments: attachments.map(toBundleAttachment),
+        inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
       },
     };
   } catch (err) {

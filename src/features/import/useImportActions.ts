@@ -16,6 +16,7 @@ const TABLE_NAMES: Record<string, string> = {
   characters: 'characters',
   creatureTemplates: 'creatureTemplates',
   encounters: 'encounters',
+  inventoryContainers: 'inventoryContainers',
   notes: 'notes',
   entityLinks: 'entityLinks',
   attachments: 'attachments',

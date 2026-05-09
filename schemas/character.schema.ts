@@ -39,6 +39,9 @@ const inventoryItemSchema = z.object({
   weight: z.number().describe('Item weight'),
   quantity: z.number().int().nonnegative().describe('Item quantity'),
   description: z.string().describe('Item description'),
+  tiny: z.boolean().optional().describe('Free-carry tiny item (no weight counted)'),
+  consumable: z.boolean().optional().describe('Show inline +/- in play mode'),
+  capacityBonus: z.number().optional().describe('Bonus weight units added to encumbrance limit while carried'),
 });
 
 const spellSchema = z.object({

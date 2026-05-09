@@ -7,6 +7,7 @@ import { entityLinkSchema } from './entityLink';
 import { attachmentSchema } from './attachment';
 import { creatureTemplateSchema } from './creatureTemplate';
 import { encounterSchema } from './encounter';
+import { inventoryContainerSchema } from './inventoryContainer';
 
 /**
  * Bundle-safe attachment schema.
@@ -48,6 +49,7 @@ export const bundleContentsSchema = z.object({
   notes: z.array(baseNoteSchema).optional(),
   entityLinks: z.array(entityLinkSchema).optional(),
   attachments: z.array(attachmentBundleSchema).optional(),
+  inventoryContainers: z.array(inventoryContainerSchema).optional(),
 });
 
 /**

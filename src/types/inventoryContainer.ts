@@ -1,5 +1,49 @@
+import { z } from 'zod';
 import type { ID, Timestamped } from './common';
 import type { InventoryItem } from './character';
+
+/**
+ * Lenient Zod schema for inventory items as they appear inside containers /
+ * character inventories within import bundles. Mirrors the optional flags on
+ * {@link InventoryItem} (tiny, consumable, capacityBonus) but stays permissive
+ * about extra fields so legacy bundles round-trip cleanly.
+ */
+const bundleInventoryItemSchema = z
+  .object({
+    id: z.string().min(1),
+    name: z.string(),
+    weight: z.number(),
+    quantity: z.number(),
+    description: z.string(),
+    tiny: z.boolean().optional(),
+    consumable: z.boolean().optional(),
+    capacityBonus: z.number().optional(),
+  })
+  .passthrough();
+
+/**
+ * Zod schema for {@link InventoryContainer}.
+ * Used to validate containers inside import bundles.
+ */
+export const inventoryContainerSchema = z
+  .object({
+    id: z.string().min(1),
+    campaignId: z.string().min(1),
+    name: z.string(),
+    kind: z.enum(['coffer', 'animal', 'npc', 'other']),
+    capacity: z.number().nullable(),
+    coins: z.object({
+      gold: z.number(),
+      silver: z.number(),
+      copper: z.number(),
+    }),
+    items: z.array(bundleInventoryItemSchema),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+    deletedAt: z.string().optional(),
+    softDeletedBy: z.string().optional(),
+  })
+  .passthrough();
 
 /**
  * Kinds of inventory carrier other than a player character. Drives the icon

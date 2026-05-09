@@ -10,6 +10,7 @@ import { sessionSchema } from '../../types/session';
 import { campaignSchema } from '../../types/campaign';
 import { partySchema, partyMemberSchema } from '../../types/party';
 import { entityLinkSchema } from '../../types/entityLink';
+import { inventoryContainerSchema } from '../../types/inventoryContainer';
 
 /**
  * A single per-entity validation warning produced during bundle parsing.
@@ -174,6 +175,7 @@ function validateContentsEntities(
   validated.parties = validateArray(contents.parties, 'parties', partySchema);
   validated.partyMembers = validateArray(contents.partyMembers, 'partyMembers', partyMemberSchema);
   validated.entityLinks = validateArray(contents.entityLinks, 'entityLinks', entityLinkSchema);
+  validated.inventoryContainers = validateArray(contents.inventoryContainers, 'inventoryContainers', inventoryContainerSchema);
 
   // Campaign is a single object, not an array
   if (contents.campaign) {

@@ -32,6 +32,7 @@ const ENTITY_LABELS: Record<string, string> = {
   characters: 'Characters',
   creatureTemplates: 'Creature Templates',
   encounters: 'Encounters',
+  inventoryContainers: 'Containers',
   notes: 'Notes',
   entityLinks: 'Entity Links',
   attachments: 'Attachments',
