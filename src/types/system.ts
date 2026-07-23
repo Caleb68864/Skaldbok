@@ -78,6 +78,24 @@ export interface SystemDefinition {
   itemFields?: {
     weapon?: Array<{ id: string; label: string; type?: 'text' | 'number' }>;
     armor?: Array<{ id: string; label: string; type?: 'text' | 'number' }>;
+    /**
+     * Built-in item fields this system does not use, by field id.
+     *
+     * @remarks
+     * A hide-list rather than an allow-list, so omitting it shows everything and
+     * a system that declares nothing is unaffected. Lets a sci-fi ruleset drop
+     * Grip and Durability instead of showing fantasy melee fields next to its
+     * own Magazine and Tech Level.
+     *
+     * Weapon ids: `range`, `damage`, `features`, `grip`, `durability`,
+     * `damageType`, `strRequirement`, `isShield`, `damaged`.
+     * Armour ids: `bodyPart`, `weight`, `movementPenalty`.
+     * `name` and the core rating/damage fields are not hideable.
+     */
+    hiddenBuiltIns?: {
+      weapon?: string[];
+      armor?: string[];
+    };
   };
   resolution?: 'd20-roll-under' | '2d6-plus';
   currency?: { label: string; abbr: string; mode: 'coins' | 'single' };

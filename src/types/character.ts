@@ -335,9 +335,21 @@ export interface CharacterUiState {
   sheetCustomCards?: CustomCard[];
   /** Visibility flags for individual panels on the sheet view; keyed by panel ID. */
   sheetPanelVisibility?: Record<string, boolean>;
-  /** Display order of draggable cards on the combat view. */
+  /**
+   * Display order of draggable cards on the combat view.
+   *
+   * @deprecated Orphaned — there is no combat screen; `/combat` redirects to the
+   * sheet and combat lives in the play dashboard. Kept so existing records keep
+   * validating; wire it up or drop it in a future migration.
+   */
   combatCardOrder?: string[];
-  /** Visibility flags for individual panels on the combat view; keyed by panel ID. */
+  /**
+   * Visibility flags for individual panels on the combat view, keyed by panel ID.
+   *
+   * @deprecated Orphaned for the same reason as {@link combatCardOrder}. The
+   * Settings section that wrote this was removed because toggling it changed
+   * nothing.
+   */
   combatPanelVisibility?: Record<string, boolean>;
   /**
    * Per-rest-type usage marks for the play dashboard rest module.

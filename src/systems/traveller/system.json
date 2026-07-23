@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 3,
+  "version": 4,
   "name": "traveller",
   "displayName": "Traveller",
   "resolution": "2d6-plus",
@@ -384,6 +384,21 @@
         "label": "Cost (Cr)",
         "type": "number"
       }
-    ]
+    ],
+    "hiddenBuiltIns": {
+      "weapon": [
+        "grip",
+        "durability",
+        "damageType",
+        "strRequirement",
+        "isShield",
+        "damaged",
+        "range"
+      ],
+      "armor": [
+        "bodyPart",
+        "movementPenalty"
+      ]
+    }
   }
 }

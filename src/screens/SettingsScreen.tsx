@@ -11,7 +11,6 @@ import { db } from '../storage/db/client';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import type { ThemeName } from '../theme/themes';
 import { DEFAULT_BOTTOM_NAV_TABS } from '../features/settings/useAppSettings';
-import { nowISO } from '../utils/dates';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { useSystemEngine } from '../features/systems/engine';
 import { cn } from '../lib/utils';
@@ -49,7 +48,7 @@ const THEMES: { value: ThemeName; label: string; description: string }[] = [
 export default function SettingsScreen() {
   const { theme, setTheme } = useTheme();
   const { settings, updateSettings } = useAppState();
-  const { character, updateCharacter, clearCharacter } = useActiveCharacter();
+  const { character, clearCharacter } = useActiveCharacter();
   const navigate = useNavigate();
   const { canInstall, install: installPwa } = usePwaInstall();
   const engine = useSystemEngine();
@@ -59,9 +58,6 @@ export default function SettingsScreen() {
   useAutosave(character, characterRepository.save, 1000);
 
   const abilitiesLabel = engine.labels.abilitiesScreen;
-  const abilitiesTerm = engine.terms.abilities;
-  const hasDeathPanel = engine.panels.includes('death');
-  const hasRestPanel = engine.panels.includes('rest');
 
   /**
    * Bottom-nav rows for the active system. The `magic` row keeps its stable
@@ -77,28 +73,6 @@ export default function SettingsScreen() {
     [abilitiesLabel],
   );
 
-  /** Combat-screen panels available in the active system. */
-  const combatPanels = useMemo(
-    () => [
-      { key: 'weaponRack', label: 'Weapon Rack' },
-      { key: 'heroicAbilities', label: abilitiesTerm },
-      { key: 'conditions', label: 'Conditions' },
-      ...(hasDeathPanel ? [{ key: 'deathRolls', label: 'Death Rolls' }] : []),
-      ...(hasRestPanel ? [{ key: 'restRecovery', label: 'Rest & Recovery' }] : []),
-    ],
-    [abilitiesTerm, hasDeathPanel, hasRestPanel],
-  );
-
-  function handleCombatPanelToggle(panelKey: string) {
-    if (!character) return;
-    const current = character.uiState.combatPanelVisibility ?? {};
-    const isOn = current[panelKey] !== false;
-    const updated: Record<string, boolean> = { ...current, [panelKey]: !isOn };
-    updateCharacter({
-      uiState: { ...character.uiState, combatPanelVisibility: updated },
-      updatedAt: nowISO(),
-    });
-  }
 
   async function handleClearAll() {
     if (confirmText !== 'DELETE') return;
@@ -286,53 +260,6 @@ export default function SettingsScreen() {
             );
           })}
         </div>
-      </Card>
-
-      {/* Combat Panels */}
-      <Card>
-        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">
-          Combat Panels
-        </h2>
-        {character ? (
-          <>
-            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
-              Choose which panels appear on the Combat screen.
-            </p>
-            <div className="flex flex-col gap-3">
-              {combatPanels.map(panel => {
-                const visibility = character.uiState.combatPanelVisibility ?? {};
-                const isOn = visibility[panel.key] !== false;
-                return (
-                  <div
-                    key={panel.key}
-                    className="flex justify-between items-center px-[var(--space-md)] py-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] min-h-[var(--touch-target-min)]"
-                  >
-                    <span className="text-[var(--color-text)] font-[var(--weight-medium)]">
-                      {panel.label}
-                    </span>
-                    <button
-                      onClick={() => handleCombatPanelToggle(panel.key)}
-                      aria-label={`${isOn ? 'Hide' : 'Show'} ${panel.label} panel in combat`}
-                      aria-pressed={isOn}
-                      className={cn(
-                        'inline-flex items-center justify-center min-w-16 min-h-[var(--touch-target-min)] px-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] cursor-pointer font-bold text-[length:var(--font-size-sm)]',
-                        isOn
-                          ? 'bg-[var(--color-success)] text-[var(--color-bg)]'
-                          : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
-                      )}
-                    >
-                      {isOn ? 'ON' : 'OFF'}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
-            Select a character to configure combat panels.
-          </p>
-        )}
       </Card>
 
       {/* Print Character Sheet */}

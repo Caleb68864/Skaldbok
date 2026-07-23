@@ -61,7 +61,11 @@ export const systemDefinitionSchema = z.object({
   itemFields: z.object({
     weapon: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
     armor: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
-  }).optional().describe('Extra per-item fields stored in each item systemFields bag'),
+    hiddenBuiltIns: z.object({
+      weapon: z.array(z.string()).optional(),
+      armor: z.array(z.string()).optional(),
+    }).optional(),
+  }).optional().describe('Extra per-item fields, plus built-ins this system does not use'),
   resolution: z.enum(['d20-roll-under', '2d6-plus']).optional().describe('Core resolution mechanic'),
   currency: z.object({
     label: z.string().min(1),

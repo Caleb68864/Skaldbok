@@ -46,6 +46,9 @@ type SystemItemField = { id: string; label: string; type?: 'text' | 'number' };
 /** An empty declaration and an absent one behave the same: nothing extra renders. */
 const NO_ITEM_FIELDS: SystemItemField[] = [];
 
+/** Shared empty hide-list, so an undeclared system shows every built-in. */
+const NO_HIDDEN_FIELDS: string[] = [];
+
 /**
  * Reads one value out of an item's `systemFields` bag as an input-ready string.
  * The `unknown` cast lives here so no call site has to repeat it.
@@ -208,6 +211,11 @@ export default function GearScreen() {
   // declare none, in which case every form below renders exactly its built-ins.
   const weaponItemFields = system?.itemFields?.weapon ?? NO_ITEM_FIELDS;
   const armorItemFields = system?.itemFields?.armor ?? NO_ITEM_FIELDS;
+  // Built-ins a system declares it does not use. Empty means show everything,
+  // so a system that declares nothing renders exactly as before.
+  const hiddenWeaponBuiltIns = system?.itemFields?.hiddenBuiltIns?.weapon ?? NO_HIDDEN_FIELDS;
+  const hiddenArmorBuiltIns = system?.itemFields?.hiddenBuiltIns?.armor ?? NO_HIDDEN_FIELDS;
+  const showsArmorField = (id: string) => !hiddenArmorBuiltIns.includes(id);
 
   function handleWeaponSave(weapon: Weapon) {
     if (!character) return;
@@ -592,6 +600,7 @@ export default function GearScreen() {
         onClose={() => setWeaponDrawerOpen(false)}
         weapon={editingWeapon}
         onSave={handleWeaponSave}
+        hiddenBuiltIns={hiddenWeaponBuiltIns}
         // System-declared fields render inside the same drawer as the built-in
         // ones, so there is a single save for the whole weapon.
         extraFields={
@@ -627,14 +636,18 @@ export default function GearScreen() {
               <input type="number" className={inputClasses} value={armorWeight} min={0} onChange={e => setArmorWeight(Number(e.target.value))} />
             </div>
           </div>
-          <div>
-            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Body Part</label>
-            <input className={inputClasses} value={armorBodyPart} onChange={e => setArmorBodyPart(e.target.value)} placeholder="e.g. Torso, Full Body" />
-          </div>
-          <div>
-            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Movement Penalty</label>
-            <input type="number" className={inputClasses} value={armorMovementPenalty} min={0} onChange={e => setArmorMovementPenalty(Number(e.target.value))} />
-          </div>
+          {showsArmorField('bodyPart') && (
+            <div>
+              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Body Part</label>
+              <input className={inputClasses} value={armorBodyPart} onChange={e => setArmorBodyPart(e.target.value)} placeholder="e.g. Torso, Full Body" />
+            </div>
+          )}
+          {showsArmorField('movementPenalty') && (
+            <div>
+              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Movement Penalty</label>
+              <input type="number" className={inputClasses} value={armorMovementPenalty} min={0} onChange={e => setArmorMovementPenalty(Number(e.target.value))} />
+            </div>
+          )}
           <SystemItemFieldInputs fields={armorItemFields} values={armorSystemFields} onChange={setArmorSystemFields} />
           <div className="flex items-center gap-[var(--space-sm)]">
             <label className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">Equipped</label>
