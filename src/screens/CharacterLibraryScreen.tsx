@@ -12,12 +12,14 @@ import { useToast } from '../context/ToastContext';
 import { cn } from '../lib/utils';
 import { useAppState } from '../context/AppStateContext';
 import { AppLogo } from '../components/primitives/AppLogo';
+import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../systems/registry';
 
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<CharacterRecord | null>(null);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [nameInput, setNameInput] = useState('');
+  const [systemInput, setSystemInput] = useState(DEFAULT_SYSTEM_ID);
   const [pendingSetActiveId, setPendingSetActiveId] = useState<string | null>(null);
   const [pendingSetActiveName, setPendingSetActiveName] = useState<string>('');
   const { character: activeCharacter, setCharacter } = useActiveCharacter();
@@ -38,6 +40,7 @@ export default function CharacterLibraryScreen() {
 
   function handleCreate() {
     setNameInput('');
+    setSystemInput(DEFAULT_SYSTEM_ID);
     setShowNamePrompt(true);
   }
 
@@ -47,7 +50,7 @@ export default function CharacterLibraryScreen() {
     setShowNamePrompt(false);
     const hadActiveCharacter = activeCharacter !== null;
     try {
-      const newChar = await createCharacter(trimmed);
+      const newChar = await createCharacter(trimmed, systemInput);
       await loadCharacters();
       if (!hadActiveCharacter) {
         // First character: auto-activate (AC3.1)
@@ -244,7 +247,7 @@ export default function CharacterLibraryScreen() {
         }
       >
         <p className="text-[var(--color-text-muted)] mb-3 text-sm">
-          Enter a name for your character.
+          Enter a name for your character and choose a game system.
         </p>
         <input
           type="text"
@@ -255,6 +258,19 @@ export default function CharacterLibraryScreen() {
           autoFocus
           className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
         />
+        <label className="mt-3 block text-[var(--color-text-muted)] text-sm">
+          Game system
+          <select
+            aria-label="Game system"
+            value={systemInput}
+            onChange={e => setSystemInput(e.target.value)}
+            className="mt-1 w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
+          >
+            {getSelectableSystems().map(s => (
+              <option key={s.id} value={s.id}>{s.displayName}</option>
+            ))}
+          </select>
+        </label>
       </Modal>
 
       <Modal

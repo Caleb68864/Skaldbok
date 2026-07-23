@@ -1,5 +1,6 @@
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import { createBlankCharacter } from './characterMappers';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
@@ -9,8 +10,8 @@ import { flushAll } from '../persistence/autosaveFlush';
 export function useCharacterActions() {
   const { clearCharacter, character: activeCharacter } = useActiveCharacter();
 
-  async function createCharacter(name?: string) {
-    const newChar = createBlankCharacter('classic-fantasy');
+  async function createCharacter(name?: string, systemId: string = DEFAULT_SYSTEM_ID) {
+    const newChar = createBlankCharacter(systemId);
     // If a name is provided and non-empty, use it; otherwise keep the blank template default
     if (name && name.trim().length > 0) {
       newChar.name = name.trim();
