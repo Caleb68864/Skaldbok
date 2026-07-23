@@ -1,4 +1,4 @@
-import { computeDerivedValues } from '../../../utils/derivedValues';
+import { computeDerivedValues, computeSkillValue } from '../../../utils/derivedValues';
 import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../../utils/boonBane';
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
@@ -103,11 +103,55 @@ export const classicFantasyEngine: SystemEngine = {
     supportsBoonBane: true,
     // Roll-under: 0 means untrained, so a skill matters once trained or raised.
     isRelevant: skill => !!skill && (skill.value > 0 || skill.trained),
+    computeValue: (skill, character, trained) =>
+      skill.linkedAttributeId
+        ? computeSkillValue(character.attributes?.[skill.linkedAttributeId] ?? 10, trained)
+        : trained
+          ? Math.max(skill.baseChance * 2, 1)
+          : skill.baseChance,
+    trainedAffectsValue: true,
   },
   derivedStats: (character, system) => computeDerivedValues(character, system),
   resourceIds: ['hp', 'wp'],
   panels: ['attributes', 'skills', 'resources', 'inventory', 'magic', 'combat', 'rest', 'death', 'notes'],
-  currency: 'coins',
+  currency: {
+    mode: 'coins',
+    denominations: [
+      { id: 'gold', label: 'Gold', abbr: 'g', value: 100 },
+      { id: 'silver', label: 'Silver', abbr: 's', value: 10 },
+      { id: 'copper', label: 'Copper', abbr: 'c', value: 1 },
+    ],
+    read: character => ({
+      gold: character.coins?.gold ?? 0,
+      silver: character.coins?.silver ?? 0,
+      copper: character.coins?.copper ?? 0,
+    }),
+    write: (character, amounts) => ({
+      coins: {
+        gold: amounts.gold ?? character.coins?.gold ?? 0,
+        silver: amounts.silver ?? character.coins?.silver ?? 0,
+        copper: amounts.copper ?? character.coins?.copper ?? 0,
+      },
+    }),
+  },
+  outcomes: [
+    { id: 'success', label: 'Success', tone: 'success' },
+    { id: 'failure', label: 'Failure', tone: 'failure' },
+    { id: 'dragon', label: 'Dragon (1)', tone: 'critical' },
+    { id: 'demon', label: 'Demon (20)', tone: 'fumble' },
+  ],
+  rollModifiers: [
+    { id: 'boon', label: 'Boon' },
+    { id: 'bane', label: 'Bane' },
+    { id: 'pushed', label: 'Pushed' },
+  ],
+  timeUnits: [
+    { id: 'round', label: 'Round', abbrev: 'RND' },
+    { id: 'stretch', label: 'Stretch', abbrev: 'STR' },
+    { id: 'shift', label: 'Shift', abbrev: 'SHI' },
+    { id: 'scene', label: 'Scene', abbrev: 'SCN' },
+    { id: 'permanent', label: 'Permanent', abbrev: '∞' },
+  ],
   terms: {
     abilities: 'Heroic Abilities',
     spells: 'Spells',

@@ -12,6 +12,7 @@ import { QuickNpcAction } from './quickActions/QuickNpcAction';
 import { QuickLogPCTray } from './quickLog/QuickLogPCTray';
 import { getById as getCharacterById, save as saveCharacter } from '../../storage/repositories/characterRepository';
 import { useSystemEngine } from '../systems/engine';
+import type { OutcomeOption, RollModifierOption } from '../systems/engine/types';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import type { CharacterRecord } from '../../types/character';
@@ -42,8 +43,6 @@ const REST_TYPES = [
   { name: 'Shift Rest', effect: 'Recover all HP, WP, and conditions' },
 ] as const;
 
-const RESULTS = ['success', 'failure', 'dragon', 'demon'] as const;
-
 const TAG_OPTIONS = [
   'combat', 'exploration', 'social', 'mystery',
   'tense', 'funny', 'dramatic', 'sad', 'victorious',
@@ -58,29 +57,48 @@ const listBtnClasses = 'block w-full text-left py-3 min-h-11 bg-transparent bord
 
 const resultChipClasses = 'min-h-11 min-w-11 px-4 border-none rounded-lg cursor-pointer text-sm font-semibold';
 
-// ── Roll Modifiers (Boon / Bane / Push) ─────────────────────────
+// ── Outcome / modifier presentation ─────────────────────────────
+//
+// Which outcomes and modifiers exist is engine data; only how a tone is
+// painted lives here.
+
+const NEUTRAL_RESULT_CLASSES = 'bg-[var(--color-surface-raised)] text-[var(--color-text)]';
+
+const OUTCOME_TONE_CLASSES: Record<string, string> = {
+  success: 'bg-[#27ae60] text-white',
+  failure: NEUTRAL_RESULT_CLASSES,
+  critical: 'bg-[var(--color-accent)] text-white',
+  fumble: 'bg-[#c0392b] text-white',
+};
+
+function outcomeToneClasses(outcome: OutcomeOption): string {
+  return (outcome.tone && OUTCOME_TONE_CLASSES[outcome.tone]) || NEUTRAL_RESULT_CLASSES;
+}
+
+const MODIFIER_ACTIVE_COLORS: Record<string, string> = {
+  boon: '#27ae60',
+  bane: '#c0392b',
+  pushed: '#8e44ad',
+};
+
+/**
+ * Modifiers that only make sense when the system has a boon/bane advantage
+ * axis; dropped when `engine.skill.supportsBoonBane` is false.
+ */
+const BOON_BANE_MODIFIER_IDS = new Set(['boon', 'bane']);
+
+// ── Roll Modifiers ──────────────────────────────────────────────
 
 function RollModifiers({
+  options,
   mods,
   onToggle,
 }: {
-  mods: { boon: boolean; bane: boolean; pushed: boolean };
-  onToggle: (key: 'boon' | 'bane' | 'pushed') => void;
+  options: RollModifierOption[];
+  mods: Record<string, boolean>;
+  onToggle: (id: string) => void;
 }) {
-  const modChip = (key: 'boon' | 'bane' | 'pushed', label: string, activeColor: string) => (
-    <button
-      key={key}
-      onClick={() => onToggle(key)}
-      className={cn(
-        chipClasses,
-        mods[key]
-          ? `bg-[${activeColor}] text-white`
-          : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-      )}
-    >
-      {label}
-    </button>
-  );
+  if (options.length === 0) return null;
 
   return (
     <div className="mb-3">
@@ -88,9 +106,20 @@ function RollModifiers({
         Modifiers
       </p>
       <div className="flex gap-2 flex-wrap">
-        {modChip('boon', 'Boon', '#27ae60')}
-        {modChip('bane', 'Bane', '#c0392b')}
-        {modChip('pushed', 'Pushed', '#8e44ad')}
+        {options.map(opt => (
+          <button
+            key={opt.id}
+            onClick={() => onToggle(opt.id)}
+            className={cn(
+              chipClasses,
+              mods[opt.id]
+                ? `bg-[${MODIFIER_ACTIVE_COLORS[opt.id] ?? 'var(--color-accent)'}] text-white`
+                : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -128,11 +157,9 @@ function TagPicker({
   );
 }
 
-function formatModTags(mods: { boon: boolean; bane: boolean; pushed: boolean }): string {
-  const tags: string[] = [];
-  if (mods.boon) tags.push('Boon');
-  if (mods.bane) tags.push('Bane');
-  if (mods.pushed) tags.push('Pushed');
+/** ` (Boon, Pushed)` — labels and order come from the engine's modifier list. */
+function formatModTags(mods: Record<string, boolean>, options: RollModifierOption[]): string {
+  const tags = options.filter(opt => mods[opt.id]).map(opt => opt.label);
   return tags.length > 0 ? ` (${tags.join(', ')})` : '';
 }
 
@@ -179,6 +206,21 @@ export function SessionQuickActions({
     [system],
   );
 
+  /** Outcome buttons offered for any roll, in engine-declared order. */
+  const outcomeOptions = engine.outcomes;
+
+  /**
+   * Modifier chips for this system. Boon/Bane are dropped when the system has
+   * no advantage axis; everything else the engine declares is shown as-is.
+   */
+  const modifierOptions = useMemo(
+    () =>
+      engine.skill.supportsBoonBane
+        ? engine.rollModifiers
+        : engine.rollModifiers.filter(m => !BOON_BANE_MODIFIER_IDS.has(m.id)),
+    [engine],
+  );
+
   const supportsRest = engine.panels.includes('rest');
   const supportsDeathRoll = engine.panels.includes('death');
   const healthResourceId = engine.primaryHealthResourceId;
@@ -195,7 +237,8 @@ export function SessionQuickActions({
   const [rumorText, setRumorText] = useState('');
   const [rumorSource, setRumorSource] = useState('');
   const [npcNotes, setNpcNotes] = useState<Note[]>([]);
-  const [rollMods, setRollMods] = useState<{ boon: boolean; bane: boolean; pushed: boolean }>({ boon: false, bane: false, pushed: false });
+  /** Active roll modifiers, keyed by `RollModifierOption.id`. */
+  const [rollMods, setRollMods] = useState<Record<string, boolean>>({});
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [shopItem, setShopItem] = useState('');
   const [shopAction, setShopAction] = useState<'buy' | 'sell'>('buy');
@@ -276,7 +319,7 @@ export function SessionQuickActions({
     setQuoteText('');
     setRumorText('');
     setRumorSource('');
-    setRollMods({ boon: false, bane: false, pushed: false });
+    setRollMods({});
     setSelectedTags([]);
     setShopItem('');
     setShopAction('buy');
@@ -362,32 +405,30 @@ export function SessionQuickActions({
 
   const renderSkillPicker = () => {
     if (selectedSkill) {
-      const modTag = formatModTags(rollMods);
+      const modTag = formatModTags(rollMods, modifierOptions);
       return (
         <div>
           <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
           <p className="text-[var(--color-text)] font-semibold mb-3 text-base">
             {selectedSkill}{modTag}
           </p>
-          <RollModifiers mods={rollMods} onToggle={key => setRollMods(m => ({ ...m, [key]: !m[key] }))} />
+          <RollModifiers
+            options={modifierOptions}
+            mods={rollMods}
+            onToggle={id => setRollMods(m => ({ ...m, [id]: !m[id] }))}
+          />
           <div className="grid grid-cols-2 gap-2">
-            {RESULTS.map(result => (
+            {outcomeOptions.map(outcome => (
               <button
-                key={result}
-                onClick={() => logEvent('skill-check', `${selectedSkill}${formatModTags(rollMods)} — ${result}`, {
+                key={outcome.id}
+                onClick={() => logEvent('skill-check', `${selectedSkill}${formatModTags(rollMods, modifierOptions)} — ${outcome.id}`, {
                   skill: selectedSkill,
-                  result,
+                  result: outcome.id,
                   character: selectedNames(),
                 })}
-                className={cn(
-                  resultChipClasses,
-                  result === 'dragon' ? 'bg-[var(--color-accent)] text-white'
-                    : result === 'demon' ? 'bg-[#c0392b] text-white'
-                    : result === 'success' ? 'bg-[#27ae60] text-white'
-                    : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-                )}
+                className={cn(resultChipClasses, outcomeToneClasses(outcome))}
               >
-                {result === 'dragon' ? 'Dragon (1)' : result === 'demon' ? 'Demon (20)' : result.charAt(0).toUpperCase() + result.slice(1)}
+                {outcome.label}
               </button>
             ))}
           </div>
@@ -436,28 +477,26 @@ export function SessionQuickActions({
       );
     }
     if (selectedSpell) {
-      const modTag = formatModTags(rollMods);
+      const modTag = formatModTags(rollMods, modifierOptions);
       return (
         <div>
           <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
           <p className="text-[var(--color-text)] font-semibold mb-3 text-base">
             Cast: {selectedSpell}{modTag}
           </p>
-          <RollModifiers mods={rollMods} onToggle={key => setRollMods(m => ({ ...m, [key]: !m[key] }))} />
+          <RollModifiers
+            options={modifierOptions}
+            mods={rollMods}
+            onToggle={id => setRollMods(m => ({ ...m, [id]: !m[id] }))}
+          />
           <div className="grid grid-cols-2 gap-2">
-            {RESULTS.map(result => (
+            {outcomeOptions.map(outcome => (
               <button
-                key={result}
-                onClick={() => logEvent('generic', `Cast ${selectedSpell}${formatModTags(rollMods)} — ${result}`, {})}
-                className={cn(
-                  resultChipClasses,
-                  result === 'dragon' ? 'bg-[var(--color-accent)] text-white'
-                    : result === 'demon' ? 'bg-[#c0392b] text-white'
-                    : result === 'success' ? 'bg-[#27ae60] text-white'
-                    : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]'
-                )}
+                key={outcome.id}
+                onClick={() => logEvent('generic', `Cast ${selectedSpell}${formatModTags(rollMods, modifierOptions)} — ${outcome.id}`, {})}
+                className={cn(resultChipClasses, outcomeToneClasses(outcome))}
               >
-                {result === 'dragon' ? 'Dragon (1)' : result === 'demon' ? 'Demon (20)' : result.charAt(0).toUpperCase() + result.slice(1)}
+                {outcome.label}
               </button>
             ))}
           </div>

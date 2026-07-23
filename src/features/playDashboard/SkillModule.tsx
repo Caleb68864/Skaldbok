@@ -3,7 +3,6 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
-import { computeSkillValue } from '../../utils/derivedValues';
 import { formatProb } from '../../utils/boonBane';
 import { cn } from '../../lib/utils';
 import type { CharacterSkill } from '../../types/character';
@@ -58,16 +57,9 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
 
   function renderSkillRow(skill: SkillRow) {
     const stored = character.skills[skill.id];
-    const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 0;
     const trained = stored?.trained ?? false;
-    // Mirrors SkillsScreen: engines whose skills carry marks derive an untrained
-    // fallback from the linked attribute / base chance; others fall back to the
-    // engine's declared default value.
-    const computedValue = engine.skill.supportsMarks
-      ? (skill.linkedAttributeId
-          ? computeSkillValue(attrValue, trained)
-          : (trained ? skill.baseChance * 2 : skill.baseChance))
-      : engine.skill.defaultValue;
+    // The engine owns the value a skill takes when the character has no stored entry.
+    const computedValue = engine.skill.computeValue(skill, character, trained);
     const rawValue = stored?.value ?? computedValue;
     const value = clamp(rawValue, engine.skill.range.min, engine.skill.range.max);
     const fallback = { value, trained };

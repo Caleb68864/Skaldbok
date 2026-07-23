@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import type { TempModifier } from '../../types/character';
+import { useSystemEngine } from '../../features/systems/engine';
 
 interface BuffChipBarProps {
   modifiers: TempModifier[];
@@ -8,14 +9,6 @@ interface BuffChipBarProps {
   onClearAll: () => void;
   onAdd: () => void;
 }
-
-const DURATION_ABBREV: Record<TempModifier['duration'], string> = {
-  round: 'RND',
-  stretch: 'STR',
-  shift: 'SHI',
-  scene: 'SCN',
-  permanent: '\u221E',
-};
 
 function formatDelta(n: number): string {
   if (n >= 0) return `+${n}`;
@@ -39,6 +32,11 @@ export function BuffChipBar({
   onAdd,
 }: BuffChipBarProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const engine = useSystemEngine();
+
+  /** Compact duration label from the active system's time units. */
+  const durationAbbrev = (duration: TempModifier['duration']): string =>
+    engine.timeUnits.find(unit => unit.id === duration)?.abbrev ?? duration;
 
   const toggleExpanded = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -63,7 +61,7 @@ export function BuffChipBar({
               <span>{mod.label}</span>
               <span className="opacity-85">{formatDelta(delta)}</span>
               <span className="text-[length:var(--font-size-xs)] opacity-70 ml-[var(--space-1)] bg-black/20 rounded-[var(--radius-sm)] px-[var(--space-1)] py-px">
-                {DURATION_ABBREV[mod.duration]}
+                {durationAbbrev(mod.duration)}
               </span>
             </button>
 

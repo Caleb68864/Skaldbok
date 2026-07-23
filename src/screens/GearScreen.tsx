@@ -22,6 +22,15 @@ import * as characterRepository from '../storage/repositories/characterRepositor
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
 
+/**
+ * Drops a trailing plural `s` so a denomination label reads naturally in a
+ * one-unit aria-label ("Credits" → "Gain 1 credit"). Labels that are already
+ * singular ("Gold") are returned unchanged.
+ */
+function singularize(label: string): string {
+  return label.length > 1 && label.endsWith('s') ? label.slice(0, -1) : label;
+}
+
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, Math.round(value)));
@@ -149,28 +158,47 @@ export default function GearScreen() {
     }
   }
 
-  function adjustCoin(coin: 'gold' | 'silver' | 'copper', delta: number) {
+  /**
+   * Adjusts one denomination of the active system's currency by `delta`.
+   *
+   * @remarks
+   * Denominations are ordered highest-value first. When a denomination would go
+   * negative, one unit of the nearest higher denomination that still has stock
+   * is broken down, converting via the denominations' `value` fields (so
+   * 1 gold → 9 silver + 10 copper falls out of the data rather than a hardcoded
+   * ladder). If no higher denomination can cover the shortfall, the whole
+   * adjustment is refused and nothing is written.
+   */
+  function adjustCurrency(denominationId: string, delta: number) {
     if (!character) return;
-    let { gold, silver, copper } = character.coins;
-    if (coin === 'gold') gold += delta;
-    else if (coin === 'silver') silver += delta;
-    else copper += delta;
-    // Borrow from higher denominations if the requested coin went negative.
-    // Coin denominations: 1 gold = 10 silver, 1 silver = 10 copper.
-    while (copper < 0 && silver > 0) { copper += 10; silver -= 1; }
-    while (copper < 0 && gold > 0) { gold -= 1; silver += 9; copper += 10; }
-    while (silver < 0 && gold > 0) { gold -= 1; silver += 10; }
-    if (gold < 0 || silver < 0 || copper < 0) return; // not enough total coin
-    updateCharacter({ coins: { gold, silver, copper }, updatedAt: nowISO() });
-    if (delta !== 0) logCoinChange(character.name, coin, delta);
-  }
+    const denoms = engine.currency.denominations;
+    const denom = denoms.find(d => d.id === denominationId);
+    if (!denom) return;
 
-  function adjustCredits(delta: number) {
-    if (!character) return;
-    const current = character.travellerData?.credits ?? 0;
-    const next = Math.max(0, current + delta);
-    updateCharacter({ travellerData: { ...character.travellerData, credits: next }, updatedAt: nowISO() });
-    if (delta !== 0) logToSession(`${character.name}: ${delta > 0 ? 'Gained' : 'Spent'} ${Math.abs(delta)} Cr`);
+    const current = engine.currency.read(character);
+    const amounts: Record<string, number> = {};
+    for (const d of denoms) amounts[d.id] = current[d.id] ?? 0;
+    amounts[denominationId] += delta;
+
+    for (let i = denoms.length - 1; i >= 1; i--) {
+      while (amounts[denoms[i].id] < 0) {
+        let donor = -1;
+        for (let j = i - 1; j >= 0; j--) {
+          if (amounts[denoms[j].id] > 0) { donor = j; break; }
+        }
+        if (donor < 0) break;
+        amounts[denoms[donor].id] -= 1;
+        // Intermediate denominations keep the change from breaking the donor.
+        for (let k = donor + 1; k < i; k++) {
+          amounts[denoms[k].id] += denoms[k - 1].value / denoms[k].value - 1;
+        }
+        amounts[denoms[i].id] += denoms[i - 1].value / denoms[i].value;
+      }
+    }
+
+    if (denoms.some(d => amounts[d.id] < 0)) return; // not enough total currency
+    updateCharacter({ ...engine.currency.write(character, amounts), updatedAt: nowISO() });
+    if (delta !== 0) logCoinChange(character.name, denominationId, delta, denom.abbr);
   }
 
   function handleInventoryQuantity(id: string, quantity: number) {
@@ -242,6 +270,22 @@ export default function GearScreen() {
   // flag the character as overloaded in that case.
   const tracksEncumbrance = encumbranceLimit > 0;
   const isOverloaded = tracksEncumbrance && totalWeight > encumbranceLimit;
+
+  const denominations = engine.currency.denominations;
+  const currencyAmounts = engine.currency.read(character);
+  // Any stock at all in any denomination means a decrement can be covered by
+  // borrowing downwards, so one shared flag gates every "spend" button.
+  const hasAnyCurrency = denominations.some(d => (currencyAmounts[d.id] ?? 0) > 0);
+  const currencyTitle = engine.currency.mode === 'single'
+    ? (denominations[0]?.label ?? 'Currency')
+    : 'Coins';
+  // e.g. "1 gold = 10 silver = 100 copper", derived from the denominations'
+  // relative values rather than written out per system.
+  const exchangeSubtitle = denominations.length > 1
+    ? denominations
+        .map((d, i) => `${i === 0 ? 1 : denominations[0].value / d.value} ${d.label.toLowerCase()}`)
+        .join(' = ')
+    : undefined;
 
   return (
     <div className="p-[var(--space-md)]">
@@ -359,49 +403,27 @@ export default function GearScreen() {
         />
       </SectionPanel>
 
-      {engine.currency === 'single' ? (
-      <SectionPanel title="Credits" collapsible defaultOpen>
-        <div className="flex items-center gap-[var(--space-sm)]">
-          <span className="text-sm text-[var(--color-text-muted)] min-w-[60px]">Cr</span>
-          <button
-            type="button"
-            aria-label="Spend 1 credit"
-            onClick={() => adjustCredits(-1)}
-            disabled={(character.travellerData?.credits ?? 0) <= 0}
-            className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
-          >−</button>
-          <span className="min-w-[60px] text-center text-lg font-bold text-[var(--color-text)]">{character.travellerData?.credits ?? 0}</span>
-          <button
-            type="button"
-            aria-label="Gain 1 credit"
-            onClick={() => adjustCredits(1)}
-            className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110"
-          >+</button>
-        </div>
-      </SectionPanel>
-      ) : (
-      <SectionPanel title="Coins" subtitle="1 gold = 10 silver = 100 copper" collapsible defaultOpen>
+      {denominations.length > 0 && (
+      <SectionPanel title={currencyTitle} subtitle={exchangeSubtitle} collapsible defaultOpen>
         <div className="flex flex-col gap-3">
-          {(['gold', 'silver', 'copper'] as const).map(coin => {
-            const value = character.coins[coin];
-            const label = coin.charAt(0).toUpperCase() + coin.slice(1);
-            const totalCopper = character.coins.gold * 100 + character.coins.silver * 10 + character.coins.copper;
-            const canDecrement = totalCopper > 0;
+          {denominations.map(denom => {
+            const value = currencyAmounts[denom.id] ?? 0;
+            const unit = singularize(denom.label.toLowerCase());
             return (
-              <div key={coin} className="flex items-center gap-[var(--space-sm)]">
-                <span className="text-sm text-[var(--color-text-muted)] min-w-[60px]">{label}</span>
+              <div key={denom.id} className="flex items-center gap-[var(--space-sm)]">
+                <span className="text-sm text-[var(--color-text-muted)] min-w-[60px]">{denom.label}</span>
                 <button
                   type="button"
-                  aria-label={`Spend 1 ${coin}`}
-                  onClick={() => adjustCoin(coin, -1)}
-                  disabled={!canDecrement}
+                  aria-label={`Spend 1 ${unit}`}
+                  onClick={() => adjustCurrency(denom.id, -1)}
+                  disabled={!hasAnyCurrency}
                   className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
                 >−</button>
                 <span className="min-w-[40px] text-center text-lg font-bold text-[var(--color-text)]">{value}</span>
                 <button
                   type="button"
-                  aria-label={`Gain 1 ${coin}`}
-                  onClick={() => adjustCoin(coin, 1)}
+                  aria-label={`Gain 1 ${unit}`}
+                  onClick={() => adjustCurrency(denom.id, 1)}
                   className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110"
                 >+</button>
               </div>

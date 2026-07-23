@@ -5,8 +5,13 @@ import { useSystemDefinition } from '../../features/systems/useSystemDefinition'
 import { getEngine } from '../../features/systems/engine';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import { nowISO } from '../../utils/dates';
-import { computeSkillValue } from '../../utils/derivedValues';
-import type { CharacterSkill } from '../../types/character';
+import type { CharacterRecord, CharacterSkill } from '../../types/character';
+
+/**
+ * Stand-in used only when the modal renders without an active character, so the
+ * engine's fallback maths sees the same "unset attribute" defaults as before.
+ */
+const NO_CHARACTER = { attributes: {} } as CharacterRecord;
 
 interface Props {
   open: boolean;
@@ -66,11 +71,13 @@ export function EndOfSessionModal({ open, onClose }: Props) {
 
   function getSkillFallback(skillId: string): CharacterSkill {
     const def = allSkillDefs.find(s => s.id === skillId);
-    if (!def?.linkedAttributeId) {
-      return { value: def?.baseChance ?? 0, trained: false };
-    }
-    const attrVal = character ? (character.attributes[def.linkedAttributeId] ?? 10) : 10;
-    return { value: computeSkillValue(attrVal, false), trained: false };
+    // The engine owns the value a skill takes when the character has no stored entry.
+    const value = engine.skill.computeValue(
+      { baseChance: def?.baseChance ?? 0, linkedAttributeId: def?.linkedAttributeId },
+      character ?? NO_CHARACTER,
+      false,
+    );
+    return { value, trained: false };
   }
 
   // Marked-skill advancement only exists in rulesets that support marks.

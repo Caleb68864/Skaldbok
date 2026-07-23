@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import type { TempModifier, TempModifierEffect } from '../../types/character';
+import { useSystemEngine } from '../../features/systems/engine';
 import { Drawer } from '../primitives/Drawer';
 
 interface AddModifierDrawerProps {
@@ -16,19 +17,15 @@ interface EffectRow {
   delta: number;
 }
 
-const DURATION_OPTIONS: { value: Duration; label: string }[] = [
-  { value: 'round', label: 'Round' },
-  { value: 'stretch', label: 'Stretch' },
-  { value: 'shift', label: 'Shift' },
-  { value: 'scene', label: 'Scene' },
-  { value: 'permanent', label: 'Permanent' },
-];
-
 const EMPTY_EFFECT: EffectRow = { stat: '', delta: 0 };
 
 const inputClasses = "min-h-[var(--touch-target-min)] px-[var(--space-sm)] text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface)] text-[var(--color-text)] w-full box-border";
 
 export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerProps) {
+  const engine = useSystemEngine();
+  // Duration choices are the active system's time units; the stored ids are
+  // shared across systems so a saved modifier stays valid if the system changes.
+  const durationOptions = engine.timeUnits;
   const [label, setLabel] = useState('');
   const [duration, setDuration] = useState<Duration>('stretch');
   const [effects, setEffects] = useState<EffectRow[]>([{ ...EMPTY_EFFECT }]);
@@ -88,10 +85,11 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
             Duration
           </label>
           <div className="flex gap-0">
-            {DURATION_OPTIONS.map(({ value, label: optLabel }, i) => {
+            {durationOptions.map((unit, i) => {
+              const value = unit.id as Duration;
               const isActive = duration === value;
               const isFirst = i === 0;
-              const isLast = i === DURATION_OPTIONS.length - 1;
+              const isLast = i === durationOptions.length - 1;
               return (
                 <button
                   key={value}
@@ -108,7 +106,7 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
                       : "bg-[var(--color-surface)] text-[var(--color-text)]"
                   )}
                 >
-                  {optLabel}
+                  {unit.label}
                 </button>
               );
             })}

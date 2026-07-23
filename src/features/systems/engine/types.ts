@@ -21,6 +21,55 @@ export type ResolutionMethod = 'd20-roll-under' | '2d6-plus';
 
 export type CurrencyMode = 'coins' | 'abstract' | 'single';
 
+/** One denomination in a system's currency. */
+export interface CurrencyDenomination {
+  id: string;
+  label: string;
+  /** Short suffix used in logs and dense UI, e.g. `g` or `Cr`. */
+  abbr: string;
+  /** Worth in the smallest denomination, used for change-making and totals. */
+  value: number;
+}
+
+/**
+ * A system's money, including where it lives on the character record.
+ *
+ * @remarks
+ * `read`/`write` keep storage an engine concern: Dragonbane persists to
+ * `character.coins`, Traveller to its system-specific bag. Consumers deal only
+ * in `{ denominationId: amount }`, so unifying the underlying fields later is a
+ * change to two engines rather than to every screen that shows money.
+ */
+export interface CurrencyModel {
+  mode: CurrencyMode;
+  denominations: CurrencyDenomination[];
+  /** Current amounts, keyed by denomination id. */
+  read: (character: CharacterRecord) => Record<string, number>;
+  /** Patch to apply for new amounts, keyed by denomination id. */
+  write: (character: CharacterRecord, amounts: Record<string, number>) => Partial<CharacterRecord>;
+}
+
+/** A possible result of a resolution roll (crit/fumble vocabulary differs per system). */
+export interface OutcomeOption {
+  id: string;
+  label: string;
+  tone?: 'success' | 'failure' | 'critical' | 'fumble';
+}
+
+/** A modifier a player can flag on a roll, e.g. Boon/Bane/Pushed. */
+export interface RollModifierOption {
+  id: string;
+  label: string;
+}
+
+/** A duration unit for temporary modifiers and travel/camp actions. */
+export interface TimeUnit {
+  id: string;
+  label: string;
+  /** Compact form for chips, e.g. `RND`. */
+  abbrev: string;
+}
+
 /**
  * Context passed to {@link SkillEngineConfig.display} so the engine can apply
  * system-specific modifiers without the shared screens knowing the rules.
@@ -68,6 +117,27 @@ export interface SkillEngineConfig {
    * roll-under assumption that 0 means untrained.
    */
   isRelevant: (skill: CharacterSkill | undefined) => boolean;
+  /**
+   * The value a skill takes when the character has no stored entry.
+   *
+   * @remarks
+   * Replaces the roll-under `trained ? base * 2 : base` formula that screens
+   * reimplemented three times over.
+   */
+  computeValue: (
+    skill: { baseChance: number; linkedAttributeId?: string },
+    character: CharacterRecord,
+    trained: boolean,
+  ) => number;
+  /**
+   * Whether toggling "trained" recomputes the skill's value.
+   *
+   * @remarks
+   * True for roll-under systems, where training doubles the base chance. False
+   * where the stored value is authored directly (Traveller levels) — there,
+   * recomputing on toggle would discard the player's number.
+   */
+  trainedAffectsValue: boolean;
 }
 
 /**
@@ -240,7 +310,13 @@ export interface SystemEngine {
   derivedStats: (character: CharacterRecord, system?: SystemDefinition) => DerivedValues;
   resourceIds: string[];
   panels: PanelKey[];
-  currency: CurrencyMode;
+  currency: CurrencyModel;
+  /** Possible results of a resolution roll. */
+  outcomes: OutcomeOption[];
+  /** Modifiers a player can flag on a roll. */
+  rollModifiers: RollModifierOption[];
+  /** Duration units for temporary modifiers and elapsed-time actions. */
+  timeUnits: TimeUnit[];
   /** System vocabulary; see {@link SystemTerms}. */
   terms: SystemTerms;
   /** Panel/screen titles; see {@link SystemLabels}. */

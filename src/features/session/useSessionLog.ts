@@ -64,11 +64,29 @@ export interface LogNpcCaptureInput {
 interface CoinBuffer {
   /** Name of the character whose coins are being tracked in this buffer. */
   character: string;
-  /** Accumulated delta values keyed by coin denomination (gold, silver, copper). */
-  changes: Record<string, number>;
+  /**
+   * Accumulated deltas keyed by denomination id, each carrying the suffix used
+   * when the entry is formatted (`g`, `Cr`, …). Insertion-ordered, so the log
+   * line lists denominations in the order the player touched them.
+   */
+  changes: Record<string, { delta: number; abbr: string }>;
   /** Handle for the active debounce timer, or null when idle. */
   timer: ReturnType<typeof setTimeout> | null;
 }
+
+/**
+ * Suffixes for the original hardcoded coin denominations.
+ *
+ * @remarks
+ * Only used when a caller omits `abbr`, so pre-existing call sites keep their
+ * exact log output. Callers that know their system should pass the
+ * denomination's `abbr` from `engine.currency`.
+ */
+const LEGACY_COIN_ABBREVIATIONS: Record<string, string> = {
+  gold: 'g',
+  silver: 's',
+  copper: 'c',
+};
 
 /**
  * Internal debounce buffer for batching HP/resource change events into a single log entry.
@@ -392,10 +410,9 @@ export function useSessionLog() {
   const flushCoinBuffer = useCallback(async () => {
     const buf = coinBuffer.current;
     if (!buf.character || Object.keys(buf.changes).length === 0) return;
-    const parts: string[] = [];
-    if (buf.changes.gold) parts.push(`${buf.changes.gold > 0 ? '+' : ''}${buf.changes.gold}g`);
-    if (buf.changes.silver) parts.push(`${buf.changes.silver > 0 ? '+' : ''}${buf.changes.silver}s`);
-    if (buf.changes.copper) parts.push(`${buf.changes.copper > 0 ? '+' : ''}${buf.changes.copper}c`);
+    const parts = Object.values(buf.changes)
+      .filter(entry => entry.delta !== 0)
+      .map(entry => `${entry.delta > 0 ? '+' : ''}${entry.delta}${entry.abbr}`);
     if (parts.length > 0) {
       await logToSession(`${buf.character}: Coins ${parts.join(' ')}`);
     }
@@ -412,16 +429,24 @@ export function useSessionLog() {
    * function is synchronous (fire-and-forget) — the actual write happens on flush.
    *
    * @param characterName - Display name of the character whose coins changed.
-   * @param coinType - Denomination that changed: `'gold'`, `'silver'`, or `'copper'`.
+   * @param coinType - Id of the denomination that changed, from the active
+   * system's `engine.currency.denominations`.
    * @param delta - Signed amount: positive for gains, negative for losses.
+   * @param abbr - Suffix for the denomination in the log line (e.g. `g`, `Cr`).
+   * Defaults to the legacy gold/silver/copper suffixes, then to the id itself.
    *
    * @example
    * ```ts
-   * logCoinChange('Eira', 'gold', -5);   // spent 5 gold
-   * logCoinChange('Eira', 'silver', 20); // gained 20 silver
+   * logCoinChange('Eira', 'gold', -5, 'g');       // "Eira: Coins -5g"
+   * logCoinChange('Jace', 'credits', 20, 'Cr');   // "Jace: Coins +20Cr"
    * ```
    */
-  const logCoinChange = useCallback((characterName: string, coinType: 'gold' | 'silver' | 'copper', delta: number) => {
+  const logCoinChange = useCallback((
+    characterName: string,
+    coinType: string,
+    delta: number,
+    abbr?: string,
+  ) => {
     const buf = coinBuffer.current;
     // If the character changes, flush previous buffer first
     if (buf.character && buf.character !== characterName) {
@@ -429,7 +454,11 @@ export function useSessionLog() {
     }
     // Accumulate
     buf.character = characterName;
-    buf.changes[coinType] = (buf.changes[coinType] ?? 0) + delta;
+    const suffix = abbr ?? LEGACY_COIN_ABBREVIATIONS[coinType] ?? coinType;
+    buf.changes[coinType] = {
+      delta: (buf.changes[coinType]?.delta ?? 0) + delta,
+      abbr: suffix,
+    };
     // Reset debounce timer (3 seconds)
     if (buf.timer !== null) clearTimeout(buf.timer);
     buf.timer = setTimeout(() => {

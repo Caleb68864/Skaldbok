@@ -5,6 +5,7 @@ import { useToast } from '../../../context/ToastContext';
 import { useAppState } from '../../../context/AppStateContext';
 import { useSystemDefinition } from '../../systems/useSystemDefinition';
 import { useSystemEngine } from '../../systems/engine';
+import type { OutcomeOption } from '../../systems/engine/types';
 import { DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 import { useSessionLog } from '../useSessionLog';
 import { useSessionEncounterContextSafe } from '../SessionEncounterContext';
@@ -34,7 +35,38 @@ type TrayStep =
     }
   | { kind: 'skills'; pcId: string };
 
-const RESULTS: OutcomeResult[] = ['success', 'failure', 'dragon', 'demon'];
+// ── Outcome / modifier presentation ─────────────────────────────
+//
+// Which outcomes and modifiers exist is engine data; only how a tone is
+// painted lives here.
+
+const NEUTRAL_RESULT_CLASSES = 'bg-[var(--color-surface-raised)] text-[var(--color-text)]';
+
+const OUTCOME_TONE_CLASSES: Record<string, string> = {
+  success: 'bg-[#27ae60] text-white',
+  failure: NEUTRAL_RESULT_CLASSES,
+  critical: 'bg-[var(--color-accent)] text-white',
+  fumble: 'bg-[#c0392b] text-white',
+};
+
+function outcomeToneClasses(outcome: OutcomeOption): string {
+  return (outcome.tone && OUTCOME_TONE_CLASSES[outcome.tone]) || NEUTRAL_RESULT_CLASSES;
+}
+
+const MODIFIER_ACTIVE_COLORS: Record<string, string> = {
+  boon: '#27ae60',
+  bane: '#c0392b',
+  pushed: '#8e44ad',
+};
+
+/**
+ * Modifiers that only make sense when the system has a boon/bane advantage
+ * axis; dropped when `engine.skill.supportsBoonBane` is false.
+ */
+const BOON_BANE_MODIFIER_IDS = new Set(['boon', 'bane']);
+
+/** Empty modifier state — every chip starts unset. */
+const NO_MODS: Record<string, boolean> = {};
 
 export interface QuickLogPCTrayProps {
   onLogged: () => void;
@@ -63,7 +95,8 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
 
   const [step, setStep] = useState<TrayStep>({ kind: 'tray' });
   const [characters, setCharacters] = useState<Record<string, CharacterRecord>>({});
-  const [mods, setMods] = useState<OutcomeMods>({ boon: false, bane: false, pushed: false });
+  /** Active roll modifiers, keyed by `RollModifierOption.id`. */
+  const [mods, setMods] = useState<Record<string, boolean>>(NO_MODS);
   const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
   const [saving, setSaving] = useState(false);
 
@@ -107,21 +140,37 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
   const abilityTerm = engine.terms.abilities.toLowerCase();
   const spellTerm = engine.terms.spells.toLowerCase();
 
+  /** Outcome buttons offered for any roll, in engine-declared order. */
+  const outcomeOptions = engine.outcomes;
+
+  /**
+   * Modifier chips for this system. Boon/Bane are dropped when the system has
+   * no advantage axis; everything else the engine declares is shown as-is.
+   */
+  const supportsBoonBane = engine.skill.supportsBoonBane;
+  const modifierOptions = useMemo(
+    () =>
+      supportsBoonBane
+        ? engine.rollModifiers
+        : engine.rollModifiers.filter(m => !BOON_BANE_MODIFIER_IDS.has(m.id)),
+    [engine.rollModifiers, supportsBoonBane],
+  );
+
   // Pre-select modifier chips from session-state boon/bane when stepping into
-  // outcome. Spells/abilities default to neutral (no pre-selection).
+  // outcome. Only meaningful for systems with a boon/bane axis; spells and
+  // abilities default to neutral (no pre-selection).
   useEffect(() => {
     if (step.kind !== 'outcome') return;
-    if (step.subjectKind === 'skill') {
+    if (step.subjectKind === 'skill' && supportsBoonBane) {
       const global = sessionState.globalBoonBane;
       setMods({
         boon: global === 'boon',
         bane: global === 'bane',
-        pushed: false,
       });
     } else {
-      setMods({ boon: false, bane: false, pushed: false });
+      setMods(NO_MODS);
     }
-  }, [step, sessionState.globalBoonBane]);
+  }, [step, sessionState.globalBoonBane, supportsBoonBane]);
 
   async function logOutcome(result: OutcomeResult) {
     if (step.kind !== 'outcome' || !activePC || saving) return;
@@ -129,7 +178,15 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
     try {
       const actor = activePC.name;
       const subject = step.subject;
-      const title = formatOutcomeTitle({ actor, subject, result, mods });
+      // `OutcomeMods` is the stored shape and still names its three flags
+      // explicitly; any additional engine modifier ids ride along untouched.
+      const storedMods: OutcomeMods = {
+        ...mods,
+        boon: mods.boon ?? false,
+        bane: mods.bane ?? false,
+        pushed: mods.pushed ?? false,
+      };
+      const title = formatOutcomeTitle({ actor, subject, result, mods: storedMods });
       const type =
         step.subjectKind === 'skill'
           ? 'skill-check'
@@ -140,7 +197,7 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
         subject,
         actor,
         result,
-        mods: { ...mods },
+        mods: storedMods,
       };
       if (step.summary) typeData.summary = step.summary;
       const target = resolveAttach(attachTo);
@@ -387,34 +444,30 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
           <p className="text-[var(--color-text-muted)] text-sm italic">{step.summary}</p>
         )}
 
-        <div>
-          <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
-            Modifiers
+        {modifierOptions.length > 0 && (
+          <div>
+            <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
+              Modifiers
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {modifierOptions.map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setMods(m => ({ ...m, [opt.id]: !m[opt.id] }))}
+                  className={cn(
+                    'min-h-11 px-3.5 rounded-full border-none cursor-pointer text-sm font-semibold shrink-0',
+                    mods[opt.id]
+                      ? `bg-[${MODIFIER_ACTIVE_COLORS[opt.id] ?? 'var(--color-accent)'}] text-white`
+                      : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]',
+                  )}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            {(
-              [
-                ['boon', 'Boon', '#27ae60'],
-                ['bane', 'Bane', '#c0392b'],
-                ['pushed', 'Pushed', '#8e44ad'],
-              ] as const
-            ).map(([key, label, color]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setMods(m => ({ ...m, [key]: !m[key] }))}
-                className={cn(
-                  'min-h-11 px-3.5 rounded-full border-none cursor-pointer text-sm font-semibold shrink-0',
-                  mods[key]
-                    ? `bg-[${color}] text-white`
-                    : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]',
-                )}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
+        )}
 
         <AttachToControl value={attachTo} onChange={setAttachTo} />
 
@@ -423,24 +476,20 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
             Result
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {RESULTS.map(r => (
+            {outcomeOptions.map(outcome => (
               <button
-                key={r}
+                key={outcome.id}
                 type="button"
-                onClick={() => logOutcome(r)}
+                // Outcome ids are the stored vocabulary; `OutcomeResult` still
+                // names the four classic-fantasy ones as a literal union.
+                onClick={() => logOutcome(outcome.id as OutcomeResult)}
                 disabled={saving}
                 className={cn(
                   'min-h-11 px-4 border-none rounded-lg cursor-pointer text-sm font-semibold disabled:opacity-60',
-                  r === 'dragon'
-                    ? 'bg-[var(--color-accent)] text-white'
-                    : r === 'demon'
-                      ? 'bg-[#c0392b] text-white'
-                      : r === 'success'
-                        ? 'bg-[#27ae60] text-white'
-                        : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]',
+                  outcomeToneClasses(outcome),
                 )}
               >
-                {r === 'dragon' ? 'Dragon (1)' : r === 'demon' ? 'Demon (20)' : r.charAt(0).toUpperCase() + r.slice(1)}
+                {outcome.label}
               </button>
             ))}
           </div>

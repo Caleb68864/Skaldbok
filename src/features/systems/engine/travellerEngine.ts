@@ -90,15 +90,47 @@ export const travellerEngine: SystemEngine = {
     // Traveller level 0 is a real (trained) skill, so presence of the trained
     // flag matters as much as a non-zero level.
     isRelevant: skill => !!skill && (skill.trained || skill.value > 0),
-    // Boon/Bane falls back to plain 2d6-vs-target odds rather than Traveller's
-    // canonical 3d6-keep-best/worst-2 — that math isn't implemented in
-    // travellerMath.ts yet (SS-04 decision: fall back rather than block).
+    // Levels are assigned during character creation; there is no attribute-derived
+    // starting value, so an unset skill simply sits at 0.
+    computeValue: () => 0,
+    // Levels are authored directly; the trained flag must not rewrite them.
+    trainedAffectsValue: false,
+    // Boon/Bane use the canonical 3d6-keep-best/worst-two odds.
     supportsBoonBane: true,
   },
   derivedStats: character => computeTravellerDerivedValues(character),
   resourceIds: ['str', 'dex', 'end'],
   panels: ['characteristics', 'skills', 'resources', 'finances', 'careers', 'augments', 'inventory', 'combat', 'notes'],
-  currency: 'single',
+  currency: {
+    mode: 'single',
+    denominations: [{ id: 'credits', label: 'Credits', abbr: 'Cr', value: 1 }],
+    read: character => ({ credits: character.travellerData?.credits ?? 0 }),
+    write: (character, amounts) => ({
+      travellerData: {
+        ...character.travellerData,
+        credits: amounts.credits ?? character.travellerData?.credits ?? 0,
+      },
+    }),
+  },
+  outcomes: [
+    { id: 'exceptional-success', label: 'Exceptional Success', tone: 'critical' },
+    { id: 'success', label: 'Success', tone: 'success' },
+    { id: 'failure', label: 'Failure', tone: 'failure' },
+    { id: 'exceptional-failure', label: 'Exceptional Failure', tone: 'fumble' },
+  ],
+  // No "pushed" mechanic in Traveller.
+  rollModifiers: [
+    { id: 'boon', label: 'Boon' },
+    { id: 'bane', label: 'Bane' },
+  ],
+  // Reuses the existing TempModifier duration ids, relabelled for a sci-fi setting.
+  timeUnits: [
+    { id: 'round', label: 'Round', abbrev: 'RND' },
+    { id: 'stretch', label: 'Watch', abbrev: 'WCH' },
+    { id: 'shift', label: 'Day', abbrev: 'DAY' },
+    { id: 'scene', label: 'Scene', abbrev: 'SCN' },
+    { id: 'permanent', label: 'Permanent', abbrev: '∞' },
+  ],
   terms: {
     abilities: 'Talents',
     spells: 'Psionic Powers',

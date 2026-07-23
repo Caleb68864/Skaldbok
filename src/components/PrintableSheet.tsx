@@ -260,35 +260,23 @@ function AbilitiesSpells({
 // ──────────────────────────────────────────────
 
 function Currency({ character, engine }: { character: CharacterRecord; engine: SystemEngine }): React.ReactElement {
-  if (engine.currency === 'single') {
-    return (
-      <div className="sheet-currency">
-        <div className="sheet-section-header">Currency</div>
-        <div className="sheet-currency-row">
-          <div className="sheet-currency-field">
-            <span className="sheet-currency-label">Credits (Cr)</span>
-            <span className="sheet-currency-value">{character.travellerData?.credits ?? 0}</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const denominations = engine.currency.denominations;
+  const amounts = engine.currency.read(character);
+  // A lone denomination carries its unit in the label ("Credits (Cr)") since
+  // there is no second box to give it context.
+  const showAbbr = denominations.length === 1;
   return (
     <div className="sheet-currency">
       <div className="sheet-section-header">Currency</div>
       <div className="sheet-currency-row">
-        <div className="sheet-currency-field">
-          <span className="sheet-currency-label">Gold</span>
-          <span className="sheet-currency-value">{character.coins?.gold ?? 0}</span>
-        </div>
-        <div className="sheet-currency-field">
-          <span className="sheet-currency-label">Silver</span>
-          <span className="sheet-currency-value">{character.coins?.silver ?? 0}</span>
-        </div>
-        <div className="sheet-currency-field">
-          <span className="sheet-currency-label">Copper</span>
-          <span className="sheet-currency-value">{character.coins?.copper ?? 0}</span>
-        </div>
+        {denominations.map(denom => (
+          <div key={denom.id} className="sheet-currency-field">
+            <span className="sheet-currency-label">
+              {showAbbr ? `${denom.label} (${denom.abbr})` : denom.label}
+            </span>
+            <span className="sheet-currency-value">{amounts[denom.id] ?? 0}</span>
+          </div>
+        ))}
       </div>
     </div>
   );

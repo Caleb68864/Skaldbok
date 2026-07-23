@@ -17,7 +17,6 @@ import type { BoonBaneState } from '../types/settings';
 import type { CharacterSkill } from '../types/character';
 import type { ConditionDefinition, AttributeDefinition } from '../types/system';
 import { nowISO } from '../utils/dates';
-import { computeSkillValue } from '../utils/derivedValues';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { getEngine } from '../features/systems/engine';
 
@@ -96,11 +95,13 @@ export default function SkillsScreen() {
     if (!character || skillsEditable || !engine.skill.supportsMarks) return;
     const cs = character.skills[skillId];
     const def = system?.skillCategories.flatMap(c => c.skills).find(s => s.id === skillId);
-    const attrVal = def?.linkedAttributeId ? (character.attributes[def.linkedAttributeId] ?? 10) : 0;
     const trained = cs?.trained ?? false;
-    const fallbackValue = def?.linkedAttributeId
-      ? computeSkillValue(attrVal, trained)
-      : (trained ? Math.max((def?.baseChance ?? 0) * 2, 1) : (def?.baseChance ?? 0));
+    // The engine owns the "no stored entry" value for its resolution system.
+    const fallbackValue = engine.skill.computeValue(
+      { baseChance: def?.baseChance ?? 0, linkedAttributeId: def?.linkedAttributeId },
+      character,
+      trained,
+    );
     const skill = cs ?? { value: fallbackValue, trained: false };
 
     let updated: CharacterSkill;
@@ -266,12 +267,7 @@ export default function SkillsScreen() {
                 </h2>
                 {visibleSkills.map(skill => {
                   const cs = character.skills[skill.id];
-                  const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 0;
-                  const computedValue = engine.skill.supportsMarks
-                    ? (skill.linkedAttributeId
-                        ? computeSkillValue(attrValue, cs?.trained ?? false)
-                        : (cs?.trained ? skill.baseChance * 2 : skill.baseChance))
-                    : engine.skill.defaultValue;
+                  const computedValue = engine.skill.computeValue(skill, character, cs?.trained ?? false);
                   const skillValue = cs?.value ?? computedValue;
                   const attrAbbr = skill.linkedAttributeId ? (attrAbbrMap[skill.linkedAttributeId] ?? '') : '';
                   const characteristicDM = skill.linkedAttributeId ? engine.attributeBadge(skill.linkedAttributeId, character) : null;
@@ -297,11 +293,12 @@ export default function SkillsScreen() {
                           checked={isTrained}
                           onChange={e => {
                             const newTrained = e.target.checked;
-                            const newValue = !engine.skill.supportsMarks
-                              ? (cs?.value ?? engine.skill.defaultValue)
-                              : skill.linkedAttributeId
-                                ? computeSkillValue(attrValue, newTrained)
-                                : (newTrained ? Math.max(skill.baseChance * 2, 1) : skill.baseChance);
+                            // Systems whose values are authored directly (e.g. Traveller
+                            // levels) must keep the stored number — recomputing would
+                            // discard it.
+                            const newValue = engine.skill.trainedAffectsValue
+                              ? engine.skill.computeValue(skill, character, newTrained)
+                              : (cs?.value ?? engine.skill.computeValue(skill, character, newTrained));
                             handleSkillChange(skill.id, { value: newValue, trained: newTrained });
                           }}
                           aria-label={`${skill.name} trained`}
