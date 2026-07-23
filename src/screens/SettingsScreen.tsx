@@ -29,6 +29,9 @@ const THEMES: { value: ThemeName; label: string; description: string }[] = [
   { value: 'dark', label: 'Dark', description: 'Deep grays with golden accents' },
   { value: 'parchment', label: 'Parchment', description: 'Warm fantasy-inspired tones' },
   { value: 'light', label: 'Light', description: 'Clean whites and light grays' },
+  { value: 'starfarers-cockpit', label: "Starfarer's Cockpit", description: 'Space-black and navy with amber + cyan accents' },
+  { value: 'databank', label: 'Databank', description: 'Cool slate/white with electric blue accents' },
+  { value: 'neon-sprawl', label: 'Neon Sprawl', description: 'Cyberpunk near-black with magenta + neon-cyan accents' },
 ];
 
 export default function SettingsScreen() {

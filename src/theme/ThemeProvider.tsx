@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
-import { DEFAULT_THEME, THEME_STORAGE_KEY } from './themes';
+import { DEFAULT_THEME, THEME_LIST, THEME_STORAGE_KEY } from './themes';
 import type { ThemeName } from './themes';
 import './theme.css';
 
@@ -18,8 +18,8 @@ interface ThemeProviderProps {
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<ThemeName>(() => {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === 'dark' || stored === 'parchment' || stored === 'light') {
-      return stored;
+    if (stored && (THEME_LIST as string[]).includes(stored)) {
+      return stored as ThemeName;
     }
     return DEFAULT_THEME;
   });

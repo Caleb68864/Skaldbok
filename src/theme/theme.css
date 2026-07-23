@@ -162,6 +162,84 @@
   --texture-highlight-strength: 0.15;
 }
 
+/* Starfarer's Cockpit theme — dark space-black/navy, amber + cyan */
+[data-theme="starfarers-cockpit"] {
+  --color-bg: #0A0E17;
+  --color-surface: #121A2B;
+  --color-surface-alt: #1A2740;
+  --color-text: #DCE6F5;
+  --color-text-muted: #8A9BB8;
+  --color-accent: #FFB000;
+  --color-accent-alt: #33D6E0;
+  --color-danger: #E24B4B;
+  --color-border: #2A3B5C;
+  --color-gold: #FFB000;
+  --color-success: #4FBF6B;
+  --color-warning: #FFA940;
+  --color-info: #33D6E0;
+
+  /* Mode indicators */
+  --color-mode-play: #1f7a4d;
+  --color-mode-edit: #2452a8;
+
+  /* Texture tokens */
+  --texture-grain-opacity: 0.05;
+  --texture-shadow-strength: 0.35;
+  --texture-highlight-strength: 0.1;
+}
+
+/* Databank theme — light, cool slate/white, electric blue */
+[data-theme="databank"] {
+  --color-bg: #F4F6F9;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #E7ECF3;
+  --color-text: #1B2534;
+  --color-text-muted: #566179;
+  --color-accent: #2464EB;
+  --color-accent-alt: #0F3FA6;
+  --color-danger: #D6362A;
+  --color-border: #C3CBD9;
+  --color-gold: #C79A2E;
+  --color-success: #21875A;
+  --color-warning: #B4711F;
+  --color-info: #2464EB;
+
+  /* Mode indicators */
+  --color-mode-play: #21875a;
+  --color-mode-edit: #2464eb;
+
+  /* Texture tokens */
+  --texture-grain-opacity: 0.0;
+  --texture-shadow-strength: 0.08;
+  --texture-highlight-strength: 0.18;
+}
+
+/* Neon Sprawl theme — cyberpunk dark, near-black, magenta + neon-cyan */
+[data-theme="neon-sprawl"] {
+  --color-bg: #08060C;
+  --color-surface: #120E1C;
+  --color-surface-alt: #1C1530;
+  --color-text: #EDE7F6;
+  --color-text-muted: #9A8FC2;
+  --color-accent: #FF2DD4;
+  --color-accent-alt: #2DE9FF;
+  --color-danger: #FF3B5C;
+  --color-border: #3A2A55;
+  --color-gold: #FFC22D;
+  --color-success: #2DFFA0;
+  --color-warning: #FF9A2D;
+  --color-info: #2DE9FF;
+
+  /* Mode indicators */
+  --color-mode-play: #2dffa0;
+  --color-mode-edit: #ff2dd4;
+
+  /* Texture tokens */
+  --texture-grain-opacity: 0.08;
+  --texture-shadow-strength: 0.45;
+  --texture-highlight-strength: 0.06;
+}
+
 /* ============================================================
    Global Base Styles
    ============================================================ */
