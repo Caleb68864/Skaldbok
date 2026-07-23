@@ -57,6 +57,9 @@ export const travellerEngine: SystemEngine = {
     defaultValue: 0,
     display: formatSkillDisplay,
     supportsMarks: false,
+    // Boon/Bane falls back to plain 2d6-vs-target odds rather than Traveller's
+    // canonical 3d6-keep-best/worst-2 — that math isn't implemented in
+    // travellerMath.ts yet (SS-04 decision: fall back rather than block).
     supportsBoonBane: true,
   },
   derivedStats: character => computeTravellerDerivedValues(character),
