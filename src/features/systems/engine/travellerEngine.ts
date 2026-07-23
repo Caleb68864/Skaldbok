@@ -36,10 +36,20 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
   };
 }
 
-/** Formats a Traveller skill's level + 2d6-vs-8 success probability string. */
-export function formatSkillDisplay(value: number): string {
-  const prob = twoD6SuccessProbability(8, value);
-  return `Level ${value} · ${Math.round(prob * 100)}%`;
+/**
+ * Formats a Traveller skill's level + linked-characteristic DM + 2d6-vs-8
+ * success probability string. `characteristicDM` is optional (and defaults to
+ * 0) because `SkillEngineConfig['display']` is typed as `(value: number) =>
+ * string` — callers that only have the raw level can still call this safely.
+ * Wiring the actual per-skill linked-characteristic DM through requires the
+ * `SkillsScreen.tsx` call site to pass it, which is outside this sub-spec's
+ * in-scope files.
+ */
+export function formatSkillDisplay(value: number, characteristicDM = 0): string {
+  const effectiveModifier = value + characteristicDM;
+  const prob = twoD6SuccessProbability(8, effectiveModifier);
+  const dmLabel = characteristicDM !== 0 ? ` · DM ${formatDM(characteristicDM)}` : '';
+  return `Level ${value}${dmLabel} · ${Math.round(prob * 100)}%`;
 }
 
 export const travellerEngine: SystemEngine = {
