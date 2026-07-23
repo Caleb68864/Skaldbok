@@ -1,5 +1,6 @@
 import type { Versioned } from './common';
 import type { ID } from './common';
+import type { ThemeName } from '../theme/themes';
 
 /**
  * The application interaction mode.
@@ -49,7 +50,7 @@ export interface AppSettings extends Versioned {
   /** ID of the currently active character, or `null` if none is selected. */
   activeCharacterId: ID | null;
   /** Active UI colour theme. */
-  theme: 'dark' | 'parchment' | 'light';
+  theme: ThemeName;
   /** Current interaction mode controlling field editability. */
   mode: ModeName;
   /** If `true`, the Screen Wake Lock API is requested to keep the display on during play. */
