@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
+import { getEngine } from '../features/systems/engine';
 import { useAutosave } from '../hooks/useAutosave';
 import { useFieldEditable, useIsEditMode } from '../utils/modeGuards';
 import { AttributeField } from '../components/fields/AttributeField';
@@ -140,9 +141,17 @@ export default function SheetScreen() {
   if (!character) return null;
 
   const isPlayMode = settings.mode === 'play';
+  const engine = getEngine(system);
+  const isTraveller = character.systemId === 'traveller';
 
-  const DEFAULT_PANEL_ORDER = ['identity', 'attributes', 'resources', 'derived', 'rest'];
-  const panelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
+  const DEFAULT_PANEL_ORDER = isTraveller
+    ? ['identity', 'characteristics', 'resources', 'finances', 'careers', 'augments']
+    : ['identity', 'attributes', 'resources', 'derived', 'rest'];
+  const storedPanelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
+  const panelOrder = [
+    ...storedPanelOrder.filter(key => DEFAULT_PANEL_ORDER.includes(key)),
+    ...DEFAULT_PANEL_ORDER.filter(key => !storedPanelOrder.includes(key)),
+  ];
 
   function updateAttr(id: string, delta: number) {
     if (!character) return;
@@ -186,6 +195,11 @@ export default function SheetScreen() {
   function updateMeta(field: string, value: string) {
     if (!character) return;
     updateCharacter({ metadata: { ...character.metadata, [field]: value }, updatedAt: nowISO() });
+  }
+
+  function updateTravellerData(field: string, value: string | number) {
+    if (!character) return;
+    updateCharacter({ travellerData: { ...character.travellerData, [field]: value }, updatedAt: nowISO() });
   }
 
   function setDerivedOverride(key: string, value: number) {
@@ -456,9 +470,9 @@ export default function SheetScreen() {
   );
 
   const resourcesPanel = (
-    <SectionPanel title="Resources" icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
+    <SectionPanel title={isTraveller ? 'Damage Track' : 'Resources'} icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-md)]">
-        {['hp', 'wp'].map(resId => {
+        {engine.resourceIds.map(resId => {
           const res = character.resources[resId];
           if (!res) return null;
           const def = system?.resources.find(r => r.id === resId);
@@ -475,6 +489,117 @@ export default function SheetScreen() {
             />
           );
         })}
+      </div>
+    </SectionPanel>
+  );
+
+  // ---- Traveller panels ----
+  const characteristicsPanel = (
+    <SectionPanel title="Characteristics" icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
+      <div className="flex flex-wrap gap-[var(--space-md)] justify-center">
+        {engine.attributeIds.map(attrId => {
+          const attr = system?.attributes.find(a => a.id === attrId);
+          const ev = getEffectiveValue(attrId, character);
+          const dm = engine.attributeBadge(attrId, character);
+          return (
+            <div key={attrId} className="flex flex-col items-center gap-[var(--space-xs)]">
+              <AttributeField
+                attributeId={attrId}
+                abbreviation={attr?.abbreviation ?? attrId.toUpperCase()}
+                value={ev.effective}
+                min={attr?.min}
+                max={attr?.max}
+                onChange={v => updateAttr(attrId, v)}
+                disabled={!attributesEditable}
+              />
+              {dm !== null && (
+                <span
+                  aria-label={`${attr?.abbreviation ?? attrId.toUpperCase()} DM`}
+                  className="text-[length:var(--font-size-xs,10px)] font-bold text-[var(--color-primary)] px-[var(--space-sm)] py-0.5 rounded-[var(--radius-sm)] border border-[var(--color-border)]"
+                >
+                  DM {dm}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </SectionPanel>
+  );
+
+  const financesPanel = (
+    <SectionPanel title="Finances" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
+      <div className="flex flex-col gap-[var(--space-md)]">
+        <div>
+          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Credits</label>
+          <input
+            type="number"
+            aria-label="Credits"
+            className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
+            value={character.travellerData?.credits ?? 0}
+            disabled={!identityEditable}
+            onChange={e => updateTravellerData('credits', Number(e.target.value) || 0)}
+          />
+        </div>
+        <div>
+          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Finance Notes</label>
+          <textarea
+            aria-label="Finance Notes"
+            className={cn(inputClass(identityEditable), 'min-h-[80px]', identityEditable ? 'field--editable' : 'field--locked')}
+            value={character.travellerData?.financeNotes ?? ''}
+            disabled={!identityEditable}
+            onChange={e => updateTravellerData('financeNotes', e.target.value)}
+          />
+        </div>
+      </div>
+    </SectionPanel>
+  );
+
+  const careersPanel = (
+    <SectionPanel title="Careers / Background" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
+      <textarea
+        aria-label="Careers"
+        className={cn(inputClass(identityEditable), 'min-h-[120px]', identityEditable ? 'field--editable' : 'field--locked')}
+        value={character.travellerData?.careers ?? ''}
+        disabled={!identityEditable}
+        onChange={e => updateTravellerData('careers', e.target.value)}
+      />
+    </SectionPanel>
+  );
+
+  const augmentsPanel = (
+    <SectionPanel title="Augments / Species" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
+      <div className="flex flex-col gap-[var(--space-md)]">
+        <div>
+          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Species</label>
+          <input
+            aria-label="Species"
+            className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
+            value={character.travellerData?.species ?? ''}
+            disabled={!identityEditable}
+            onChange={e => updateTravellerData('species', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Species Traits</label>
+          <textarea
+            aria-label="Species Traits"
+            className={cn(inputClass(identityEditable), 'min-h-[80px]', identityEditable ? 'field--editable' : 'field--locked')}
+            value={character.travellerData?.speciesTraits ?? ''}
+            disabled={!identityEditable}
+            onChange={e => updateTravellerData('speciesTraits', e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Augments</label>
+          <textarea
+            aria-label="Augments"
+            className={cn(inputClass(identityEditable), 'min-h-[80px]', identityEditable ? 'field--editable' : 'field--locked')}
+            value={character.travellerData?.augments ?? ''}
+            disabled={!identityEditable}
+            onChange={e => updateTravellerData('augments', e.target.value)}
+          />
+        </div>
       </div>
     </SectionPanel>
   );
@@ -534,9 +659,9 @@ export default function SheetScreen() {
     </SectionPanel>
   );
 
-  // Death rolls panel (only rendered when HP == 0)
+  // Death rolls panel (only rendered when HP == 0 and the engine supports the death panel)
   const hp = character.resources['hp'] ?? { current: 0, max: 10 };
-  const isDown = hp.current === 0;
+  const isDown = engine.panels.includes('death') && hp.current === 0;
   const deathRolls = character.resources['deathRolls'] ?? { current: 0, max: 3 };
   const deathSuccesses = character.resources['deathSuccesses'] ?? { current: 0, max: 3 };
   const deathRollFailures = deathRolls.current;
@@ -631,21 +756,39 @@ export default function SheetScreen() {
   ) : null;
 
   // ---- Panel map & visibility ----
-  const panelMap: Record<string, React.ReactNode> = {
-    identity: identityPanel,
-    attributes: attributesPanel,
-    resources: resourcesPanel,
-    derived: derivedPanel,
-    rest: restPanel,
-  };
+  const panelMap: Record<string, React.ReactNode> = isTraveller
+    ? {
+        identity: identityPanel,
+        characteristics: characteristicsPanel,
+        resources: resourcesPanel,
+        finances: financesPanel,
+        careers: careersPanel,
+        augments: augmentsPanel,
+      }
+    : {
+        identity: identityPanel,
+        attributes: attributesPanel,
+        resources: resourcesPanel,
+        derived: derivedPanel,
+        rest: restPanel,
+      };
 
-  const panelVisibility: Record<string, boolean> = {
-    identity: true,
-    attributes: true,
-    resources: true,
-    derived: true,
-    rest: isPlayMode,
-  };
+  const panelVisibility: Record<string, boolean> = isTraveller
+    ? {
+        identity: true,
+        characteristics: true,
+        resources: true,
+        finances: true,
+        careers: true,
+        augments: true,
+      }
+    : {
+        identity: true,
+        attributes: true,
+        resources: true,
+        derived: true,
+        rest: isPlayMode,
+      };
 
   const panelItems: PanelItem[] = panelOrder
     .filter(key => panelMap[key] !== undefined)
