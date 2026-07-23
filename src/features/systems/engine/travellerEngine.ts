@@ -104,12 +104,9 @@ export const travellerEngine: SystemEngine = {
   currency: {
     mode: 'single',
     denominations: [{ id: 'credits', label: 'Credits', abbr: 'Cr', value: 1 }],
-    read: character => ({ credits: character.travellerData?.credits ?? 0 }),
+    read: character => ({ credits: character.wealth?.credits ?? 0 }),
     write: (character, amounts) => ({
-      travellerData: {
-        ...character.travellerData,
-        credits: amounts.credits ?? character.travellerData?.credits ?? 0,
-      },
+      wealth: { ...character.wealth, ...amounts },
     }),
   },
   outcomes: [

@@ -139,6 +139,7 @@ export default function SheetScreen() {
     string,
     number | string | undefined
   >;
+  const currencyAmounts = engine.currency.read(character);
 
   const DEFAULT_PANEL_ORDER = isTraveller
     ? ['identity', 'characteristics', 'resources', 'finances', 'careers', 'augments']
@@ -193,9 +194,15 @@ export default function SheetScreen() {
     updateCharacter({ metadata: { ...character.metadata, [field]: value }, updatedAt: nowISO() });
   }
 
-  function updateTravellerData(field: string, value: string | number) {
+  /** Reads a free-text field out of the character's system-specific bag. */
+  function sysStr(key: string): string {
+    return (character?.systemData?.[key] as string | undefined) ?? '';
+  }
+
+  /** Writes a free-text field into the character's system-specific bag. */
+  function setSysStr(key: string, value: string) {
     if (!character) return;
-    updateCharacter({ travellerData: { ...character.travellerData, [field]: value }, updatedAt: nowISO() });
+    updateCharacter({ systemData: { ...character.systemData, [key]: value }, updatedAt: nowISO() });
   }
 
   function setDerivedOverride(key: string, value: number) {
@@ -342,6 +349,48 @@ export default function SheetScreen() {
       : "bg-[var(--color-surface)] cursor-default opacity-70"
   );
 
+  // ---- Identity fields (declared by the active system, not hardcoded) ----
+  type IdentityField = { id: string; label: string; type?: 'text' | 'textarea' };
+
+  const identityFields: IdentityField[] = system?.identityFields ?? [];
+  // The first three declared fields share the compact meta row; anything beyond
+  // that gets its own full-width line, matching the sheet's existing rhythm.
+  const identityRowFields = identityFields.slice(0, 3);
+  const identityRestFields = identityFields.slice(3);
+
+  function renderIdentityField(field: IdentityField) {
+    const value = character?.metadata?.[field.id] ?? '';
+    const className = cn(
+      inputClass(identityEditable),
+      field.type === 'textarea' && 'min-h-[80px]',
+      identityEditable ? 'field--editable' : 'field--locked',
+    );
+    return (
+      <div key={field.id}>
+        <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
+          {field.label}
+        </label>
+        {field.type === 'textarea' ? (
+          <textarea
+            aria-label={field.label}
+            className={className}
+            value={value}
+            disabled={!identityEditable}
+            onChange={e => updateMeta(field.id, e.target.value)}
+          />
+        ) : (
+          <input
+            aria-label={field.label}
+            className={className}
+            value={value}
+            disabled={!identityEditable}
+            onChange={e => updateMeta(field.id, e.target.value)}
+          />
+        )}
+      </div>
+    );
+  }
+
   // ---- Panel definitions ----
   const identityPanel = (
     <SectionPanel title="Identity" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
@@ -362,24 +411,12 @@ export default function SheetScreen() {
               onChange={e => updateCharacter({ name: e.target.value, updatedAt: nowISO() })}
             />
           </div>
-          <div className="identity-meta-row">
-            <div>
-              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Kin</label>
-              <input aria-label="Kin" className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')} value={character.metadata.kin} disabled={!identityEditable} onChange={e => updateMeta('kin', e.target.value)} />
+          {identityRowFields.length > 0 && (
+            <div className="identity-meta-row">
+              {identityRowFields.map(renderIdentityField)}
             </div>
-            <div>
-              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Profession</label>
-              <input aria-label="Profession" className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')} value={character.metadata.profession} disabled={!identityEditable} onChange={e => updateMeta('profession', e.target.value)} />
-            </div>
-            <div>
-              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Age</label>
-              <input aria-label="Age" className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')} value={character.metadata.age ?? ''} disabled={!identityEditable} onChange={e => updateMeta('age', e.target.value)} />
-            </div>
-          </div>
-          <div>
-            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Weakness</label>
-            <input aria-label="Weakness" className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')} value={character.metadata.weakness ?? ''} disabled={!identityEditable} onChange={e => updateMeta('weakness', e.target.value)} />
-          </div>
+          )}
+          {identityRestFields.map(renderIdentityField)}
         </div>
       </div>
     </SectionPanel>
@@ -497,25 +534,32 @@ export default function SheetScreen() {
   const financesPanel = (
     <SectionPanel title="Finances" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-md)]">
-        <div>
-          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Credits</label>
-          <input
-            type="number"
-            aria-label="Credits"
-            className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
-            value={character.travellerData?.credits ?? 0}
-            disabled={!identityEditable}
-            onChange={e => updateTravellerData('credits', Number(e.target.value) || 0)}
-          />
-        </div>
+        {engine.currency.denominations.map(denom => (
+          <div key={denom.id}>
+            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">{denom.label}</label>
+            <input
+              type="number"
+              aria-label={denom.label}
+              className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
+              value={currencyAmounts[denom.id] ?? 0}
+              disabled={!identityEditable}
+              onChange={e =>
+                updateCharacter({
+                  ...engine.currency.write(character, { [denom.id]: Number(e.target.value) || 0 }),
+                  updatedAt: nowISO(),
+                })
+              }
+            />
+          </div>
+        ))}
         <div>
           <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Finance Notes</label>
           <textarea
             aria-label="Finance Notes"
             className={cn(inputClass(identityEditable), 'min-h-[80px]', identityEditable ? 'field--editable' : 'field--locked')}
-            value={character.travellerData?.financeNotes ?? ''}
+            value={sysStr('financeNotes')}
             disabled={!identityEditable}
-            onChange={e => updateTravellerData('financeNotes', e.target.value)}
+            onChange={e => setSysStr('financeNotes', e.target.value)}
           />
         </div>
       </div>
@@ -527,9 +571,9 @@ export default function SheetScreen() {
       <textarea
         aria-label="Careers"
         className={cn(inputClass(identityEditable), 'min-h-[120px]', identityEditable ? 'field--editable' : 'field--locked')}
-        value={character.travellerData?.careers ?? ''}
+        value={sysStr('careers')}
         disabled={!identityEditable}
-        onChange={e => updateTravellerData('careers', e.target.value)}
+        onChange={e => setSysStr('careers', e.target.value)}
       />
     </SectionPanel>
   );
@@ -538,23 +582,13 @@ export default function SheetScreen() {
     <SectionPanel title="Augments / Species" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-md)]">
         <div>
-          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Species</label>
-          <input
-            aria-label="Species"
-            className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
-            value={character.travellerData?.species ?? ''}
-            disabled={!identityEditable}
-            onChange={e => updateTravellerData('species', e.target.value)}
-          />
-        </div>
-        <div>
           <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Species Traits</label>
           <textarea
             aria-label="Species Traits"
             className={cn(inputClass(identityEditable), 'min-h-[80px]', identityEditable ? 'field--editable' : 'field--locked')}
-            value={character.travellerData?.speciesTraits ?? ''}
+            value={sysStr('speciesTraits')}
             disabled={!identityEditable}
-            onChange={e => updateTravellerData('speciesTraits', e.target.value)}
+            onChange={e => setSysStr('speciesTraits', e.target.value)}
           />
         </div>
         <div>
@@ -562,9 +596,9 @@ export default function SheetScreen() {
           <textarea
             aria-label="Augments"
             className={cn(inputClass(identityEditable), 'min-h-[80px]', identityEditable ? 'field--editable' : 'field--locked')}
-            value={character.travellerData?.augments ?? ''}
+            value={sysStr('augments')}
             disabled={!identityEditable}
-            onChange={e => updateTravellerData('augments', e.target.value)}
+            onChange={e => setSysStr('augments', e.target.value)}
           />
         </div>
       </div>

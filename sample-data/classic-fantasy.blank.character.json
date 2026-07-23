@@ -1,6 +1,6 @@
 {
   "id": "blank-template",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "systemId": "classic-fantasy",
   "name": "New Adventurer",
   "createdAt": "2026-01-01T00:00:00.000Z",
@@ -30,9 +30,18 @@
     "disheartened": false
   },
   "resources": {
-    "hp": { "current": 10, "max": 10 },
-    "wp": { "current": 10, "max": 10 },
-    "deathRolls": { "current": 0, "max": 3 }
+    "hp": {
+      "current": 10,
+      "max": 10
+    },
+    "wp": {
+      "current": 10,
+      "max": 10
+    },
+    "deathRolls": {
+      "current": 0,
+      "max": 3
+    }
   },
   "skills": {},
   "weapons": [],
@@ -41,15 +50,15 @@
   "inventory": [],
   "tinyItems": [],
   "memento": "",
-  "coins": {
-    "gold": 0,
-    "silver": 0,
-    "copper": 0
-  },
   "spells": [],
   "heroicAbilities": [],
   "derivedOverrides": {},
   "uiState": {
     "expandedSections": []
+  },
+  "wealth": {
+    "gold": 0,
+    "silver": 0,
+    "copper": 0
   }
 }

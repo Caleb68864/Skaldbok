@@ -1,17 +1,15 @@
 {
   "id": "blank-template",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "systemId": "traveller",
   "name": "New Traveller",
   "createdAt": "2026-01-01T00:00:00.000Z",
   "updatedAt": "2026-01-01T00:00:00.000Z",
   "metadata": {
-    "kin": "",
-    "profession": "",
-    "age": "Adult",
-    "weakness": "",
-    "appearance": "",
-    "notes": ""
+    "species": "",
+    "homeworld": "",
+    "age": "",
+    "title": ""
   },
   "attributes": {
     "str": 7,
@@ -27,9 +25,18 @@
     "unconscious": false
   },
   "resources": {
-    "str": { "current": 0, "max": 7 },
-    "dex": { "current": 0, "max": 7 },
-    "end": { "current": 0, "max": 7 }
+    "str": {
+      "current": 0,
+      "max": 7
+    },
+    "dex": {
+      "current": 0,
+      "max": 7
+    },
+    "end": {
+      "current": 0,
+      "max": 7
+    }
   },
   "skills": {},
   "weapons": [],
@@ -38,23 +45,19 @@
   "inventory": [],
   "tinyItems": [],
   "memento": "",
-  "coins": {
-    "gold": 0,
-    "silver": 0,
-    "copper": 0
-  },
   "spells": [],
   "heroicAbilities": [],
   "derivedOverrides": {},
   "uiState": {
     "expandedSections": []
   },
-  "travellerData": {
-    "credits": 0,
+  "systemData": {
     "financeNotes": "",
     "careers": "",
     "augments": "",
-    "species": "",
     "speciesTraits": ""
+  },
+  "wealth": {
+    "credits": 0
   }
 }

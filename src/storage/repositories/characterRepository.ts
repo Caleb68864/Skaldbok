@@ -3,6 +3,7 @@ import type { CharacterRecord } from '../../types/character';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { normalizeCharacter } from '../../utils/characterNormalization';
+import { upgradeCharacter } from '../../utils/migrations';
 
 /**
  * Retrieves all {@link CharacterRecord} entries stored in IndexedDB.
@@ -21,7 +22,7 @@ import { normalizeCharacter } from '../../utils/characterNormalization';
  * ```
  */
 export async function getAll(options?: { includeDeleted?: boolean }): Promise<CharacterRecord[]> {
-  const rows = await db.characters.toArray();
+  const rows = (await db.characters.toArray()).map(upgradeCharacter);
   return options?.includeDeleted ? rows : excludeDeleted(rows);
 }
 
@@ -41,7 +42,10 @@ export async function getById(id: string, options?: { includeDeleted?: boolean }
   const row = await db.characters.get(id);
   if (!row) return undefined;
   if (!options?.includeDeleted && row.deletedAt) return undefined;
-  return row;
+  // Records written by an older schema version are brought forward on read, so
+  // the rest of the app only ever sees the current shape. The upgraded record
+  // persists on the next save.
+  return upgradeCharacter(row);
 }
 
 /**

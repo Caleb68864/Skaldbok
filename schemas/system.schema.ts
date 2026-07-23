@@ -53,6 +53,11 @@ export const systemDefinitionSchema = z.object({
   skillCategories: z.array(skillCategorySchema).describe('Grouped skill definitions'),
   sectionLayouts: z.array(sectionLayoutSchema).optional().describe('Optional section layout overrides'),
   themesSupported: z.array(z.string()).optional().describe('Theme names this system supports'),
+  identityFields: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    type: z.enum(['text', 'textarea']).optional(),
+  })).optional().describe('Identity fields shown on the sheet, keyed into character.metadata'),
   resolution: z.enum(['d20-roll-under', '2d6-plus']).optional().describe('Core resolution mechanic'),
   currency: z.object({
     label: z.string().min(1),

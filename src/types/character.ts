@@ -7,20 +7,26 @@ import type { ID, Timestamped, Versioned } from './common';
  * All fields are plain strings so they can be freely edited in the identity
  * panel without imposing validation constraints on the user.
  */
-export interface CharacterMetadata {
-  /** The character's kin (race / lineage), e.g. "Human", "Elf", "Dwarf". */
-  kin: string;
-  /** The character's profession / class, e.g. "Knight", "Hunter". */
-  profession: string;
-  /** Free-text age, e.g. "23" or "Middle-aged". */
-  age: string;
-  /** The character's personal weakness — used for advancement checks. */
-  weakness: string;
-  /** Physical appearance description. */
-  appearance: string;
-  /** Miscellaneous notes about the character. */
-  notes: string;
-}
+export type CharacterMetadata = Record<string, string>;
+
+/**
+ * Identity field ids the bundled systems use.
+ *
+ * @remarks
+ * `metadata` is an open string map so each ruleset can declare its own identity
+ * fields via `SystemDefinition.identityFields` — Dragonbane wants Kin and
+ * Weakness, a sci-fi setting wants Species and Homeworld. These constants exist
+ * only so code that genuinely depends on a specific field (Dragonbane's
+ * weakness advancement track) can refer to it without a bare string literal.
+ */
+export const METADATA_KEYS = {
+  kin: 'kin',
+  profession: 'profession',
+  age: 'age',
+  weakness: 'weakness',
+  appearance: 'appearance',
+  notes: 'notes',
+} as const;
 
 /**
  * A single skill entry on the character sheet.
@@ -350,15 +356,15 @@ export interface CharacterRecord extends Versioned, Timestamped {
   tinyItems: string[];
   /** The character's memento item description. */
   memento: string;
-  /** Coin purse. */
-  coins: {
-    /** Gold coins held. */
-    gold: number;
-    /** Silver coins held. */
-    silver: number;
-    /** Copper coins held. */
-    copper: number;
-  };
+  /**
+   * Money held, keyed by the active system's currency denomination id.
+   *
+   * @remarks
+   * Dragonbane stores `gold`/`silver`/`copper`; Traveller stores `credits`.
+   * Read and write it through `engine.currency` rather than indexing directly,
+   * so screens stay system-agnostic.
+   */
+  wealth: Record<string, number>;
   /** Spells known by the character. */
   spells: Spell[];
   /** Heroic abilities unlocked by the character. */
@@ -389,13 +395,13 @@ export interface CharacterRecord extends Versioned, Timestamped {
   deletedAt?: string;
   /** Transaction UUID identifying the cascade that soft-deleted this character. */
   softDeletedBy?: string;
-  /** System-specific data for Traveller-based characters. */
-  travellerData?: {
-    credits?: number;
-    financeNotes?: string;
-    careers?: string;
-    augments?: string;
-    species?: string;
-    speciesTraits?: string;
-  };
+  /**
+   * Free-form data belonging to the character's game system.
+   *
+   * @remarks
+   * Replaces the former `travellerData` bag, which named one system on the
+   * shared record and meant a third ruleset would need a third field. Systems
+   * own the shape; the schema validates only that values are JSON-serialisable.
+   */
+  systemData?: Record<string, unknown>;
 }

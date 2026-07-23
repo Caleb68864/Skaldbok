@@ -3,7 +3,7 @@ import * as characterRepository from '../storage/repositories/characterRepositor
 import { generateId } from './ids';
 import { nowISO } from './dates';
 import { BUNDLED_SYSTEMS } from '../systems/registry';
-import type { CharacterRecord, CharacterMetadata } from '../types/character';
+import type { CharacterRecord } from '../types/character';
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'character';
@@ -33,10 +33,11 @@ function normalizeSystemId(systemId: string): string {
  * Recursively strips HTML from every string reachable inside `value`.
  *
  * @remarks
- * Used for free-form data bags (character metadata, system-specific data such
- * as `travellerData`) so new string fields are sanitized automatically instead
- * of having to be enumerated by name — the omission that previously let
- * `travellerData` strings through unsanitized.
+ * Used for free-form data bags (`metadata`, `systemData`) so new string fields
+ * are sanitized automatically instead of having to be enumerated by name — the
+ * omission that previously let system-specific strings through unsanitized.
+ * Both bags are open maps whose keys are owned by the active ruleset, so a
+ * field-name list here would go stale the moment a system adds a field.
  */
 function sanitizeDeep<T>(value: T): T {
   if (typeof value === 'string') return stripHtml(value) as unknown as T;
@@ -56,11 +57,11 @@ function sanitizeCharacterStrings(char: CharacterRecord): CharacterRecord {
     ...char,
     systemId: normalizeSystemId(char.systemId),
     name: stripHtml(char.name),
-    metadata: sanitizeDeep(char.metadata) as CharacterMetadata,
+    metadata: sanitizeDeep(char.metadata),
     memento: stripHtml(char.memento),
   };
-  if (char.travellerData) {
-    sanitized.travellerData = sanitizeDeep(char.travellerData);
+  if (char.systemData) {
+    sanitized.systemData = sanitizeDeep(char.systemData);
   }
   return sanitized;
 }

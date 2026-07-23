@@ -12,11 +12,16 @@ import * as characterRepository from '../../storage/repositories/characterReposi
 import * as inventoryContainerRepository from '../../storage/repositories/inventoryContainerRepository';
 import { computeEncumbranceLimit } from '../../utils/derivedValues';
 import { nowISO } from '../../utils/dates';
+import { useSystemEngine } from '../systems/engine';
+import type { CurrencyDenomination } from '../systems/engine/types';
 import type { CharacterRecord, InventoryItem } from '../../types/character';
 import type {
   InventoryContainer,
   InventoryContainerKind,
 } from '../../types/inventoryContainer';
+
+/** Money held by a carrier, keyed by the active system's denomination ids. */
+type Wealth = Record<string, number>;
 
 type Carrier =
   | {
@@ -24,7 +29,7 @@ type Carrier =
       id: string;
       name: string;
       items: InventoryItem[];
-      coins: { gold: number; silver: number; copper: number };
+      wealth: Wealth;
       capacity: number;
       character: CharacterRecord;
     }
@@ -33,7 +38,7 @@ type Carrier =
       id: string;
       name: string;
       items: InventoryItem[];
-      coins: { gold: number; silver: number; copper: number };
+      wealth: Wealth;
       capacity: number | null;
       container: InventoryContainer;
       containerKind: InventoryContainerKind;
@@ -42,8 +47,74 @@ type Carrier =
 const inputClasses =
   'w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]';
 
-function coinTotalCopper(coins: { gold: number; silver: number; copper: number }): number {
-  return coins.gold * 100 + coins.silver * 10 + coins.copper;
+/**
+ * Value of `amounts` expressed in the smallest denomination the system defines.
+ *
+ * @remarks
+ * Derived from each denomination's `value` rather than a 100/10/1 coin ladder,
+ * so a system with different exchange rates (or a single abstract currency)
+ * totals correctly without a code change.
+ */
+function totalInSmallest(denoms: CurrencyDenomination[], amounts: Wealth): number {
+  return denoms.reduce((sum, d) => sum + (amounts[d.id] ?? 0) * d.value, 0);
+}
+
+/** Fills in every declared denomination so arithmetic never hits `undefined`. */
+function normalizeWealth(denoms: CurrencyDenomination[], amounts: Wealth): Wealth {
+  const out: Wealth = {};
+  for (const d of denoms) out[d.id] = amounts[d.id] ?? 0;
+  return out;
+}
+
+/**
+ * Settles negative denominations by breaking down higher ones.
+ *
+ * @remarks
+ * Denominations are ordered highest-value first. A shortfall borrows one unit
+ * of the nearest higher denomination that still has stock, converting through
+ * the `value` fields so "1 gold → 9 silver + 10 copper" falls out of the data.
+ * Returns `null` when the carrier simply does not hold enough, so callers can
+ * refuse the whole operation instead of writing a negative purse.
+ */
+function makeChange(denoms: CurrencyDenomination[], amounts: Wealth): Wealth | null {
+  const next = { ...amounts };
+  for (let i = denoms.length - 1; i >= 1; i--) {
+    while (next[denoms[i].id] < 0) {
+      let donor = -1;
+      for (let j = i - 1; j >= 0; j--) {
+        if (next[denoms[j].id] > 0) { donor = j; break; }
+      }
+      if (donor < 0) break;
+      next[denoms[donor].id] -= 1;
+      // Intermediate denominations keep the change from breaking the donor.
+      for (let k = donor + 1; k < i; k++) {
+        next[denoms[k].id] += denoms[k - 1].value / denoms[k].value - 1;
+      }
+      next[denoms[i].id] += denoms[i - 1].value / denoms[i].value;
+    }
+  }
+  if (denoms.some(d => next[d.id] < 0)) return null;
+  return next;
+}
+
+/**
+ * Projects system-neutral amounts back onto a container's coin purse.
+ *
+ * @remarks
+ * `InventoryContainer.coins` is a fixed gold/silver/copper record, so a
+ * denomination the container has no slot for (Traveller credits) is dropped
+ * rather than invented. Named keys here are the container schema's own fields,
+ * not an assumption about the active system.
+ */
+function containerCoinsFrom(
+  existing: InventoryContainer['coins'],
+  amounts: Wealth,
+): InventoryContainer['coins'] {
+  return {
+    gold: amounts.gold ?? existing.gold,
+    silver: amounts.silver ?? existing.silver,
+    copper: amounts.copper ?? existing.copper,
+  };
 }
 
 function carrierWeight(items: InventoryItem[]): number {
@@ -57,6 +128,8 @@ function kindIcon(kind: InventoryContainerKind): string {
 export function PartyInventoryTab() {
   const { activeCampaign, activeParty } = useCampaignContext();
   const { showToast } = useToast();
+  const engine = useSystemEngine();
+  const denominations = engine.currency.denominations;
 
   const [pcs, setPcs] = useState<CharacterRecord[]>([]);
   const [containers, setContainers] = useState<InventoryContainer[]>([]);
@@ -124,7 +197,7 @@ export function PartyInventoryTab() {
         id: `pc:${pc.id}`,
         name: pc.name,
         items: pc.inventory,
-        coins: pc.coins,
+        wealth: normalizeWealth(denominations, engine.currency.read(pc)),
         capacity: computeEncumbranceLimit(pc),
         character: pc,
       });
@@ -135,19 +208,25 @@ export function PartyInventoryTab() {
         id: `container:${c.id}`,
         name: c.name,
         items: c.items,
-        coins: c.coins,
+        wealth: normalizeWealth(denominations, c.coins),
         capacity: c.capacity,
         container: c,
         containerKind: c.kind,
       });
     }
     return out;
-  }, [pcs, containers]);
+  }, [pcs, containers, denominations, engine]);
 
-  const grandGoldEquiv = useMemo(() => {
-    const totalCopper = carriers.reduce((s, c) => s + coinTotalCopper(c.coins), 0);
-    return totalCopper / 100;
-  }, [carriers]);
+  /**
+   * Party-wide money, expressed in the highest denomination the system defines
+   * (gold for Dragonbane, credits for a single-currency system).
+   */
+  const topDenomination = denominations[0] ?? null;
+  const grandCurrencyTotal = useMemo(() => {
+    if (!topDenomination) return 0;
+    const total = carriers.reduce((s, c) => s + totalInSmallest(denominations, c.wealth), 0);
+    return total / topDenomination.value;
+  }, [carriers, denominations, topDenomination]);
 
   const grandWeight = useMemo(
     () => carriers.reduce((s, c) => s + carrierWeight(c.items), 0),
@@ -177,13 +256,13 @@ export function PartyInventoryTab() {
 
   async function persistCarrier(
     carrier: Carrier,
-    patch: Partial<{ items: InventoryItem[]; coins: Carrier['coins'] }>,
+    patch: Partial<{ items: InventoryItem[]; wealth: Wealth }>,
   ): Promise<void> {
     if (carrier.kind === 'pc') {
       const next: CharacterRecord = {
         ...carrier.character,
         inventory: patch.items ?? carrier.character.inventory,
-        coins: patch.coins ?? carrier.character.coins,
+        ...(patch.wealth ? engine.currency.write(carrier.character, patch.wealth) : {}),
         updatedAt: nowISO(),
       };
       await characterRepository.save(next);
@@ -191,39 +270,23 @@ export function PartyInventoryTab() {
       const next: InventoryContainer = {
         ...carrier.container,
         items: patch.items ?? carrier.container.items,
-        coins: patch.coins ?? carrier.container.coins,
+        coins: patch.wealth
+          ? containerCoinsFrom(carrier.container.coins, patch.wealth)
+          : carrier.container.coins,
       };
       await inventoryContainerRepository.save(next);
     }
   }
 
-  async function adjustCoin(
-    carrier: Carrier,
-    coin: 'gold' | 'silver' | 'copper',
-    delta: number,
-  ) {
-    let { gold, silver, copper } = carrier.coins;
-    if (coin === 'gold') gold += delta;
-    else if (coin === 'silver') silver += delta;
-    else copper += delta;
-    while (copper < 0 && silver > 0) {
-      copper += 10;
-      silver -= 1;
-    }
-    while (copper < 0 && gold > 0) {
-      gold -= 1;
-      silver += 9;
-      copper += 10;
-    }
-    while (silver < 0 && gold > 0) {
-      gold -= 1;
-      silver += 10;
-    }
-    if (gold < 0 || silver < 0 || copper < 0) {
+  async function adjustCurrency(carrier: Carrier, denominationId: string, delta: number) {
+    const amounts = normalizeWealth(denominations, carrier.wealth);
+    amounts[denominationId] = (amounts[denominationId] ?? 0) + delta;
+    const settled = makeChange(denominations, amounts);
+    if (!settled) {
       showToast('Not enough coin');
       return;
     }
-    await persistCarrier(carrier, { coins: { gold, silver, copper } });
+    await persistCarrier(carrier, { wealth: settled });
     reload();
   }
 
@@ -296,51 +359,31 @@ export function PartyInventoryTab() {
     reload();
   }
 
-  async function handleMoveCoins(
-    from: Carrier,
-    toId: string,
-    amounts: { gold: number; silver: number; copper: number },
-  ) {
+  async function handleMoveCoins(from: Carrier, toId: string, amounts: Wealth) {
     const to = carriers.find(c => c.id === toId);
     if (!to) return;
-    const need = amounts.gold * 100 + amounts.silver * 10 + amounts.copper;
+    const need = totalInSmallest(denominations, amounts);
     if (need <= 0) {
       setMoveCoinsSource(null);
       return;
     }
-    if (coinTotalCopper(from.coins) < need) {
+    if (totalInSmallest(denominations, from.wealth) < need) {
       showToast('Not enough coin to move');
       return;
     }
     // Deduct from source (preferring like denominations, borrowing as needed).
-    let { gold: fg, silver: fs, copper: fc } = from.coins;
-    fg -= amounts.gold;
-    fs -= amounts.silver;
-    fc -= amounts.copper;
-    while (fc < 0 && fs > 0) {
-      fc += 10;
-      fs -= 1;
-    }
-    while (fc < 0 && fg > 0) {
-      fg -= 1;
-      fs += 9;
-      fc += 10;
-    }
-    while (fs < 0 && fg > 0) {
-      fg -= 1;
-      fs += 10;
-    }
-    if (fg < 0 || fs < 0 || fc < 0) {
+    const fromNext = normalizeWealth(denominations, from.wealth);
+    for (const d of denominations) fromNext[d.id] -= amounts[d.id] ?? 0;
+    const settled = makeChange(denominations, fromNext);
+    if (!settled) {
       showToast('Not enough coin to move');
       return;
     }
-    const newToCoins = {
-      gold: to.coins.gold + amounts.gold,
-      silver: to.coins.silver + amounts.silver,
-      copper: to.coins.copper + amounts.copper,
-    };
-    await persistCarrier(from, { coins: { gold: fg, silver: fs, copper: fc } });
-    await persistCarrier(to, { coins: newToCoins });
+    const toNext = normalizeWealth(denominations, to.wealth);
+    for (const d of denominations) toNext[d.id] += amounts[d.id] ?? 0;
+
+    await persistCarrier(from, { wealth: settled });
+    await persistCarrier(to, { wealth: toNext });
     setMoveCoinsSource(null);
     reload();
   }
@@ -398,10 +441,10 @@ export function PartyInventoryTab() {
       <div className="grid grid-cols-3 gap-[var(--space-sm)] p-[var(--space-md)] rounded-[var(--radius-md)] bg-[var(--color-surface-alt)] border border-[var(--color-border)]">
         <div>
           <div className="text-[length:var(--font-size-xs)] text-[var(--color-text-muted)]">
-            Total gold
+            Total {topDenomination ? topDenomination.label.toLowerCase() : 'currency'}
           </div>
           <div className="text-[length:var(--font-size-lg)] text-[var(--color-text)] font-bold">
-            ≈ {grandGoldEquiv.toFixed(2)} gp
+            ≈ {grandCurrencyTotal.toFixed(2)} {topDenomination?.abbr ?? ''}
           </div>
         </div>
         <div>
@@ -464,8 +507,8 @@ export function PartyInventoryTab() {
                 </div>
                 <div className="text-[var(--color-text-muted)] text-[length:var(--font-size-xs)]">
                   {weight}
-                  {c.capacity !== null ? ` / ${c.capacity}` : ''} wt · {c.coins.gold}g{' '}
-                  {c.coins.silver}s {c.coins.copper}c
+                  {c.capacity !== null ? ` / ${c.capacity}` : ''} wt ·{' '}
+                  {denominations.map(d => `${c.wealth[d.id] ?? 0}${d.abbr}`).join(' ')}
                 </div>
               </div>
               {c.kind === 'container' && (
@@ -499,20 +542,20 @@ export function PartyInventoryTab() {
               <div className="px-[var(--space-sm)] pb-[var(--space-sm)] flex flex-col gap-[var(--space-md)]">
                 {/* Coin strip */}
                 <div className="flex flex-col gap-[var(--space-xs)]">
-                  {(['gold', 'silver', 'copper'] as const).map(coin => {
-                    const label = coin.charAt(0).toUpperCase() + coin.slice(1);
-                    const value = c.coins[coin];
-                    const canDec = coinTotalCopper(c.coins) > 0;
+                  {denominations.map(denom => {
+                    const value = c.wealth[denom.id] ?? 0;
+                    // Any stock at all can cover a decrement once change is made.
+                    const canDec = totalInSmallest(denominations, c.wealth) > 0;
                     return (
-                      <div key={coin} className="flex items-center gap-[var(--space-sm)]">
+                      <div key={denom.id} className="flex items-center gap-[var(--space-sm)]">
                         <span className="text-xs text-[var(--color-text-muted)] min-w-[52px]">
-                          {label}
+                          {denom.label}
                         </span>
                         <button
                           type="button"
-                          onClick={() => adjustCoin(c, coin, -1)}
+                          onClick={() => adjustCurrency(c, denom.id, -1)}
                           disabled={!canDec}
-                          aria-label={`Spend 1 ${coin} from ${c.name}`}
+                          aria-label={`Spend 1 ${denom.label.toLowerCase()} from ${c.name}`}
                           className="min-w-[40px] min-h-[40px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center disabled:opacity-60 disabled:pointer-events-none"
                         >
                           −
@@ -522,8 +565,8 @@ export function PartyInventoryTab() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => adjustCoin(c, coin, 1)}
-                          aria-label={`Add 1 ${coin} to ${c.name}`}
+                          onClick={() => adjustCurrency(c, denom.id, 1)}
+                          aria-label={`Add 1 ${denom.label.toLowerCase()} to ${c.name}`}
                           className="min-w-[40px] min-h-[40px] bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center"
                         >
                           +
@@ -671,6 +714,7 @@ export function PartyInventoryTab() {
         onClose={() => setMoveCoinsSource(null)}
         source={moveCoinsSource}
         carriers={carriers}
+        denominations={denominations}
         onMove={handleMoveCoins}
       />
 
@@ -768,53 +812,50 @@ function MoveCoinsDrawer({
   onClose,
   source,
   carriers,
+  denominations,
   onMove,
 }: {
   open: boolean;
   onClose: () => void;
   source: Carrier | null;
   carriers: Carrier[];
-  onMove: (
-    from: Carrier,
-    toId: string,
-    amounts: { gold: number; silver: number; copper: number },
-  ) => void;
+  denominations: CurrencyDenomination[];
+  onMove: (from: Carrier, toId: string, amounts: Wealth) => void;
 }) {
-  const [gold, setGold] = useState(0);
-  const [silver, setSilver] = useState(0);
-  const [copper, setCopper] = useState(0);
+  const [amounts, setAmounts] = useState<Wealth>({});
   const [destId, setDestId] = useState<string | null>(null);
   useEffect(() => {
     if (open) {
-      setGold(0);
-      setSilver(0);
-      setCopper(0);
+      setAmounts({});
       setDestId(null);
     }
   }, [open]);
+  const totalEntered = denominations.reduce((s, d) => s + (amounts[d.id] ?? 0), 0);
   if (!source) return <Drawer open={open} onClose={onClose} title="Move coins"><div /></Drawer>;
   const destinations = carriers.filter(c => c.id !== source.id);
   return (
     <Drawer open={open} onClose={onClose} title={`Move coins from ${source.name}`}>
       <div className="flex flex-col gap-[var(--space-md)]">
-        <div className="grid grid-cols-3 gap-[var(--space-sm)]">
-          {(
-            [
-              ['Gold', gold, setGold],
-              ['Silver', silver, setSilver],
-              ['Copper', copper, setCopper],
-            ] as const
-          ).map(([label, value, setter]) => (
-            <div key={label}>
+        <div
+          className="grid gap-[var(--space-sm)]"
+          style={{ gridTemplateColumns: `repeat(${Math.max(1, denominations.length)}, minmax(0, 1fr))` }}
+        >
+          {denominations.map(denom => (
+            <div key={denom.id}>
               <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
-                {label}
+                {denom.label}
               </label>
               <input
                 type="number"
                 min={0}
                 className={inputClasses}
-                value={value}
-                onChange={e => setter(Math.max(0, Number(e.target.value)))}
+                value={amounts[denom.id] ?? 0}
+                onChange={e =>
+                  setAmounts(prev => ({
+                    ...prev,
+                    [denom.id]: Math.max(0, Number(e.target.value)),
+                  }))
+                }
               />
             </div>
           ))}
@@ -848,10 +889,8 @@ function MoveCoinsDrawer({
           </Button>
           <Button
             variant="primary"
-            disabled={!destId || gold + silver + copper === 0}
-            onClick={() =>
-              destId && onMove(source, destId, { gold, silver, copper })
-            }
+            disabled={!destId || totalEntered === 0}
+            onClick={() => destId && onMove(source, destId, amounts)}
           >
             Move
           </Button>

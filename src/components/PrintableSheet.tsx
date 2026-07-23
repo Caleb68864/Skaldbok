@@ -35,8 +35,20 @@ interface PrintableSheetProps {
 // Section 1 — Sheet Header (SS-04)
 // ──────────────────────────────────────────────
 
+/**
+ * Header identity block.
+ *
+ * @remarks
+ * The fields come from `system.identityFields` rather than a Dragonbane list,
+ * so a ruleset that tracks Species/Homeworld prints those instead. The split
+ * mirrors the sheet screen: the first three declared fields join Name/Player on
+ * the top row, the rest print full-width underneath.
+ */
 function SheetHeader({ character, system }: { character: CharacterRecord; system: SystemDefinition | null }): React.ReactElement {
   const title = (system?.displayName ?? 'Character Sheet').toUpperCase();
+  const identityFields = system?.identityFields ?? [];
+  const topRowFields = identityFields.slice(0, 3);
+  const wideRowFields = identityFields.slice(3);
   return (
     <div className="sheet-header">
       <div className="sheet-title">{title}</div>
@@ -50,29 +62,23 @@ function SheetHeader({ character, system }: { character: CharacterRecord; system
           <span className="sheet-label">Player</span>
           <span className="sheet-value">{/* intentionally blank */}</span>
         </div>
-        <div className="sheet-field">
-          <span className="sheet-label">Kin</span>
-          <span className="sheet-value">{character.metadata?.kin || ''}</span>
-        </div>
-        <div className="sheet-field">
-          <span className="sheet-label">Age</span>
-          <span className="sheet-value">{character.metadata?.age || ''}</span>
-        </div>
-        <div className="sheet-field">
-          <span className="sheet-label">Profession</span>
-          <span className="sheet-value">{character.metadata?.profession || ''}</span>
-        </div>
+        {topRowFields.map(field => (
+          <div key={field.id} className="sheet-field">
+            <span className="sheet-label">{field.label}</span>
+            <span className="sheet-value">{character.metadata?.[field.id] || ''}</span>
+          </div>
+        ))}
       </div>
-      <div className="sheet-identity-row">
-        <div className="sheet-field sheet-field--wide">
-          <span className="sheet-label">Weakness</span>
-          <span className="sheet-value">{character.metadata?.weakness || ''}</span>
+      {wideRowFields.length > 0 && (
+        <div className="sheet-identity-row">
+          {wideRowFields.map(field => (
+            <div key={field.id} className="sheet-field sheet-field--wide">
+              <span className="sheet-label">{field.label}</span>
+              <span className="sheet-value">{character.metadata?.[field.id] || ''}</span>
+            </div>
+          ))}
         </div>
-        <div className="sheet-field sheet-field--wide">
-          <span className="sheet-label">Appearance</span>
-          <span className="sheet-value">{character.metadata?.appearance || ''}</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }

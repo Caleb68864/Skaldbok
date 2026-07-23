@@ -1,13 +1,15 @@
 import { z } from 'zod';
 
-const characterMetadataSchema = z.object({
-  kin: z.string().describe('Character kin/race'),
-  profession: z.string().describe('Character profession'),
-  age: z.string().describe('Character age'),
-  weakness: z.string().describe('Character weakness'),
-  appearance: z.string().describe('Physical appearance description'),
-  notes: z.string().describe('General notes'),
-});
+/**
+ * Identity fields are declared per-system (`SystemDefinition.identityFields`),
+ * so metadata is an open string map rather than a fixed set. This lets a
+ * Traveller character carry Species/Homeworld without also carrying Dragonbane's
+ * required Kin and Weakness.
+ */
+const characterMetadataSchema = z
+  .record(z.string(), z.string())
+  .default({})
+  .describe('System-declared identity fields, keyed by field id');
 
 const characterSkillSchema = z.object({
   value: z.number().describe('Skill value (percentage)'),
@@ -79,33 +81,31 @@ export const characterRecordSchema = z.object({
   conditions: z.record(z.string(), z.boolean()).describe('Condition id to active state map'),
   resources: z.record(z.string(), characterResourceSchema).describe('Resource id to current/max map'),
   skills: z.record(z.string(), characterSkillSchema).describe('Skill id to value/trained map'),
-  weapons: z.array(weaponSchema),
-  armor: armorPieceSchema.nullable(),
-  helmet: armorPieceSchema.nullable(),
-  inventory: z.array(inventoryItemSchema),
-  tinyItems: z.array(z.string()).describe('List of tiny item names'),
-  memento: z.string().describe('Character memento description'),
-  coins: z.object({
-    gold: z.number().nonnegative(),
-    silver: z.number().nonnegative(),
-    copper: z.number().nonnegative(),
-  }),
-  spells: z.array(spellSchema),
-  heroicAbilities: z.array(heroicAbilitySchema),
-  derivedOverrides: z.record(z.string(), z.number().nullable()).describe('Override map for derived values'),
+  // Collections default to empty so a record from a system that has no such
+  // concept (Traveller has no spells or heroic abilities) still validates,
+  // while parsed output keeps the non-optional shape consumers rely on.
+  weapons: z.array(weaponSchema).default([]),
+  armor: armorPieceSchema.nullable().default(null),
+  helmet: armorPieceSchema.nullable().default(null),
+  inventory: z.array(inventoryItemSchema).default([]),
+  tinyItems: z.array(z.string()).default([]).describe('List of tiny item names'),
+  memento: z.string().default('').describe('Character memento description'),
+  wealth: z
+    .record(z.string(), z.number().nonnegative())
+    .default({})
+    .describe('Money held, keyed by currency denomination id'),
+  spells: z.array(spellSchema).default([]),
+  heroicAbilities: z.array(heroicAbilitySchema).default([]),
+  derivedOverrides: z.record(z.string(), z.number().nullable()).default({}).describe('Override map for derived values'),
   uiState: z.object({
-    expandedSections: z.array(z.string()),
-  }),
+    expandedSections: z.array(z.string()).default([]),
+  }).default({ expandedSections: [] }),
   deletedAt: z.string().optional().describe('ISO timestamp when soft-deleted; absent when live'),
   softDeletedBy: z.string().optional().describe('Transaction UUID identifying the cascade that soft-deleted this character'),
-  travellerData: z.object({
-    credits: z.number().optional(),
-    financeNotes: z.string().optional(),
-    careers: z.string().optional(),
-    augments: z.string().optional(),
-    species: z.string().optional(),
-    speciesTraits: z.string().optional(),
-  }).optional().describe('System-specific data for Traveller-based characters'),
+  systemData: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe('Free-form data owned by the character game system'),
 });
 
 export type CharacterRecordSchema = z.infer<typeof characterRecordSchema>;

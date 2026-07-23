@@ -51,6 +51,20 @@ export interface SystemDefinition {
   skillCategories: SkillCategory[];
   sectionLayouts?: SectionLayout[];
   themesSupported?: string[];
+  /**
+   * Identity fields shown on the sheet's Identity panel and the print header,
+   * in display order. Each `id` is a key in `CharacterRecord.metadata`.
+   *
+   * @remarks
+   * Lets a ruleset ask for Kin and Weakness while another asks for Species and
+   * Homeworld, instead of every character carrying Dragonbane's field set.
+   */
+  identityFields?: Array<{
+    id: string;
+    label: string;
+    /** `text` renders a single-line input, `textarea` a multi-line one. */
+    type?: 'text' | 'textarea';
+  }>;
   resolution?: 'd20-roll-under' | '2d6-plus';
   currency?: { label: string; abbr: string; mode: 'coins' | 'single' };
   /**

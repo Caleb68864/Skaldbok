@@ -122,16 +122,12 @@ export const classicFantasyEngine: SystemEngine = {
       { id: 'copper', label: 'Copper', abbr: 'c', value: 1 },
     ],
     read: character => ({
-      gold: character.coins?.gold ?? 0,
-      silver: character.coins?.silver ?? 0,
-      copper: character.coins?.copper ?? 0,
+      gold: character.wealth?.gold ?? 0,
+      silver: character.wealth?.silver ?? 0,
+      copper: character.wealth?.copper ?? 0,
     }),
     write: (character, amounts) => ({
-      coins: {
-        gold: amounts.gold ?? character.coins?.gold ?? 0,
-        silver: amounts.silver ?? character.coins?.silver ?? 0,
-        copper: amounts.copper ?? character.coins?.copper ?? 0,
-      },
+      wealth: { ...character.wealth, ...amounts },
     }),
   },
   outcomes: [

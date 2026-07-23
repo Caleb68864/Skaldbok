@@ -32,14 +32,11 @@ export function normalizeCharacter(character: CharacterRecord): CharacterRecord 
 
   return {
     ...character,
-    metadata: {
-      kin: metadata.kin ?? '',
-      profession: metadata.profession ?? '',
-      age: metadata.age ?? '',
-      weakness: metadata.weakness ?? '',
-      appearance: metadata.appearance ?? '',
-      notes: metadata.notes ?? '',
-    },
+    // Identity fields are declared per-system, so normalise whatever keys are
+    // present rather than forcing one ruleset's field set onto every character.
+    metadata: Object.fromEntries(
+      Object.entries(metadata).map(([id, value]) => [id, typeof value === 'string' ? value : '']),
+    ),
     attributes: Object.fromEntries(
       Object.entries(character.attributes ?? {}).map(([id, value]) => [id, clampNumber(value, 1, 30, 10)]),
     ),
@@ -51,11 +48,14 @@ export function normalizeCharacter(character: CharacterRecord): CharacterRecord 
     tinyItems: Array.isArray(character.tinyItems) ? character.tinyItems : [],
     spells: Array.isArray(character.spells) ? character.spells : [],
     heroicAbilities: Array.isArray(character.heroicAbilities) ? character.heroicAbilities : [],
-    coins: {
-      gold: clampNumber(character.coins?.gold, 0, 999999, 0),
-      silver: clampNumber(character.coins?.silver, 0, 999999, 0),
-      copper: clampNumber(character.coins?.copper, 0, 999999, 0),
-    },
+    // Money is keyed by the system's own denomination ids, so clamp each entry
+    // generically instead of assuming gold/silver/copper.
+    wealth: Object.fromEntries(
+      Object.entries(character.wealth ?? {}).map(([id, amount]) => [
+        id,
+        clampNumber(amount, 0, 999999, 0),
+      ]),
+    ),
     derivedOverrides: character.derivedOverrides ?? {},
     uiState: character.uiState ?? { expandedSections: [] },
   };

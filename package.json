@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "docs": "typedoc",
-    "docs:open": "typedoc && start docs/api/index.html"
+    "docs:open": "typedoc && start docs/api/index.html",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.12",
@@ -51,6 +53,7 @@
     "typedoc": "^0.28.18",
     "typescript": "~5.7.2",
     "vite": "^6.2.0",
-    "vite-plugin-pwa": "^0.21.1"
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^3.2.7"
   }
 }
