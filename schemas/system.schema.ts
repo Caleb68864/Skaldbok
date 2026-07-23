@@ -59,6 +59,19 @@ export const systemDefinitionSchema = z.object({
     abbr: z.string().min(1),
     mode: z.enum(['coins', 'single']),
   }).optional().describe('Currency display configuration'),
+  terms: z.object({
+    abilities: z.string().optional(),
+    spells: z.string().optional(),
+    magicResource: z.string().optional(),
+    healthResource: z.string().optional(),
+    roleFallback: z.string().optional(),
+  }).optional().describe('Overrides for system vocabulary; omitted keys use engine defaults'),
+  labels: z.object({
+    abilitiesScreen: z.string().nullable().optional(),
+    resourcesPanel: z.string().optional(),
+    attributesPanel: z.string().optional(),
+    encumbrance: z.string().optional(),
+  }).optional().describe('Overrides for panel/screen titles; abilitiesScreen null hides that tab'),
 });
 
 export type SystemDefinitionSchema = z.infer<typeof systemDefinitionSchema>;

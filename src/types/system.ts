@@ -53,4 +53,25 @@ export interface SystemDefinition {
   themesSupported?: string[];
   resolution?: 'd20-roll-under' | '2d6-plus';
   currency?: { label: string; abbr: string; mode: 'coins' | 'single' };
+  /**
+   * Optional overrides for system vocabulary (see `SystemTerms` in the engine).
+   * Any omitted key falls back to the engine adapter's default.
+   */
+  terms?: Partial<{
+    abilities: string;
+    spells: string;
+    magicResource: string;
+    healthResource: string;
+    roleFallback: string;
+  }>;
+  /**
+   * Optional overrides for panel/screen titles (see `SystemLabels`).
+   * `abilitiesScreen: null` hides the abilities/magic tab for this system.
+   */
+  labels?: Partial<{
+    abilitiesScreen: string | null;
+    resourcesPanel: string;
+    attributesPanel: string;
+    encumbrance: string;
+  }>;
 }

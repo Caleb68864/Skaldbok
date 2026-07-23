@@ -22,9 +22,25 @@ export const classicFantasyEngine: SystemEngine = {
     display: (value: number) => `${value}`,
     supportsMarks: true,
     supportsBoonBane: true,
+    // Roll-under: 0 means untrained, so a skill matters once trained or raised.
+    isRelevant: skill => !!skill && (skill.value > 0 || skill.trained),
   },
   derivedStats: (character, system) => computeDerivedValues(character, system),
   resourceIds: ['hp', 'wp'],
   panels: ['attributes', 'skills', 'resources', 'inventory', 'magic', 'combat', 'rest', 'death', 'notes'],
   currency: 'coins',
+  terms: {
+    abilities: 'Heroic Abilities',
+    spells: 'Spells',
+    magicResource: 'WP',
+    healthResource: 'HP',
+    roleFallback: 'Adventurer',
+  },
+  labels: {
+    abilitiesScreen: 'Abilities / Magic',
+    resourcesPanel: 'Resources',
+    attributesPanel: 'Attributes',
+    encumbrance: 'Encumbrance',
+  },
+  primaryHealthResourceId: 'hp',
 };

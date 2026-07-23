@@ -1,6 +1,5 @@
 import type { CharacterRecord, StatKey } from '../types/character';
 import type { SystemDefinition } from '../types/system';
-import { TRAVELLER_ATTRIBUTE_IDS } from '../features/systems/engine/travellerEngine';
 
 export interface DerivedValues {
   hpMax: number;
@@ -145,18 +144,26 @@ export interface EffectiveValueResult {
   isModified: boolean;
 }
 
-const CLASSIC_FANTASY_ATTRIBUTE_KEYS = new Set(['str', 'con', 'agl', 'int', 'wil', 'cha']);
-const TRAVELLER_ATTRIBUTE_KEYS = new Set(TRAVELLER_ATTRIBUTE_IDS);
 const DERIVED_KEYS = new Set(['movement', 'hpMax', 'wpMax']);
 
-/** Resolves the attribute id set for a character's active system. Defaults to classic-fantasy. */
-function resolveAttributeKeys(character: CharacterRecord): Set<string> {
-  if (character.systemId === 'traveller') return TRAVELLER_ATTRIBUTE_KEYS;
-  return CLASSIC_FANTASY_ATTRIBUTE_KEYS;
-}
-
+/**
+ * Resolves a stat key against a character.
+ *
+ * @remarks
+ * Attribute ids are read from the character's own `attributes` map rather than
+ * a per-system constant, so this stays system-agnostic without importing any
+ * concrete engine (which would invert the dependency — engines import from
+ * here, never the reverse).
+ *
+ * Known limitation: a system whose resource ids collide with its attribute ids
+ * (Traveller's `str`/`dex`/`end` damage track) resolves the attribute here.
+ * Resources are read directly from `character.resources`, so nothing depends on
+ * the collided path today; disambiguating properly needs namespaced stat keys.
+ */
 function resolveBase(stat: StatKey, character: CharacterRecord): number {
-  if (resolveAttributeKeys(character).has(stat)) return character.attributes[stat] ?? 0;
+  if (Object.prototype.hasOwnProperty.call(character.attributes ?? {}, stat)) {
+    return character.attributes[stat] ?? 0;
+  }
   if (stat === 'armor') return character.armor?.rating ?? 0;
   if (stat === 'helmet') return character.helmet?.rating ?? 0;
   if (DERIVED_KEYS.has(stat)) {

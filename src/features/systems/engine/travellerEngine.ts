@@ -72,6 +72,9 @@ export const travellerEngine: SystemEngine = {
       return formatSkillDisplay(value, dm);
     },
     supportsMarks: false,
+    // Traveller level 0 is a real (trained) skill, so presence of the trained
+    // flag matters as much as a non-zero level.
+    isRelevant: skill => !!skill && (skill.trained || skill.value > 0),
     // Boon/Bane falls back to plain 2d6-vs-target odds rather than Traveller's
     // canonical 3d6-keep-best/worst-2 — that math isn't implemented in
     // travellerMath.ts yet (SS-04 decision: fall back rather than block).
@@ -81,4 +84,23 @@ export const travellerEngine: SystemEngine = {
   resourceIds: ['str', 'dex', 'end'],
   panels: ['characteristics', 'skills', 'resources', 'finances', 'careers', 'augments', 'inventory', 'combat', 'notes'],
   currency: 'single',
+  terms: {
+    abilities: 'Talents',
+    spells: 'Psionic Powers',
+    magicResource: 'PSI',
+    healthResource: 'END',
+    roleFallback: 'Traveller',
+  },
+  labels: {
+    // null => the abilities/magic tab is hidden entirely rather than linking to
+    // a dead-end screen. Set `labels.abilitiesScreen` in system.json to surface
+    // it (e.g. "Psionics") once that content exists.
+    abilitiesScreen: null,
+    resourcesPanel: 'Damage Track',
+    attributesPanel: 'Characteristics',
+    encumbrance: 'Encumbrance',
+  },
+  // Damage lands on END first in Traveller; STR/DEX overflow is a rules decision
+  // the generic damage helper should not make on its own.
+  primaryHealthResourceId: 'end',
 };
