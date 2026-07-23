@@ -1,5 +1,6 @@
 import type { CharacterRecord, StatKey } from '../types/character';
 import type { SystemDefinition } from '../types/system';
+import { TRAVELLER_ATTRIBUTE_IDS } from '../features/systems/engine/travellerEngine';
 
 export interface DerivedValues {
   hpMax: number;
@@ -144,11 +145,18 @@ export interface EffectiveValueResult {
   isModified: boolean;
 }
 
-const ATTRIBUTE_KEYS = new Set(['str', 'con', 'agl', 'int', 'wil', 'cha']);
+const CLASSIC_FANTASY_ATTRIBUTE_KEYS = new Set(['str', 'con', 'agl', 'int', 'wil', 'cha']);
+const TRAVELLER_ATTRIBUTE_KEYS = new Set(TRAVELLER_ATTRIBUTE_IDS);
 const DERIVED_KEYS = new Set(['movement', 'hpMax', 'wpMax']);
 
+/** Resolves the attribute id set for a character's active system. Defaults to classic-fantasy. */
+function resolveAttributeKeys(character: CharacterRecord): Set<string> {
+  if (character.systemId === 'traveller') return TRAVELLER_ATTRIBUTE_KEYS;
+  return CLASSIC_FANTASY_ATTRIBUTE_KEYS;
+}
+
 function resolveBase(stat: StatKey, character: CharacterRecord): number {
-  if (ATTRIBUTE_KEYS.has(stat)) return character.attributes[stat] ?? 0;
+  if (resolveAttributeKeys(character).has(stat)) return character.attributes[stat] ?? 0;
   if (stat === 'armor') return character.armor?.rating ?? 0;
   if (stat === 'helmet') return character.helmet?.rating ?? 0;
   if (DERIVED_KEYS.has(stat)) {
