@@ -17,6 +17,7 @@ import { computeEncumbranceLimit } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
+import { useSystemEngine } from '../features/systems/engine';
 import * as characterRepository from '../storage/repositories/characterRepository';
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
@@ -32,6 +33,7 @@ function clamp(value: number, min: number, max: number): number {
 export default function GearScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
+  const engine = useSystemEngine();
   const isEditMode = useIsEditMode();
   const armorEquipEditable = useFieldEditable('armor.equipped');
   const helmetEquipEditable = useFieldEditable('helmet.equipped');
@@ -160,6 +162,14 @@ export default function GearScreen() {
     if (gold < 0 || silver < 0 || copper < 0) return; // not enough total coin
     updateCharacter({ coins: { gold, silver, copper }, updatedAt: nowISO() });
     if (delta !== 0) logCoinChange(character.name, coin, delta);
+  }
+
+  function adjustCredits(delta: number) {
+    if (!character) return;
+    const current = character.travellerData?.credits ?? 0;
+    const next = Math.max(0, current + delta);
+    updateCharacter({ travellerData: { ...character.travellerData, credits: next }, updatedAt: nowISO() });
+    if (delta !== 0) logToSession(`${character.name}: ${delta > 0 ? 'Gained' : 'Spent'} ${Math.abs(delta)} Cr`);
   }
 
   function handleInventoryQuantity(id: string, quantity: number) {
@@ -344,6 +354,27 @@ export default function GearScreen() {
         />
       </SectionPanel>
 
+      {engine.currency === 'single' ? (
+      <SectionPanel title="Credits" collapsible defaultOpen>
+        <div className="flex items-center gap-[var(--space-sm)]">
+          <span className="text-sm text-[var(--color-text-muted)] min-w-[60px]">Cr</span>
+          <button
+            type="button"
+            aria-label="Spend 1 credit"
+            onClick={() => adjustCredits(-1)}
+            disabled={(character.travellerData?.credits ?? 0) <= 0}
+            className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
+          >−</button>
+          <span className="min-w-[60px] text-center text-lg font-bold text-[var(--color-text)]">{character.travellerData?.credits ?? 0}</span>
+          <button
+            type="button"
+            aria-label="Gain 1 credit"
+            onClick={() => adjustCredits(1)}
+            className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110"
+          >+</button>
+        </div>
+      </SectionPanel>
+      ) : (
       <SectionPanel title="Coins" subtitle="1 gold = 10 silver = 100 copper" collapsible defaultOpen>
         <div className="flex flex-col gap-3">
           {(['gold', 'silver', 'copper'] as const).map(coin => {
@@ -373,6 +404,7 @@ export default function GearScreen() {
           })}
         </div>
       </SectionPanel>
+      )}
 
       <SectionPanel title="Tiny Items" collapsible defaultOpen>
         <div className="flex flex-col gap-3">

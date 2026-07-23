@@ -8,6 +8,7 @@ import type {
 } from '../types/character';
 import type { SystemDefinition, SkillDefinition } from '../types/system';
 import { compareSpellsByRankThenName, formatCastingTime, formatRequirements, getSpellRank } from '../utils/spells';
+import type { SystemEngine } from '../features/systems/engine';
 
 // ──────────────────────────────────────────────
 // Exported types (consumed by SS-02 screen)
@@ -27,6 +28,7 @@ interface PrintableSheetProps {
   system: SystemDefinition | null;
   derived: PrintDerivedValues;
   colorMode: 'color' | 'bw';
+  engine: SystemEngine;
 }
 
 // ──────────────────────────────────────────────
@@ -198,7 +200,20 @@ function AbilitiesSpells({
 // Section 4 Left — Currency (SS-09)
 // ──────────────────────────────────────────────
 
-function Currency({ character }: { character: CharacterRecord }): React.ReactElement {
+function Currency({ character, engine }: { character: CharacterRecord; engine: SystemEngine }): React.ReactElement {
+  if (engine.currency === 'single') {
+    return (
+      <div className="sheet-currency">
+        <div className="sheet-section-header">Currency</div>
+        <div className="sheet-currency-row">
+          <div className="sheet-currency-field">
+            <span className="sheet-currency-label">Credits (Cr)</span>
+            <span className="sheet-currency-value">{character.travellerData?.credits ?? 0}</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="sheet-currency">
       <div className="sheet-section-header">Currency</div>
@@ -488,10 +503,36 @@ function DotTracker({
 function ResourceTrackers({
   character,
   derived,
+  system,
+  engine,
 }: {
   character: CharacterRecord;
   derived: PrintDerivedValues;
+  system: SystemDefinition | null;
+  engine: SystemEngine;
 }): React.ReactElement {
+  // Dragonbane-style HP/WP tracking only applies to engines that model those resources.
+  if (!engine.resourceIds.includes('hp')) {
+    return (
+      <div className="sheet-resource-trackers">
+        <div className="sheet-section-header">Damage Track</div>
+        {engine.resourceIds.map(id => {
+          const resource = character.resources?.[id];
+          const label = system?.resources?.find(r => r.id === id)?.name ?? id.toUpperCase();
+          return (
+            <DotTracker
+              key={id}
+              label={label}
+              current={resource?.current ?? 0}
+              max={resource?.max ?? 0}
+              filledClass="hp-dot-filled"
+            />
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="sheet-resource-trackers">
       <div className="sheet-section-header">Hit Points &amp; Willpower</div>
@@ -555,6 +596,7 @@ export default function PrintableSheet({
   system,
   derived,
   colorMode,
+  engine,
 }: PrintableSheetProps): React.ReactElement {
   const sheetClass = `print-sheet print-sheet--${colorMode}`;
 
@@ -574,7 +616,7 @@ export default function PrintableSheet({
         {/* Left: Abilities/Spells + Currency */}
         <div className="print-col print-col--left">
           <AbilitiesSpells character={character} />
-          <Currency character={character} />
+          <Currency character={character} engine={engine} />
         </div>
 
         {/* Center: Skills */}
@@ -597,7 +639,7 @@ export default function PrintableSheet({
           <WeaponsTable character={character} />
         </div>
         <div className="print-col print-col--right">
-          <ResourceTrackers character={character} derived={derived} />
+          <ResourceTrackers character={character} derived={derived} system={system} engine={engine} />
         </div>
       </div>
     </div>

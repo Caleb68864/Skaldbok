@@ -17,6 +17,7 @@ import { useIsEditMode } from '../utils/modeGuards';
 import { computeMaxPreparedSpells } from '../utils/derivedValues';
 import { isMetalEquipped } from '../utils/metalDetection';
 import { compareSpellsByRankThenName, isMagicTrick } from '../utils/spells';
+import { useSystemEngine } from '../features/systems/engine';
 import * as characterRepository from '../storage/repositories/characterRepository';
 
 type PrepFilter = 'prepared' | 'grimoire';
@@ -27,6 +28,7 @@ export default function MagicScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { isLoading: settingsLoading, settings, updateSettings } = useAppState();
+  const engine = useSystemEngine();
   const showMagic = settings.showCharacterMagic === true;
   const isEditMode = useIsEditMode();
   const { showToast } = useToast();
@@ -93,6 +95,19 @@ export default function MagicScreen() {
 
   if (stillLoading || waitingForCharacter) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
+
+  if (!engine.hasMagic) {
+    return (
+      <div className="p-[var(--space-md)]">
+        <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] mb-[var(--space-md)]">
+          Abilities / Magic
+        </h1>
+        <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-md)]">
+          Magic is not available in this system.
+        </p>
+      </div>
+    );
+  }
 
   // ── Derived values ────────────────────────────────────────────────
   const maxPrepared = computeMaxPreparedSpells(character);

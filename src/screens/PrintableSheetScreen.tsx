@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
+import { getEngine } from '../features/systems/engine';
 import { getDerivedValue } from '../utils/derivedValues';
 import PrintableSheet from '../components/PrintableSheet';
 import '../styles/print-sheet.css';
@@ -56,6 +57,7 @@ export default function PrintableSheetScreen() {
         system={system}
         derived={derived}
         colorMode={colorMode}
+        engine={getEngine(system)}
       />
       {/* Floating toolbar — hidden via @media print in print-sheet.css */}
       <div className="print-toolbar">
