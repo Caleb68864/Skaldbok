@@ -2,7 +2,8 @@ import { migrateCharacter } from './migrations';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { generateId } from './ids';
 import { nowISO } from './dates';
-import type { CharacterRecord } from '../types/character';
+import { BUNDLED_SYSTEMS } from '../systems/registry';
+import type { CharacterRecord, CharacterMetadata } from '../types/character';
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'character';
@@ -12,7 +13,11 @@ function stripHtml(str: string): string {
   return str.replace(/<[^>]*>/g, '').replace(/javascript:/gi, '');
 }
 
-const KNOWN_SYSTEM_IDS = ['classic-fantasy', 'traveller'];
+/**
+ * System ids we know how to render, derived from the bundled system registry so
+ * adding a third system doesn't silently warn on import.
+ */
+const KNOWN_SYSTEM_IDS: string[] = BUNDLED_SYSTEMS.map(s => s.id);
 const SYSTEM_ID_ALIASES: Record<string, string> = {
   'classic-fantasy': 'classic-fantasy',
   'dragon-bane': 'classic-fantasy',
@@ -24,21 +29,40 @@ function normalizeSystemId(systemId: string): string {
   return SYSTEM_ID_ALIASES[normalized] ?? normalized;
 }
 
+/**
+ * Recursively strips HTML from every string reachable inside `value`.
+ *
+ * @remarks
+ * Used for free-form data bags (character metadata, system-specific data such
+ * as `travellerData`) so new string fields are sanitized automatically instead
+ * of having to be enumerated by name — the omission that previously let
+ * `travellerData` strings through unsanitized.
+ */
+function sanitizeDeep<T>(value: T): T {
+  if (typeof value === 'string') return stripHtml(value) as unknown as T;
+  if (Array.isArray(value)) return value.map(item => sanitizeDeep(item)) as unknown as T;
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      out[key] = sanitizeDeep(val);
+    }
+    return out as unknown as T;
+  }
+  return value;
+}
+
 function sanitizeCharacterStrings(char: CharacterRecord): CharacterRecord {
-  return {
+  const sanitized: CharacterRecord = {
     ...char,
     systemId: normalizeSystemId(char.systemId),
     name: stripHtml(char.name),
-    metadata: {
-      kin: stripHtml(char.metadata.kin),
-      profession: stripHtml(char.metadata.profession),
-      age: stripHtml(char.metadata.age),
-      weakness: stripHtml(char.metadata.weakness),
-      appearance: stripHtml(char.metadata.appearance),
-      notes: stripHtml(char.metadata.notes),
-    },
+    metadata: sanitizeDeep(char.metadata) as CharacterMetadata,
     memento: stripHtml(char.memento),
   };
+  if (char.travellerData) {
+    sanitized.travellerData = sanitizeDeep(char.travellerData);
+  }
+  return sanitized;
 }
 
 export function exportCharacter(character: CharacterRecord): void {

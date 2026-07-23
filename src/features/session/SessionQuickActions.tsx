@@ -11,6 +11,9 @@ import { QuickNoteAction } from './quickActions/QuickNoteAction';
 import { QuickNpcAction } from './quickActions/QuickNpcAction';
 import { QuickLogPCTray } from './quickLog/QuickLogPCTray';
 import { getById as getCharacterById, save as saveCharacter } from '../../storage/repositories/characterRepository';
+import { useSystemEngine } from '../systems/engine';
+import { useSystemDefinition } from '../systems/useSystemDefinition';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
 import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
@@ -28,28 +31,10 @@ import {
 } from '../../components/ui/dropdown-menu';
 
 // ── System Data ──────────────────────────────────────────────
-
-const CORE_SKILLS = [
-  'ACROBATICS', 'AWARENESS', 'BARTERING', 'BEAST LORE', 'BLUFFING',
-  'BUSHCRAFT', 'CRAFTING', 'EVADE', 'HEALING', 'HUNTING & FISHING',
-  'LANGUAGES', 'MYTHS & LEGENDS', 'PERFORMANCE', 'PERSUASION',
-  'RIDING', 'SEAMANSHIP', 'SLEIGHT OF HAND', 'SNEAKING',
-  'SPOT HIDDEN', 'SWIMMING',
-] as const;
-
-const WEAPON_SKILLS = [
-  'Axes', 'Bows', 'Brawling', 'Crossbows', 'Hammers',
-  'Knives', 'Slings', 'Spears', 'Staves', 'Swords',
-] as const;
-
-const CONDITIONS = [
-  { name: 'Exhausted', attr: 'STR' },
-  { name: 'Sickly', attr: 'CON' },
-  { name: 'Dazed', attr: 'AGL' },
-  { name: 'Angry', attr: 'INT' },
-  { name: 'Scared', attr: 'WIL' },
-  { name: 'Disheartened', attr: 'CHA' },
-] as const;
+//
+// Skills and conditions are read from the active `SystemDefinition` (see the
+// `skillNames` / `conditions` memos below) rather than hardcoded here, so a
+// non-Dragonbane ruleset shows its own vocabulary.
 
 const REST_TYPES = [
   { name: 'Round Rest', effect: 'Recover D6 WP' },
@@ -173,6 +158,31 @@ export function SessionQuickActions({
   const { activeCampaign, activeParty, activeCharacterInCampaign } = useCampaignContext();
   const { showToast } = useToast();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
+  const engine = useSystemEngine();
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
+
+  /** Flat list of every skill the active system defines. */
+  const skillNames = useMemo(
+    () => system?.skillCategories.flatMap(c => c.skills.map(s => s.name)) ?? [],
+    [system],
+  );
+
+  /** Conditions the active system defines, with their linked-attribute badge. */
+  const conditions = useMemo(
+    () =>
+      (system?.conditions ?? []).map(c => ({
+        name: c.name,
+        attr:
+          system?.attributes.find(a => a.id === c.linkedAttributeId)?.abbreviation
+          ?? c.linkedAttributeId.toUpperCase(),
+      })),
+    [system],
+  );
+
+  const supportsRest = engine.panels.includes('rest');
+  const supportsDeathRoll = engine.panels.includes('death');
+  const healthResourceId = engine.primaryHealthResourceId;
+  const healthLabel = engine.terms.healthResource;
 
   const [activeDrawer, setActiveDrawer] = useState<string | null>(null);
   const [attachTo, setAttachTo] = useState<AttachToValue>('auto');
@@ -406,7 +416,7 @@ export function SessionQuickActions({
             </p>
           </>
         )}
-        {[...CORE_SKILLS, ...WEAPON_SKILLS].map(skill => (
+        {skillNames.map(skill => (
           <button key={skill} onClick={() => setSelectedSkill(skill)} className={listBtnClasses}>
             {skill}
           </button>
@@ -418,6 +428,13 @@ export function SessionQuickActions({
   // ── Spell Cast Flow ───────────────────────────────────────────
 
   const renderSpellPicker = () => {
+    if (!engine.hasMagic) {
+      return (
+        <p className="text-[var(--color-text-muted)] text-sm">
+          This system has no {engine.terms.spells.toLowerCase()}.
+        </p>
+      );
+    }
     if (selectedSpell) {
       const modTag = formatModTags(rollMods);
       return (
@@ -458,12 +475,14 @@ export function SessionQuickActions({
             <button key={spell.id} onClick={() => setSelectedSpell(spell.name)} className={listBtnClasses}>
               <span>{spell.name}</span>
               <span className="text-[var(--color-text-muted)] text-sm ml-2">
-                ({spell.wpCost} WP)
+                ({spell.wpCost} {engine.terms.magicResource})
               </span>
             </button>
           ))
         ) : (
-          <p className="text-[var(--color-text-muted)] text-sm">No spells on {selectedNames() || 'active character'}.</p>
+          <p className="text-[var(--color-text-muted)] text-sm">
+            No {engine.terms.spells.toLowerCase()} on {selectedNames() || 'active character'}.
+          </p>
         )}
         <button
           onClick={() => {
@@ -481,6 +500,13 @@ export function SessionQuickActions({
   // ── Heroic Ability Flow ───────────────────────────────────────
 
   const renderAbilityPicker = () => {
+    if (!engine.hasMagic) {
+      return (
+        <p className="text-[var(--color-text-muted)] text-sm">
+          This system has no {engine.terms.abilities.toLowerCase()}.
+        </p>
+      );
+    }
     const char = selectedCharacter();
     const abilities = char?.heroicAbilities ?? [];
     return (
@@ -496,13 +522,15 @@ export function SessionQuickActions({
               <span>{a.name}</span>
               {a.wpCost !== undefined && (
                 <span className="text-[var(--color-text-muted)] text-sm ml-2">
-                  ({a.wpCost} WP)
+                  ({a.wpCost} {engine.terms.magicResource})
                 </span>
               )}
             </button>
           ))
         ) : (
-          <p className="text-[var(--color-text-muted)] text-sm">No heroic abilities on {selectedNames() || 'active character'}.</p>
+          <p className="text-[var(--color-text-muted)] text-sm">
+            No {engine.terms.abilities.toLowerCase()} on {selectedNames() || 'active character'}.
+          </p>
         )}
       </div>
     );
@@ -513,7 +541,12 @@ export function SessionQuickActions({
   const renderConditionPicker = () => (
     <div>
       <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} multiSelect />
-      {CONDITIONS.map(c => (
+      {conditions.length === 0 && (
+        <p className="text-[var(--color-text-muted)] text-sm">
+          This system defines no conditions.
+        </p>
+      )}
+      {conditions.map(c => (
         <div key={c.name} className="flex gap-3 mb-2">
           <button
             onClick={() => logEvent('generic', `Gained ${c.name}`, {})}
@@ -553,42 +586,67 @@ export function SessionQuickActions({
 
   // ── Damage Flow ───────────────────────────────────────────────
 
-  const applyDamage = async (amount: number) => {
-    // Update HP on each selected character's sheet
+  /**
+   * Applies `delta` to the system's primary health resource on every selected
+   * character, returning how many sheets were actually updated.
+   *
+   * @remarks
+   * Returns 0 when the system declares no single health pool
+   * (`primaryHealthResourceId === null`) or none of the selected characters
+   * carry that resource — callers must not claim success in that case.
+   */
+  const adjustHealth = async (delta: number): Promise<number> => {
+    if (!healthResourceId) return 0;
+    let updated = 0;
     for (const memberId of selectedMembers) {
       const member = resolvedMembers.find(m => m.id === memberId);
       if (!member?.character) continue;
       const fresh = await getCharacterById(member.character.id);
       if (!fresh) continue;
-      const hp = fresh.resources['hp'];
-      if (!hp) continue;
-      const newCurrent = Math.max(0, hp.current - amount);
+      const pool = fresh.resources[healthResourceId];
+      if (!pool) continue;
+      const newCurrent =
+        delta < 0
+          ? Math.max(0, pool.current + delta)
+          : Math.min(pool.max, pool.current + delta);
       await saveCharacter({
         ...fresh,
-        resources: { ...fresh.resources, hp: { ...hp, current: newCurrent } },
+        resources: { ...fresh.resources, [healthResourceId]: { ...pool, current: newCurrent } },
         updatedAt: new Date().toISOString(),
       });
+      updated += 1;
+    }
+    return updated;
+  };
+
+  const applyDamage = async (amount: number) => {
+    const updated = await adjustHealth(-amount);
+    if (updated === 0) {
+      showToast(
+        healthResourceId
+          ? `No ${healthLabel} on the selected character — logged as a note only.`
+          : `This system has no single ${healthLabel} pool — logged as a note only.`,
+        'warning',
+        3000,
+      );
     }
     await logEvent('generic', `Took ${amount} damage`, { damage: amount });
   };
 
   const applyHealing = async (amount: number) => {
-    // Update HP on each selected character's sheet
-    for (const memberId of selectedMembers) {
-      const member = resolvedMembers.find(m => m.id === memberId);
-      if (!member?.character) continue;
-      const fresh = await getCharacterById(member.character.id);
-      if (!fresh) continue;
-      const hp = fresh.resources['hp'];
-      if (!hp) continue;
-      const newCurrent = Math.min(hp.max, hp.current + amount);
-      await saveCharacter({
-        ...fresh,
-        resources: { ...fresh.resources, hp: { ...hp, current: newCurrent } },
-        updatedAt: new Date().toISOString(),
-      });
+    const updated = await adjustHealth(amount);
+    if (updated === 0) {
+      showToast(
+        healthResourceId
+          ? `No ${healthLabel} on the selected character — logged as a note only.`
+          : `This system has no single ${healthLabel} pool — logged as a note only.`,
+        'warning',
+        3000,
+      );
+      await logEvent('generic', `Healing ${amount} (not applied)`, { healing: amount, applied: false });
+      return;
     }
-    await logEvent('generic', `Healed ${amount} HP`, { healing: amount });
+    await logEvent('generic', `Healed ${amount} ${healthLabel}`, { healing: amount });
   };
 
   const renderDamagePicker = () => {
@@ -596,7 +654,9 @@ export function SessionQuickActions({
     return (
       <div>
         <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
-        <p className="text-[var(--color-text-muted)] text-[13px] mb-2">Damage taken (updates HP):</p>
+        <p className="text-[var(--color-text-muted)] text-[13px] mb-2">
+          Damage taken {healthResourceId ? `(updates ${healthLabel})` : '(log only)'}:
+        </p>
         <div className="flex flex-wrap gap-3 mb-4">
           {values.map(v => (
             <button
@@ -608,7 +668,9 @@ export function SessionQuickActions({
             </button>
           ))}
         </div>
-        <p className="text-[var(--color-text-muted)] text-[13px] mb-2">Healing (updates HP):</p>
+        <p className="text-[var(--color-text-muted)] text-[13px] mb-2">
+          Healing {healthResourceId ? `(updates ${healthLabel})` : '(log only)'}:
+        </p>
         <div className="flex flex-wrap gap-3 mb-4">
           {values.map(v => (
             <button
@@ -996,30 +1058,38 @@ export function SessionQuickActions({
 
   // ── Render ────────────────────────────────────────────────────
 
-  const actions = [
-    { id: 'quickLog', label: 'Quick Log' },
-    { id: 'note', label: 'Note' },
-    { id: 'npc', label: 'NPC / Monster' },
-    { id: 'encounter', label: 'Encounter' },
-    { id: 'damage', label: 'Damage' },
-    { id: 'quote', label: 'Quote' },
-    { id: 'condition', label: 'Condition' },
-    { id: 'death', label: 'Death Roll' },
-    { id: 'rest', label: 'Rest' },
-    { id: 'camp', label: 'Camp' },
-    { id: 'travel', label: 'Travel' },
-    { id: 'rumor', label: 'Rumor' },
-    { id: 'shopping', label: 'Shopping' },
-    { id: 'loot', label: 'Loot' },
-  ];
+  // Rest and Death Roll only exist for systems whose engine declares those
+  // panels — they are dropped entirely (chips + drawers) otherwise.
+  const actions = useMemo(
+    () =>
+      [
+        { id: 'quickLog', label: 'Quick Log' },
+        { id: 'note', label: 'Note' },
+        { id: 'npc', label: 'NPC / Monster' },
+        { id: 'encounter', label: 'Encounter' },
+        { id: 'damage', label: 'Damage' },
+        { id: 'quote', label: 'Quote' },
+        { id: 'condition', label: 'Condition' },
+        ...(supportsDeathRoll ? [{ id: 'death', label: 'Death Roll' }] : []),
+        ...(supportsRest ? [{ id: 'rest', label: 'Rest' }] : []),
+        { id: 'camp', label: 'Camp' },
+        { id: 'travel', label: 'Travel' },
+        { id: 'rumor', label: 'Rumor' },
+        { id: 'shopping', label: 'Shopping' },
+        { id: 'loot', label: 'Loot' },
+      ],
+    [supportsDeathRoll, supportsRest],
+  );
 
   const primaryActionIds = ['quickLog', 'note', 'encounter', 'damage', 'quote', 'npc'];
   const primaryActions = useMemo(
     () => actions.filter((action) => primaryActionIds.includes(action.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [actions],
   );
   const secondaryActions = useMemo(
     () => actions.filter((action) => !primaryActionIds.includes(action.id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [actions],
   );
 
@@ -1040,9 +1110,9 @@ export function SessionQuickActions({
   const drawerContent: Record<string, { title: string; render: () => React.JSX.Element }> = {
     quickLog: { title: 'Quick Log', render: renderQuickLog },
     condition: { title: 'Condition', render: renderConditionPicker },
-    rest: { title: 'Rest', render: renderRestPicker },
+    ...(supportsRest ? { rest: { title: 'Rest', render: renderRestPicker } } : {}),
     damage: { title: 'Damage', render: renderDamagePicker },
-    death: { title: 'Death Roll', render: renderDeathRollPicker },
+    ...(supportsDeathRoll ? { death: { title: 'Death Roll', render: renderDeathRollPicker } } : {}),
     camp: { title: 'Camp', render: renderCampPicker },
     travel: { title: 'Travel', render: renderTravelPicker },
     quote: { title: 'Quick Quote', render: renderQuotePicker },

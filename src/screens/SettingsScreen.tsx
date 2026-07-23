@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { useAppState } from '../context/AppStateContext';
@@ -13,16 +13,28 @@ import type { ThemeName } from '../theme/themes';
 import { DEFAULT_BOTTOM_NAV_TABS } from '../features/settings/useAppSettings';
 import { nowISO } from '../utils/dates';
 import { usePwaInstall } from '../hooks/usePwaInstall';
+import { useSystemEngine } from '../features/systems/engine';
 import { cn } from '../lib/utils';
 
-const BOTTOM_NAV_TAB_LABELS = ['Sheet', 'Skills', 'Gear', 'Magic', 'Combat', 'Reference', 'Profile'] as const;
+/**
+ * Bottom-nav rows that are the same in every ruleset.
+ *
+ * @remarks
+ * `id` is the persisted settings key and must never be derived from `label` —
+ * renaming a label would otherwise orphan the user's stored preference. The
+ * abilities/magic row is inserted separately because its label (and its very
+ * existence) comes from the active system's engine.
+ */
+const STATIC_BOTTOM_NAV_TABS: { id: string; label: string }[] = [
+  { id: 'sheet', label: 'Sheet' },
+  { id: 'skills', label: 'Skills' },
+  { id: 'gear', label: 'Gear' },
+];
 
-const COMBAT_PANELS: { key: string; label: string }[] = [
-  { key: 'weaponRack', label: 'Weapon Rack' },
-  { key: 'heroicAbilities', label: 'Heroic Abilities' },
-  { key: 'conditions', label: 'Conditions' },
-  { key: 'deathRolls', label: 'Death Rolls' },
-  { key: 'restRecovery', label: 'Rest & Recovery' },
+const TRAILING_BOTTOM_NAV_TABS: { id: string; label: string }[] = [
+  { id: 'combat', label: 'Combat' },
+  { id: 'reference', label: 'Reference' },
+  { id: 'profile', label: 'Profile' },
 ];
 
 const THEMES: { value: ThemeName; label: string; description: string }[] = [
@@ -40,10 +52,42 @@ export default function SettingsScreen() {
   const { character, updateCharacter, clearCharacter } = useActiveCharacter();
   const navigate = useNavigate();
   const { canInstall, install: installPwa } = usePwaInstall();
+  const engine = useSystemEngine();
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
 
   useAutosave(character, characterRepository.save, 1000);
+
+  const abilitiesLabel = engine.labels.abilitiesScreen;
+  const abilitiesTerm = engine.terms.abilities;
+  const hasDeathPanel = engine.panels.includes('death');
+  const hasRestPanel = engine.panels.includes('rest');
+
+  /**
+   * Bottom-nav rows for the active system. The `magic` row keeps its stable
+   * `magic` id (so stored preferences survive a label rename) and is dropped
+   * entirely for systems without an abilities/magic screen.
+   */
+  const bottomNavTabs = useMemo(
+    () => [
+      ...STATIC_BOTTOM_NAV_TABS,
+      ...(abilitiesLabel ? [{ id: 'magic', label: abilitiesLabel }] : []),
+      ...TRAILING_BOTTOM_NAV_TABS,
+    ],
+    [abilitiesLabel],
+  );
+
+  /** Combat-screen panels available in the active system. */
+  const combatPanels = useMemo(
+    () => [
+      { key: 'weaponRack', label: 'Weapon Rack' },
+      { key: 'heroicAbilities', label: abilitiesTerm },
+      { key: 'conditions', label: 'Conditions' },
+      ...(hasDeathPanel ? [{ key: 'deathRolls', label: 'Death Rolls' }] : []),
+      ...(hasRestPanel ? [{ key: 'restRecovery', label: 'Rest & Recovery' }] : []),
+    ],
+    [abilitiesTerm, hasDeathPanel, hasRestPanel],
+  );
 
   function handleCombatPanelToggle(panelKey: string) {
     if (!character) return;
@@ -208,8 +252,7 @@ export default function SettingsScreen() {
           Choose which tabs appear in the bottom navigation bar. Hidden tabs remain accessible via the ☰ menu.
         </p>
         <div className="flex flex-col gap-3">
-          {BOTTOM_NAV_TAB_LABELS.map(tabLabel => {
-            const key = tabLabel.toLowerCase();
+          {bottomNavTabs.map(({ id: key, label: tabLabel }) => {
             const currentTabs: Record<string, boolean> = {
               ...DEFAULT_BOTTOM_NAV_TABS,
               ...(settings.bottomNavTabs ?? {}),
@@ -256,7 +299,7 @@ export default function SettingsScreen() {
               Choose which panels appear on the Combat screen.
             </p>
             <div className="flex flex-col gap-3">
-              {COMBAT_PANELS.map(panel => {
+              {combatPanels.map(panel => {
                 const visibility = character.uiState.combatPanelVisibility ?? {};
                 const isOn = visibility[panel.key] !== false;
                 return (

@@ -3,10 +3,13 @@ import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
 import type { PlayModuleProps } from './types';
 import { useSessionLog } from '../session/useSessionLog';
+import { getEngine } from '../systems/engine';
 
-export function CombatModule({ character, updateCharacter }: PlayModuleProps) {
+export function CombatModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { logCoinChange } = useSessionLog();
   const equipped = character.weapons.filter(w => w.equipped).slice(0, 6);
+  // Only coin-denomination systems get the gold/silver/copper widget.
+  const showCoins = getEngine(system).currency === 'coins';
 
   function adjustCoin(coin: 'gold' | 'silver' | 'copper', delta: number) {
     let changed = false;
@@ -57,6 +60,7 @@ export function CombatModule({ character, updateCharacter }: PlayModuleProps) {
             </Button>
           </div>
         ))}
+        {showCoins && (
         <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)]">
           <p className="m-0 font-semibold text-[var(--color-text)]">Coins</p>
           {(['gold', 'silver', 'copper'] as const).map(coin => {
@@ -87,6 +91,7 @@ export function CombatModule({ character, updateCharacter }: PlayModuleProps) {
             );
           })}
         </div>
+        )}
       </div>
     </SectionPanel>
   );

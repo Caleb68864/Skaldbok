@@ -7,6 +7,7 @@ import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
 import { type PlayModuleProps } from './types';
 import { useSessionLog } from '../session/useSessionLog';
+import { getEngine } from '../systems/engine';
 
 type RestType = 'round' | 'stretch' | 'shift';
 
@@ -19,6 +20,9 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
   const [stretchOpen, setStretchOpen] = useState(false);
   const [stretchWp, setStretchWp] = useState('');
   const [stretchHp, setStretchHp] = useState('');
+
+  // Systems without a 'rest' panel (e.g. Traveller) have no rest mechanic at all.
+  const hasRest = getEngine(system).panels.includes('rest');
 
   const restsUsed = character.uiState.restsUsed ?? {};
 
@@ -139,6 +143,8 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
   }
 
   const anyUsed = !!(restsUsed.round || restsUsed.stretch || restsUsed.shift);
+
+  if (!hasRest) return null;
 
   return (
     <SectionPanel title="Rest" collapsible defaultOpen>

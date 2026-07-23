@@ -18,6 +18,8 @@ export const classicFantasyEngine: SystemEngine = {
   skill: {
     valueLabel: 'Value',
     range: { min: 0, max: 20 },
+    // Dragonbane advancement stops at 18 even though the sheet accepts 20.
+    advancementMax: 18,
     defaultValue: 0,
     display: (value: number) => `${value}`,
     supportsMarks: true,

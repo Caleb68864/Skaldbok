@@ -37,7 +37,8 @@ function clampSkillValue(value: number, range: { min: number; max: number }): nu
  * Skills are grouped by category as defined by the active game-system definition.
  * The screen provides the following interactive controls:
  *
- * - **Filter chips** — toggle between "Relevant" (trained / non-zero) and "All" skills.
+ * - **Filter chips** — toggle between "Relevant" (per the active system engine's
+ *   {@link SkillEngineConfig.isRelevant} predicate) and "All" skills.
  * - **Global Boon/Bane selector** — sets a campaign-wide modifier applied to
  *   every skill's probability calculation.
  * - **Per-skill boon/bane override** — cycles through inherit → boon → bane → inherit
@@ -212,8 +213,8 @@ export default function SkillsScreen() {
         </div>
       </div>
 
-      {/* Dragon Mark Count Badge */}
-      {dragonMarkedCount > 0 && (
+      {/* Skill-mark count badge — only systems whose skills carry marks show it */}
+      {engine.skill.supportsMarks && dragonMarkedCount > 0 && (
         <div className="dragon-count-badge" aria-label={`${dragonMarkedCount} skills dragon marked`}>
           🐉 {dragonMarkedCount} marked
         </div>
@@ -248,10 +249,7 @@ export default function SkillsScreen() {
         <div>
           {system.skillCategories.map(category => {
             const visibleSkills = filter === 'relevant'
-              ? category.skills.filter(skill => {
-                  const cs = character.skills[skill.id];
-                  return cs ? (cs.value > 0 || cs.trained) : false;
-                })
+              ? category.skills.filter(skill => engine.skill.isRelevant(character.skills[skill.id]))
               : category.skills;
 
             if (visibleSkills.length === 0 && filter === 'relevant') return null;

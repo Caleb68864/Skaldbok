@@ -36,7 +36,17 @@ export interface SkillDisplayContext {
 
 export interface SkillEngineConfig {
   valueLabel: string;
+  /** Clamp applied to the skill's editable value input. */
   range: { min: number; max: number };
+  /**
+   * Ceiling an end-of-session advancement roll may raise a skill to.
+   *
+   * @remarks
+   * Distinct from {@link range}: Dragonbane accepts values up to 20 on the
+   * sheet but advancement stops at 18, so reusing `range.max` here would
+   * silently raise the ceiling.
+   */
+  advancementMax: number;
   defaultValue: number;
   /**
    * Renders a skill's user-facing value string. `context` is optional so

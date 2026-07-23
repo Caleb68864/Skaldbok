@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Modal } from '../primitives/Modal';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
+import { getEngine } from '../../features/systems/engine';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import { nowISO } from '../../utils/dates';
 import { computeSkillValue } from '../../utils/derivedValues';
@@ -27,13 +28,18 @@ interface RollResult {
   newValue: number;
 }
 
-const MAX_SKILL_VALUE = 18;
-
 const btnBaseClass = "min-h-11 min-w-11 px-[var(--space-md)] rounded-[var(--radius-sm)] border-none cursor-pointer font-[family-name:var(--font-ui)] text-[length:var(--size-md)] font-[var(--weight-semibold)]";
 
 export function EndOfSessionModal({ open, onClose }: Props) {
   const { character, updateCharacter } = useActiveCharacter();
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
+  const engine = getEngine(system);
+  /** Skill ceiling for this ruleset — no advancement past it. */
+  // Advancement ceiling, not the sheet's input clamp — Dragonbane accepts 20 on
+  // the sheet but advancement stops at 18.
+  const maxSkillValue = engine.skill.advancementMax;
+  /** Whether this ruleset has the "mark a skill during play" advancement step. */
+  const supportsMarks = engine.skill.supportsMarks;
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
@@ -72,9 +78,13 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     return { value: computeSkillValue(attrVal, false), trained: false };
   }
 
+  // Marked-skill advancement only exists in rulesets that support marks.
   const markedIds = useMemo(
-    () => Object.entries(skills).filter(([, cs]) => cs?.dragonMarked).map(([id]) => id),
-    [skills],
+    () =>
+      supportsMarks
+        ? Object.entries(skills).filter(([, cs]) => cs?.dragonMarked).map(([id]) => id)
+        : [],
+    [skills, supportsMarks],
   );
 
   const checkedCount = Object.values(checks).filter(Boolean).length;
@@ -96,7 +106,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     for (const id of unique) {
       const cs = currentSkills[id];
       const def = allSkillDefs.find(s => s.id === id);
-      if (cs && cs.value >= MAX_SKILL_VALUE) {
+      if (cs && cs.value >= maxSkillValue) {
         autoResults.push({ skillId: id, skillName: def?.name ?? id, advanced: false, skipped: true, newValue: cs.value });
       } else {
         queue.push(id);
@@ -151,8 +161,10 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     const skillId = rollQueue[rollIndex];
     const def = allSkillDefs.find(s => s.id === skillId);
     const cs = skills[skillId] ?? getSkillFallback(skillId);
-    const newValue = Math.min(cs.value + 1, MAX_SKILL_VALUE);
-    const updatedSkill = { ...cs, value: newValue, dragonMarked: false };
+    const newValue = Math.min(cs.value + 1, maxSkillValue);
+    const updatedSkill = supportsMarks
+      ? { ...cs, value: newValue, dragonMarked: false }
+      : { ...cs, value: newValue };
     const updatedSkills = { ...skills, [skillId]: updatedSkill };
     setSkills(updatedSkills);
     updateCharacter({ skills: updatedSkills, updatedAt: nowISO() });
@@ -166,7 +178,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     const skillId = rollQueue[rollIndex];
     const def = allSkillDefs.find(s => s.id === skillId);
     const cs = skills[skillId] ?? getSkillFallback(skillId);
-    const updatedSkill = { ...cs, dragonMarked: false };
+    const updatedSkill = supportsMarks ? { ...cs, dragonMarked: false } : { ...cs };
     const updatedSkills = { ...skills, [skillId]: updatedSkill };
     setSkills(updatedSkills);
     updateCharacter({ skills: updatedSkills, updatedAt: nowISO() });
@@ -177,9 +189,11 @@ export function EndOfSessionModal({ open, onClose }: Props) {
 
   function handleDone() {
     if (!character) { onClose(); return; }
-    const cleared = Object.fromEntries(
-      Object.entries(skills).map(([id, cs]) => [id, { ...cs, dragonMarked: false }])
-    );
+    const cleared = supportsMarks
+      ? Object.fromEntries(
+          Object.entries(skills).map(([id, cs]) => [id, { ...cs, dragonMarked: false }])
+        )
+      : skills;
     const updatedChar = { ...character, skills: cleared, advancementChecks: {}, updatedAt: nowISO() };
     updateCharacter({ skills: cleared, advancementChecks: {}, updatedAt: nowISO() });
     characterRepository.save(updatedChar).catch(console.error);
@@ -210,7 +224,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
           <span className="eos-check-label">{evt.label}</span>
         </label>
       ))}
-      {markedIds.length > 0 && (
+      {supportsMarks && markedIds.length > 0 && (
         <p className="eos-hint">
           🐉 {markedIds.length} dragon-marked skill{markedIds.length !== 1 ? 's' : ''} will be rolled.
         </p>
@@ -277,7 +291,11 @@ export function EndOfSessionModal({ open, onClose }: Props) {
       <h3 className="eos-roll-skill">{currentDef?.name ?? currentSkillId}</h3>
       <div className="eos-roll-value">Current value: <strong>{currentCs.value}</strong></div>
       <div className="eos-roll-target">
-        Roll above <strong>{currentCs.value}</strong> on a d20 to advance
+        {engine.resolution === 'd20-roll-under' ? (
+          <>Roll above <strong>{currentCs.value}</strong> on a d20 to advance</>
+        ) : (
+          <>Make an advancement roll on <strong>2d6</strong> to advance</>
+        )}
       </div>
       <div className="eos-roll-btns">
         <button

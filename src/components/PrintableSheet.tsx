@@ -81,24 +81,43 @@ function SheetHeader({ character, system }: { character: CharacterRecord; system
 // Section 2 — Attribute Band (SS-05)
 // ──────────────────────────────────────────────
 
-const ATTR_CONDITION_PAIRS = [
-  { attr: 'STR', attrKey: 'str', cond: 'Exhausted', condKey: 'exhausted' },
-  { attr: 'CON', attrKey: 'con', cond: 'Sickly', condKey: 'sickly' },
-  { attr: 'AGL', attrKey: 'agl', cond: 'Dazed', condKey: 'dazed' },
-  { attr: 'INT', attrKey: 'int', cond: 'Angry', condKey: 'angry' },
-  { attr: 'WIL', attrKey: 'wil', cond: 'Scared', condKey: 'scared' },
-  { attr: 'CHA', attrKey: 'cha', cond: 'Disheartened', condKey: 'disheartened' },
-] as const;
+/**
+ * Builds the attribute/condition pairs for the band from system data.
+ *
+ * The attribute order comes from the engine; labels come from the system's own
+ * attribute definitions, and each condition is matched to its attribute through
+ * `linkedAttributeId` rather than a hardcoded Dragonbane list.
+ */
+function buildAttributePairs(
+  engine: SystemEngine,
+  system: SystemDefinition | null,
+): Array<{ attrKey: string; attr: string; cond: string | null; condKey: string | null }> {
+  return engine.attributeIds.map(attrKey => {
+    const def = system?.attributes?.find(a => a.id === attrKey);
+    const condition = system?.conditions?.find(c => c.linkedAttributeId === attrKey);
+    return {
+      attrKey,
+      attr: def?.abbreviation ?? attrKey.toUpperCase(),
+      cond: condition?.name ?? null,
+      condKey: condition?.id ?? null,
+    };
+  });
+}
 
 function AttributeBand({
   character,
+  system,
+  engine,
 }: {
   character: CharacterRecord;
+  system: SystemDefinition | null;
+  engine: SystemEngine;
 }): React.ReactElement {
+  const pairs = buildAttributePairs(engine, system);
   return (
     <div className="sheet-attribute-grid">
-      {ATTR_CONDITION_PAIRS.map(({ attr, attrKey, cond, condKey }) => {
-        const active = character.conditions?.[condKey] === true;
+      {pairs.map(({ attr, attrKey, cond, condKey }) => {
+        const active = condKey ? character.conditions?.[condKey] === true : false;
         return (
           <div key={attrKey} className="sheet-attribute-column">
             <div className="sheet-attribute-box">
@@ -107,10 +126,16 @@ function AttributeBand({
                 {character.attributes?.[attrKey] != null ? character.attributes[attrKey] : ''}
               </div>
             </div>
-            <div className="sheet-condition">
-              <span className="sheet-condition-diamond">{active ? '◆' : '◇'}</span>
-              <span className="sheet-condition-label">{cond}</span>
-            </div>
+            {cond ? (
+              <div className="sheet-condition">
+                <span className="sheet-condition-diamond">{active ? '◆' : '◇'}</span>
+                <span className="sheet-condition-label">{cond}</span>
+              </div>
+            ) : (
+              // Keeps column heights aligned for systems whose attributes have
+              // no linked condition.
+              <div className="sheet-condition">&nbsp;</div>
+            )}
           </div>
         );
       })}
@@ -159,14 +184,23 @@ const SPELL_SLOTS = 3;
 
 function AbilitiesSpells({
   character,
+  engine,
 }: {
   character: CharacterRecord;
-}): React.ReactElement {
+  engine: SystemEngine;
+}): React.ReactElement | null {
+  // Systems without magic have no ability/spell lists to print — rendering them
+  // would emit blank Dragonbane rows on, e.g., a Traveller sheet.
+  if (!engine.hasMagic) return null;
+
   const abilities: HeroicAbility[] = character.heroicAbilities ?? [];
   const spells: Spell[] = [...(character.spells ?? [])].sort(compareSpellsByRankThenName);
 
   return (
     <div className="sheet-abilities-spells">
+      {/* NOTE: heading intentionally not `engine.terms.abilities` — that reads
+          "Heroic Abilities" for classic-fantasy and would change the printed
+          Dragonbane sheet. Override via `terms.abilities` in system.json. */}
       <div className="sheet-section-header">Abilities</div>
       {abilities.map((ability, i) => (
         <div key={i} className="sheet-ability-row">
@@ -178,7 +212,7 @@ function AbilitiesSpells({
         <div key={`ability-blank-${i}`} className="sheet-ability-row sheet-blank-row">&nbsp;</div>
       ))}
 
-      <div className="sheet-section-header">Spells</div>
+      <div className="sheet-section-header">{engine.terms.spells}</div>
       {spells.map((spell, i) => (
         <div key={i} className="sheet-ability-row sheet-spell-row">
           <span className="sheet-spell-name">{spell.name}</span>
@@ -511,78 +545,77 @@ function ResourceTrackers({
   system: SystemDefinition | null;
   engine: SystemEngine;
 }): React.ReactElement {
-  // Dragonbane-style HP/WP tracking only applies to engines that model those resources.
-  if (!engine.resourceIds.includes('hp')) {
-    return (
-      <div className="sheet-resource-trackers">
-        <div className="sheet-section-header">Damage Track</div>
-        {engine.resourceIds.map(id => {
-          const resource = character.resources?.[id];
-          const label = system?.resources?.find(r => r.id === id)?.name ?? id.toUpperCase();
-          return (
-            <DotTracker
-              key={id}
-              label={label}
-              current={resource?.current ?? 0}
-              max={resource?.max ?? 0}
-              filledClass="hp-dot-filled"
-            />
-          );
-        })}
-      </div>
-    );
-  }
+  // `hp` / `wp` are data keys (of `character.resources` and the derived struct),
+  // not labels — the user-facing text comes from the engine's terms.
+  const hasHpWpPools = engine.resourceIds.includes('hp') && engine.resourceIds.includes('wp');
+
+  const labelFor = (id: string): string => {
+    if (id === 'hp') return engine.terms.healthResource;
+    if (id === 'wp') return engine.terms.magicResource;
+    return system?.resources?.find(r => r.id === id)?.name ?? id.toUpperCase();
+  };
+
+  const maxFor = (id: string): number => {
+    if (id === 'hp') return derived.hpMax;
+    if (id === 'wp') return derived.wpMax;
+    return character.resources?.[id]?.max ?? 0;
+  };
+
+  // NOTE: not `engine.labels.resourcesPanel` for the HP/WP shape — that reads
+  // "Resources" for classic-fantasy and would change the printed Dragonbane
+  // sheet. Override via `labels.resourcesPanel` in system.json.
+  const heading = hasHpWpPools ? 'Hit Points & Willpower' : engine.labels.resourcesPanel;
 
   return (
     <div className="sheet-resource-trackers">
-      <div className="sheet-section-header">Hit Points &amp; Willpower</div>
+      <div className="sheet-section-header">{heading}</div>
 
-      <DotTracker
-        label="HP"
-        current={character.resources?.['hp']?.current ?? 0}
-        max={derived.hpMax}
-        filledClass="hp-dot-filled"
-      />
+      {engine.resourceIds.map(id => (
+        <DotTracker
+          key={id}
+          label={labelFor(id)}
+          current={character.resources?.[id]?.current ?? 0}
+          max={maxFor(id)}
+          filledClass={id === 'wp' ? 'wp-dot-filled' : 'hp-dot-filled'}
+        />
+      ))}
 
-      <DotTracker
-        label="WP"
-        current={character.resources?.['wp']?.current ?? 0}
-        max={derived.wpMax}
-        filledClass="wp-dot-filled"
-      />
-
-      {/* Rest Checkboxes */}
-      <div className="sheet-rest-row">
-        <label className="sheet-rest-checkbox">
-          <span className="sheet-checkbox-box" />
-          <span className="sheet-checkbox-label">Round Rest</span>
-        </label>
-        <label className="sheet-rest-checkbox">
-          <span className="sheet-checkbox-box" />
-          <span className="sheet-checkbox-label">Stretch Rest</span>
-        </label>
-        <label className="sheet-rest-checkbox">
-          <span className="sheet-checkbox-box" />
-          <span className="sheet-checkbox-label">Shift Rest</span>
-        </label>
-      </div>
-
-      {/* Death Rolls */}
-      <div className="sheet-death-rolls">
-        <div className="sheet-section-header">Death Rolls</div>
-        <div className="sheet-death-roll-row">
-          <span className="sheet-death-label">Success</span>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <span key={i} className="sheet-checkbox-box" />
-          ))}
+      {/* Rest Checkboxes — only for systems with a rest panel */}
+      {engine.panels.includes('rest') && (
+        <div className="sheet-rest-row">
+          <label className="sheet-rest-checkbox">
+            <span className="sheet-checkbox-box" />
+            <span className="sheet-checkbox-label">Round Rest</span>
+          </label>
+          <label className="sheet-rest-checkbox">
+            <span className="sheet-checkbox-box" />
+            <span className="sheet-checkbox-label">Stretch Rest</span>
+          </label>
+          <label className="sheet-rest-checkbox">
+            <span className="sheet-checkbox-box" />
+            <span className="sheet-checkbox-label">Shift Rest</span>
+          </label>
         </div>
-        <div className="sheet-death-roll-row">
-          <span className="sheet-death-label">Failure</span>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <span key={i} className="sheet-checkbox-box" />
-          ))}
+      )}
+
+      {/* Death Rolls — only for systems with a death panel */}
+      {engine.panels.includes('death') && (
+        <div className="sheet-death-rolls">
+          <div className="sheet-section-header">Death Rolls</div>
+          <div className="sheet-death-roll-row">
+            <span className="sheet-death-label">Success</span>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <span key={i} className="sheet-checkbox-box" />
+            ))}
+          </div>
+          <div className="sheet-death-roll-row">
+            <span className="sheet-death-label">Failure</span>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <span key={i} className="sheet-checkbox-box" />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -606,7 +639,7 @@ export default function PrintableSheet({
       <SheetHeader character={character} system={system} />
 
       {/* 2. Attribute Band + Conditions (SS-05) */}
-      <AttributeBand character={character} />
+      <AttributeBand character={character} system={system} engine={engine} />
 
       {/* 3. Derived Stats Row (SS-06) */}
       <DerivedStatsRow derived={derived} />
@@ -615,7 +648,7 @@ export default function PrintableSheet({
       <div className="print-body-columns">
         {/* Left: Abilities/Spells + Currency */}
         <div className="print-col print-col--left">
-          <AbilitiesSpells character={character} />
+          <AbilitiesSpells character={character} engine={engine} />
           <Currency character={character} engine={engine} />
         </div>
 

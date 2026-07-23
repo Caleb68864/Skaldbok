@@ -4,7 +4,6 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { getEngine } from '../features/systems/engine';
-import { getDerivedValue } from '../utils/derivedValues';
 import PrintableSheet from '../components/PrintableSheet';
 import '../styles/print-sheet.css';
 
@@ -40,14 +39,22 @@ export default function PrintableSheetScreen() {
   if (stillLoading || waitingForCharacter) return <div>Loading...</div>;
   if (!character) return null;
 
-  // Compute derived values
+  // Derived values come from the system engine rather than the classic-fantasy
+  // formulas, so a non-Dragonbane ruleset prints its own numbers.
+  const engine = getEngine(system);
+  const engineDerived = engine.derivedStats(character, system ?? undefined);
+
+  // Manual per-character overrides still win, matching `getDerivedValue`.
+  const override = (key: keyof PrintDerivedValues): number | null =>
+    character.derivedOverrides?.[key] ?? null;
+
   const derived: PrintDerivedValues = {
-    damageBonus: String(getDerivedValue(character, 'damageBonus').effective),
-    aglDamageBonus: String(getDerivedValue(character, 'aglDamageBonus').effective),
-    movement: Number(getDerivedValue(character, 'movement').effective),
-    encumbranceLimit: Number(getDerivedValue(character, 'encumbranceLimit').effective),
-    hpMax: Number(getDerivedValue(character, 'hpMax').effective),
-    wpMax: Number(getDerivedValue(character, 'wpMax').effective),
+    damageBonus: String(override('damageBonus') ?? engineDerived.damageBonus),
+    aglDamageBonus: String(override('aglDamageBonus') ?? engineDerived.aglDamageBonus),
+    movement: Number(override('movement') ?? engineDerived.movement),
+    encumbranceLimit: Number(override('encumbranceLimit') ?? engineDerived.encumbranceLimit),
+    hpMax: Number(override('hpMax') ?? engineDerived.hpMax),
+    wpMax: Number(override('wpMax') ?? engineDerived.wpMax),
   };
 
   return (
@@ -57,7 +64,7 @@ export default function PrintableSheetScreen() {
         system={system}
         derived={derived}
         colorMode={colorMode}
-        engine={getEngine(system)}
+        engine={engine}
       />
       {/* Floating toolbar — hidden via @media print in print-sheet.css */}
       <div className="print-toolbar">

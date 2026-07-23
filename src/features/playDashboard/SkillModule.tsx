@@ -27,7 +27,9 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
   if (!system) return null;
 
   const engine = getEngine(system);
-  const isTraveller = system.id === 'traveller';
+  // Roll-under systems render a bare target number plus a boon/bane odds line;
+  // other resolutions let the engine format the whole thing into one string.
+  const rollsUnder = engine.resolution === 'd20-roll-under';
 
   const skillDefs: SkillRow[] = system.skillCategories.flatMap(category =>
     category.skills.map(skill => ({ ...skill, category: category.name })),
@@ -55,11 +57,18 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
   function renderSkillRow(skill: SkillRow) {
     const stored = character.skills[skill.id];
     const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 0;
-    const rawValue =
-      stored?.value ??
-      (isTraveller || !skill.linkedAttributeId ? skill.baseChance : computeSkillValue(attrValue, stored?.trained ?? false));
+    const trained = stored?.trained ?? false;
+    // Mirrors SkillsScreen: engines whose skills carry marks derive an untrained
+    // fallback from the linked attribute / base chance; others fall back to the
+    // engine's declared default value.
+    const computedValue = engine.skill.supportsMarks
+      ? (skill.linkedAttributeId
+          ? computeSkillValue(attrValue, trained)
+          : (trained ? skill.baseChance * 2 : skill.baseChance))
+      : engine.skill.defaultValue;
+    const rawValue = stored?.value ?? computedValue;
     const value = clamp(rawValue, engine.skill.range.min, engine.skill.range.max);
-    const fallback = { value, trained: stored?.trained ?? false };
+    const fallback = { value, trained };
     const mark = stored?.dragonMarked ? 'Dragon' : stored?.demonMarked ? 'Demon' : 'Mark';
     const displayValue = engine.skill.display(value, {
       character,
@@ -70,11 +79,11 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
         <div className="min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <p className="m-0 font-semibold text-[var(--color-text)]">{skill.name}</p>
-            {!isTraveller && (
+            {rollsUnder && (
               <span className="text-[length:var(--font-size-lg)] font-bold text-[var(--color-accent)] leading-none">{displayValue}</span>
             )}
           </div>
-          <p className="m-0 text-xs text-[var(--color-text-muted)]">{isTraveller ? displayValue : probability(value)}</p>
+          <p className="m-0 text-xs text-[var(--color-text-muted)]">{rollsUnder ? probability(value) : displayValue}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap min-[520px]:shrink-0">
           {engine.skill.supportsMarks && (

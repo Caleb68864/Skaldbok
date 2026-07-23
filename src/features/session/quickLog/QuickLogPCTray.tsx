@@ -4,6 +4,8 @@ import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useToast } from '../../../context/ToastContext';
 import { useAppState } from '../../../context/AppStateContext';
 import { useSystemDefinition } from '../../systems/useSystemDefinition';
+import { useSystemEngine } from '../../systems/engine';
+import { DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 import { useSessionLog } from '../useSessionLog';
 import { useSessionEncounterContextSafe } from '../SessionEncounterContext';
 import { getById as getCharacterById } from '../../../storage/repositories/characterRepository';
@@ -57,6 +59,7 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
   const { showToast } = useToast();
   const { sessionState } = useAppState();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
+  const engine = useSystemEngine();
 
   const [step, setStep] = useState<TrayStep>({ kind: 'tray' });
   const [characters, setCharacters] = useState<Record<string, CharacterRecord>>({});
@@ -98,6 +101,11 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
   }, [activeParty, characters]);
 
   const activePC = step.kind !== 'tray' ? characters[step.pcId] : undefined;
+
+  // Mid-sentence forms of the system's vocabulary (headings use the term as
+  // declared; running copy lowercases it).
+  const abilityTerm = engine.terms.abilities.toLowerCase();
+  const spellTerm = engine.terms.spells.toLowerCase();
 
   // Pre-select modifier chips from session-state boon/bane when stepping into
   // outcome. Spells/abilities default to neutral (no pre-selection).
@@ -182,34 +190,41 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
           Who did something?
         </p>
         <div className="flex flex-col gap-2">
-          {pcList.map(({ memberId, character }) => (
-            <button
-              key={memberId}
-              type="button"
-              onClick={() => setStep({ kind: 'palette', pcId: memberId })}
-              className="flex items-center gap-3 p-3 min-h-[56px] rounded-[var(--radius-md)] bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-left text-[var(--color-text)] cursor-pointer"
-            >
-              <span className="text-2xl">🧝</span>
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-base truncate">{character.name}</div>
-                <div className="text-xs text-[var(--color-text-muted)] truncate">
-                  {character.metadata?.profession ?? 'Adventurer'}
-                  {character.spells.length > 0 || character.heroicAbilities.length > 0
-                    ? ` · ${character.heroicAbilities.length} abilities, ${character.spells.filter(s => s.prepared).length} prepared spells`
-                    : ''}
+          {pcList.map(({ memberId, character }) => {
+            const abilityCount = character.heroicAbilities.length;
+            const preparedCount = character.spells.filter(s => s.prepared).length;
+            const showCounts =
+              abilityCount > 0 || (engine.hasMagic && character.spells.length > 0);
+            const counts = engine.hasMagic
+              ? `${abilityCount} ${abilityTerm}, ${preparedCount} prepared ${spellTerm}`
+              : `${abilityCount} ${abilityTerm}`;
+            return (
+              <button
+                key={memberId}
+                type="button"
+                onClick={() => setStep({ kind: 'palette', pcId: memberId })}
+                className="flex items-center gap-3 p-3 min-h-[56px] rounded-[var(--radius-md)] bg-[var(--color-surface-alt)] border border-[var(--color-border)] text-left text-[var(--color-text)] cursor-pointer"
+              >
+                <span className="text-2xl">🧝</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-base truncate">{character.name}</div>
+                  <div className="text-xs text-[var(--color-text-muted)] truncate">
+                    {character.metadata?.profession ?? engine.terms.roleFallback}
+                    {showCounts ? ` · ${counts}` : ''}
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       </div>
     );
   }
 
   if (step.kind === 'palette' && activePC) {
-    const preparedSpells = activePC.spells.filter(
-      s => s.prepared || s.pinnedAsStamp,
-    );
+    const preparedSpells = engine.hasMagic
+      ? activePC.spells.filter(s => s.prepared || s.pinnedAsStamp)
+      : [];
     const abilities = activePC.heroicAbilities;
     return (
       <div className="flex flex-col gap-3">
@@ -241,7 +256,7 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
         {abilities.length > 0 && (
           <div>
             <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1.5">
-              Heroic Abilities
+              {engine.terms.abilities}
             </div>
             <div className="flex flex-col gap-2">
               {abilities.map(a => (
@@ -262,7 +277,9 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
                   <Zap size={14} className="text-[#b08d57]" />
                   <span className="flex-1 text-sm">{a.name}</span>
                   {typeof a.wpCost === 'number' && a.wpCost > 0 && (
-                    <span className="text-xs text-[var(--color-text-muted)]">{a.wpCost} WP</span>
+                    <span className="text-xs text-[var(--color-text-muted)]">
+                      {a.wpCost} {engine.terms.magicResource}
+                    </span>
                   )}
                 </button>
               ))}
@@ -271,10 +288,10 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
         )}
 
         {/* Spells */}
-        {preparedSpells.length > 0 && (
+        {engine.hasMagic && preparedSpells.length > 0 && (
           <div>
             <div className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1.5">
-              Spells
+              {engine.terms.spells}
             </div>
             <div className="flex flex-col gap-2">
               {preparedSpells.map(s => (
@@ -295,7 +312,7 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
                   <Sparkles size={14} className="text-[#7a5cff]" />
                   <span className="flex-1 text-sm">{s.name}</span>
                   <span className="text-xs text-[var(--color-text-muted)]">
-                    {s.wpCost} WP
+                    {s.wpCost} {engine.terms.magicResource}
                   </span>
                 </button>
               ))}
@@ -305,8 +322,16 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
 
         {abilities.length === 0 && preparedSpells.length === 0 && (
           <p className="text-[var(--color-text-muted)] text-sm">
-            No heroic abilities or prepared spells on this character. Use "Skill
-            check…" above, or prepare a spell on the character sheet.
+            {engine.hasMagic ? (
+              <>
+                No {abilityTerm} or prepared {spellTerm} on this character. Use "Skill
+                check…" above, or prepare {spellTerm} on the character sheet.
+              </>
+            ) : (
+              <>
+                No {abilityTerm} on this character. Use "Skill check…" above.
+              </>
+            )}
           </p>
         )}
       </div>
@@ -429,16 +454,6 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
 
 // ── Skills sub-step ───────────────────────────────────────────────
 
-const CORE_SKILLS_FALLBACK = [
-  'Acrobatics', 'Awareness', 'Bartering', 'Beast Lore', 'Bluffing',
-  'Bushcraft', 'Crafting', 'Evade', 'Healing', 'Hunting & Fishing',
-  'Languages', 'Myths & Legends', 'Performance', 'Persuasion',
-  'Riding', 'Seamanship', 'Sleight of Hand', 'Sneaking',
-  'Spot Hidden', 'Swimming',
-  'Axes', 'Bows', 'Brawling', 'Crossbows', 'Hammers',
-  'Knives', 'Slings', 'Spears', 'Staves', 'Swords',
-];
-
 function SkillsSubStep({
   character,
   onBack,
@@ -448,11 +463,14 @@ function SkillsSubStep({
   onBack: () => void;
   onPick: (skillName: string) => void;
 }) {
-  const { system } = useSystemDefinition(character.systemId ?? 'classic-fantasy');
-  const skillNames = useMemo(() => {
-    if (!system) return CORE_SKILLS_FALLBACK;
-    return system.skillCategories.flatMap(c => c.skills.map(s => s.name));
-  }, [system]);
+  const { system, isLoading, error } = useSystemDefinition(character.systemId ?? DEFAULT_SYSTEM_ID);
+  // No cross-system fallback list: until the character's own system loads there
+  // is no honest answer, so the list renders empty rather than another ruleset's
+  // skills.
+  const skillNames = useMemo(
+    () => system?.skillCategories.flatMap(c => c.skills.map(s => s.name)) ?? [],
+    [system],
+  );
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
@@ -468,6 +486,15 @@ function SkillsSubStep({
           {character.name} — which skill?
         </p>
       </div>
+      {skillNames.length === 0 && (
+        <p className="text-[var(--color-text-muted)] text-sm">
+          {isLoading
+            ? 'Loading skills…'
+            : error
+              ? `Could not load skills for this character's system (${error}).`
+              : 'This system defines no skills.'}
+        </p>
+      )}
       <div className="flex flex-col">
         {skillNames.map(name => (
           <button

@@ -96,11 +96,19 @@ export default function MagicScreen() {
   if (stillLoading || waitingForCharacter) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
+  // User-facing vocabulary comes from the active system's engine. Systems
+  // without a dedicated abilities screen label fall back to their term for
+  // abilities so the heading is never blank.
+  const screenTitle = engine.labels.abilitiesScreen ?? engine.terms.abilities;
+  const abilitiesTerm = engine.terms.abilities;
+  const spellsTerm = engine.terms.spells;
+  const magicResourceTerm = engine.terms.magicResource;
+
   if (!engine.hasMagic) {
     return (
       <div className="p-[var(--space-md)]">
         <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] mb-[var(--space-md)]">
-          Abilities / Magic
+          {screenTitle}
         </h1>
         <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-md)]">
           Magic is not available in this system.
@@ -202,7 +210,7 @@ export default function MagicScreen() {
     if (!character) return;
     const wp = character.resources['wp'];
     if (!wp || wp.current < wpCost) {
-      showToast('Not enough WP to cast this spell.', 'error');
+      showToast(`Not enough ${magicResourceTerm} to cast this spell.`, 'error');
       return;
     }
     // Deduct WP
@@ -227,9 +235,9 @@ export default function MagicScreen() {
         createdAt: nowISO(),
       }));
       updates.tempModifiers = [...(character.tempModifiers ?? []), ...newModifiers];
-      showToast(`Cast ${spell.name} (${wpCost} WP) — effects applied!`, 'success');
+      showToast(`Cast ${spell.name} (${wpCost} ${magicResourceTerm}) — effects applied!`, 'success');
     } else {
-      showToast(`Cast ${spell.name} (${wpCost} WP)`, 'success');
+      showToast(`Cast ${spell.name} (${wpCost} ${magicResourceTerm})`, 'success');
     }
     updateCharacter(updates);
   }
@@ -239,7 +247,7 @@ export default function MagicScreen() {
       {/* ── Page header with prepared counter + show-magic toggle ── */}
       <div className="flex items-center justify-between mb-[var(--space-sm)] flex-wrap gap-[var(--space-sm)]">
         <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] m-0">
-          Abilities / Magic
+          {screenTitle}
         </h1>
         <div className="flex items-center gap-[var(--space-md)]">
           {showMagic && (
@@ -294,9 +302,9 @@ export default function MagicScreen() {
         </div>
       )}
 
-      {/* ── Heroic Abilities section (always shown — this is the primary
+      {/* ── Abilities section (always shown — this is the primary
              content for non-casters and the default view) ── */}
-      <SectionPanel title="Heroic Abilities" collapsible defaultOpen>
+      <SectionPanel title={abilitiesTerm} collapsible defaultOpen>
         <div className="flex justify-end mb-[var(--space-sm)]">
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingAbility(null); setAbilityDrawerOpen(true); }}>+ Add Ability</Button>}
         </div>
@@ -308,7 +316,7 @@ export default function MagicScreen() {
 
       {/* ── Spells section (hidden unless "Show Magic" is toggled on) ── */}
       {showMagic && (
-      <SectionPanel title="Spells" collapsible defaultOpen>
+      <SectionPanel title={spellsTerm} collapsible defaultOpen>
         <div className="flex justify-end mb-[var(--space-sm)]">
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingSpell(null); setSpellDrawerOpen(true); }}>+ Add Spell</Button>}
         </div>
@@ -366,7 +374,7 @@ export default function MagicScreen() {
           </div>
           <div>
             <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
-              WP cost: 2 per power level (selected at cast time). Tricks always cost 1 WP.
+              {magicResourceTerm} cost: 2 per power level (selected at cast time). Tricks always cost 1 {magicResourceTerm}.
             </p>
           </div>
           <div>

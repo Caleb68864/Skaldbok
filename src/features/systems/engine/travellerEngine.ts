@@ -63,6 +63,7 @@ export const travellerEngine: SystemEngine = {
   skill: {
     valueLabel: 'Level',
     range: { min: 0, max: 6 },
+    advancementMax: 6,
     defaultValue: 0,
     display: (value, context) => {
       const linkedId = context?.linkedAttributeId;

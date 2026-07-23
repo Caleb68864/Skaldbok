@@ -13,11 +13,11 @@ import { Drawer } from '../components/primitives/Drawer';
 import type { Weapon, InventoryItem, ArmorPiece } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
-import { computeEncumbranceLimit } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
 import { useSystemEngine } from '../features/systems/engine';
+import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import * as characterRepository from '../storage/repositories/characterRepository';
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
@@ -34,6 +34,7 @@ export default function GearScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const engine = useSystemEngine();
+  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   const isEditMode = useIsEditMode();
   const armorEquipEditable = useFieldEditable('armor.equipped');
   const helmetEquipEditable = useFieldEditable('helmet.equipped');
@@ -236,7 +237,11 @@ export default function GearScreen() {
   const totalWeight = character.inventory.reduce((sum, i) => sum + (i.tiny ? 0 : i.weight), 0)
     + (character.armor?.weight ?? 0)
     + (character.helmet?.weight ?? 0);
-  const encumbranceLimit = computeEncumbranceLimit(character);
+  const encumbranceLimit = engine.derivedStats(character, system ?? undefined).encumbranceLimit;
+  // A falsy limit means the active system does not track encumbrance — never
+  // flag the character as overloaded in that case.
+  const tracksEncumbrance = encumbranceLimit > 0;
+  const isOverloaded = tracksEncumbrance && totalWeight > encumbranceLimit;
 
   return (
     <div className="p-[var(--space-md)]">
@@ -452,12 +457,13 @@ export default function GearScreen() {
         )}
       </SectionPanel>
 
-      <SectionPanel title="Encumbrance" collapsible defaultOpen>
+      <SectionPanel title={engine.labels.encumbrance} collapsible defaultOpen>
         <p className={cn(
           "text-[length:var(--font-size-md)]",
-          totalWeight > encumbranceLimit ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"
+          isOverloaded ? "text-[var(--color-danger)]" : "text-[var(--color-text)]"
         )}>
-          {totalWeight} / {encumbranceLimit} {totalWeight > encumbranceLimit ? '(Overloaded!)' : ''}
+          {tracksEncumbrance ? `${totalWeight} / ${encumbranceLimit}` : totalWeight}
+          {isOverloaded ? ' (Overloaded!)' : ''}
         </p>
       </SectionPanel>
 
