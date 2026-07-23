@@ -11,11 +11,15 @@ export type PanelKey =
   | 'combat'
   | 'rest'
   | 'death'
-  | 'notes';
+  | 'notes'
+  | 'characteristics'
+  | 'finances'
+  | 'careers'
+  | 'augments';
 
-export type ResolutionMethod = 'd20-roll-under';
+export type ResolutionMethod = 'd20-roll-under' | '2d6-plus';
 
-export type CurrencyMode = 'coins' | 'abstract';
+export type CurrencyMode = 'coins' | 'abstract' | 'single';
 
 export interface SkillEngineConfig {
   valueLabel: string;
