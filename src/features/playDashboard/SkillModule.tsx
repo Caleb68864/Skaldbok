@@ -7,7 +7,8 @@ import { computeSkillValue } from '../../utils/derivedValues';
 import { calcBaneProb, calcBoonProb, calcNormalProb, formatProb } from '../../utils/boonBane';
 import { cn } from '../../lib/utils';
 import type { CharacterSkill } from '../../types/character';
-import type { PlayModuleProps } from './types';
+import { clamp, type PlayModuleProps } from './types';
+import { getEngine } from '../systems/engine';
 
 function probability(value: number): string {
   return `${formatProb(calcNormalProb(value))} / boon ${formatProb(calcBoonProb(value))} / bane ${formatProb(calcBaneProb(value))}`;
@@ -24,6 +25,9 @@ type SkillRow = {
 export function SkillModule({ character, system, updateCharacter }: PlayModuleProps) {
   const [showUntrained, setShowUntrained] = useState(false);
   if (!system) return null;
+
+  const engine = getEngine(system);
+  const isTraveller = system.id === 'traveller';
 
   const skillDefs: SkillRow[] = system.skillCategories.flatMap(category =>
     category.skills.map(skill => ({ ...skill, category: category.name })),
@@ -51,20 +55,28 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
   function renderSkillRow(skill: SkillRow) {
     const stored = character.skills[skill.id];
     const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 0;
-    const value = stored?.value ?? (skill.linkedAttributeId ? computeSkillValue(attrValue, stored?.trained ?? false) : skill.baseChance);
+    const rawValue =
+      stored?.value ??
+      (isTraveller || !skill.linkedAttributeId ? skill.baseChance : computeSkillValue(attrValue, stored?.trained ?? false));
+    const value = clamp(rawValue, engine.skill.range.min, engine.skill.range.max);
     const fallback = { value, trained: stored?.trained ?? false };
     const mark = stored?.dragonMarked ? 'Dragon' : stored?.demonMarked ? 'Demon' : 'Mark';
+    const displayValue = engine.skill.display(value);
     return (
       <div key={skill.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)] min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <p className="m-0 font-semibold text-[var(--color-text)]">{skill.name}</p>
-            <span className="text-[length:var(--font-size-lg)] font-bold text-[var(--color-accent)] leading-none">{value}</span>
+            {!isTraveller && (
+              <span className="text-[length:var(--font-size-lg)] font-bold text-[var(--color-accent)] leading-none">{displayValue}</span>
+            )}
           </div>
-          <p className="m-0 text-xs text-[var(--color-text-muted)]">{probability(value)}</p>
+          <p className="m-0 text-xs text-[var(--color-text-muted)]">{isTraveller ? displayValue : probability(value)}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap min-[520px]:shrink-0">
-          <Button size="sm" variant="secondary" onClick={() => cycleMark(skill.id, fallback)}>{mark}</Button>
+          {engine.skill.supportsMarks && (
+            <Button size="sm" variant="secondary" onClick={() => cycleMark(skill.id, fallback)}>{mark}</Button>
+          )}
         </div>
       </div>
     );

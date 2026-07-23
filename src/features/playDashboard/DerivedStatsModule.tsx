@@ -1,15 +1,33 @@
 import { SectionPanel } from '../../components/primitives/SectionPanel';
-import { computeDerivedValues } from '../../utils/derivedValues';
+import { getEngine } from '../systems/engine';
+import { formatDM, type TravellerDerivedValues } from '../systems/engine/travellerEngine';
 import type { PlayModuleProps } from './types';
 
-export function DerivedStatsModule({ character }: PlayModuleProps) {
-  const derived = computeDerivedValues(character);
-  const stats = [
-    { label: 'Move', value: derived.movement },
-    { label: 'STR Dmg', value: derived.damageBonus },
-    { label: 'AGL Dmg', value: derived.aglDamageBonus },
-    { label: 'Carry', value: derived.encumbranceLimit },
-  ];
+const CHARACTERISTIC_LABELS: Record<string, string> = {
+  str: 'STR',
+  dex: 'DEX',
+  end: 'END',
+  int: 'INT',
+  edu: 'EDU',
+  soc: 'SOC',
+};
+
+export function DerivedStatsModule({ character, system }: PlayModuleProps) {
+  const engine = getEngine(system);
+  const derived = engine.derivedStats(character, system ?? undefined);
+
+  const stats =
+    system?.id === 'traveller'
+      ? Object.entries((derived as TravellerDerivedValues).characteristicDMs).map(([id, dm]) => ({
+          label: CHARACTERISTIC_LABELS[id] ?? id.toUpperCase(),
+          value: formatDM(dm),
+        }))
+      : [
+          { label: 'Move', value: derived.movement },
+          { label: 'STR Dmg', value: derived.damageBonus },
+          { label: 'AGL Dmg', value: derived.aglDamageBonus },
+          { label: 'Carry', value: derived.encumbranceLimit },
+        ];
 
   return (
     <SectionPanel title="Derived Stats" collapsible defaultOpen>
