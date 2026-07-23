@@ -34,7 +34,8 @@ Skaldmark Dragonbane TTRPG companion web app.
 
 - Python 3.12+ with ``playwright`` package installed
 - Chromium browser installed via ``python -m playwright install chromium``
-- Skaldmark dev server running on ``https://localhost:5174`` (Vite + SSL)
+- Skaldbok dev server running on ``https://localhost:5173`` (Vite + SSL).
+  Override with ``SKALDBOK_E2E_URL`` if Vite picked a different port.
 
 **Outputs:**
 
@@ -46,6 +47,7 @@ Skaldmark Dragonbane TTRPG companion web app.
 :date: 2026-03-31
 """
 
+import os
 import sys
 import time
 import random
@@ -53,7 +55,7 @@ import traceback
 from playwright.sync_api import sync_playwright, Page, expect
 
 #: Base URL for the Skaldmark dev server (HTTPS due to Vite basicSsl plugin).
-BASE_URL = "https://localhost:5174"
+BASE_URL = os.environ.get("SKALDBOK_E2E_URL", "https://localhost:5173")
 
 #: Number of full test iterations to run. Override via CLI argument.
 ITERATIONS = int(sys.argv[1]) if len(sys.argv) > 1 else 10

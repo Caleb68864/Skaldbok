@@ -14,8 +14,16 @@ Skaldbok is a local-first, offline-capable PWA for tabletop RPG play. It ships w
 - `npm run build` — `tsc -b` project references build, then `vite build`. **This is the only type-check command** — there is no standalone `lint` or `typecheck` script; rely on `tsc -b` via build.
 - `npm run preview` — serve the built bundle (used by `build-and-run.bat` for LAN tablet testing on port 4173).
 - `npm run docs` / `npm run docs:open` — TypeDoc API docs into `docs/api/`.
+- `npm test` — Vitest, run once. `npm run test:watch` for watch mode.
 
-There is **no JS/TS test runner wired up**. The `tests/` directory contains a Python Playwright E2E script (`e2e_full_test.py`) that drives the running app. Do not assume `npm test` exists.
+`npm test` covers **pure logic only** — schema migrations, stat-key resolution,
+ability projections, container wealth. It is deliberately scoped: these are the
+places where a bug silently corrupts saved characters rather than failing to
+compile. There is no component/DOM test setup, so UI changes are still verified
+by `npm run build` plus running the app.
+
+The `tests/` directory additionally contains a Python Playwright E2E script
+(`e2e_full_test.py`) that drives the running app against the dev server.
 
 ## Architecture Big Picture
 
@@ -33,7 +41,8 @@ There is **no JS/TS test runner wired up**. The `tests/` directory contains a Py
 - Relationships between entities are almost always expressed via `entityLinks` rows rather than FK columns. See the **Entity Linking** section below — this is the single most important convention to internalize before adding cross-entity features.
 
 ### Game system as data
-- The active RPG system (fields, skills, abilities, resources) is a `SystemDefinition` loaded from JSON — `src/systems/classic-fantasy/system.json` — not a set of hardcoded types. `src/systems/classic-fantasy/index.ts` just re-exports it. Zod schemas in `schemas/` validate character / system / settings shapes on import. Adding rules content is usually a JSON edit, not a code change. Additional systems can be added as sibling folders under `src/systems/` and selected via a character's `systemId`.
+- The active RPG system (fields, skills, abilities, resources) is a `SystemDefinition` loaded from JSON — `src/systems/classic-fantasy/system.json` — not a set of hardcoded types. `src/systems/classic-fantasy/index.ts` just re-exports it. Zod schemas in `schemas/` validate character / system / settings shapes on import. Adding rules content is usually a JSON edit, not a code change. Additional systems can be added as sibling folders under `src/systems/` and registered in `src/systems/registry.ts`.
+- *Behaviour* that varies by ruleset lives in the **System Engine**, not in screens. See the section below — internalize it before touching any character-facing UI.
 
 ### Feature vs. component layout
 - `src/components/` — presentational, reusable UI (shell, layout, primitives, ui, fields, modals, timeline, notes).
@@ -44,6 +53,90 @@ There is **no JS/TS test runner wired up**. The `tests/` directory contains a Py
 ### PWA / offline
 - `vite-plugin-pwa` is configured in `vite.config.ts` with `registerType: 'prompt'`. Service-worker / install lifecycle code lives in `src/pwa/`. Because the app is entirely local-first, treat IndexedDB as the source of truth; there is no server reconciliation to defer to.
 - `@` is aliased to `src/` in `vite.config.ts` — prefer relative imports when both work, but `@/` is available.
+
+## System Engine
+
+Skaldbok supports more than one RPG system. Everything that differs between
+rulesets — vocabulary, panels, formulas, rest and death rules, currency,
+probability — is resolved through a **`SystemEngine`**, never hardcoded in a
+screen and never branched on `systemId`.
+
+Source: `src/features/systems/engine/`. Two adapters ship today:
+`classicFantasyEngine` (Dragonbane-like) and `travellerEngine`.
+
+### The rule
+
+> **If a value differs between rulesets, it comes from the engine.**
+> A screen that says `if (systemId === 'traveller')` is a bug.
+
+```ts
+const engine = useSystemEngine();          // active character's system
+const engine = getEngine(systemDefinition); // when you already hold the system
+```
+
+### What the engine owns
+
+| Area | Surface |
+|---|---|
+| Vocabulary | `terms` (`abilities`, `spells`, `magicResource`, `healthResource`, `roleFallback`) |
+| Panel/screen titles | `labels` (`abilitiesScreen`, `resourcesPanel`, `attributesPanel`, `encumbrance`) |
+| Which panels exist | `panels: PanelKey[]`, `hasMagic` |
+| Attributes / resources | `attributeIds`, `resourceIds`, `attributeBadge`, `primaryHealthResourceId` |
+| Skills | `skill.{valueLabel, range, advancementMax, defaultValue, display, computeValue, isRelevant, supportsMarks, supportsBoonBane, trainedAffectsValue}` |
+| Derived stats | `derivedStats()`, `derivedFields` (each with `surfaces` — sheet/dashboard/print show different subsets) |
+| Money | `currency` — `denominations` plus `read`/`write`, so no screen touches `character.wealth` directly |
+| Rules models (nullable) | `rest`, `death`, `advancement` — `null` means "this system has no such mechanic", which is how a panel gets hidden |
+| Dice | `probability.chance()`, `outcomes`, `rollModifiers`, `timeUnits` |
+| Modifier targets | `modifiableStats()` |
+
+`labels.abilitiesScreen: null` hides that tab entirely rather than linking to a
+dead-end screen. `terms` and `labels` can be overridden per-system from
+`system.json`, so renaming user-facing vocabulary needs no code change.
+
+### Rules of thumb
+
+- **Never** reintroduce a `systemId ===` branch. Add an engine field instead.
+- Ids and labels are separate. Persisted keys (settings, stored preferences,
+  ability types) use stable ids; only display strings come from `terms`/`labels`.
+  Deriving a storage key from a label orphans user data the moment it is renamed.
+- Nullable models express absence. Prefer `engine.rest === null` over a
+  capability flag plus a parallel list.
+- The classic-fantasy adapter **delegates** to the existing helpers in
+  `utils/derivedValues`, `utils/restActions` and `utils/boonBane` rather than
+  restating Dragonbane's rules. Keep it that way — it is what makes Dragonbane
+  behaviour provably unchanged.
+
+### Stat keys are namespaced
+
+Modifier targets use `attr:str`, `res:str`, `derived:movement`, `armor:helmet`,
+`skill:axes` (`src/utils/statKeys.ts`). A bare id is ambiguous — Traveller's
+damage-track resources share ids with its characteristics. Build keys with
+`attrKey()`/`resKey()`/etc., never by string concatenation. Unprefixed keys still
+resolve by the legacy precedence order so old data keeps working.
+
+### Adding or editing a system
+
+1. Add `src/systems/<id>/system.json` + `index.ts`, and register it in
+   `src/systems/registry.ts` (this drives the character-creation picker).
+2. Add an engine adapter under `src/features/systems/engine/` and wire it into
+   `getEngine`.
+3. **Bump the definition's `version` whenever you edit a bundled `system.json`.**
+   Stored definitions are cached in IndexedDB; `useSystemDefinition` only
+   refreshes when the bundled `version` is higher. Forget this and your change
+   is invisible to anyone who has already run the app.
+
+### Character schema migrations
+
+`CharacterRecord` changes go through the ladder in `src/utils/migrations.ts`:
+bump `CURRENT_SCHEMA_VERSION`, add a `migrateCharacterVnToVn+1`, and **add tests**
+(`src/utils/migrations.test.ts`). Migrations must be idempotent and must preserve
+unrelated fields.
+
+Records are upgraded on read (`upgradeCharacter`, used by the character
+repository) and persisted on the next save. `migrateCharacter` additionally
+validates and is used for **import**, where the data is untrusted; the read path
+deliberately skips validation so one malformed field cannot stop the whole
+library from loading.
 
 ## Entity Linking
 

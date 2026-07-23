@@ -1,5 +1,89 @@
 # Skaldbok — Project Notes for Codex
 
+## System Engine
+
+Skaldbok supports more than one RPG system. Everything that differs between
+rulesets — vocabulary, panels, formulas, rest and death rules, currency,
+probability — is resolved through a **`SystemEngine`**, never hardcoded in a
+screen and never branched on `systemId`.
+
+Source: `src/features/systems/engine/`. Two adapters ship today:
+`classicFantasyEngine` (Dragonbane-like) and `travellerEngine`.
+
+### The rule
+
+> **If a value differs between rulesets, it comes from the engine.**
+> A screen that says `if (systemId === 'traveller')` is a bug.
+
+```ts
+const engine = useSystemEngine();          // active character's system
+const engine = getEngine(systemDefinition); // when you already hold the system
+```
+
+### What the engine owns
+
+| Area | Surface |
+|---|---|
+| Vocabulary | `terms` (`abilities`, `spells`, `magicResource`, `healthResource`, `roleFallback`) |
+| Panel/screen titles | `labels` (`abilitiesScreen`, `resourcesPanel`, `attributesPanel`, `encumbrance`) |
+| Which panels exist | `panels: PanelKey[]`, `hasMagic` |
+| Attributes / resources | `attributeIds`, `resourceIds`, `attributeBadge`, `primaryHealthResourceId` |
+| Skills | `skill.{valueLabel, range, advancementMax, defaultValue, display, computeValue, isRelevant, supportsMarks, supportsBoonBane, trainedAffectsValue}` |
+| Derived stats | `derivedStats()`, `derivedFields` (each with `surfaces` — sheet/dashboard/print show different subsets) |
+| Money | `currency` — `denominations` plus `read`/`write`, so no screen touches `character.wealth` directly |
+| Rules models (nullable) | `rest`, `death`, `advancement` — `null` means "this system has no such mechanic", which is how a panel gets hidden |
+| Dice | `probability.chance()`, `outcomes`, `rollModifiers`, `timeUnits` |
+| Modifier targets | `modifiableStats()` |
+
+`labels.abilitiesScreen: null` hides that tab entirely rather than linking to a
+dead-end screen. `terms` and `labels` can be overridden per-system from
+`system.json`, so renaming user-facing vocabulary needs no code change.
+
+### Rules of thumb
+
+- **Never** reintroduce a `systemId ===` branch. Add an engine field instead.
+- Ids and labels are separate. Persisted keys (settings, stored preferences,
+  ability types) use stable ids; only display strings come from `terms`/`labels`.
+  Deriving a storage key from a label orphans user data the moment it is renamed.
+- Nullable models express absence. Prefer `engine.rest === null` over a
+  capability flag plus a parallel list.
+- The classic-fantasy adapter **delegates** to the existing helpers in
+  `utils/derivedValues`, `utils/restActions` and `utils/boonBane` rather than
+  restating Dragonbane's rules. Keep it that way — it is what makes Dragonbane
+  behaviour provably unchanged.
+
+### Stat keys are namespaced
+
+Modifier targets use `attr:str`, `res:str`, `derived:movement`, `armor:helmet`,
+`skill:axes` (`src/utils/statKeys.ts`). A bare id is ambiguous — Traveller's
+damage-track resources share ids with its characteristics. Build keys with
+`attrKey()`/`resKey()`/etc., never by string concatenation. Unprefixed keys still
+resolve by the legacy precedence order so old data keeps working.
+
+### Adding or editing a system
+
+1. Add `src/systems/<id>/system.json` + `index.ts`, and register it in
+   `src/systems/registry.ts` (this drives the character-creation picker).
+2. Add an engine adapter under `src/features/systems/engine/` and wire it into
+   `getEngine`.
+3. **Bump the definition's `version` whenever you edit a bundled `system.json`.**
+   Stored definitions are cached in IndexedDB; `useSystemDefinition` only
+   refreshes when the bundled `version` is higher. Forget this and your change
+   is invisible to anyone who has already run the app.
+
+### Character schema migrations
+
+`CharacterRecord` changes go through the ladder in `src/utils/migrations.ts`:
+bump `CURRENT_SCHEMA_VERSION`, add a `migrateCharacterVnToVn+1`, and **add tests**
+(`src/utils/migrations.test.ts`). Migrations must be idempotent and must preserve
+unrelated fields.
+
+Records are upgraded on read (`upgradeCharacter`, used by the character
+repository) and persisted on the next save. `migrateCharacter` additionally
+validates and is used for **import**, where the data is untrusted; the read path
+deliberately skips validation so one malformed field cannot stop the whole
+library from loading.
+
 ## Entity Linking
 
 Skaldbok uses a single generic graph-edge table (`entityLinks`) to express
