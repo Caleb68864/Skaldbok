@@ -58,6 +58,10 @@ export const systemDefinitionSchema = z.object({
     label: z.string().min(1),
     type: z.enum(['text', 'textarea']).optional(),
   })).optional().describe('Identity fields shown on the sheet, keyed into character.metadata'),
+  itemFields: z.object({
+    weapon: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
+    armor: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
+  }).optional().describe('Extra per-item fields stored in each item systemFields bag'),
   resolution: z.enum(['d20-roll-under', '2d6-plus']).optional().describe('Core resolution mechanic'),
   currency: z.object({
     label: z.string().min(1),

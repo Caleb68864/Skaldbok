@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 2,
+  "version": 3,
   "name": "traveller",
   "displayName": "Traveller",
   "resolution": "2d6-plus",
@@ -339,5 +339,51 @@
       "label": "Title / Rank",
       "type": "text"
     }
-  ]
+  ],
+  "itemFields": {
+    "weapon": [
+      {
+        "id": "tl",
+        "label": "TL",
+        "type": "number"
+      },
+      {
+        "id": "rangeM",
+        "label": "Range (m)",
+        "type": "text"
+      },
+      {
+        "id": "magazine",
+        "label": "Magazine",
+        "type": "number"
+      },
+      {
+        "id": "traits",
+        "label": "Traits",
+        "type": "text"
+      },
+      {
+        "id": "cost",
+        "label": "Cost (Cr)",
+        "type": "number"
+      }
+    ],
+    "armor": [
+      {
+        "id": "tl",
+        "label": "TL",
+        "type": "number"
+      },
+      {
+        "id": "rad",
+        "label": "RAD Protection",
+        "type": "number"
+      },
+      {
+        "id": "cost",
+        "label": "Cost (Cr)",
+        "type": "number"
+      }
+    ]
+  }
 }

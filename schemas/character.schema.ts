@@ -25,6 +25,7 @@ const weaponSchema = z.object({
   durability: z.number().describe('Durability rating'),
   features: z.string().describe('Special features'),
   equipped: z.boolean().describe('Whether weapon is currently equipped'),
+  systemFields: z.record(z.string(), z.unknown()).optional().describe('System-declared extra fields'),
 });
 
 const armorPieceSchema = z.object({
@@ -33,6 +34,7 @@ const armorPieceSchema = z.object({
   rating: z.number().describe('Armor rating'),
   features: z.string().describe('Special features'),
   equipped: z.boolean().describe('Whether armor is equipped'),
+  systemFields: z.record(z.string(), z.unknown()).optional().describe('System-declared extra fields'),
 });
 
 const inventoryItemSchema = z.object({

@@ -15,6 +15,7 @@ import { nowISO } from '../../utils/dates';
 import { useSystemEngine } from '../systems/engine';
 import type { CurrencyDenomination } from '../systems/engine/types';
 import type { CharacterRecord, InventoryItem } from '../../types/character';
+import { containerWealth } from '../../types/inventoryContainer';
 import type {
   InventoryContainer,
   InventoryContainerKind,
@@ -95,26 +96,6 @@ function makeChange(denoms: CurrencyDenomination[], amounts: Wealth): Wealth | n
   }
   if (denoms.some(d => next[d.id] < 0)) return null;
   return next;
-}
-
-/**
- * Projects system-neutral amounts back onto a container's coin purse.
- *
- * @remarks
- * `InventoryContainer.coins` is a fixed gold/silver/copper record, so a
- * denomination the container has no slot for (Traveller credits) is dropped
- * rather than invented. Named keys here are the container schema's own fields,
- * not an assumption about the active system.
- */
-function containerCoinsFrom(
-  existing: InventoryContainer['coins'],
-  amounts: Wealth,
-): InventoryContainer['coins'] {
-  return {
-    gold: amounts.gold ?? existing.gold,
-    silver: amounts.silver ?? existing.silver,
-    copper: amounts.copper ?? existing.copper,
-  };
 }
 
 function carrierWeight(items: InventoryItem[]): number {
@@ -208,7 +189,7 @@ export function PartyInventoryTab() {
         id: `container:${c.id}`,
         name: c.name,
         items: c.items,
-        wealth: normalizeWealth(denominations, c.coins),
+        wealth: normalizeWealth(denominations, containerWealth(c)),
         capacity: c.capacity,
         container: c,
         containerKind: c.kind,
@@ -270,9 +251,9 @@ export function PartyInventoryTab() {
       const next: InventoryContainer = {
         ...carrier.container,
         items: patch.items ?? carrier.container.items,
-        coins: patch.wealth
-          ? containerCoinsFrom(carrier.container.coins, patch.wealth)
-          : carrier.container.coins,
+        // Containers hold denomination-keyed money now, so any currency the
+        // active system defines round-trips instead of being dropped.
+        wealth: patch.wealth ?? containerWealth(carrier.container),
       };
       await inventoryContainerRepository.save(next);
     }

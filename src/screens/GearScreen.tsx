@@ -37,6 +37,85 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 /**
+ * One extra per-item field declared by the active system in
+ * `SystemDefinition.itemFields`. Structurally identical to the entries in that
+ * array, kept local so the screen does not depend on the system module.
+ */
+type SystemItemField = { id: string; label: string; type?: 'text' | 'number' };
+
+/** An empty declaration and an absent one behave the same: nothing extra renders. */
+const NO_ITEM_FIELDS: SystemItemField[] = [];
+
+/**
+ * Reads one value out of an item's `systemFields` bag as an input-ready string.
+ * The `unknown` cast lives here so no call site has to repeat it.
+ */
+function readSystemField(bag: Record<string, unknown> | undefined, fieldId: string): string {
+  const raw = bag?.[fieldId];
+  if (typeof raw === 'string') return raw;
+  if (typeof raw === 'number') return Number.isFinite(raw) ? String(raw) : '';
+  return '';
+}
+
+/**
+ * Returns a new `systemFields` bag with one field replaced — every other key is
+ * carried across untouched. A cleared input drops the key rather than storing an
+ * empty string or a coerced `0`.
+ */
+function writeSystemField(
+  bag: Record<string, unknown> | undefined,
+  field: SystemItemField,
+  raw: string,
+): Record<string, unknown> {
+  const next: Record<string, unknown> = { ...(bag ?? {}) };
+  if (raw === '') {
+    delete next[field.id];
+    return next;
+  }
+  next[field.id] = field.type === 'number' ? Number(raw) : raw;
+  return next;
+}
+
+/**
+ * Keeps a `systemFields` bag off the saved item entirely when it holds nothing,
+ * so a system that declares no extra fields writes byte-identical records.
+ */
+function withSystemFields(bag: Record<string, unknown> | undefined): { systemFields?: Record<string, unknown> } {
+  return bag && Object.keys(bag).length > 0 ? { systemFields: bag } : {};
+}
+
+/**
+ * Renders the system-declared extra inputs for one item, using the same markup
+ * as the built-in fields around them. Renders nothing when `fields` is empty.
+ */
+function SystemItemFieldInputs({
+  fields,
+  values,
+  onChange,
+}: {
+  fields: SystemItemField[];
+  values: Record<string, unknown> | undefined;
+  onChange: (next: Record<string, unknown>) => void;
+}) {
+  if (fields.length === 0) return null;
+  return (
+    <>
+      {fields.map(field => (
+        <div key={field.id}>
+          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">{field.label}</label>
+          <input
+            type={field.type === 'number' ? 'number' : 'text'}
+            className={inputClasses}
+            value={readSystemField(values, field.id)}
+            onChange={e => onChange(writeSystemField(values, field, e.target.value))}
+          />
+        </div>
+      ))}
+    </>
+  );
+}
+
+/**
  * The Gear screen — manages all equipment for the active character.
  */
 export default function GearScreen() {
@@ -52,6 +131,9 @@ export default function GearScreen() {
   const [activeTab, setActiveTab] = useState<'mine' | 'party'>('mine');
   const [weaponDrawerOpen, setWeaponDrawerOpen] = useState(false);
   const [editingWeapon, setEditingWeapon] = useState<Weapon | null>(null);
+  // System-declared weapon fields are collected in their own step because the
+  // built-in weapon form lives in <WeaponEditor>, which only knows the core fields.
+  const [weaponSystemFields, setWeaponSystemFields] = useState<Record<string, unknown>>({});
   const [inventoryDrawerOpen, setInventoryDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
   const [newTinyItem, setNewTinyItem] = useState('');
@@ -64,6 +146,7 @@ export default function GearScreen() {
   const [armorWeight, setArmorWeight] = useState(0);
   const [armorMovementPenalty, setArmorMovementPenalty] = useState(0);
   const [armorEquipped, setArmorEquipped] = useState(false);
+  const [armorSystemFields, setArmorSystemFields] = useState<Record<string, unknown>>({});
 
   // Helmet drawer state
   const [helmetDrawerOpen, setHelmetDrawerOpen] = useState(false);
@@ -71,6 +154,7 @@ export default function GearScreen() {
   const [helmetRating, setHelmetRating] = useState(0);
   const [helmetWeight, setHelmetWeight] = useState(0);
   const [helmetEquipped, setHelmetEquipped] = useState(false);
+  const [helmetSystemFields, setHelmetSystemFields] = useState<Record<string, unknown>>({});
   useAutosave(character, characterRepository.save, 1000);
 
   // Populate armor form when drawer opens
@@ -82,6 +166,7 @@ export default function GearScreen() {
       setArmorWeight(character.armor.weight ?? 0);
       setArmorMovementPenalty(character.armor.movementPenalty ?? 0);
       setArmorEquipped(character.armor.equipped);
+      setArmorSystemFields(character.armor.systemFields ?? {});
     } else if (armorDrawerOpen && !character?.armor) {
       setArmorName('');
       setArmorRating(0);
@@ -89,6 +174,7 @@ export default function GearScreen() {
       setArmorWeight(0);
       setArmorMovementPenalty(0);
       setArmorEquipped(false);
+      setArmorSystemFields({});
     }
   }, [armorDrawerOpen, character?.armor]);
 
@@ -99,11 +185,13 @@ export default function GearScreen() {
       setHelmetRating(character.helmet.rating);
       setHelmetWeight(character.helmet.weight ?? 0);
       setHelmetEquipped(character.helmet.equipped);
+      setHelmetSystemFields(character.helmet.systemFields ?? {});
     } else if (helmetDrawerOpen && !character?.helmet) {
       setHelmetName('');
       setHelmetRating(0);
       setHelmetWeight(0);
       setHelmetEquipped(false);
+      setHelmetSystemFields({});
     }
   }, [helmetDrawerOpen, character?.helmet]);
 
@@ -116,12 +204,20 @@ export default function GearScreen() {
   if (isLoading) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
+  // Extra per-item fields the active system asks for. Undefined for systems that
+  // declare none, in which case every form below renders exactly its built-ins.
+  const weaponItemFields = system?.itemFields?.weapon ?? NO_ITEM_FIELDS;
+  const armorItemFields = system?.itemFields?.armor ?? NO_ITEM_FIELDS;
+
   function handleWeaponSave(weapon: Weapon) {
     if (!character) return;
     const existing = character.weapons.findIndex(w => w.id === weapon.id);
+    // The system-declared inputs live in the same drawer, so their values come
+    // from local state here rather than from the editor's own form.
+    const saved: Weapon = { ...weapon, ...withSystemFields(weaponSystemFields) };
     const weapons = existing >= 0
-      ? character.weapons.map(w => w.id === weapon.id ? weapon : w)
-      : [...character.weapons, weapon];
+      ? character.weapons.map(w => w.id === saved.id ? saved : w)
+      : [...character.weapons, saved];
     updateCharacter({ weapons, updatedAt: nowISO() });
   }
 
@@ -232,6 +328,7 @@ export default function GearScreen() {
       weight: clamp(armorWeight, 0, 999),
       bodyPart: armorBodyPart,
       movementPenalty: clamp(armorMovementPenalty, 0, 99),
+      ...withSystemFields(armorItemFields.length > 0 ? armorSystemFields : character.armor?.systemFields),
     };
     updateCharacter({ armor, updatedAt: nowISO() });
     setArmorDrawerOpen(false);
@@ -247,6 +344,7 @@ export default function GearScreen() {
       features: character.helmet?.features ?? '',
       equipped: helmetEquipped,
       weight: clamp(helmetWeight, 0, 999),
+      ...withSystemFields(armorItemFields.length > 0 ? helmetSystemFields : character.helmet?.systemFields),
     };
     updateCharacter({ helmet, updatedAt: nowISO() });
     setHelmetDrawerOpen(false);
@@ -323,14 +421,14 @@ export default function GearScreen() {
               key={weapon.id}
               weapon={weapon}
               onEquipToggle={() => handleWeaponEquipToggle(weapon.id)}
-              onEdit={() => { setEditingWeapon(weapon); setWeaponDrawerOpen(true); }}
+              onEdit={() => { setEditingWeapon(weapon); setWeaponSystemFields(weapon.systemFields ?? {}); setWeaponDrawerOpen(true); }}
               onDelete={() => handleWeaponDelete(weapon.id)}
               isEditMode={isEditMode}
             />
           ))}
         </div>
         {isEditMode && (
-          <Button variant="secondary" size="sm" className="mt-[var(--space-sm)]" onClick={() => { setEditingWeapon(null); setWeaponDrawerOpen(true); }}>
+          <Button variant="secondary" size="sm" className="mt-[var(--space-sm)]" onClick={() => { setEditingWeapon(null); setWeaponSystemFields({}); setWeaponDrawerOpen(true); }}>
             + Add Weapon
           </Button>
         )}
@@ -494,6 +592,15 @@ export default function GearScreen() {
         onClose={() => setWeaponDrawerOpen(false)}
         weapon={editingWeapon}
         onSave={handleWeaponSave}
+        // System-declared fields render inside the same drawer as the built-in
+        // ones, so there is a single save for the whole weapon.
+        extraFields={
+          <SystemItemFieldInputs
+            fields={weaponItemFields}
+            values={weaponSystemFields}
+            onChange={setWeaponSystemFields}
+          />
+        }
       />
 
       <InventoryItemEditor
@@ -528,6 +635,7 @@ export default function GearScreen() {
             <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Movement Penalty</label>
             <input type="number" className={inputClasses} value={armorMovementPenalty} min={0} onChange={e => setArmorMovementPenalty(Number(e.target.value))} />
           </div>
+          <SystemItemFieldInputs fields={armorItemFields} values={armorSystemFields} onChange={setArmorSystemFields} />
           <div className="flex items-center gap-[var(--space-sm)]">
             <label className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">Equipped</label>
             <Button size="sm" variant={armorEquipped ? 'primary' : 'secondary'} onClick={() => setArmorEquipped(v => !v)}>
@@ -558,6 +666,7 @@ export default function GearScreen() {
               <input type="number" className={inputClasses} value={helmetWeight} min={0} onChange={e => setHelmetWeight(Number(e.target.value))} />
             </div>
           </div>
+          <SystemItemFieldInputs fields={armorItemFields} values={helmetSystemFields} onChange={setHelmetSystemFields} />
           <div className="flex items-center gap-[var(--space-sm)]">
             <label className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">Equipped</label>
             <Button size="sm" variant={helmetEquipped ? 'primary' : 'secondary'} onClick={() => setHelmetEquipped(v => !v)}>

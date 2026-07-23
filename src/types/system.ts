@@ -65,6 +65,20 @@ export interface SystemDefinition {
     /** `text` renders a single-line input, `textarea` a multi-line one. */
     type?: 'text' | 'textarea';
   }>;
+  /**
+   * Extra per-item fields this system wants on weapons and armour, beyond the
+   * shared core (name, damage, equipped…).
+   *
+   * @remarks
+   * Values are stored in the item's own `systemFields` bag, so a sci-fi ruleset
+   * can ask for Tech Level, Range in metres, Magazine and Traits without those
+   * columns existing on every fantasy weapon. Purely additive — a system that
+   * declares nothing keeps exactly the built-in fields.
+   */
+  itemFields?: {
+    weapon?: Array<{ id: string; label: string; type?: 'text' | 'number' }>;
+    armor?: Array<{ id: string; label: string; type?: 'text' | 'number' }>;
+  };
   resolution?: 'd20-roll-under' | '2d6-plus';
   currency?: { label: string; abbr: string; mode: 'coins' | 'single' };
   /**

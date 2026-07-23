@@ -10,6 +10,12 @@ interface WeaponEditorProps {
   onClose: () => void;
   weapon: Weapon | null;
   onSave: (weapon: Weapon) => void;
+  /**
+   * Extra inputs rendered after the built-in fields, for the per-item fields a
+   * system declares in `SystemDefinition.itemFields.weapon`. Rendering them
+   * here keeps them in the same drawer as the built-in fields.
+   */
+  extraFields?: React.ReactNode;
 }
 
 const empty: Omit<Weapon, 'id'> = {
@@ -28,7 +34,7 @@ const empty: Omit<Weapon, 'id'> = {
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
 
-export function WeaponEditor({ open, onClose, weapon, onSave }: WeaponEditorProps) {
+export function WeaponEditor({ open, onClose, weapon, onSave, extraFields }: WeaponEditorProps) {
   const [form, setForm] = useState<Omit<Weapon, 'id'>>(weapon ? { ...empty, ...weapon } : { ...empty });
 
   useEffect(() => {
@@ -46,6 +52,9 @@ export function WeaponEditor({ open, onClose, weapon, onSave }: WeaponEditorProp
         strRequirement: weapon.strRequirement ?? null,
         damaged: weapon.damaged ?? false,
         isShield: weapon.isShield ?? false,
+        // Carried through explicitly: this effect enumerates keys, so omitting
+        // the bag would silently drop system-declared fields on every edit.
+        systemFields: weapon.systemFields,
       });
     } else if (open && !weapon) {
       setForm({ ...empty });
@@ -139,6 +148,7 @@ export function WeaponEditor({ open, onClose, weapon, onSave }: WeaponEditorProp
             {form.damaged ? 'Yes' : 'No'}
           </button>
         </div>
+        {extraFields}
         <div className="flex gap-3 justify-end mt-[var(--space-md)]">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={handleSave}>Save</Button>

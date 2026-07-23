@@ -29,9 +29,9 @@ export async function getById(
 }
 
 export async function create(
-  data: Omit<InventoryContainer, 'id' | 'createdAt' | 'updatedAt' | 'items' | 'coins'> & {
+  data: Omit<InventoryContainer, 'id' | 'createdAt' | 'updatedAt' | 'items' | 'wealth'> & {
     items?: InventoryContainer['items'];
-    coins?: InventoryContainer['coins'];
+    wealth?: InventoryContainer['wealth'];
   },
 ): Promise<InventoryContainer> {
   const now = nowISO();
@@ -41,7 +41,10 @@ export async function create(
     name: data.name,
     kind: data.kind,
     capacity: data.capacity,
-    coins: data.coins ?? { gold: 0, silver: 0, copper: 0 },
+    // Denomination-keyed and empty by default: the active system decides which
+    // currencies exist, so a new container starts with none rather than an
+    // assumed gold/silver/copper purse.
+    wealth: data.wealth ?? {},
     items: data.items ?? [],
     createdAt: now,
     updatedAt: now,

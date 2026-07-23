@@ -77,6 +77,11 @@ export interface Weapon {
   damaged?: boolean;
   /** If `true`, this entry represents a shield rather than an offensive weapon. */
   isShield?: boolean;
+  /**
+   * Values for the extra fields the active system declares in
+   * `SystemDefinition.itemFields.weapon`, keyed by field id.
+   */
+  systemFields?: Record<string, unknown>;
 }
 
 /**
@@ -104,6 +109,11 @@ export interface ArmorPiece {
   movementPenalty?: number;
   /** If `true`, the armour is made of metal. */
   metal?: boolean;
+  /**
+   * Values for the extra fields the active system declares in
+   * `SystemDefinition.itemFields.armor`, keyed by field id.
+   */
+  systemFields?: Record<string, unknown>;
 }
 
 /**

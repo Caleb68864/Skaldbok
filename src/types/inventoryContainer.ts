@@ -32,11 +32,15 @@ export const inventoryContainerSchema = z
     name: z.string(),
     kind: z.enum(['coffer', 'animal', 'npc', 'other']),
     capacity: z.number().nullable(),
-    coins: z.object({
-      gold: z.number(),
-      silver: z.number(),
-      copper: z.number(),
-    }),
+    // Keyed by the active system's currency denomination id, like
+    // `CharacterRecord.wealth`. Defaults to empty so a container written before
+    // this change still validates; `coins` is accepted for the same reason and
+    // folded into `wealth` on read.
+    wealth: z.record(z.string(), z.number()).default({}),
+    coins: z
+      .object({ gold: z.number(), silver: z.number(), copper: z.number() })
+      .optional()
+      .describe('Legacy fixed coin purse; superseded by wealth'),
     items: z.array(bundleInventoryItemSchema),
     createdAt: z.string(),
     updatedAt: z.string(),
@@ -44,6 +48,25 @@ export const inventoryContainerSchema = z
     softDeletedBy: z.string().optional(),
   })
   .passthrough();
+
+/**
+ * Reads a container's money, folding a legacy `coins` purse into the
+ * denomination-keyed shape.
+ *
+ * @remarks
+ * Containers have no `schemaVersion`, so rather than a ladder they are
+ * normalised on read. Always go through this instead of touching either field.
+ */
+export function containerWealth(container: {
+  wealth?: Record<string, number>;
+  coins?: { gold: number; silver: number; copper: number };
+}): Record<string, number> {
+  if (container.wealth && Object.keys(container.wealth).length > 0) return container.wealth;
+  if (container.coins) {
+    return { gold: container.coins.gold, silver: container.coins.silver, copper: container.coins.copper };
+  }
+  return {};
+}
 
 /**
  * Kinds of inventory carrier other than a player character. Drives the icon
@@ -74,8 +97,17 @@ export interface InventoryContainer extends Timestamped {
   kind: InventoryContainerKind;
   /** Weight capacity in wt units; `null` means unlimited. */
   capacity: number | null;
-  /** Coin purse held by this container. */
-  coins: {
+  /**
+   * Money held by this container, keyed by currency denomination id.
+   *
+   * @remarks
+   * Mirrors `CharacterRecord.wealth` so the Party tab can aggregate a character
+   * and a container with the same code, and so a system using Credits is not
+   * stuck with a gold/silver/copper purse.
+   */
+  wealth: Record<string, number>;
+  /** @deprecated Legacy fixed coin purse; read via {@link containerWealth}. */
+  coins?: {
     gold: number;
     silver: number;
     copper: number;
