@@ -282,6 +282,15 @@ export interface ProbabilityModel {
 /** Where a derived stat is surfaced. Different screens show different subsets. */
 export type DerivedSurface = 'sheet' | 'dashboard' | 'print';
 
+/** A stat a temporary modifier can target, grouped for the picker. */
+export interface ModifiableStat {
+  /** Namespaced stat key, e.g. `attr:str` — see `utils/statKeys`. */
+  id: string;
+  label: string;
+  /** Heading the option is listed under. */
+  group: string;
+}
+
 /** A derived stat a system surfaces, and how to label it. */
 export interface DerivedFieldDef {
   key: string;
@@ -336,4 +345,12 @@ export interface SystemEngine {
   probability: ProbabilityModel;
   /** Derived stats this system surfaces, with their labels. */
   derivedFields: DerivedFieldDef[];
+  /**
+   * Stats a temporary modifier may target, for the "add modifier" picker.
+   *
+   * @remarks
+   * Takes the system definition so labels can come from its own attribute and
+   * resource names rather than being restated in the engine.
+   */
+  modifiableStats: (system?: SystemDefinition) => ModifiableStat[];
 }

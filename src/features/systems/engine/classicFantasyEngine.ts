@@ -2,6 +2,7 @@ import { computeDerivedValues, computeSkillValue } from '../../../utils/derivedV
 import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../../utils/boonBane';
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
+import { attrKey, armorKey, derivedKey } from '../../../utils/statKeys';
 import type { SystemEngine, RestDefinition } from './types';
 
 /** Formats a skill's success probability string for the current boon/bane state. */
@@ -189,6 +190,18 @@ export const classicFantasyEngine: SystemEngine = {
     chance: (value, state) =>
       state === 'boon' ? calcBoonProb(value) : state === 'bane' ? calcBaneProb(value) : calcNormalProb(value),
   },
+  modifiableStats: system => [
+    ...(system?.attributes ?? []).map(a => ({
+      id: attrKey(a.id),
+      label: a.abbreviation,
+      group: 'Attributes',
+    })),
+    { id: armorKey('armor'), label: 'Armor Rating', group: 'Armor' },
+    { id: armorKey('helmet'), label: 'Helmet Rating', group: 'Armor' },
+    { id: derivedKey('movement'), label: 'Movement', group: 'Derived' },
+    { id: derivedKey('hpMax'), label: 'Max HP', group: 'Derived' },
+    { id: derivedKey('wpMax'), label: 'Max WP', group: 'Derived' },
+  ],
   // Surfaces reproduce today's three distinct layouts exactly: the sheet shows
   // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
   // vitals module already shows), and the print sheet four.

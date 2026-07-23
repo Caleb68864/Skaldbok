@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '../../lib/utils';
 import type { TempModifier, TempModifierEffect } from '../../types/character';
 import { useSystemEngine } from '../../features/systems/engine';
+import type { ModifiableStat } from '../../features/systems/engine/types';
+import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
+import { useActiveCharacter } from '../../context/ActiveCharacterContext';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { Drawer } from '../primitives/Drawer';
 
 interface AddModifierDrawerProps {
@@ -23,9 +27,25 @@ const inputClasses = "min-h-[var(--touch-target-min)] px-[var(--space-sm)] text-
 
 export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerProps) {
   const engine = useSystemEngine();
+  const { character } = useActiveCharacter();
   // Duration choices are the active system's time units; the stored ids are
   // shared across systems so a saved modifier stays valid if the system changes.
   const durationOptions = engine.timeUnits;
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
+  /**
+   * Targets come from the engine, grouped for the picker. Ids are namespaced
+   * (`attr:str` vs `res:str`), which is what lets a system name a resource
+   * after an attribute without the two colliding.
+   */
+  const statGroups = useMemo(() => {
+    const grouped = new Map<string, ModifiableStat[]>();
+    for (const stat of engine.modifiableStats(system ?? undefined)) {
+      const list = grouped.get(stat.group) ?? [];
+      list.push(stat);
+      grouped.set(stat.group, list);
+    }
+    return [...grouped.entries()];
+  }, [engine, system]);
   const [label, setLabel] = useState('');
   const [duration, setDuration] = useState<Duration>('stretch');
   const [effects, setEffects] = useState<EffectRow[]>([{ ...EMPTY_EFFECT }]);
@@ -129,23 +149,13 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
                 className={cn(inputClasses, "flex-1 w-auto")}
               >
                 <option value="">Select stat...</option>
-                <optgroup label="Attributes">
-                  <option value="str">STR</option>
-                  <option value="con">CON</option>
-                  <option value="agl">AGL</option>
-                  <option value="int">INT</option>
-                  <option value="wil">WIL</option>
-                  <option value="cha">CHA</option>
-                </optgroup>
-                <optgroup label="Armor">
-                  <option value="armor">Armor Rating</option>
-                  <option value="helmet">Helmet Rating</option>
-                </optgroup>
-                <optgroup label="Derived">
-                  <option value="movement">Movement</option>
-                  <option value="hpMax">Max HP</option>
-                  <option value="wpMax">Max WP</option>
-                </optgroup>
+                {statGroups.map(([group, stats]) => (
+                  <optgroup key={group} label={group}>
+                    {stats.map(stat => (
+                      <option key={stat.id} value={stat.id}>{stat.label}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
 
               <input

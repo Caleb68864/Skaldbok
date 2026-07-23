@@ -5,6 +5,7 @@ import {
   twoD6SuccessProbability,
   threeD6KeepTwoProbability,
 } from '../../../systems/traveller/travellerMath';
+import { attrKey, resKey } from '../../../utils/statKeys';
 import type { SystemEngine } from './types';
 
 export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'];
@@ -168,5 +169,19 @@ export const travellerEngine: SystemEngine = {
   },
   derivedFields: [
     { key: 'initiativeDM', label: 'Initiative DM', shortLabel: 'Init' },
+  ],
+  // Characteristics and damage-track resources share ids (str/dex/end), so the
+  // namespace is what keeps `attr:str` and `res:str` distinct targets.
+  modifiableStats: system => [
+    ...(system?.attributes ?? []).map(a => ({
+      id: attrKey(a.id),
+      label: a.abbreviation,
+      group: 'Characteristics',
+    })),
+    ...(system?.resources ?? []).map(r => ({
+      id: resKey(r.id),
+      label: r.name,
+      group: 'Damage Track',
+    })),
   ],
 };

@@ -1,4 +1,5 @@
 import type { CharacterRecord, StatKey } from '../types/character';
+import { parseStatKey, type StatNamespace } from './statKeys';
 import type { SystemDefinition } from '../types/system';
 
 export interface DerivedValues {
@@ -146,21 +147,39 @@ export interface EffectiveValueResult {
 
 const DERIVED_KEYS = new Set(['movement', 'hpMax', 'wpMax']);
 
+/** Resolves an explicitly namespaced key against exactly one part of the record. */
+function resolveNamespaced(
+  namespace: StatNamespace,
+  id: string,
+  character: CharacterRecord,
+): number {
+  switch (namespace) {
+    case 'attr':
+      return character.attributes?.[id] ?? 0;
+    case 'res':
+      return character.resources?.[id]?.current ?? 0;
+    case 'derived': {
+      const dv = getDerivedValue(character, id);
+      return typeof dv.effective === 'number' ? dv.effective : 0;
+    }
+    case 'armor':
+      if (id === 'armor') return character.armor?.rating ?? 0;
+      if (id === 'helmet') return character.helmet?.rating ?? 0;
+      return 0;
+    case 'skill':
+      return character.skills?.[id]?.value ?? 0;
+  }
+}
+
 /**
- * Resolves a stat key against a character.
+ * Resolves an unprefixed key by the historical precedence order.
  *
  * @remarks
- * Attribute ids are read from the character's own `attributes` map rather than
- * a per-system constant, so this stays system-agnostic without importing any
- * concrete engine (which would invert the dependency — engines import from
- * here, never the reverse).
- *
- * Known limitation: a system whose resource ids collide with its attribute ids
- * (Traveller's `str`/`dex`/`end` damage track) resolves the attribute here.
- * Resources are read directly from `character.resources`, so nothing depends on
- * the collided path today; disambiguating properly needs namespaced stat keys.
+ * Kept so temp modifiers written before stat keys were namespaced still resolve
+ * to what they always did, whether or not they have been migrated. New keys
+ * should always carry a namespace — see {@link statKey}.
  */
-function resolveBase(stat: StatKey, character: CharacterRecord): number {
+function resolveLegacy(stat: string, character: CharacterRecord): number {
   if (Object.prototype.hasOwnProperty.call(character.attributes ?? {}, stat)) {
     return character.attributes[stat] ?? 0;
   }
@@ -170,10 +189,25 @@ function resolveBase(stat: StatKey, character: CharacterRecord): number {
     const dv = getDerivedValue(character, stat);
     return typeof dv.effective === 'number' ? dv.effective : 0;
   }
-  // Skill IDs
   if (character.skills?.[stat]) return character.skills[stat].value ?? 0;
   console.warn('getEffectiveValue: unknown stat key', stat);
   return 0;
+}
+
+/**
+ * Resolves a stat key against a character.
+ *
+ * @remarks
+ * A namespaced key (`attr:str`, `res:str`) resolves against exactly that part
+ * of the record, which is what lets a system name a resource after an
+ * attribute — Traveller's damage track does exactly that. Unprefixed keys fall
+ * back to the legacy precedence order.
+ */
+function resolveBase(stat: StatKey, character: CharacterRecord): number {
+  const { namespace, id } = parseStatKey(stat);
+  return namespace === null
+    ? resolveLegacy(id, character)
+    : resolveNamespaced(namespace, id, character);
 }
 
 /**

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   migrateCharacter,
   migrateCharacterV1ToV2,
+  migrateCharacterV2ToV3,
   upgradeCharacter,
   CURRENT_SCHEMA_VERSION,
 } from './migrations';
@@ -159,6 +160,68 @@ describe('migrateCharacter (full ladder + validation)', () => {
 
   it('throws a descriptive error on genuinely invalid data', () => {
     expect(() => migrateCharacter({ schemaVersion: 1, id: '', name: 5 })).toThrow(/Invalid character data/);
+  });
+});
+
+describe('migrateCharacterV2ToV3 (namespaced stat keys)', () => {
+  const v2WithModifiers = () => ({
+    ...v1Dragonbane(),
+    schemaVersion: 2,
+    wealth: { gold: 1 },
+    tempModifiers: [
+      {
+        id: 'm1',
+        label: 'Blessing',
+        duration: 'stretch',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        effects: [
+          { stat: 'str', delta: 2 },
+          { stat: 'armor', delta: 1 },
+          { stat: 'movement', delta: -2 },
+          { stat: 'hpMax', delta: 3 },
+        ],
+      },
+    ],
+    spells: [
+      { id: 's1', name: 'Shield', school: 'Protection', powerLevel: 1, wpCost: 2, range: 'Self', duration: 'Round', summary: '', effects: [{ stat: 'helmet', delta: 2, duration: 'round' }] },
+    ],
+  });
+
+  it('namespaces attribute, armour and derived targets', () => {
+    const out = migrateCharacterV2ToV3(v2WithModifiers()) as Record<string, unknown>;
+    const effects = (out.tempModifiers as Array<{ effects: Array<{ stat: string }> }>)[0].effects;
+    expect(effects.map(e => e.stat)).toEqual([
+      'attr:str',
+      'armor:armor',
+      'derived:movement',
+      'derived:hpMax',
+    ]);
+  });
+
+  it('namespaces spell effect templates too', () => {
+    const out = migrateCharacterV2ToV3(v2WithModifiers()) as Record<string, unknown>;
+    const spell = (out.spells as Array<{ effects: Array<{ stat: string }> }>)[0];
+    expect(spell.effects[0].stat).toBe('armor:helmet');
+  });
+
+  it('leaves already-namespaced keys untouched and is idempotent', () => {
+    const once = migrateCharacterV2ToV3(v2WithModifiers());
+    const twice = migrateCharacterV2ToV3(once);
+    expect(twice).toEqual(once);
+  });
+
+  it('preserves delta values and modifier metadata', () => {
+    const out = migrateCharacterV2ToV3(v2WithModifiers()) as Record<string, unknown>;
+    const mod = (out.tempModifiers as Array<Record<string, unknown>>)[0];
+    expect(mod.label).toBe('Blessing');
+    expect(mod.duration).toBe('stretch');
+    expect((mod.effects as Array<{ delta: number }>).map(e => e.delta)).toEqual([2, 1, -2, 3]);
+  });
+
+  it('tolerates a character with no modifiers or spells', () => {
+    const bare = { ...v1Dragonbane(), schemaVersion: 2, wealth: {} };
+    delete (bare as Record<string, unknown>).spells;
+    expect(() => migrateCharacterV2ToV3(bare)).not.toThrow();
   });
 });
 
