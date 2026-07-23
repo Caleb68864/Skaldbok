@@ -2,14 +2,17 @@ import type { SystemDefinition } from '../../../types/system';
 import { useSystemDefinition } from '../useSystemDefinition';
 import { useActiveCharacter } from '../../../context/ActiveCharacterContext';
 import { classicFantasyEngine } from './classicFantasyEngine';
+import { travellerEngine } from './travellerEngine';
 import type { SystemEngine } from './types';
 
 export type { SystemEngine, PanelKey } from './types';
 export { classicFantasyEngine } from './classicFantasyEngine';
+export { travellerEngine } from './travellerEngine';
 
 /** Resolves the SystemEngine adapter for a given system definition (or id). */
 export function getEngine(system: SystemDefinition | undefined | null): SystemEngine {
-  if (!system || system.id === 'classic-fantasy') return classicFantasyEngine;
+  if (!system) return classicFantasyEngine;
+  if (system.id === 'traveller') return travellerEngine;
   return classicFantasyEngine;
 }
 
