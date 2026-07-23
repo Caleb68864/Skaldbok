@@ -1,0 +1,60 @@
+{
+  "id": "blank-template",
+  "schemaVersion": 1,
+  "systemId": "traveller",
+  "name": "New Traveller",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "metadata": {
+    "kin": "",
+    "profession": "",
+    "age": "Adult",
+    "weakness": "",
+    "appearance": "",
+    "notes": ""
+  },
+  "attributes": {
+    "str": 7,
+    "dex": 7,
+    "end": 7,
+    "int": 7,
+    "edu": 7,
+    "soc": 7
+  },
+  "conditions": {
+    "wounded": false,
+    "fatigued": false,
+    "unconscious": false
+  },
+  "resources": {
+    "str": { "current": 0, "max": 7 },
+    "dex": { "current": 0, "max": 7 },
+    "end": { "current": 0, "max": 7 }
+  },
+  "skills": {},
+  "weapons": [],
+  "armor": null,
+  "helmet": null,
+  "inventory": [],
+  "tinyItems": [],
+  "memento": "",
+  "coins": {
+    "gold": 0,
+    "silver": 0,
+    "copper": 0
+  },
+  "spells": [],
+  "heroicAbilities": [],
+  "derivedOverrides": {},
+  "uiState": {
+    "expandedSections": []
+  },
+  "travellerData": {
+    "credits": 0,
+    "financeNotes": "",
+    "careers": "",
+    "augments": "",
+    "species": "",
+    "speciesTraits": ""
+  }
+}

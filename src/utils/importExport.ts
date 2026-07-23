@@ -12,7 +12,7 @@ function stripHtml(str: string): string {
   return str.replace(/<[^>]*>/g, '').replace(/javascript:/gi, '');
 }
 
-const KNOWN_SYSTEM_IDS = ['classic-fantasy'];
+const KNOWN_SYSTEM_IDS = ['classic-fantasy', 'traveller'];
 const SYSTEM_ID_ALIASES: Record<string, string> = {
   'classic-fantasy': 'classic-fantasy',
   'dragon-bane': 'classic-fantasy',

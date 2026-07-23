@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import * as systemRepository from '../../storage/repositories/systemRepository';
 import { classicFantasySystem } from '../../systems/classic-fantasy';
+import { travellerSystem } from '../../systems/traveller';
 import type { SystemDefinition } from '../../types/system';
 
 export function useSystemDefinition(systemId: string) {
@@ -17,6 +18,9 @@ export function useSystemDefinition(systemId: string) {
       } else if (systemId === 'classic-fantasy') {
         await systemRepository.save(classicFantasySystem);
         setSystem(classicFantasySystem);
+      } else if (systemId === 'traveller') {
+        await systemRepository.save(travellerSystem);
+        setSystem(travellerSystem);
       } else {
         setError(`Unknown system: ${systemId}`);
       }

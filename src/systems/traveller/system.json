@@ -1,0 +1,95 @@
+{
+  "id": "traveller",
+  "version": 1,
+  "name": "traveller",
+  "displayName": "Traveller",
+  "resolution": "2d6-plus",
+  "currency": { "label": "Credits", "abbr": "Cr", "mode": "single" },
+  "attributes": [
+    { "id": "str", "name": "Strength", "abbreviation": "STR", "min": 0, "max": 15 },
+    { "id": "dex", "name": "Dexterity", "abbreviation": "DEX", "min": 0, "max": 15 },
+    { "id": "end", "name": "Endurance", "abbreviation": "END", "min": 0, "max": 15 },
+    { "id": "int", "name": "Intelligence", "abbreviation": "INT", "min": 0, "max": 15 },
+    { "id": "edu", "name": "Education", "abbreviation": "EDU", "min": 0, "max": 15 },
+    { "id": "soc", "name": "Social Standing", "abbreviation": "SOC", "min": 0, "max": 15 }
+  ],
+  "conditions": [
+    { "id": "wounded", "name": "Wounded", "linkedAttributeId": "end", "description": "Physical damage track is depleted" },
+    { "id": "fatigued", "name": "Fatigued", "linkedAttributeId": "end", "description": "Affects END-based actions" },
+    { "id": "unconscious", "name": "Unconscious", "linkedAttributeId": "end", "description": "Character cannot act" }
+  ],
+  "resources": [
+    { "id": "str", "name": "Strength Damage", "derivedFrom": "str", "min": 0, "defaultMax": 8 },
+    { "id": "dex", "name": "Dexterity Damage", "derivedFrom": "dex", "min": 0, "defaultMax": 8 },
+    { "id": "end", "name": "Endurance Damage", "derivedFrom": "end", "min": 0, "defaultMax": 8 }
+  ],
+  "skillCategories": [
+    {
+      "id": "combat",
+      "name": "Combat",
+      "skills": [
+        { "id": "gunCombat", "name": "Gun Combat (Slug)", "baseChance": 0, "linkedAttributeId": "dex" },
+        { "id": "gunCombatEnergy", "name": "Gun Combat (Energy)", "baseChance": 0, "linkedAttributeId": "dex" },
+        { "id": "meleeBlade", "name": "Melee (Blade)", "baseChance": 0, "linkedAttributeId": "str" },
+        { "id": "meleeUnarmed", "name": "Melee (Unarmed)", "baseChance": 0, "linkedAttributeId": "str" },
+        { "id": "heavyWeapons", "name": "Heavy Weapons", "baseChance": 0, "linkedAttributeId": "dex" },
+        { "id": "tactics", "name": "Tactics (Military)", "baseChance": 0, "linkedAttributeId": "int" }
+      ]
+    },
+    {
+      "id": "technical",
+      "name": "Technical",
+      "skills": [
+        { "id": "mechanic", "name": "Mechanic", "baseChance": 0, "linkedAttributeId": "int" },
+        { "id": "electronics", "name": "Electronics (Comms)", "baseChance": 0, "linkedAttributeId": "int" },
+        { "id": "engineer", "name": "Engineer (Jump)", "baseChance": 0, "linkedAttributeId": "edu" },
+        { "id": "science", "name": "Science (Physics)", "baseChance": 0, "linkedAttributeId": "edu" },
+        { "id": "medic", "name": "Medic", "baseChance": 0, "linkedAttributeId": "edu" }
+      ]
+    },
+    {
+      "id": "space",
+      "name": "Space",
+      "skills": [
+        { "id": "pilot", "name": "Pilot (Spacecraft)", "baseChance": 0, "linkedAttributeId": "dex" },
+        { "id": "astrogation", "name": "Astrogation", "baseChance": 0, "linkedAttributeId": "edu" },
+        { "id": "sensors", "name": "Sensors", "baseChance": 0, "linkedAttributeId": "int" },
+        { "id": "vacc", "name": "Vacc Suit", "baseChance": 0, "linkedAttributeId": "dex" }
+      ]
+    },
+    {
+      "id": "social",
+      "name": "Social",
+      "skills": [
+        { "id": "admin", "name": "Admin", "baseChance": 0, "linkedAttributeId": "edu" },
+        { "id": "advocate", "name": "Advocate", "baseChance": 0, "linkedAttributeId": "edu" },
+        { "id": "broker", "name": "Broker", "baseChance": 0, "linkedAttributeId": "int" },
+        { "id": "diplomat", "name": "Diplomat", "baseChance": 0, "linkedAttributeId": "soc" },
+        { "id": "streetwise", "name": "Streetwise", "baseChance": 0, "linkedAttributeId": "int" },
+        { "id": "persuade", "name": "Persuade", "baseChance": 0, "linkedAttributeId": "soc" }
+      ]
+    },
+    {
+      "id": "physical",
+      "name": "Physical",
+      "skills": [
+        { "id": "athletics", "name": "Athletics (Strength)", "baseChance": 0, "linkedAttributeId": "str" },
+        { "id": "stealth", "name": "Stealth", "baseChance": 0, "linkedAttributeId": "dex" },
+        { "id": "recon", "name": "Recon", "baseChance": 0, "linkedAttributeId": "int" },
+        { "id": "survival", "name": "Survival", "baseChance": 0, "linkedAttributeId": "end" }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "name": "Knowledge",
+      "skills": [
+        { "id": "carouse", "name": "Carouse", "baseChance": 0, "linkedAttributeId": "soc" },
+        { "id": "deception", "name": "Deception", "baseChance": 0, "linkedAttributeId": "int" },
+        { "id": "investigate", "name": "Investigate", "baseChance": 0, "linkedAttributeId": "int" },
+        { "id": "explosives", "name": "Explosives", "baseChance": 0, "linkedAttributeId": "dex" },
+        { "id": "jackOfAllTrades", "name": "Jack of All Trades", "baseChance": 0 }
+      ]
+    }
+  ],
+  "themesSupported": ["starfarers-cockpit", "databank", "neon-sprawl"]
+}
