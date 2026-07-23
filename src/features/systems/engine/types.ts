@@ -105,6 +105,99 @@ export interface SystemLabels {
   encumbrance: string;
 }
 
+/** One input the rest modal collects before applying a rest. */
+export interface RestPromptField {
+  id: string;
+  label: string;
+}
+
+/** Modal prompt shown before a rest is applied; omit for rests that apply immediately. */
+export interface RestPrompt {
+  /** Explanatory copy at the top of the modal. */
+  text: string;
+  /** Die size the player rolls, e.g. `6` for d6. Drives input bounds and labels. */
+  die: number;
+  fields: RestPromptField[];
+  /** Whether the rest may additionally clear one active condition. */
+  clearOneCondition?: boolean;
+}
+
+/** What a rest did, in system-neutral terms. */
+export interface RestOutcome {
+  /** Resource id → new `current` value. */
+  resources: Record<string, number>;
+  /** Condition ids cleared by the rest. */
+  conditionsCleared: string[];
+  /** User-facing sentences describing what happened. */
+  messages: string[];
+}
+
+/**
+ * A rest/recovery action a system offers.
+ *
+ * @remarks
+ * `id` doubles as the {@link TempModifier} duration key, so a modifier lasting
+ * "until the next round rest" expires when the rest with `id: 'round'` runs.
+ */
+export interface RestDefinition {
+  id: string;
+  label: string;
+  prompt?: RestPrompt;
+  apply: (
+    character: CharacterRecord,
+    rolls: Record<string, number>,
+    conditionToClear?: string,
+  ) => RestOutcome;
+}
+
+/** A death/dying track (e.g. Dragonbane's three failures and three successes). */
+export interface DeathTrack {
+  id: string;
+  label: string;
+  max: number;
+  tone: 'danger' | 'success';
+}
+
+/** How a system models a downed/dying character. `null` when it has no such rules. */
+export interface DeathModel {
+  /** Resource whose depletion puts the character down. */
+  triggerResourceId: string;
+  /** Character is down when that resource is at or below this value. */
+  triggerAtOrBelow: number;
+  downLabel: string;
+  deadLabel: string;
+  stabilizedLabel: string;
+  tracks: DeathTrack[];
+}
+
+/** End-of-session advancement rules. `null` when the system has no such procedure. */
+export interface AdvancementModel {
+  /** Checkboxes offered on the session checklist. */
+  sessionEvents: Array<{ id: string; label: string }>;
+  /** Whether advancement is driven by per-skill marks. */
+  usesMarks: boolean;
+  /** Ceiling an advancement roll may raise a skill to. */
+  maxSkillValue: number;
+  /** Copy describing the roll a player makes for a skill at `value`. */
+  rollPrompt: (value: number) => string;
+}
+
+/** Success-chance maths for a system's resolution mechanic. */
+export interface ProbabilityModel {
+  /** Chance of success at `value` under the given boon/bane state, as 0–1. */
+  chance: (value: number, state: 'boon' | 'none' | 'bane', context?: SkillDisplayContext) => number;
+}
+
+/** A derived stat a system surfaces, and how to label it. */
+export interface DerivedFieldDef {
+  key: string;
+  label: string;
+  /** Short form for dense layouts like the play dashboard. */
+  shortLabel?: string;
+  /** Whether the user may manually override this value on the sheet. */
+  overridable?: boolean;
+}
+
 export interface SystemEngine {
   resolution: ResolutionMethod;
   hasMagic: boolean;
@@ -124,4 +217,14 @@ export interface SystemEngine {
    * has no single health pool (consumers must then defer to the system's own UI).
    */
   primaryHealthResourceId: string | null;
+  /** Rest/recovery actions, or `null` when the system has none. */
+  rest: RestDefinition[] | null;
+  /** Downed/dying rules, or `null` when the system has none. */
+  death: DeathModel | null;
+  /** End-of-session advancement, or `null` when the system has none. */
+  advancement: AdvancementModel | null;
+  /** Success-chance maths for this system's resolution mechanic. */
+  probability: ProbabilityModel;
+  /** Derived stats this system surfaces, with their labels. */
+  derivedFields: DerivedFieldDef[];
 }

@@ -1,6 +1,10 @@
 import type { CharacterRecord } from '../../../types/character';
 import type { DerivedValues } from '../../../utils/derivedValues';
-import { characteristicToDM, twoD6SuccessProbability } from '../../../systems/traveller/travellerMath';
+import {
+  characteristicToDM,
+  twoD6SuccessProbability,
+  threeD6KeepTwoProbability,
+} from '../../../systems/traveller/travellerMath';
 import type { SystemEngine } from './types';
 
 export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'];
@@ -104,4 +108,26 @@ export const travellerEngine: SystemEngine = {
   // Damage lands on END first in Traveller; STR/DEX overflow is a rules decision
   // the generic damage helper should not make on its own.
   primaryHealthResourceId: 'end',
+  // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
+  rest: null,
+  // No death-roll track; a downed character is handled by the damage track.
+  death: null,
+  // Advancement is study/training time, not per-session rolls.
+  advancement: null,
+  probability: {
+    // Skill level + linked-characteristic DM vs the default 8+ target.
+    chance: (value, state, context) => {
+      const linkedId = context?.linkedAttributeId;
+      const dm = linkedId
+        ? characteristicToDM(context?.character.attributes?.[linkedId] ?? 0)
+        : 0;
+      const modifier = value + dm;
+      if (state === 'boon') return threeD6KeepTwoProbability(8, modifier, 'best');
+      if (state === 'bane') return threeD6KeepTwoProbability(8, modifier, 'worst');
+      return twoD6SuccessProbability(8, modifier);
+    },
+  },
+  derivedFields: [
+    { key: 'initiativeDM', label: 'Initiative DM', shortLabel: 'Init' },
+  ],
 };

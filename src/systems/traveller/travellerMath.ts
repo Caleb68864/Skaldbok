@@ -30,3 +30,32 @@ export function twoD6SuccessProbability(target: number, modifier = 0): number {
   }
   return Math.min(1, Math.max(0, favorable / 36));
 }
+
+/**
+ * Probability of success under a Boon or Bane: roll 3d6 and keep the best two
+ * (Boon) or the worst two (Bane), then add the modifier and compare to target.
+ *
+ * @remarks
+ * Enumerates all 216 ordered 3d6 outcomes rather than approximating. This
+ * replaces the previous fallback that reused plain 2d6 odds and therefore
+ * reported the same chance with or without a Boon.
+ */
+export function threeD6KeepTwoProbability(
+  target: number,
+  modifier = 0,
+  keep: 'best' | 'worst',
+): number {
+  const needed = target - modifier;
+  let favorable = 0;
+  for (let a = 1; a <= 6; a++) {
+    for (let b = 1; b <= 6; b++) {
+      for (let c = 1; c <= 6; c++) {
+        const sorted = [a, b, c].sort((x, y) => x - y);
+        // sorted[0] <= sorted[1] <= sorted[2]
+        const total = keep === 'best' ? sorted[1] + sorted[2] : sorted[0] + sorted[1];
+        if (total >= needed) favorable++;
+      }
+    }
+  }
+  return Math.min(1, Math.max(0, favorable / 216));
+}
