@@ -16,6 +16,7 @@ import type { OutcomeOption, RollModifierOption } from '../systems/engine/types'
 import { useSystemDefinition } from '../systems/useSystemDefinition';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import type { CharacterRecord } from '../../types/character';
+import { toSpells, toHeroicAbilities } from '../../utils/abilities';
 import type { PartyMember } from '../../types/party';
 import { getNotesByCampaign } from '../../storage/repositories/noteRepository';
 import type { Note } from '../../types/note';
@@ -505,7 +506,7 @@ export function SessionQuickActions({
     }
 
     const char = selectedCharacter();
-    const spells = char?.spells ?? [];
+    const spells = toSpells(char?.abilities);
     return (
       <div>
         <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />
@@ -547,7 +548,7 @@ export function SessionQuickActions({
       );
     }
     const char = selectedCharacter();
-    const abilities = char?.heroicAbilities ?? [];
+    const abilities = toHeroicAbilities(char?.abilities);
     return (
       <div>
         <PartyPicker members={resolvedMembers} selected={selectedMembers} onSelect={setSelectedMembers} />

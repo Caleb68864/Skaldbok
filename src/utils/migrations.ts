@@ -4,7 +4,7 @@ import type { CharacterRecord } from '../types/character';
 import type { SystemDefinition } from '../types/system';
 import { isNamespaced, attrKey, armorKey, derivedKey } from './statKeys';
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 type MigrationFn = (data: unknown) => unknown;
 
@@ -116,9 +116,81 @@ export function migrateCharacterV2ToV3(data: unknown): unknown {
   return { ...rec, schemaVersion: 3 };
 }
 
+/**
+ * v3 → v4: one abilities collection.
+ *
+ * @remarks
+ * `spells` and `heroicAbilities` were separate required arrays, so a character
+ * in a system with neither concept still carried two empty Dragonbane
+ * collections. Both fold into `abilities`, tagged by type, with the
+ * ruleset-specific fields moved into each entry's `systemFields` and the WP cost
+ * expressed as `cost: { wp }` rather than a field named after one system's
+ * resource.
+ */
+function spellToAbility(spell: Record<string, unknown>): Record<string, unknown> {
+  const systemFields: Record<string, unknown> = {};
+  for (const key of ['school', 'powerLevel', 'range', 'duration', 'rank', 'requirements', 'castingTime', 'powerScaling']) {
+    if (spell[key] !== undefined) systemFields[key] = spell[key];
+  }
+  return {
+    id: spell.id,
+    type: 'spell',
+    name: spell.name,
+    summary: spell.summary ?? '',
+    cost: typeof spell.wpCost === 'number' ? { wp: spell.wpCost } : undefined,
+    prepared: spell.prepared,
+    pinnedAsStamp: spell.pinnedAsStamp,
+    effects: spell.effects,
+    ...(Object.keys(systemFields).length > 0 ? { systemFields } : {}),
+  };
+}
+
+function heroicToAbility(ability: Record<string, unknown>): Record<string, unknown> {
+  const systemFields: Record<string, unknown> = {};
+  for (const key of ['requirement', 'requirementSkillId', 'requirementSkillLevel']) {
+    if (ability[key] !== undefined && ability[key] !== null) systemFields[key] = ability[key];
+  }
+  return {
+    id: ability.id,
+    type: 'heroic',
+    name: ability.name,
+    summary: ability.summary ?? '',
+    cost: typeof ability.wpCost === 'number' ? { wp: ability.wpCost } : undefined,
+    pinnedAsStamp: ability.pinnedAsStamp,
+    ...(Object.keys(systemFields).length > 0 ? { systemFields } : {}),
+  };
+}
+
+export function migrateCharacterV3ToV4(data: unknown): unknown {
+  const rec = { ...(data as Record<string, unknown>) };
+  const existing = Array.isArray(rec.abilities) ? (rec.abilities as Record<string, unknown>[]) : [];
+
+  const converted: Record<string, unknown>[] = [];
+  if (Array.isArray(rec.spells)) {
+    for (const spell of rec.spells) {
+      if (spell && typeof spell === 'object') converted.push(spellToAbility(spell as Record<string, unknown>));
+    }
+  }
+  if (Array.isArray(rec.heroicAbilities)) {
+    for (const ability of rec.heroicAbilities) {
+      if (ability && typeof ability === 'object') converted.push(heroicToAbility(ability as Record<string, unknown>));
+    }
+  }
+
+  // Anything already in `abilities` wins, so re-running cannot duplicate.
+  const seen = new Set(existing.map(a => a.id));
+  const abilities = [...existing, ...converted.filter(a => !seen.has(a.id))];
+
+  delete rec.spells;
+  delete rec.heroicAbilities;
+
+  return { ...rec, abilities, schemaVersion: 4 };
+}
+
 const characterMigrations: Record<number, MigrationFn> = {
   1: migrateCharacterV1ToV2,
   2: migrateCharacterV2ToV3,
+  3: migrateCharacterV3ToV4,
 };
 
 /**

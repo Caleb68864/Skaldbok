@@ -3,6 +3,7 @@ import {
   migrateCharacter,
   migrateCharacterV1ToV2,
   migrateCharacterV2ToV3,
+  migrateCharacterV3ToV4,
   upgradeCharacter,
   CURRENT_SCHEMA_VERSION,
 } from './migrations';
@@ -136,9 +137,10 @@ describe('migrateCharacter (full ladder + validation)', () => {
       delete (lean as Record<string, unknown>)[key];
     }
     const out = migrateCharacter(lean);
-    // Defaults fill in, so consumers still see the non-optional shape.
-    expect(out.spells).toEqual([]);
-    expect(out.heroicAbilities).toEqual([]);
+    // Defaults fill in, so consumers still see the non-optional shape. Spells
+    // and heroic abilities are no longer separate collections as of v4 — a
+    // system with neither concept simply has no abilities of those types.
+    expect(out.abilities).toEqual([]);
     expect(out.tinyItems).toEqual([]);
     expect(out.memento).toBe('');
   });
@@ -222,6 +224,64 @@ describe('migrateCharacterV2ToV3 (namespaced stat keys)', () => {
     const bare = { ...v1Dragonbane(), schemaVersion: 2, wealth: {} };
     delete (bare as Record<string, unknown>).spells;
     expect(() => migrateCharacterV2ToV3(bare)).not.toThrow();
+  });
+});
+
+describe('migrateCharacterV3ToV4 (unified abilities)', () => {
+  const v3WithBoth = () => ({
+    ...v1Dragonbane(),
+    schemaVersion: 3,
+    wealth: { gold: 1 },
+    spells: [
+      { id: 's1', name: 'Fireball', school: 'Elementalism', powerLevel: 2, wpCost: 4, range: 'Far', duration: 'Immediate', summary: 'Burns.', prepared: true },
+    ],
+    heroicAbilities: [
+      { id: 'h1', name: 'Veteran', summary: 'Extra attack.', wpCost: 3, requirementSkillId: 'axes', requirementSkillLevel: 12 },
+    ],
+  });
+
+  it('folds both collections into one, tagged by type', () => {
+    const out = migrateCharacterV3ToV4(v3WithBoth()) as Record<string, unknown>;
+    const abilities = out.abilities as Array<Record<string, unknown>>;
+    expect(abilities.map(a => a.type)).toEqual(['spell', 'heroic']);
+    expect(out).not.toHaveProperty('spells');
+    expect(out).not.toHaveProperty('heroicAbilities');
+  });
+
+  it('expresses WP cost as a resource-keyed cost', () => {
+    const out = migrateCharacterV3ToV4(v3WithBoth()) as Record<string, unknown>;
+    const [spell, heroic] = out.abilities as Array<Record<string, unknown>>;
+    expect(spell.cost).toEqual({ wp: 4 });
+    expect(heroic.cost).toEqual({ wp: 3 });
+  });
+
+  it('moves ruleset-specific fields into systemFields', () => {
+    const out = migrateCharacterV3ToV4(v3WithBoth()) as Record<string, unknown>;
+    const [spell, heroic] = out.abilities as Array<Record<string, unknown>>;
+    expect(spell.systemFields).toMatchObject({ school: 'Elementalism', powerLevel: 2, range: 'Far' });
+    expect(heroic.systemFields).toMatchObject({ requirementSkillId: 'axes', requirementSkillLevel: 12 });
+  });
+
+  it('preserves prepared state and names', () => {
+    const out = migrateCharacterV3ToV4(v3WithBoth()) as Record<string, unknown>;
+    const [spell] = out.abilities as Array<Record<string, unknown>>;
+    expect(spell.name).toBe('Fireball');
+    expect(spell.prepared).toBe(true);
+  });
+
+  it('is idempotent — re-running does not duplicate abilities', () => {
+    const once = migrateCharacterV3ToV4(v3WithBoth());
+    const twice = migrateCharacterV3ToV4(once);
+    expect((twice as Record<string, unknown>).abilities).toHaveLength(2);
+    expect(twice).toEqual(once);
+  });
+
+  it('gives a character with neither collection an empty abilities array', () => {
+    const bare = { ...v1Dragonbane(), schemaVersion: 3, wealth: {} };
+    delete (bare as Record<string, unknown>).spells;
+    delete (bare as Record<string, unknown>).heroicAbilities;
+    const out = migrateCharacterV3ToV4(bare) as Record<string, unknown>;
+    expect(out.abilities).toEqual([]);
   });
 });
 

@@ -3,6 +3,7 @@ import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
 import { compareSpellsByRankThenName, formatCastingTime } from '../../utils/spells';
+import { toSpells } from '../../utils/abilities';
 import { clamp, type PlayModuleProps } from './types';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
@@ -14,7 +15,7 @@ function isMagicTrick(powerLevel: number, school: string): boolean {
 export function MagicModule({ character, updateCharacter }: PlayModuleProps) {
   const { showToast } = useToast();
   const [powerLevels, setPowerLevels] = useState<Record<string, number>>({});
-  const spells = character.spells
+  const spells = toSpells(character.abilities)
     .filter(spell => spell.prepared || spell.pinnedAsStamp || spell.powerLevel === 0)
     .sort(compareSpellsByRankThenName)
     .slice(0, 8);

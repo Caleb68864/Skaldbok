@@ -153,10 +153,45 @@ export interface InventoryItem {
 }
 
 /**
+ * A special capability a character has: a spell, a heroic ability, a talent, a
+ * psionic power — whatever the active ruleset calls them.
+ *
+ * @remarks
+ * This is the canonical storage shape. Only the genuinely shared fields are
+ * first-class; everything ruleset-specific (a spell's school and power level, a
+ * heroic ability's skill prerequisite) lives in `systemFields`, described by
+ * `SystemDefinition.abilityTypes`.
+ *
+ * Dragonbane screens do not read this directly — they go through the typed
+ * projections in `utils/abilities`, which present the familiar {@link Spell}
+ * and {@link HeroicAbility} views over it.
+ */
+export interface Ability {
+  id: ID;
+  /** Which of the system's ability types this is, e.g. `spell` or `heroic`. */
+  type: string;
+  name: string;
+  summary: string;
+  /**
+   * Cost to use, keyed by resource id — `{ wp: 2 }` rather than a `wpCost`
+   * field that names one system's resource.
+   */
+  cost?: Record<string, number>;
+  /** Readied for use, for systems with a preparation step. */
+  prepared?: boolean;
+  /** Pinned into the Quick Log tray regardless of preparation. */
+  pinnedAsStamp?: boolean;
+  /** Effect templates applied when the ability is used. */
+  effects?: SpellEffect[];
+  /** Values for the fields this ability type declares. */
+  systemFields?: Record<string, unknown>;
+}
+
+/**
  * A spell known by the character.
  *
  * @remarks
- * Spells belong to magical schools and cost WP (willpower) to cast.
+ * A Dragonbane-shaped *view* over {@link Ability}; see `utils/abilities`.
  */
 export interface Spell {
   /** Unique identifier for this spell entry. */
@@ -375,10 +410,14 @@ export interface CharacterRecord extends Versioned, Timestamped {
    * so screens stay system-agnostic.
    */
   wealth: Record<string, number>;
-  /** Spells known by the character. */
-  spells: Spell[];
-  /** Heroic abilities unlocked by the character. */
-  heroicAbilities: HeroicAbility[];
+  /**
+   * Every special capability the character has, of any type the active system
+   * declares. Replaces the separate `spells` and `heroicAbilities` arrays, which
+   * required a Traveller character to carry two empty Dragonbane collections.
+   *
+   * Read and write it through `utils/abilities` rather than filtering by hand.
+   */
+  abilities: Ability[];
   /** Manual overrides for computed derived values. */
   derivedOverrides: DerivedOverrides;
   /** Active temporary stat modifiers (overlaid on base values). */

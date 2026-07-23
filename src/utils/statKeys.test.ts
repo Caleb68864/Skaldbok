@@ -41,7 +41,7 @@ function travellerCharacter(): CharacterRecord {
     resources: { str: { current: 4, max: 12 }, dex: { current: 2, max: 9 }, end: { current: 1, max: 7 } },
     skills: {},
     weapons: [], armor: null, helmet: null, inventory: [], tinyItems: [], memento: '',
-    wealth: {}, spells: [], heroicAbilities: [], derivedOverrides: {},
+    wealth: {}, abilities: [], derivedOverrides: {},
     uiState: { expandedSections: [] },
   } as unknown as CharacterRecord;
 }

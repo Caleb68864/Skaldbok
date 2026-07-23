@@ -3,10 +3,11 @@ import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
 import { clamp, type PlayModuleProps } from './types';
 import { useToast } from '../../context/ToastContext';
+import { toHeroicAbilities } from '../../utils/abilities';
 
 export function AbilityModule({ character, updateCharacter }: PlayModuleProps) {
   const { showToast } = useToast();
-  const abilities = character.heroicAbilities.slice(0, 8);
+  const abilities = toHeroicAbilities(character.abilities).slice(0, 8);
 
   if (abilities.length === 0) return null;
 

@@ -48,22 +48,21 @@ const inventoryItemSchema = z.object({
   capacityBonus: z.number().optional().describe('Bonus weight units added to encumbrance limit while carried'),
 });
 
-const spellSchema = z.object({
-  id: z.string().min(1).describe('Unique spell id'),
-  name: z.string().min(1).describe('Spell name'),
-  school: z.string().describe('Magic school'),
-  powerLevel: z.number().describe('Power level'),
-  wpCost: z.number().nonnegative().describe('WP cost to cast'),
-  range: z.string().describe('Spell range'),
-  duration: z.string().describe('Spell duration'),
-  summary: z.string().describe('Spell summary'),
-  powerScaling: z.tuple([z.string(), z.string(), z.string()]).optional().describe('Short descriptions for PL 1-3'),
-});
-
-const heroicAbilitySchema = z.object({
+/**
+ * One unified collection for spells, heroic abilities, talents and anything
+ * else a ruleset calls a special capability. Ruleset-specific fields live in
+ * `systemFields`, so no system's vocabulary is baked into the shared schema.
+ */
+const abilitySchema = z.object({
   id: z.string().min(1).describe('Unique ability id'),
+  type: z.string().min(1).describe('Ability type id declared by the system'),
   name: z.string().min(1).describe('Ability name'),
-  summary: z.string().describe('Ability summary'),
+  summary: z.string().default('').describe('Ability summary'),
+  cost: z.record(z.string(), z.number()).optional().describe('Cost keyed by resource id'),
+  prepared: z.boolean().optional(),
+  pinnedAsStamp: z.boolean().optional(),
+  effects: z.array(z.unknown()).optional(),
+  systemFields: z.record(z.string(), z.unknown()).optional(),
 });
 
 const characterResourceSchema = z.object({
@@ -96,8 +95,7 @@ export const characterRecordSchema = z.object({
     .record(z.string(), z.number().nonnegative())
     .default({})
     .describe('Money held, keyed by currency denomination id'),
-  spells: z.array(spellSchema).default([]),
-  heroicAbilities: z.array(heroicAbilitySchema).default([]),
+  abilities: z.array(abilitySchema).default([]),
   derivedOverrides: z.record(z.string(), z.number().nullable()).default({}).describe('Override map for derived values'),
   uiState: z.object({
     expandedSections: z.array(z.string()).default([]),

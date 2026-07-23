@@ -17,6 +17,7 @@ import { useIsEditMode } from '../utils/modeGuards';
 import { computeMaxPreparedSpells } from '../utils/derivedValues';
 import { isMetalEquipped } from '../utils/metalDetection';
 import { compareSpellsByRankThenName, isMagicTrick } from '../utils/spells';
+import { toSpells, toHeroicAbilities, withSpells, withHeroicAbilities } from '../utils/abilities';
 import { useSystemEngine } from '../features/systems/engine';
 import * as characterRepository from '../storage/repositories/characterRepository';
 
@@ -118,23 +119,27 @@ export default function MagicScreen() {
   }
 
   // ── Derived values ────────────────────────────────────────────────
+  // Storage is one unified `abilities` collection; this screen still thinks in
+  // spells and heroic abilities, so it reads through the typed projections.
+  const allSpells = toSpells(character.abilities);
+  const heroicAbilities = toHeroicAbilities(character.abilities);
   const maxPrepared = computeMaxPreparedSpells(character);
-  const preparedCount = character.spells?.filter(s => s.prepared && !isMagicTrick(s)).length ?? 0;
+  const preparedCount = allSpells.filter(s => s.prepared && !isMagicTrick(s)).length;
   const metalBlocked = isMetalEquipped(character);
   const currentWP = character.resources?.wp?.current ?? 0;
   const overLimit = preparedCount > maxPrepared;
 
   const visibleSpells = (filter === 'prepared'
-    ? character.spells.filter(s => s.prepared === true || isMagicTrick(s))
-    : character.spells
+    ? allSpells.filter(s => s.prepared === true || isMagicTrick(s))
+    : allSpells
   ).slice().sort(compareSpellsByRankThenName);
 
   // ── Handlers ──────────────────────────────────────────────────────
   function handleTogglePrepare(spell: Spell) {
-    const spells = character!.spells.map(s =>
+    const spells = toSpells(character!.abilities).map(s =>
       s.id === spell.id ? { ...s, prepared: !s.prepared } : s
     );
-    updateCharacter({ spells, updatedAt: nowISO() });
+    updateCharacter({ abilities: withSpells(character!.abilities, spells), updatedAt: nowISO() });
   }
 
   function handleSpellSave() {
@@ -174,13 +179,15 @@ export default function MagicScreen() {
           summary: sSummary,
           powerScaling,
         };
-    const spells = editingSpell ? character!.spells.map(s => s.id === spell.id ? spell : s) : [...character!.spells, spell];
-    updateCharacter({ spells, updatedAt: nowISO() });
+    const current = toSpells(character!.abilities);
+    const spells = editingSpell ? current.map(s => s.id === spell.id ? spell : s) : [...current, spell];
+    updateCharacter({ abilities: withSpells(character!.abilities, spells), updatedAt: nowISO() });
     setSpellDrawerOpen(false);
   }
 
   function handleSpellDelete(id: string) {
-    updateCharacter({ spells: character!.spells.filter(s => s.id !== id), updatedAt: nowISO() });
+    const spells = toSpells(character!.abilities).filter(s => s.id !== id);
+    updateCharacter({ abilities: withSpells(character!.abilities, spells), updatedAt: nowISO() });
   }
 
   function handleAbilitySave() {
@@ -195,15 +202,23 @@ export default function MagicScreen() {
           name: aName,
           summary: aSummary,
         };
-    const heroicAbilities = editingAbility
-      ? character!.heroicAbilities.map(a => a.id === ability.id ? ability : a)
-      : [...character!.heroicAbilities, ability];
-    updateCharacter({ heroicAbilities, updatedAt: nowISO() });
+    const current = toHeroicAbilities(character!.abilities);
+    const nextHeroic = editingAbility
+      ? current.map(a => a.id === ability.id ? ability : a)
+      : [...current, ability];
+    updateCharacter({
+      abilities: withHeroicAbilities(character!.abilities, nextHeroic),
+      updatedAt: nowISO(),
+    });
     setAbilityDrawerOpen(false);
   }
 
   function handleAbilityDelete(id: string) {
-    updateCharacter({ heroicAbilities: character!.heroicAbilities.filter(a => a.id !== id), updatedAt: nowISO() });
+    const nextHeroic = toHeroicAbilities(character!.abilities).filter(a => a.id !== id);
+    updateCharacter({
+      abilities: withHeroicAbilities(character!.abilities, nextHeroic),
+      updatedAt: nowISO(),
+    });
   }
 
   function handleCastSpell(spell: Spell, wpCost: number) {
@@ -308,9 +323,9 @@ export default function MagicScreen() {
         <div className="flex justify-end mb-[var(--space-sm)]">
           {isEditMode && <Button size="sm" variant="primary" onClick={() => { setEditingAbility(null); setAbilityDrawerOpen(true); }}>+ Add Ability</Button>}
         </div>
-        {character.heroicAbilities.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No heroic abilities yet.</p>}
+        {heroicAbilities.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No heroic abilities yet.</p>}
         <div className="flex flex-col gap-[var(--space-md)]">
-          {character.heroicAbilities.map(a => <AbilityCard key={a.id} ability={a} onEdit={() => { setEditingAbility(a); setAbilityDrawerOpen(true); }} onDelete={() => handleAbilityDelete(a.id)} isEditMode={isEditMode} />)}
+          {heroicAbilities.map(a => <AbilityCard key={a.id} ability={a} onEdit={() => { setEditingAbility(a); setAbilityDrawerOpen(true); }} onDelete={() => handleAbilityDelete(a.id)} isEditMode={isEditMode} />)}
         </div>
       </SectionPanel>
 

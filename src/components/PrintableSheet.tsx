@@ -8,6 +8,7 @@ import type {
 } from '../types/character';
 import type { SystemDefinition, SkillDefinition } from '../types/system';
 import { compareSpellsByRankThenName, formatCastingTime, formatRequirements, getSpellRank } from '../utils/spells';
+import { toSpells, toHeroicAbilities } from '../utils/abilities';
 import type { SystemEngine } from '../features/systems/engine';
 
 // ──────────────────────────────────────────────
@@ -224,8 +225,8 @@ function AbilitiesSpells({
   // would emit blank Dragonbane rows on, e.g., a Traveller sheet.
   if (!engine.hasMagic) return null;
 
-  const abilities: HeroicAbility[] = character.heroicAbilities ?? [];
-  const spells: Spell[] = [...(character.spells ?? [])].sort(compareSpellsByRankThenName);
+  const abilities: HeroicAbility[] = toHeroicAbilities(character.abilities);
+  const spells: Spell[] = toSpells(character.abilities).sort(compareSpellsByRankThenName);
 
   return (
     <div className="sheet-abilities-spells">

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
+import { toSpells } from '../../utils/abilities';
 import { cn } from '../../lib/utils';
 
 interface SpellPickerProps {
@@ -61,19 +62,21 @@ export function SpellPicker({ onSelect, onClose }: SpellPickerProps) {
         </p>
       )}
 
-      {partyWithChars.map(({ memberId, memberName, character, remainingWP }) => (
+      {partyWithChars.map(({ memberId, memberName, character, remainingWP }) => {
+        const spells = toSpells(character.abilities);
+        return (
         <div key={memberId} className="mb-2">
           <div
             className="py-2 text-[var(--color-text)] text-sm font-semibold border-b border-[var(--color-border)]"
           >
             {memberName} — WP: {remainingWP}
           </div>
-          {character.spells.length === 0 ? (
+          {spells.length === 0 ? (
             <p className="text-[var(--color-text-muted)] py-1.5 text-sm">
               No spells.
             </p>
           ) : (
-            character.spells.map(spell => (
+            spells.map(spell => (
               <button
                 key={spell.id}
                 onClick={() => { onSelect(spell.name, memberName); onClose(); }}
@@ -90,7 +93,8 @@ export function SpellPicker({ onSelect, onClose }: SpellPickerProps) {
             ))
           )}
         </div>
-      ))}
+        );
+      })}
 
       {/* Quick-add spell not on sheet */}
       <div className="pt-3 border-t-2 border-t-[var(--color-border)]">

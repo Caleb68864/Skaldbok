@@ -1,6 +1,6 @@
 {
   "id": "blank-template",
-  "schemaVersion": 2,
+  "schemaVersion": 4,
   "systemId": "traveller",
   "name": "New Traveller",
   "createdAt": "2026-01-01T00:00:00.000Z",
@@ -45,8 +45,7 @@
   "inventory": [],
   "tinyItems": [],
   "memento": "",
-  "spells": [],
-  "heroicAbilities": [],
+  "abilities": [],
   "derivedOverrides": {},
   "uiState": {
     "expandedSections": []

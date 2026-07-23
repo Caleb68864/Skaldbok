@@ -1,4 +1,5 @@
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
+import { toHeroicAbilities } from '../../utils/abilities';
 
 interface AbilityPickerProps {
   onSelect: (abilityName: string) => void;
@@ -8,7 +9,7 @@ interface AbilityPickerProps {
 export function AbilityPicker({ onSelect, onClose }: AbilityPickerProps) {
   const { character } = useActiveCharacter();
 
-  const abilities = character?.heroicAbilities ?? [];
+  const abilities = toHeroicAbilities(character?.abilities);
 
   if (abilities.length === 0) {
     return (

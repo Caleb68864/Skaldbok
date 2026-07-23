@@ -21,6 +21,7 @@ import {
   type OutcomeResult,
 } from '../actions/formatSkillCheckTitle';
 import type { CharacterRecord } from '../../../types/character';
+import { toSpells, toHeroicAbilities } from '../../../utils/abilities';
 import { cn } from '../../../lib/utils';
 
 type TrayStep =
@@ -248,10 +249,11 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
         </p>
         <div className="flex flex-col gap-2">
           {pcList.map(({ memberId, character }) => {
-            const abilityCount = character.heroicAbilities.length;
-            const preparedCount = character.spells.filter(s => s.prepared).length;
+            const spells = toSpells(character.abilities);
+            const abilityCount = toHeroicAbilities(character.abilities).length;
+            const preparedCount = spells.filter(s => s.prepared).length;
             const showCounts =
-              abilityCount > 0 || (engine.hasMagic && character.spells.length > 0);
+              abilityCount > 0 || (engine.hasMagic && spells.length > 0);
             const counts = engine.hasMagic
               ? `${abilityCount} ${abilityTerm}, ${preparedCount} prepared ${spellTerm}`
               : `${abilityCount} ${abilityTerm}`;
@@ -280,9 +282,9 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
 
   if (step.kind === 'palette' && activePC) {
     const preparedSpells = engine.hasMagic
-      ? activePC.spells.filter(s => s.prepared || s.pinnedAsStamp)
+      ? toSpells(activePC.abilities).filter(s => s.prepared || s.pinnedAsStamp)
       : [];
-    const abilities = activePC.heroicAbilities;
+    const abilities = toHeroicAbilities(activePC.abilities);
     return (
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
