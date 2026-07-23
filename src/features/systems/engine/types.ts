@@ -32,6 +32,11 @@ export interface SkillDisplayContext {
   character: CharacterRecord;
   /** Attribute the skill is linked to, if any (e.g. `'end'` for Traveller). */
   linkedAttributeId?: string;
+  /**
+   * Resolved advantage state for this skill, so the formatted string reflects
+   * the odds the player actually faces.
+   */
+  boonBane?: 'boon' | 'none' | 'bane';
 }
 
 export interface SkillEngineConfig {

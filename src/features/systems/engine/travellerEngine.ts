@@ -48,11 +48,21 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
  * resolves it from the {@link SkillDisplayContext} the shared skill screens
  * pass in. It defaults to 0 so callers holding only a raw level stay safe.
  */
-export function formatSkillDisplay(value: number, characteristicDM = 0): string {
+export function formatSkillDisplay(
+  value: number,
+  characteristicDM = 0,
+  boonBane: 'boon' | 'none' | 'bane' = 'none',
+): string {
   const effectiveModifier = value + characteristicDM;
-  const prob = twoD6SuccessProbability(8, effectiveModifier);
+  const prob =
+    boonBane === 'boon'
+      ? threeD6KeepTwoProbability(8, effectiveModifier, 'best')
+      : boonBane === 'bane'
+        ? threeD6KeepTwoProbability(8, effectiveModifier, 'worst')
+        : twoD6SuccessProbability(8, effectiveModifier);
   const dmLabel = characteristicDM !== 0 ? ` · DM ${formatDM(characteristicDM)}` : '';
-  return `Level ${value}${dmLabel} · ${Math.round(prob * 100)}%`;
+  const stateLabel = boonBane === 'boon' ? ' (boon)' : boonBane === 'bane' ? ' (bane)' : '';
+  return `Level ${value}${dmLabel} · ${Math.round(prob * 100)}%${stateLabel}`;
 }
 
 export const travellerEngine: SystemEngine = {
@@ -74,7 +84,7 @@ export const travellerEngine: SystemEngine = {
       const dm = linkedId
         ? characteristicToDM(context?.character.attributes?.[linkedId] ?? 0)
         : 0;
-      return formatSkillDisplay(value, dm);
+      return formatSkillDisplay(value, dm, context?.boonBane ?? 'none');
     },
     supportsMarks: false,
     // Traveller level 0 is a real (trained) skill, so presence of the trained
