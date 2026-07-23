@@ -160,8 +160,10 @@ export default function SkillsScreen() {
 
   function getProbDisplay(skillId: string, value: number, linkedAttributeId?: string): string {
     if (!engine.skill.supportsMarks) {
-      // Non-d20 systems (e.g. Traveller) express success chance through the engine's own display formula.
-      return engine.skill.display(value);
+      // Non-d20 systems (e.g. Traveller) express success chance through the engine's own
+      // display formula. Pass the linked attribute so the engine can fold in its
+      // characteristic DM — without it, Traveller odds ignore the characteristic entirely.
+      return engine.skill.display(value, character ? { character, linkedAttributeId } : undefined);
     }
 
     const hasAutoBane = linkedAttributeId ? (conditionBaneMap[linkedAttributeId] ?? false) : false;

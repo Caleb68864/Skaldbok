@@ -38,12 +38,11 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
 
 /**
  * Formats a Traveller skill's level + linked-characteristic DM + 2d6-vs-8
- * success probability string. `characteristicDM` is optional (and defaults to
- * 0) because `SkillEngineConfig['display']` is typed as `(value: number) =>
- * string` — callers that only have the raw level can still call this safely.
- * Wiring the actual per-skill linked-characteristic DM through requires the
- * `SkillsScreen.tsx` call site to pass it, which is outside this sub-spec's
- * in-scope files.
+ * success probability string.
+ *
+ * The DM is supplied by {@link travellerEngine}'s `skill.display`, which
+ * resolves it from the {@link SkillDisplayContext} the shared skill screens
+ * pass in. It defaults to 0 so callers holding only a raw level stay safe.
  */
 export function formatSkillDisplay(value: number, characteristicDM = 0): string {
   const effectiveModifier = value + characteristicDM;
@@ -65,7 +64,13 @@ export const travellerEngine: SystemEngine = {
     valueLabel: 'Level',
     range: { min: 0, max: 6 },
     defaultValue: 0,
-    display: formatSkillDisplay,
+    display: (value, context) => {
+      const linkedId = context?.linkedAttributeId;
+      const dm = linkedId
+        ? characteristicToDM(context?.character.attributes?.[linkedId] ?? 0)
+        : 0;
+      return formatSkillDisplay(value, dm);
+    },
     supportsMarks: false,
     // Boon/Bane falls back to plain 2d6-vs-target odds rather than Traveller's
     // canonical 3d6-keep-best/worst-2 — that math isn't implemented in

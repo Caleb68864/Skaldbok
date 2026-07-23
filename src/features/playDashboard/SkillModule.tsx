@@ -61,7 +61,10 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
     const value = clamp(rawValue, engine.skill.range.min, engine.skill.range.max);
     const fallback = { value, trained: stored?.trained ?? false };
     const mark = stored?.dragonMarked ? 'Dragon' : stored?.demonMarked ? 'Demon' : 'Mark';
-    const displayValue = engine.skill.display(value);
+    const displayValue = engine.skill.display(value, {
+      character,
+      linkedAttributeId: skill.linkedAttributeId,
+    });
     return (
       <div key={skill.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)] min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
         <div className="min-w-0">
