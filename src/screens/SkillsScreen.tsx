@@ -22,10 +22,11 @@ import type { ConditionDefinition, AttributeDefinition } from '../types/system';
 import { nowISO } from '../utils/dates';
 import { computeSkillValue } from '../utils/derivedValues';
 import * as characterRepository from '../storage/repositories/characterRepository';
+import { getEngine } from '../features/systems/engine';
 
-function clampSkillValue(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.min(20, Math.max(0, Math.round(value)));
+function clampSkillValue(value: number, range: { min: number; max: number }): number {
+  if (!Number.isFinite(value)) return range.min;
+  return Math.min(range.max, Math.max(range.min, Math.round(value)));
 }
 
 /**
@@ -71,6 +72,8 @@ export default function SkillsScreen() {
   const skillsEditable = useFieldEditable('skills.any');
   const [filter, setFilter] = useState<'all' | 'relevant'>('relevant');
   useAutosave(character, characterRepository.save, 1000);
+  const engine = getEngine(system);
+  const skillRange = engine.skill.range;
 
   useEffect(() => {
     const stillLoading = settingsLoading || isLoading;
@@ -88,11 +91,11 @@ export default function SkillsScreen() {
 
   function handleSkillChange(skillId: string, value: CharacterSkill) {
     if (!character) return;
-    updateCharacter({ skills: { ...character.skills, [skillId]: { ...value, value: clampSkillValue(value.value) } }, updatedAt: nowISO() });
+    updateCharacter({ skills: { ...character.skills, [skillId]: { ...value, value: clampSkillValue(value.value, skillRange) } }, updatedAt: nowISO() });
   }
 
   function cycleSkillMark(skillId: string) {
-    if (!character || skillsEditable) return;
+    if (!character || skillsEditable || !engine.skill.supportsMarks) return;
     const cs = character.skills[skillId];
     const def = system?.skillCategories.flatMap(c => c.skills).find(s => s.id === skillId);
     const attrVal = def?.linkedAttributeId ? (character.attributes[def.linkedAttributeId] ?? 10) : 0;
@@ -156,6 +159,11 @@ export default function SkillsScreen() {
   const attrAbbrMap = system ? buildAttrAbbrMap(system.attributes) : {};
 
   function getProbDisplay(skillId: string, value: number, linkedAttributeId?: string): string {
+    if (!engine.skill.supportsMarks) {
+      // Non-d20 systems (e.g. Traveller) express success chance through the engine's own display formula.
+      return engine.skill.display(value);
+    }
+
     const hasAutoBane = linkedAttributeId ? (conditionBaneMap[linkedAttributeId] ?? false) : false;
     const override = sessionState.skillOverrides[skillId];
     const effective = resolveEffectiveBoonBane(sessionState.globalBoonBane, override, hasAutoBane);
@@ -210,6 +218,7 @@ export default function SkillsScreen() {
       )}
 
       {/* Global Boon/Bane Selector */}
+      {engine.skill.supportsBoonBane && (
       <div className="flex rounded-lg overflow-hidden border border-[var(--color-border)]" aria-label="Global boon/bane selector" role="group">
         {(['boon', 'none', 'bane'] as BoonBaneState[]).map(seg => (
           <button
@@ -230,6 +239,7 @@ export default function SkillsScreen() {
           </button>
         ))}
       </div>
+      )}
 
       {/* Skill list with boon/bane overlays */}
       {system ? (
@@ -252,11 +262,14 @@ export default function SkillsScreen() {
                 {visibleSkills.map(skill => {
                   const cs = character.skills[skill.id];
                   const attrValue = skill.linkedAttributeId ? (character.attributes[skill.linkedAttributeId] ?? 10) : 0;
-                  const computedValue = skill.linkedAttributeId
-                    ? computeSkillValue(attrValue, cs?.trained ?? false)
-                    : (cs?.trained ? skill.baseChance * 2 : skill.baseChance);
+                  const computedValue = engine.skill.supportsMarks
+                    ? (skill.linkedAttributeId
+                        ? computeSkillValue(attrValue, cs?.trained ?? false)
+                        : (cs?.trained ? skill.baseChance * 2 : skill.baseChance))
+                    : engine.skill.defaultValue;
                   const skillValue = cs?.value ?? computedValue;
                   const attrAbbr = skill.linkedAttributeId ? (attrAbbrMap[skill.linkedAttributeId] ?? '') : '';
+                  const characteristicDM = skill.linkedAttributeId ? engine.attributeBadge(skill.linkedAttributeId, character) : null;
                   const probDisplay = getProbDisplay(skill.id, skillValue, skill.linkedAttributeId);
                   const overrideLabel = getOverrideLabel(skill.id);
                   const overrideTitle = getOverrideTitle(skill.id);
@@ -279,9 +292,11 @@ export default function SkillsScreen() {
                           checked={isTrained}
                           onChange={e => {
                             const newTrained = e.target.checked;
-                            const newValue = skill.linkedAttributeId
-                              ? computeSkillValue(attrValue, newTrained)
-                              : (newTrained ? Math.max(skill.baseChance * 2, 1) : skill.baseChance);
+                            const newValue = !engine.skill.supportsMarks
+                              ? (cs?.value ?? engine.skill.defaultValue)
+                              : skill.linkedAttributeId
+                                ? computeSkillValue(attrValue, newTrained)
+                                : (newTrained ? Math.max(skill.baseChance * 2, 1) : skill.baseChance);
                             handleSkillChange(skill.id, { value: newValue, trained: newTrained });
                           }}
                           aria-label={`${skill.name} trained`}
@@ -302,6 +317,7 @@ export default function SkillsScreen() {
                         {attrAbbr && (
                           <span className="ml-1.5 text-xs font-normal text-[var(--color-text-muted)] opacity-70" aria-label={`Linked attribute: ${attrAbbr}`}>
                             {attrAbbr}
+                            {characteristicDM && ` ${characteristicDM}`}
                           </span>
                         )}
                       </span>
@@ -315,10 +331,10 @@ export default function SkillsScreen() {
                       <input
                         type="number"
                         value={skillValue}
-                        min={0}
-                        max={20}
+                        min={skillRange.min}
+                        max={skillRange.max}
                         disabled={!skillsEditable}
-                        onChange={e => handleSkillChange(skill.id, { value: clampSkillValue(Number(e.target.value)), trained: cs?.trained ?? false })}
+                        onChange={e => handleSkillChange(skill.id, { value: clampSkillValue(Number(e.target.value), skillRange), trained: cs?.trained ?? false })}
                         className={cn(
                           "w-[52px] h-10 text-center text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)]",
                           skillsEditable
@@ -328,6 +344,7 @@ export default function SkillsScreen() {
                       />
 
                       {/* Per-skill boon/bane override */}
+                      {engine.skill.supportsBoonBane && (
                       <button
                         className={`w-8 h-8 shrink-0 flex items-center justify-center rounded border-none cursor-pointer text-sm font-bold ${
                           (sessionState.skillOverrides[skill.id] ?? 'inherit') === 'boon'
@@ -342,9 +359,10 @@ export default function SkillsScreen() {
                       >
                         {overrideLabel}
                       </button>
+                      )}
 
                       {/* Skill mark cycle: unmarked -> dragon -> demon -> clear (play mode only) */}
-                      {!skillsEditable && (
+                      {engine.skill.supportsMarks && !skillsEditable && (
                         <button
                           className={cn(
                             'dragon-mark-toggle',
