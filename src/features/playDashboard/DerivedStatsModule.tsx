@@ -4,7 +4,9 @@ import type { PlayModuleProps } from './types';
 
 type StatEntry = { label: string; value: string | number };
 
-/** Formats a dice modifier as a signed string, e.g. 2 -> '+2', -1 -> '-1'. */
+/**
+ * Formats a dice modifier as a signed string, e.g. 2 -> '+2', -1 -> '-1'.
+ */
 function formatModifier(dm: number): string {
   return dm >= 0 ? `+${dm}` : `${dm}`;
 }
@@ -21,17 +23,21 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
       ? (derived as { characteristicDMs?: Record<string, number> }).characteristicDMs
       : undefined;
 
+  // The flat list is driven by the engine's declared derived fields; the dense
+  // dashboard tile prefers the short label when the engine supplies one.
+  const derivedValues = derived as unknown as Record<string, string | number | undefined>;
+
   const stats: StatEntry[] = attributeModifiers
     ? Object.entries(attributeModifiers).map(([id, dm]) => ({
         label: system?.attributes.find(attr => attr.id === id)?.abbreviation ?? id.toUpperCase(),
         value: formatModifier(dm),
       }))
-    : [
-        { label: 'Move', value: derived.movement },
-        { label: 'STR Dmg', value: derived.damageBonus },
-        { label: 'AGL Dmg', value: derived.aglDamageBonus },
-        { label: 'Carry', value: derived.encumbranceLimit },
-      ];
+    : engine.derivedFields
+        .filter(field => !field.surfaces || field.surfaces.includes('dashboard'))
+        .map(field => ({
+          label: field.shortLabel ?? field.label,
+          value: derivedValues[field.key] ?? '—',
+        }));
 
   return (
     <SectionPanel title="Derived Stats" collapsible defaultOpen>

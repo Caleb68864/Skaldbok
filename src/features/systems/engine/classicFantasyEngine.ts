@@ -29,14 +29,12 @@ const classicFantasyRests: RestDefinition[] = [
     },
     apply: (character, rolls) => {
       const result = applyRoundRest(character, rolls.wp ?? 0);
+      const noop = result.alreadyFull && result.recovered === 0;
       return {
         resources: { wp: result.newWpCurrent },
         conditionsCleared: [],
-        messages: [
-          result.alreadyFull && result.recovered === 0
-            ? 'Already at full WP.'
-            : `Recovered ${result.recovered} WP.`,
-        ],
+        messages: [noop ? 'Already at full WP.' : `Recovered ${result.recovered} WP.`],
+        noop,
       };
     },
   },
@@ -70,6 +68,8 @@ const classicFantasyRests: RestDefinition[] = [
   {
     id: 'shift',
     label: 'Shift Rest',
+    // Ends the day: clears the round/stretch "used" marks.
+    clearsRestTracker: true,
     apply: character => {
       const result = applyShiftRest(character);
       return {
@@ -136,10 +136,10 @@ export const classicFantasyEngine: SystemEngine = {
   },
   advancement: {
     sessionEvents: [
-      { id: 'combat', label: 'Participated in combat' },
-      { id: 'explore', label: 'Explored a new location' },
-      { id: 'weakness', label: 'Role-played a weakness' },
-      { id: 'heroic', label: 'Used a heroic ability' },
+      { id: 'combat', label: '⚔️ Participated in combat' },
+      { id: 'explore', label: '🗺️ Explored a new location' },
+      { id: 'weakness', label: '💔 Role-played a weakness' },
+      { id: 'heroic', label: '✨ Used a heroic ability' },
     ],
     usesMarks: true,
     maxSkillValue: 18,
@@ -149,12 +149,15 @@ export const classicFantasyEngine: SystemEngine = {
     chance: (value, state) =>
       state === 'boon' ? calcBoonProb(value) : state === 'bane' ? calcBaneProb(value) : calcNormalProb(value),
   },
+  // Surfaces reproduce today's three distinct layouts exactly: the sheet shows
+  // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
+  // vitals module already shows), and the print sheet four.
   derivedFields: [
-    { key: 'movement', label: 'Movement', shortLabel: 'Move', overridable: true },
-    { key: 'hpMax', label: 'HP Max', overridable: true },
-    { key: 'wpMax', label: 'WP Max', overridable: true },
-    { key: 'damageBonus', label: 'STR Damage Bonus', shortLabel: 'STR Dmg', overridable: true },
-    { key: 'aglDamageBonus', label: 'AGL Damage Bonus', shortLabel: 'AGL Dmg', overridable: true },
-    { key: 'encumbranceLimit', label: 'Encumbrance Limit', shortLabel: 'Carry', overridable: true },
+    { key: 'movement', label: 'Movement', shortLabel: 'Move', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
+    { key: 'hpMax', label: 'HP Max', overridable: true, surfaces: ['sheet'] },
+    { key: 'wpMax', label: 'WP Max', overridable: true, surfaces: ['sheet'] },
+    { key: 'damageBonus', label: 'STR Damage Bonus', shortLabel: 'STR Dmg', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
+    { key: 'aglDamageBonus', label: 'AGL Damage Bonus', shortLabel: 'AGL Dmg', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
+    { key: 'encumbranceLimit', label: 'Encumbrance Limit', shortLabel: 'Carry', overridable: true, surfaces: ['dashboard', 'print'] },
   ],
 };

@@ -13,13 +13,6 @@ interface Props {
   onClose: () => void;
 }
 
-const SESSION_EVENTS = [
-  { id: 'combat', label: '⚔️ Participated in combat' },
-  { id: 'explore', label: '🗺️ Explored a new location' },
-  { id: 'weakness', label: '💔 Role-played a weakness' },
-  { id: 'heroic', label: '✨ Used a heroic ability' },
-] as const;
-
 interface RollResult {
   skillId: string;
   skillName: string;
@@ -34,12 +27,14 @@ export function EndOfSessionModal({ open, onClose }: Props) {
   const { character, updateCharacter } = useActiveCharacter();
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   const engine = getEngine(system);
+  /** End-of-session advancement rules, or `null` for systems that have none. */
+  const advancement = engine.advancement;
   /** Skill ceiling for this ruleset — no advancement past it. */
   // Advancement ceiling, not the sheet's input clamp — Dragonbane accepts 20 on
   // the sheet but advancement stops at 18.
-  const maxSkillValue = engine.skill.advancementMax;
+  const maxSkillValue = advancement?.maxSkillValue ?? engine.skill.advancementMax;
   /** Whether this ruleset has the "mark a skill during play" advancement step. */
-  const supportsMarks = engine.skill.supportsMarks;
+  const usesMarks = advancement?.usesMarks ?? false;
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [checks, setChecks] = useState<Record<string, boolean>>({});
@@ -81,10 +76,10 @@ export function EndOfSessionModal({ open, onClose }: Props) {
   // Marked-skill advancement only exists in rulesets that support marks.
   const markedIds = useMemo(
     () =>
-      supportsMarks
+      usesMarks
         ? Object.entries(skills).filter(([, cs]) => cs?.dragonMarked).map(([id]) => id)
         : [],
-    [skills, supportsMarks],
+    [skills, usesMarks],
   );
 
   const checkedCount = Object.values(checks).filter(Boolean).length;
@@ -162,7 +157,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     const def = allSkillDefs.find(s => s.id === skillId);
     const cs = skills[skillId] ?? getSkillFallback(skillId);
     const newValue = Math.min(cs.value + 1, maxSkillValue);
-    const updatedSkill = supportsMarks
+    const updatedSkill = usesMarks
       ? { ...cs, value: newValue, dragonMarked: false }
       : { ...cs, value: newValue };
     const updatedSkills = { ...skills, [skillId]: updatedSkill };
@@ -178,7 +173,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     const skillId = rollQueue[rollIndex];
     const def = allSkillDefs.find(s => s.id === skillId);
     const cs = skills[skillId] ?? getSkillFallback(skillId);
-    const updatedSkill = supportsMarks ? { ...cs, dragonMarked: false } : { ...cs };
+    const updatedSkill = usesMarks ? { ...cs, dragonMarked: false } : { ...cs };
     const updatedSkills = { ...skills, [skillId]: updatedSkill };
     setSkills(updatedSkills);
     updateCharacter({ skills: updatedSkills, updatedAt: nowISO() });
@@ -189,7 +184,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
 
   function handleDone() {
     if (!character) { onClose(); return; }
-    const cleared = supportsMarks
+    const cleared = usesMarks
       ? Object.fromEntries(
           Object.entries(skills).map(([id, cs]) => [id, { ...cs, dragonMarked: false }])
         )
@@ -209,11 +204,25 @@ export function EndOfSessionModal({ open, onClose }: Props) {
     );
   }
 
+  // Systems without an advancement model (e.g. Traveller, where progress is
+  // study/training time rather than per-session rolls) get an explanatory state
+  // instead of an empty checklist and a meaningless roll step.
+  if (!advancement) {
+    return (
+      <Modal open={open} onClose={onClose} title="End of Session"
+        actions={<button className={btnBaseClass} onClick={onClose}>Close</button>}>
+        <p className="text-[var(--color-text-muted)]">
+          This system has no end-of-session advancement procedure.
+        </p>
+      </Modal>
+    );
+  }
+
   // Step 1 — Session Checklist
   const step1 = (
     <div className="eos-step">
       <p className="eos-step__desc">Check each event that occurred this session. Each gives one bonus advancement roll.</p>
-      {SESSION_EVENTS.map(evt => (
+      {advancement.sessionEvents.map(evt => (
         <label key={evt.id} className="eos-check-row">
           <input
             type="checkbox"
@@ -224,7 +233,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
           <span className="eos-check-label">{evt.label}</span>
         </label>
       ))}
-      {supportsMarks && markedIds.length > 0 && (
+      {usesMarks && markedIds.length > 0 && (
         <p className="eos-hint">
           🐉 {markedIds.length} dragon-marked skill{markedIds.length !== 1 ? 's' : ''} will be rolled.
         </p>
@@ -290,13 +299,7 @@ export function EndOfSessionModal({ open, onClose }: Props) {
       <div className="eos-roll-progress">{rollIndex + 1} / {rollQueue.length}</div>
       <h3 className="eos-roll-skill">{currentDef?.name ?? currentSkillId}</h3>
       <div className="eos-roll-value">Current value: <strong>{currentCs.value}</strong></div>
-      <div className="eos-roll-target">
-        {engine.resolution === 'd20-roll-under' ? (
-          <>Roll above <strong>{currentCs.value}</strong> on a d20 to advance</>
-        ) : (
-          <>Make an advancement roll on <strong>2d6</strong> to advance</>
-        )}
-      </div>
+      <div className="eos-roll-target">{advancement.rollPrompt(currentCs.value)}</div>
       <div className="eos-roll-btns">
         <button
           className={`${btnBaseClass} bg-[var(--color-success)] text-white flex-1`}

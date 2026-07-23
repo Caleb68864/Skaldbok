@@ -2,37 +2,53 @@ import { useState } from 'react';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Modal } from '../../components/primitives/Modal';
 import { useToast } from '../../context/ToastContext';
-import { applyRoundRest, applyShiftRest, applyStretchRest } from '../../utils/restActions';
 import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
+import type { CharacterRecord } from '../../types/character';
 import { type PlayModuleProps } from './types';
 import { useSessionLog } from '../session/useSessionLog';
 import { getEngine } from '../systems/engine';
+import type { RestDefinition } from '../systems/engine/types';
 
-type RestType = 'round' | 'stretch' | 'shift';
+/**
+ * `CharacterUIState.restsUsed` is declared with the three Dragonbane keys; the
+ * module keys it by `RestDefinition.id` instead so any system's rest ladder can
+ * be tracked. The ids match the old literals for classic-fantasy, so no stored
+ * data changes shape.
+ */
+type RestsUsedMap = Record<string, boolean | undefined>;
+
+function asStoredRestsUsed(map: RestsUsedMap): CharacterRecord['uiState']['restsUsed'] {
+  return map as CharacterRecord['uiState']['restsUsed'];
+}
 
 export function RestModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { showToast } = useToast();
   const { logRest } = useSessionLog();
 
-  const [roundOpen, setRoundOpen] = useState(false);
-  const [roundWp, setRoundWp] = useState('');
-  const [stretchOpen, setStretchOpen] = useState(false);
-  const [stretchWp, setStretchWp] = useState('');
-  const [stretchHp, setStretchHp] = useState('');
+  const engine = getEngine(system);
+  const rests = engine.rest;
 
-  // Systems without a 'rest' panel (e.g. Traveller) have no rest mechanic at all.
-  const hasRest = getEngine(system).panels.includes('rest');
+  const [openRestId, setOpenRestId] = useState<string | null>(null);
+  const [rollInputs, setRollInputs] = useState<Record<string, string>>({});
+  const [conditionToClear, setConditionToClear] = useState('');
 
-  const restsUsed = character.uiState.restsUsed ?? {};
+  const restsUsed = (character.uiState.restsUsed ?? {}) as RestsUsedMap;
+  const openRest = rests?.find(def => def.id === openRestId) ?? null;
 
-  function markUsed(type: RestType) {
-    updateCharacter(prev => ({
-      uiState: {
-        ...prev.uiState,
-        restsUsed: { ...(prev.uiState.restsUsed ?? {}), [type]: true },
-      },
-    }));
+  /**
+   * Whether a rest resets the tracker instead of marking itself used. Declared
+   * by the engine (Dragonbane's Shift Rest ends the day) rather than inferred
+   * from the rest's position in the ladder.
+   */
+  function clearsTracker(def: RestDefinition): boolean {
+    return def.clearsRestTracker === true;
+  }
+
+  function closeModal() {
+    setOpenRestId(null);
+    setRollInputs({});
+    setConditionToClear('');
   }
 
   function resetMarks() {
@@ -42,116 +58,107 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
     showToast('Rest tracker cleared.', 'info');
   }
 
-  function confirmRound() {
-    const roll = parseInt(roundWp, 10);
-    if (isNaN(roll) || roll < 1 || roll > 6) {
-      showToast('Enter a value between 1 and 6.', 'error');
-      return;
+  function applyRest(def: RestDefinition, rolls: Record<string, number>, condition?: string) {
+    const outcome = def.apply(character, rolls, condition);
+
+    updateCharacter(prev => {
+      const resources = { ...prev.resources };
+      for (const [id, value] of Object.entries(outcome.resources)) {
+        resources[id] = { ...(prev.resources[id] ?? { current: 0, max: 0 }), current: value };
+      }
+      const conditions = { ...prev.conditions };
+      for (const id of outcome.conditionsCleared) conditions[id] = false;
+
+      const prevUsed = (prev.uiState.restsUsed ?? {}) as RestsUsedMap;
+      const nextUsed: RestsUsedMap = clearsTracker(def) ? {} : { ...prevUsed, [def.id]: true };
+
+      return {
+        resources,
+        conditions,
+        uiState: { ...prev.uiState, restsUsed: asStoredRestsUsed(nextUsed) },
+        updatedAt: nowISO(),
+      };
+    });
+
+    const parts = [...outcome.messages];
+    if (outcome.conditionsCleared.length > 0) {
+      const names = outcome.conditionsCleared.map(
+        id => system?.conditions.find(c => c.id === id)?.name ?? id,
+      );
+      parts.push(`Cleared ${names.join(', ')}.`);
     }
-    const result = applyRoundRest(character, roll);
-    updateCharacter(prev => ({
-      resources: { ...prev.resources, wp: { ...prev.resources.wp, current: result.newWpCurrent } },
-      uiState: { ...prev.uiState, restsUsed: { ...(prev.uiState.restsUsed ?? {}), round: true } },
-      updatedAt: nowISO(),
-    }));
-    showToast(result.alreadyFull && result.recovered === 0
-      ? 'Already at full WP.'
-      : `Recovered ${result.recovered} WP.`, 'success');
-    logRest(character.name, 'Round Rest', `Rolled ${roll}, recovered ${result.recovered} WP`);
-    setRoundOpen(false);
-    setRoundWp('');
+    const summary = parts.join(' ');
+    showToast(summary, 'success');
+    logRest(character.name, def.label, summary);
   }
 
-  function confirmStretch() {
-    const wpRoll = parseInt(stretchWp, 10);
-    const hpRoll = parseInt(stretchHp, 10);
-    if (isNaN(wpRoll) || wpRoll < 1 || wpRoll > 6) {
-      showToast('Enter a WP d6 value between 1 and 6.', 'error');
+  function startRest(def: RestDefinition) {
+    if (!def.prompt) {
+      applyRest(def, {});
       return;
     }
-    if (isNaN(hpRoll) || hpRoll < 1 || hpRoll > 6) {
-      showToast('Enter an HP d6 value between 1 and 6.', 'error');
-      return;
-    }
-    const activeCondition = Object.entries(character.conditions).find(([, active]) => active)?.[0];
-    const result = applyStretchRest(character, wpRoll, hpRoll, activeCondition);
-    updateCharacter(prev => ({
-      resources: {
-        ...prev.resources,
-        wp: { ...prev.resources.wp, current: result.newWpCurrent },
-        hp: { ...prev.resources.hp, current: result.newHpCurrent },
-      },
-      conditions: result.conditionCleared
-        ? { ...prev.conditions, [result.conditionCleared]: false }
-        : prev.conditions,
-      uiState: { ...prev.uiState, restsUsed: { ...(prev.uiState.restsUsed ?? {}), stretch: true } },
-      updatedAt: nowISO(),
-    }));
-    const condName = result.conditionCleared
-      ? system?.conditions.find(c => c.id === result.conditionCleared)?.name ?? result.conditionCleared
-      : null;
-    showToast(`Stretch rest: HP +${result.hpRecovered}, WP restored${condName ? `, cleared ${condName}` : ''}.`, 'success');
-    logRest(character.name, 'Stretch Rest', `HP roll ${hpRoll}, WP roll ${wpRoll}`);
-    setStretchOpen(false);
-    setStretchWp('');
-    setStretchHp('');
+    setRollInputs({});
+    // Preserves the dashboard's previous behaviour of clearing an active
+    // condition by default; the player can still pick another or none.
+    setConditionToClear(
+      def.prompt.clearOneCondition
+        ? Object.entries(character.conditions).find(([, active]) => active)?.[0] ?? ''
+        : '',
+    );
+    setOpenRestId(def.id);
   }
 
-  function applyShift() {
-    const result = applyShiftRest(character);
-    updateCharacter(prev => ({
-      resources: {
-        ...prev.resources,
-        hp: { ...prev.resources.hp, current: prev.resources.hp?.max ?? 0 },
-        wp: { ...prev.resources.wp, current: prev.resources.wp?.max ?? 0 },
-      },
-      conditions: Object.fromEntries(Object.keys(prev.conditions).map(id => [id, false])),
-      uiState: {
-        ...prev.uiState,
-        restsUsed: {},
-      },
-      updatedAt: nowISO(),
-    }));
-    showToast(`Shift rest: ${result.hpRestored} HP and ${result.wpRestored} WP restored.`, 'success');
-    logRest(character.name, 'Shift Rest', 'Fully recovered');
+  function confirmRest() {
+    if (!openRest?.prompt) return;
+    const { prompt } = openRest;
+    const rolls: Record<string, number> = {};
+    for (const field of prompt.fields) {
+      const value = parseInt(rollInputs[field.id] ?? '', 10);
+      if (isNaN(value) || value < 1 || value > prompt.die) {
+        showToast(
+          prompt.fields.length > 1
+            ? `Enter a ${field.label} between 1 and ${prompt.die}.`
+            : `Enter a value between 1 and ${prompt.die}.`,
+          'error',
+        );
+        return;
+      }
+      rolls[field.id] = value;
+    }
+    applyRest(openRest, rolls, prompt.clearOneCondition ? conditionToClear || undefined : undefined);
+    closeModal();
   }
 
   const btnBase = 'min-h-[var(--touch-target-min)] w-full justify-center px-1 py-[var(--space-sm)] rounded-[var(--radius-sm)] border text-[length:var(--font-size-md)] font-medium cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap';
   const unusedClass = 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] hover:bg-[var(--color-surface)]';
   const usedClass = 'border-[var(--color-success,#27ae60)] bg-[var(--color-success,#27ae60)] text-white opacity-70';
 
-  function restButton(type: RestType, label: string, onClick: () => void) {
-    const used = !!restsUsed[type];
-    return (
-      <button
-        type="button"
-        className={cn(btnBase, used ? usedClass : unusedClass)}
-        onClick={() => {
-          if (used) {
-            markUsed(type); // no-op idempotent confirm; still allows re-applying
-          }
-          onClick();
-        }}
-        aria-pressed={used}
-        title={used ? `${label} already used — Reset to clear` : label}
-      >
-        {used && <span aria-hidden="true">✓</span>}
-        {label}
-        {used && <span className="text-[length:var(--font-size-xs)] opacity-80">used</span>}
-      </button>
-    );
-  }
+  // Systems without a rest ladder (e.g. Traveller) have no rest mechanic at all.
+  if (!rests || rests.length === 0) return null;
 
-  const anyUsed = !!(restsUsed.round || restsUsed.stretch || restsUsed.shift);
-
-  if (!hasRest) return null;
+  const anyUsed = rests.some(def => !!restsUsed[def.id]);
+  const openPrompt = openRest?.prompt ?? null;
 
   return (
     <SectionPanel title="Rest" collapsible defaultOpen>
       <div className="grid gap-2 w-full">
-        {restButton('round', 'Round Rest', () => setRoundOpen(true))}
-        {restButton('stretch', 'Stretch Rest', () => setStretchOpen(true))}
-        {restButton('shift', 'Shift Rest', applyShift)}
+        {rests.map(def => {
+          const used = !!restsUsed[def.id];
+          return (
+            <button
+              key={def.id}
+              type="button"
+              className={cn(btnBase, used ? usedClass : unusedClass)}
+              onClick={() => startRest(def)}
+              aria-pressed={used}
+              title={used ? `${def.label} already used — Reset to clear` : def.label}
+            >
+              {used && <span aria-hidden="true">✓</span>}
+              {def.label}
+              {used && <span className="text-[length:var(--font-size-xs)] opacity-80">used</span>}
+            </button>
+          );
+        })}
         {anyUsed && (
           <button
             type="button"
@@ -165,56 +172,56 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
       </div>
 
       <Modal
-        open={roundOpen}
-        onClose={() => { setRoundOpen(false); setRoundWp(''); }}
-        title="Round Rest"
+        open={!!openPrompt}
+        onClose={closeModal}
+        title={openRest?.label ?? ''}
         actions={
           <>
-            <button type="button" className="rest-modal-btn rest-modal-btn--cancel" onClick={() => { setRoundOpen(false); setRoundWp(''); }}>Cancel</button>
-            <button type="button" className="rest-modal-btn rest-modal-btn--confirm" onClick={confirmRound}>Confirm</button>
+            <button type="button" className="rest-modal-btn rest-modal-btn--cancel" onClick={closeModal}>Cancel</button>
+            <button type="button" className="rest-modal-btn rest-modal-btn--confirm" onClick={confirmRest}>Confirm</button>
           </>
         }
       >
-        <div className="flex flex-col gap-[var(--space-md)]">
-          <p className="text-[var(--color-text)] text-[length:var(--font-size-md)]">Roll a d6 for WP recovery.</p>
-          <label className="flex flex-col gap-2 text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
-            d6 Result (1–6)
-            <input
-              type="number"
-              min={1}
-              max={6}
-              value={roundWp}
-              onChange={e => setRoundWp(e.target.value)}
-              className="rest-modal-input"
-              placeholder="Enter 1–6"
-              autoFocus
-            />
-          </label>
-        </div>
-      </Modal>
-
-      <Modal
-        open={stretchOpen}
-        onClose={() => { setStretchOpen(false); setStretchWp(''); setStretchHp(''); }}
-        title="Stretch Rest"
-        actions={
-          <>
-            <button type="button" className="rest-modal-btn rest-modal-btn--cancel" onClick={() => { setStretchOpen(false); setStretchWp(''); setStretchHp(''); }}>Cancel</button>
-            <button type="button" className="rest-modal-btn rest-modal-btn--confirm" onClick={confirmStretch}>Confirm</button>
-          </>
-        }
-      >
-        <div className="flex flex-col gap-[var(--space-md)]">
-          <p className="text-[var(--color-text)] text-[length:var(--font-size-md)]">Roll d6 for WP and HP recovery. WP is fully restored. HP is recovered by your roll result.</p>
-          <label className="flex flex-col gap-2 text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
-            WP d6 Result (1–6)
-            <input type="number" min={1} max={6} value={stretchWp} onChange={e => setStretchWp(e.target.value)} className="rest-modal-input" placeholder="Enter 1–6" autoFocus />
-          </label>
-          <label className="flex flex-col gap-2 text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
-            HP d6 Result (1–6)
-            <input type="number" min={1} max={6} value={stretchHp} onChange={e => setStretchHp(e.target.value)} className="rest-modal-input" placeholder="Enter 1–6" />
-          </label>
-        </div>
+        {openPrompt && (
+          <div className="flex flex-col gap-[var(--space-md)]">
+            <p className="text-[var(--color-text)] text-[length:var(--font-size-md)]">{openPrompt.text}</p>
+            {openPrompt.fields.map((field, index) => (
+              <label
+                key={field.id}
+                className="flex flex-col gap-2 text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]"
+              >
+                {field.label} (1–{openPrompt.die})
+                <input
+                  type="number"
+                  min={1}
+                  max={openPrompt.die}
+                  value={rollInputs[field.id] ?? ''}
+                  onChange={e => setRollInputs(prev => ({ ...prev, [field.id]: e.target.value }))}
+                  className="rest-modal-input"
+                  placeholder={`Enter 1–${openPrompt.die}`}
+                  autoFocus={index === 0}
+                />
+              </label>
+            ))}
+            {openPrompt.clearOneCondition && system && system.conditions.length > 0 && (
+              <label className="flex flex-col gap-2 text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
+                Clear a Condition (optional)
+                <select
+                  value={conditionToClear}
+                  onChange={e => setConditionToClear(e.target.value)}
+                  className="rest-modal-input"
+                >
+                  <option value="">— None —</option>
+                  {system.conditions
+                    .filter(c => character.conditions[c.id])
+                    .map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                </select>
+              </label>
+            )}
+          </div>
+        )}
       </Modal>
     </SectionPanel>
   );

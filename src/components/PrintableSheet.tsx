@@ -147,29 +147,54 @@ function AttributeBand({
 // Section 3 — Derived Stats Row (SS-06)
 // ──────────────────────────────────────────────
 
+/**
+ * Print-specific label wording, and the order the printed row uses.
+ *
+ * @remarks
+ * The engine's `label` reads "STR Damage Bonus"/"AGL Damage Bonus" and lists
+ * movement first, but the printed Dragonbane sheet has always read
+ * "Damage Bonus (STR)" in damage-first order. Changing it would alter existing
+ * printouts, so the print layer keeps its own wording/order for the keys it
+ * knows about; unknown keys fall through to the engine's label and order.
+ */
+const PRINT_DERIVED_LABELS: Record<string, string> = {
+  damageBonus: 'Damage Bonus (STR)',
+  aglDamageBonus: 'Damage Bonus (AGL)',
+};
+const PRINT_DERIVED_ORDER = ['damageBonus', 'aglDamageBonus', 'movement', 'encumbranceLimit'];
+
 function DerivedStatsRow({
   derived,
+  engine,
 }: {
   derived: PrintDerivedValues;
+  engine: SystemEngine;
 }): React.ReactElement {
+  const values = derived as unknown as Record<string, string | number | undefined>;
+
+  const fields = engine.derivedFields
+    .filter(field => !field.surfaces || field.surfaces.includes('print'))
+    // A system may declare derived stats the print screen does not compute
+    // (Traveller's initiative DM); printing a blank field helps nobody.
+    .filter(field => values[field.key] !== undefined)
+    .map((field, index) => ({ field, index }))
+    .sort((a, b) => {
+      const rank = (key: string) => {
+        const i = PRINT_DERIVED_ORDER.indexOf(key);
+        return i === -1 ? PRINT_DERIVED_ORDER.length : i;
+      };
+      return rank(a.field.key) - rank(b.field.key) || a.index - b.index;
+    })
+    .map(({ field }) => field);
+
   return (
     <div className="sheet-derived-row">
-      <div className="sheet-derived-field">
-        <span className="sheet-derived-label">Damage Bonus (STR)</span>
-        <span className="sheet-derived-value">{derived.damageBonus}</span>
-      </div>
-      <div className="sheet-derived-field">
-        <span className="sheet-derived-label">Damage Bonus (AGL)</span>
-        <span className="sheet-derived-value">{derived.aglDamageBonus}</span>
-      </div>
-      <div className="sheet-derived-field">
-        <span className="sheet-derived-label">Movement</span>
-        <span className="sheet-derived-value">{derived.movement}</span>
-      </div>
-      <div className="sheet-derived-field">
-        <span className="sheet-derived-label">Encumbrance Limit</span>
-        <span className="sheet-derived-value">{derived.encumbranceLimit}</span>
-      </div>
+      {fields.map(field => (
+        <div key={field.key} className="sheet-derived-field">
+          <span className="sheet-derived-label">{PRINT_DERIVED_LABELS[field.key] ?? field.label}</span>
+          <span className="sheet-derived-value">{values[field.key]}</span>
+        </div>
+      ))}
     </div>
   );
 }
@@ -507,6 +532,20 @@ function WeaponsTable({ character }: { character: CharacterRecord }): React.Reac
 // Section 5 Right — Resource Trackers (SS-13)
 // ──────────────────────────────────────────────
 
+/**
+ * Print-specific wording for the death tracks.
+ *
+ * @remarks
+ * Same rationale as {@link PRINT_DERIVED_LABELS}: the engine's plural
+ * "Failures"/"Successes" read well in the play UI, but the printed sheet has
+ * always used the singular column headings. Unknown track ids print the
+ * engine's label unchanged.
+ */
+const PRINT_DEATH_TRACK_LABELS: Record<string, string> = {
+  deathSuccesses: 'Success',
+  deathRolls: 'Failure',
+};
+
 function DotTracker({
   label,
   current,
@@ -580,40 +619,34 @@ function ResourceTrackers({
         />
       ))}
 
-      {/* Rest Checkboxes — only for systems with a rest panel */}
-      {engine.panels.includes('rest') && (
+      {/* Rest Checkboxes — one per rest the system defines */}
+      {engine.rest && engine.rest.length > 0 && (
         <div className="sheet-rest-row">
-          <label className="sheet-rest-checkbox">
-            <span className="sheet-checkbox-box" />
-            <span className="sheet-checkbox-label">Round Rest</span>
-          </label>
-          <label className="sheet-rest-checkbox">
-            <span className="sheet-checkbox-box" />
-            <span className="sheet-checkbox-label">Stretch Rest</span>
-          </label>
-          <label className="sheet-rest-checkbox">
-            <span className="sheet-checkbox-box" />
-            <span className="sheet-checkbox-label">Shift Rest</span>
-          </label>
+          {engine.rest.map(rest => (
+            <label key={rest.id} className="sheet-rest-checkbox">
+              <span className="sheet-checkbox-box" />
+              <span className="sheet-checkbox-label">{rest.label}</span>
+            </label>
+          ))}
         </div>
       )}
 
-      {/* Death Rolls — only for systems with a death panel */}
-      {engine.panels.includes('death') && (
+      {/* Death Rolls — only for systems that model a dying character */}
+      {engine.death && (
         <div className="sheet-death-rolls">
           <div className="sheet-section-header">Death Rolls</div>
-          <div className="sheet-death-roll-row">
-            <span className="sheet-death-label">Success</span>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <span key={i} className="sheet-checkbox-box" />
+          {/* Printed order has always been successes first; the engine lists
+              failures first because that is the order the play UI stacks them. */}
+          {[...engine.death.tracks]
+            .sort((a, b) => Number(a.tone === 'danger') - Number(b.tone === 'danger'))
+            .map(track => (
+              <div key={track.id} className="sheet-death-roll-row">
+                <span className="sheet-death-label">{PRINT_DEATH_TRACK_LABELS[track.id] ?? track.label}</span>
+                {Array.from({ length: track.max }).map((_, i) => (
+                  <span key={i} className="sheet-checkbox-box" />
+                ))}
+              </div>
             ))}
-          </div>
-          <div className="sheet-death-roll-row">
-            <span className="sheet-death-label">Failure</span>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <span key={i} className="sheet-checkbox-box" />
-            ))}
-          </div>
         </div>
       )}
     </div>
@@ -642,7 +675,7 @@ export default function PrintableSheet({
       <AttributeBand character={character} system={system} engine={engine} />
 
       {/* 3. Derived Stats Row (SS-06) */}
-      <DerivedStatsRow derived={derived} />
+      <DerivedStatsRow derived={derived} engine={engine} />
 
       {/* 4. Three-column body */}
       <div className="print-body-columns">

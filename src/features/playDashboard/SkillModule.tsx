@@ -4,14 +4,16 @@ import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
 import { computeSkillValue } from '../../utils/derivedValues';
-import { calcBaneProb, calcBoonProb, calcNormalProb, formatProb } from '../../utils/boonBane';
+import { formatProb } from '../../utils/boonBane';
 import { cn } from '../../lib/utils';
 import type { CharacterSkill } from '../../types/character';
 import { clamp, type PlayModuleProps } from './types';
-import { getEngine } from '../systems/engine';
+import { getEngine, type SystemEngine, type SkillDisplayContext } from '../systems/engine';
 
-function probability(value: number): string {
-  return `${formatProb(calcNormalProb(value))} / boon ${formatProb(calcBoonProb(value))} / bane ${formatProb(calcBaneProb(value))}`;
+/** Normal / boon / bane odds line, with the maths owned by the active engine. */
+function probability(engine: SystemEngine, value: number, context?: SkillDisplayContext): string {
+  const chance = (state: 'boon' | 'none' | 'bane') => formatProb(engine.probability.chance(value, state, context));
+  return `${chance('none')} / boon ${chance('boon')} / bane ${chance('bane')}`;
 }
 
 type SkillRow = {
@@ -70,10 +72,11 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
     const value = clamp(rawValue, engine.skill.range.min, engine.skill.range.max);
     const fallback = { value, trained };
     const mark = stored?.dragonMarked ? 'Dragon' : stored?.demonMarked ? 'Demon' : 'Mark';
-    const displayValue = engine.skill.display(value, {
+    const displayContext = {
       character,
       linkedAttributeId: skill.linkedAttributeId,
-    });
+    };
+    const displayValue = engine.skill.display(value, displayContext);
     return (
       <div key={skill.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)] min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
         <div className="min-w-0">
@@ -83,7 +86,7 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
               <span className="text-[length:var(--font-size-lg)] font-bold text-[var(--color-accent)] leading-none">{displayValue}</span>
             )}
           </div>
-          <p className="m-0 text-xs text-[var(--color-text-muted)]">{rollsUnder ? probability(value) : displayValue}</p>
+          <p className="m-0 text-xs text-[var(--color-text-muted)]">{rollsUnder ? probability(engine, value, displayContext) : displayValue}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap min-[520px]:shrink-0">
           {engine.skill.supportsMarks && (

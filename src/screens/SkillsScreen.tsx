@@ -10,9 +10,6 @@ import { SkillList } from '../components/fields/SkillList';
 import { Chip } from '../components/primitives/Chip';
 import { GameIcon } from '../components/primitives/GameIcon';
 import {
-  calcNormalProb,
-  calcBoonProb,
-  calcBaneProb,
   resolveEffectiveBoonBane,
   formatProb,
 } from '../utils/boonBane';
@@ -49,8 +46,8 @@ function clampSkillValue(value: number, range: { min: number; max: number }): nu
  * - **Dragon / Demon mark toggle** — cycles unmarked → dragon-marked → demon-marked →
  *   unmarked in Play Mode to track session advancement .
  *
- * Probability strings are computed from {@link calcNormalProb}, {@link calcBoonProb},
- * and {@link calcBaneProb}, resolved through {@link resolveEffectiveBoonBane}.
+ * Probability strings come from the active engine's `probability.chance`, with the
+ * boon/bane state resolved through {@link resolveEffectiveBoonBane}.
  *
  * Conditions with a `linkedAttributeId` automatically impose a bane on skills
  * that share that attribute (reflected in the probability display).
@@ -170,19 +167,23 @@ export default function SkillsScreen() {
     const hasAutoBane = linkedAttributeId ? (conditionBaneMap[linkedAttributeId] ?? false) : false;
     const override = sessionState.skillOverrides[skillId];
     const effective = resolveEffectiveBoonBane(sessionState.globalBoonBane, override, hasAutoBane);
-    const normalPct = formatProb(calcNormalProb(value));
-    const isDragon = value === 1;
+    // The engine owns the odds maths; the screen only decides which state applies.
+    const probContext = character ? { character, linkedAttributeId } : undefined;
+    const chance = (state: BoonBaneState) => engine.probability.chance(value, state, probContext);
+    const normalPct = formatProb(chance('none'));
+    // Natural-1 auto-success is a roll-under convention; other resolutions never show it.
+    const isDragon = engine.skill.supportsMarks && value === 1;
 
     if (effective === 'none') {
       return isDragon ? `${normalPct} (auto-success)` : normalPct;
     }
     if (effective === 'boon') {
-      const boonPct = formatProb(calcBoonProb(value));
+      const boonPct = formatProb(chance('boon'));
       return isDragon
         ? `${normalPct} (${boonPct} with boon, auto-success)`
         : `${normalPct} (${boonPct} with boon)`;
     }
-    const banePct = formatProb(calcBaneProb(value));
+    const banePct = formatProb(chance('bane'));
     return isDragon
       ? `${normalPct} (${banePct} with bane, auto-success)`
       : `${normalPct} (${banePct} with bane)`;

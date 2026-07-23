@@ -130,6 +130,14 @@ export interface RestOutcome {
   conditionsCleared: string[];
   /** User-facing sentences describing what happened. */
   messages: string[];
+  /**
+   * True when the rest changed nothing (e.g. already at full).
+   *
+   * @remarks
+   * Lets consumers show an informational toast and skip the write instead of
+   * reporting success and bumping `updatedAt` for a no-op.
+   */
+  noop?: boolean;
 }
 
 /**
@@ -143,6 +151,14 @@ export interface RestDefinition {
   id: string;
   label: string;
   prompt?: RestPrompt;
+  /**
+   * Whether taking this rest resets the "rests used" tracker.
+   *
+   * @remarks
+   * Dragonbane's shift rest ends the day, so it clears the round/stretch marks.
+   * Declaring it here avoids consumers inferring it from list position.
+   */
+  clearsRestTracker?: boolean;
   apply: (
     character: CharacterRecord,
     rolls: Record<string, number>,
@@ -188,6 +204,9 @@ export interface ProbabilityModel {
   chance: (value: number, state: 'boon' | 'none' | 'bane', context?: SkillDisplayContext) => number;
 }
 
+/** Where a derived stat is surfaced. Different screens show different subsets. */
+export type DerivedSurface = 'sheet' | 'dashboard' | 'print';
+
 /** A derived stat a system surfaces, and how to label it. */
 export interface DerivedFieldDef {
   key: string;
@@ -196,6 +215,15 @@ export interface DerivedFieldDef {
   shortLabel?: string;
   /** Whether the user may manually override this value on the sheet. */
   overridable?: boolean;
+  /**
+   * Screens this field appears on. Omitted means "all".
+   *
+   * @remarks
+   * The three surfaces genuinely differ — encumbrance belongs on the gear and
+   * print sheets but not the character sheet's derived panel, and HP/WP maxima
+   * are already shown by the dashboard's vitals module.
+   */
+  surfaces?: DerivedSurface[];
 }
 
 export interface SystemEngine {
