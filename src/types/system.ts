@@ -51,4 +51,6 @@ export interface SystemDefinition {
   skillCategories: SkillCategory[];
   sectionLayouts?: SectionLayout[];
   themesSupported?: string[];
+  resolution?: 'd20-roll-under' | '2d6-plus';
+  currency?: { label: string; abbr: string; mode: 'coins' | 'single' };
 }

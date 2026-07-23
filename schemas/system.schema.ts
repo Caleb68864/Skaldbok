@@ -53,6 +53,12 @@ export const systemDefinitionSchema = z.object({
   skillCategories: z.array(skillCategorySchema).describe('Grouped skill definitions'),
   sectionLayouts: z.array(sectionLayoutSchema).optional().describe('Optional section layout overrides'),
   themesSupported: z.array(z.string()).optional().describe('Theme names this system supports'),
+  resolution: z.enum(['d20-roll-under', '2d6-plus']).optional().describe('Core resolution mechanic'),
+  currency: z.object({
+    label: z.string().min(1),
+    abbr: z.string().min(1),
+    mode: z.enum(['coins', 'single']),
+  }).optional().describe('Currency display configuration'),
 });
 
 export type SystemDefinitionSchema = z.infer<typeof systemDefinitionSchema>;

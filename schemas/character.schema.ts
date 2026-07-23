@@ -98,6 +98,14 @@ export const characterRecordSchema = z.object({
   }),
   deletedAt: z.string().optional().describe('ISO timestamp when soft-deleted; absent when live'),
   softDeletedBy: z.string().optional().describe('Transaction UUID identifying the cascade that soft-deleted this character'),
+  travellerData: z.object({
+    credits: z.number().optional(),
+    financeNotes: z.string().optional(),
+    careers: z.string().optional(),
+    augments: z.string().optional(),
+    species: z.string().optional(),
+    speciesTraits: z.string().optional(),
+  }).optional().describe('System-specific data for Traveller-based characters'),
 });
 
 export type CharacterRecordSchema = z.infer<typeof characterRecordSchema>;

@@ -389,4 +389,13 @@ export interface CharacterRecord extends Versioned, Timestamped {
   deletedAt?: string;
   /** Transaction UUID identifying the cascade that soft-deleted this character. */
   softDeletedBy?: string;
+  /** System-specific data for Traveller-based characters. */
+  travellerData?: {
+    credits?: number;
+    financeNotes?: string;
+    careers?: string;
+    augments?: string;
+    species?: string;
+    speciesTraits?: string;
+  };
 }
