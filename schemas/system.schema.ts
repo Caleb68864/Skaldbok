@@ -53,6 +53,12 @@ export const systemDefinitionSchema = z.object({
   skillCategories: z.array(skillCategorySchema).describe('Grouped skill definitions'),
   sectionLayouts: z.array(sectionLayoutSchema).optional().describe('Optional section layout overrides'),
   themesSupported: z.array(z.string()).optional().describe('Theme names this system supports'),
+  quickReference: z.array(z.object({
+    title: z.string(),
+    columns: z.array(z.string()).optional(),
+    rows: z.array(z.array(z.string())),
+    note: z.string().optional(),
+  })).optional().describe('At-the-table cheat-sheet cards'),
   identityFields: z.array(z.object({
     id: z.string().min(1),
     label: z.string().min(1),

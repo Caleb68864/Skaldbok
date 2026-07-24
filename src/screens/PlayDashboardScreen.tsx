@@ -13,6 +13,7 @@ import { AbilityModule } from '../features/playDashboard/AbilityModule';
 import { MagicModule } from '../features/playDashboard/MagicModule';
 import { RestModule } from '../features/playDashboard/RestModule';
 import { DerivedStatsModule } from '../features/playDashboard/DerivedStatsModule';
+import { QuickReferenceModule } from '../features/playDashboard/QuickReferenceModule';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 
 /**
@@ -68,6 +69,7 @@ export default function PlayDashboardScreen() {
           <AbilityModule {...moduleProps} />
           <MagicModule {...moduleProps} />
         </div>
+        <QuickReferenceModule {...moduleProps} />
       </div>
     </div>
   );

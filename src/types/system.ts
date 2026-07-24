@@ -54,6 +54,25 @@ export interface SectionLayout {
   sections: string[];
 }
 
+/**
+ * One at-the-table cheat-sheet card (task targets, the Effect table, combat
+ * actions…), rendered read-only wherever the quick reference is shown.
+ *
+ * @remarks
+ * Reference content is data, not code — a ruleset ships its own cards and any
+ * screen renders them the same way, so adding a system never means editing the
+ * quick-reference UI.
+ */
+export interface QuickRefCard {
+  title: string;
+  /** Optional column headers; when present the rows render as a table. */
+  columns?: string[];
+  /** Rows of cells. A single-cell row reads as a plain list item. */
+  rows: string[][];
+  /** Optional one-line note printed beneath the card. */
+  note?: string;
+}
+
 export interface SystemDefinition {
   id: string;
   version: number;
@@ -65,6 +84,8 @@ export interface SystemDefinition {
   skillCategories: SkillCategory[];
   sectionLayouts?: SectionLayout[];
   themesSupported?: string[];
+  /** At-the-table cheat-sheet cards; see {@link QuickRefCard}. */
+  quickReference?: QuickRefCard[];
   /**
    * Identity fields shown on the sheet's Identity panel and the print header,
    * in display order. Each `id` is a key in `CharacterRecord.metadata`.

@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 4,
+  "version": 5,
   "name": "traveller",
   "displayName": "Traveller",
   "resolution": "2d6-plus",
@@ -400,5 +400,164 @@
         "movementPenalty"
       ]
     }
-  }
+  },
+  "quickReference": [
+    {
+      "title": "Core Roll",
+      "rows": [
+        [
+          "2d6 + Skill + Characteristic DM  ≥  Target (default 8+)"
+        ]
+      ],
+      "note": "Unskilled: −3 DM. Skill 0 = trained, no bonus. Boon: roll 3d6 keep best 2. Bane: keep worst 2."
+    },
+    {
+      "title": "Task Difficulty (Target)",
+      "columns": [
+        "Difficulty",
+        "Target"
+      ],
+      "rows": [
+        [
+          "Simple",
+          "2+"
+        ],
+        [
+          "Easy",
+          "4+"
+        ],
+        [
+          "Routine",
+          "6+"
+        ],
+        [
+          "Average",
+          "8+"
+        ],
+        [
+          "Difficult",
+          "10+"
+        ],
+        [
+          "Very Difficult",
+          "12+"
+        ],
+        [
+          "Formidable",
+          "14+"
+        ],
+        [
+          "Impossible",
+          "16+"
+        ]
+      ]
+    },
+    {
+      "title": "Effect (roll total − target)",
+      "columns": [
+        "Effect",
+        "Result"
+      ],
+      "rows": [
+        [
+          "−6 or worse",
+          "Exceptional Failure"
+        ],
+        [
+          "−5 to −2",
+          "Average Failure"
+        ],
+        [
+          "−1",
+          "Marginal Failure"
+        ],
+        [
+          "0 to +1",
+          "Marginal Success"
+        ],
+        [
+          "+2 to +5",
+          "Average Success"
+        ],
+        [
+          "+6 or better",
+          "Exceptional Success"
+        ]
+      ]
+    },
+    {
+      "title": "Combat: Actions / Round (~6s)",
+      "columns": [
+        "Type",
+        "Examples"
+      ],
+      "rows": [
+        [
+          "Significant",
+          "Attack · complex skill · stabilize wounded"
+        ],
+        [
+          "Minor",
+          "Move 6m · Aim (+1) · draw weapon · change stance"
+        ],
+        [
+          "Reaction",
+          "Dodge · Dive for cover"
+        ],
+        [
+          "Free",
+          "Talk · drop prone · drop item"
+        ]
+      ],
+      "note": "Per round: 1 Significant + 1 Minor, or 3 Minor. Initiative = 2d6 + DEX DM, rolled once for the whole fight."
+    },
+    {
+      "title": "Attack Rolls",
+      "rows": [
+        [
+          "Melee:  2d6 + Melee (spec) + STR or DEX DM  ≥ 8"
+        ],
+        [
+          "Ranged: 2d6 + Gun Combat (spec) + DEX DM  ≥ 8"
+        ]
+      ]
+    },
+    {
+      "title": "Characteristic DM",
+      "columns": [
+        "Score",
+        "DM"
+      ],
+      "rows": [
+        [
+          "0",
+          "−3"
+        ],
+        [
+          "1–2",
+          "−2"
+        ],
+        [
+          "3–5",
+          "−1"
+        ],
+        [
+          "6–8",
+          "+0"
+        ],
+        [
+          "9–11",
+          "+1"
+        ],
+        [
+          "12–14",
+          "+2"
+        ],
+        [
+          "15+",
+          "+3"
+        ]
+      ]
+    }
+  ]
 }
