@@ -541,13 +541,18 @@ export default function SheetScreen() {
             <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">{denom.label}</label>
             <input
               type="number"
+              min={0}
               aria-label={denom.label}
               className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
               value={currencyAmounts[denom.id] ?? 0}
               disabled={!identityEditable}
               onChange={e =>
                 updateCharacter({
-                  ...engine.currency.write(character, { [denom.id]: Number(e.target.value) || 0 }),
+                  // Clamp non-negative at the source; money is never negative in
+                  // any bundled system, and the stored value is normalised to
+                  // >= 0 anyway, so an unclamped input just shows a value that
+                  // silently corrects itself on the next load.
+                  ...engine.currency.write(character, { [denom.id]: Math.max(0, Math.floor(Number(e.target.value) || 0)) }),
                   updatedAt: nowISO(),
                 })
               }

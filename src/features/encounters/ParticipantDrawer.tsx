@@ -98,10 +98,12 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
    */
   const handleLinkedHealthBlur = async () => {
     if (!linkedCharacter || !healthResourceId) return;
+    // Bail if the character has no such resource: writing here would fabricate a
+    // maxless `{ current }` entry that normalisation then pins to max 0.
+    if (!linkedResource) return;
     const parsed = Number(currentHp);
     if (currentHp === '' || !Number.isFinite(parsed)) return;
-    const max = linkedResource?.max ?? 0;
-    const next = Math.max(0, Math.min(parsed, max));
+    const next = Math.max(0, Math.min(parsed, linkedResource.max));
 
     const updated: CharacterRecord = {
       ...linkedCharacter,
