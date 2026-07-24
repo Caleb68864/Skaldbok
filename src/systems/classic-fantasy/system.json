@@ -1,8 +1,8 @@
 {
   "id": "classic-fantasy",
-  "version": 2,
+  "version": 3,
   "name": "classic-fantasy",
-  "displayName": "Classic Fantasy",
+  "displayName": "Dragonbane",
   "attributes": [
     {
       "id": "str",

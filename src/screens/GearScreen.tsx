@@ -514,22 +514,26 @@ export default function GearScreen() {
         <div className="flex flex-col gap-3">
           {denominations.map(denom => {
             const value = currencyAmounts[denom.id] ?? 0;
-            const unit = singularize(denom.label.toLowerCase());
+            // Step size is a system property — Traveller's credits move in
+            // hundreds where Dragonbane's coins move one at a time.
+            const step = denom.step ?? 1;
+            // Only singularise when the step actually is one ("Spend 100 credits").
+            const unit = step === 1 ? singularize(denom.label.toLowerCase()) : denom.label.toLowerCase();
             return (
               <div key={denom.id} className="flex items-center gap-[var(--space-sm)]">
                 <span className="text-sm text-[var(--color-text-muted)] min-w-[60px]">{denom.label}</span>
                 <button
                   type="button"
-                  aria-label={`Spend 1 ${unit}`}
-                  onClick={() => adjustCurrency(denom.id, -1)}
+                  aria-label={`Spend ${step} ${unit}`}
+                  onClick={() => adjustCurrency(denom.id, -step)}
                   disabled={!hasAnyCurrency}
                   className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
                 >−</button>
                 <span className="min-w-[40px] text-center text-lg font-bold text-[var(--color-text)]">{value}</span>
                 <button
                   type="button"
-                  aria-label={`Gain 1 ${unit}`}
-                  onClick={() => adjustCurrency(denom.id, 1)}
+                  aria-label={`Gain ${step} ${unit}`}
+                  onClick={() => adjustCurrency(denom.id, step)}
                   className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110"
                 >+</button>
               </div>

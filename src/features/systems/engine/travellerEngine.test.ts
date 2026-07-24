@@ -1,0 +1,95 @@
+import { describe, it, expect } from 'vitest';
+import { effectiveCharacteristic, travellerEngine, computeTravellerDerivedValues } from './travellerEngine';
+import type { CharacterRecord } from '../../../types/character';
+
+/** A minimal Traveller character: all characteristics 7, an empty damage track. */
+function character(overrides: Partial<CharacterRecord> = {}): CharacterRecord {
+  return {
+    attributes: { str: 7, dex: 7, end: 7, int: 7, edu: 7, soc: 7 },
+    resources: {
+      str: { current: 0, max: 7 },
+      dex: { current: 0, max: 7 },
+      end: { current: 0, max: 7 },
+    },
+    ...overrides,
+  } as CharacterRecord;
+}
+
+describe('effectiveCharacteristic', () => {
+  it('returns the raw score when undamaged', () => {
+    expect(effectiveCharacteristic(character(), 'end')).toBe(7);
+  });
+
+  it('subtracts damage taken to that characteristic', () => {
+    const wounded = character({
+      resources: { str: { current: 0, max: 7 }, dex: { current: 0, max: 7 }, end: { current: 5, max: 7 } },
+    });
+    expect(effectiveCharacteristic(wounded, 'end')).toBe(2);
+  });
+
+  it('does not let damage push a characteristic below zero', () => {
+    const downed = character({
+      resources: { end: { current: 99, max: 7 } } as CharacterRecord['resources'],
+    });
+    expect(effectiveCharacteristic(downed, 'end')).toBe(0);
+  });
+
+  it('leaves characteristics without a damage track untouched', () => {
+    // INT/EDU/SOC have no matching resource; a same-named resource must not leak in.
+    expect(effectiveCharacteristic(character(), 'int')).toBe(7);
+  });
+
+  it('reads the characteristic, not the same-named resource', () => {
+    // attr:str and res:str collide by id — the score must win here.
+    const c = character({
+      attributes: { str: 12, dex: 7, end: 7, int: 7, edu: 7, soc: 7 },
+      resources: { str: { current: 2, max: 12 } } as CharacterRecord['resources'],
+    });
+    expect(effectiveCharacteristic(c, 'str')).toBe(10);
+  });
+});
+
+describe('damage feeds through to DMs', () => {
+  it('drops the attribute badge as damage accumulates', () => {
+    const healthy = character();
+    expect(travellerEngine.attributeBadge('end', healthy)).toBe('+0');
+
+    // END 7 - 5 damage = END 2, which is DM -2.
+    const wounded = character({
+      resources: { str: { current: 0, max: 7 }, dex: { current: 0, max: 7 }, end: { current: 5, max: 7 } },
+    });
+    expect(travellerEngine.attributeBadge('end', wounded)).toBe('-2');
+  });
+
+  it('drops the derived characteristic DM as damage accumulates', () => {
+    const wounded = character({
+      resources: { str: { current: 5, max: 7 }, dex: { current: 0, max: 7 }, end: { current: 0, max: 7 } },
+    });
+    const derived = computeTravellerDerivedValues(wounded);
+    expect(derived.characteristicDMs['str']).toBe(-2);
+    expect(derived.characteristicDMs['dex']).toBe(0);
+  });
+
+  it('lowers a skill check chance when the linked characteristic is damaged', () => {
+    const healthy = character();
+    const wounded = character({
+      resources: { str: { current: 0, max: 7 }, dex: { current: 5, max: 7 }, end: { current: 0, max: 7 } },
+    });
+    const display = travellerEngine.skill.display;
+    const healthyText = display(1, { character: healthy, linkedAttributeId: 'dex' });
+    const woundedText = display(1, { character: wounded, linkedAttributeId: 'dex' });
+
+    expect(healthyText).not.toContain('DM -2');
+    expect(woundedText).toContain('DM -2');
+
+    const pct = (s: string) => Number(/(\d+)%/.exec(s)?.[1]);
+    expect(pct(woundedText)).toBeLessThan(pct(healthyText));
+  });
+});
+
+describe('currency', () => {
+  it('steps credits in hundreds, not single units', () => {
+    // Traveller prices run to thousands; a step of 1 makes purchases unusable.
+    expect(travellerEngine.currency.denominations[0].step).toBe(100);
+  });
+});

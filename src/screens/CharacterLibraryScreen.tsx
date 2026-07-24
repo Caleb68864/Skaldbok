@@ -13,6 +13,7 @@ import { cn } from '../lib/utils';
 import { useAppState } from '../context/AppStateContext';
 import { AppLogo } from '../components/primitives/AppLogo';
 import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../systems/registry';
+import { useCampaignContext } from '../features/campaign/CampaignContext';
 
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
@@ -26,7 +27,24 @@ export default function CharacterLibraryScreen() {
   const { createCharacter, duplicateCharacter, deleteCharacter } = useCharacterActions();
   const { showToast } = useToast();
   const { updateSettings } = useAppState();
+  const { activeCampaign } = useCampaignContext();
   const navigate = useNavigate();
+
+  /**
+   * The system a new character should default to.
+   *
+   * @remarks
+   * A campaign declares its ruleset, and that is what decides the character
+   * sheet, so creating a character inside a Traveller campaign should not
+   * silently hand back a Dragonbane sheet. The picker stays editable for the
+   * one-off case (an NPC from another system, a character created with no
+   * campaign selected). Falls back to the default when the campaign names a
+   * system that is not bundled.
+   */
+  const campaignSystemId =
+    activeCampaign && getSelectableSystems().some(s => s.id === activeCampaign.system)
+      ? activeCampaign.system
+      : DEFAULT_SYSTEM_ID;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadCharacters = useCallback(async () => {
@@ -40,7 +58,7 @@ export default function CharacterLibraryScreen() {
 
   function handleCreate() {
     setNameInput('');
-    setSystemInput(DEFAULT_SYSTEM_ID);
+    setSystemInput(campaignSystemId);
     setShowNamePrompt(true);
   }
 
@@ -258,19 +276,35 @@ export default function CharacterLibraryScreen() {
           autoFocus
           className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
         />
-        <label className="mt-3 block text-[var(--color-text-muted)] text-sm">
-          Game system
-          <select
-            aria-label="Game system"
-            value={systemInput}
-            onChange={e => setSystemInput(e.target.value)}
-            className="mt-1 w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
-          >
-            {getSelectableSystems().map(s => (
-              <option key={s.id} value={s.id}>{s.displayName}</option>
-            ))}
-          </select>
-        </label>
+        {/*
+          The campaign owns the ruleset, so when one is active the character
+          inherits it silently — asking twice invites a Traveller campaign full
+          of Dragonbane sheets. The picker only appears with no campaign
+          selected, where there is nothing to inherit from.
+        */}
+        {activeCampaign ? (
+          <p className="mt-3 text-[var(--color-text-muted)] text-sm">
+            Game system:{' '}
+            <span className="text-[var(--color-text)]">
+              {getSelectableSystems().find(s => s.id === campaignSystemId)?.displayName}
+            </span>{' '}
+            — from campaign “{activeCampaign.name}”.
+          </p>
+        ) : (
+          <label className="mt-3 block text-[var(--color-text-muted)] text-sm">
+            Game system
+            <select
+              aria-label="Game system"
+              value={systemInput}
+              onChange={e => setSystemInput(e.target.value)}
+              className="mt-1 w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
+            >
+              {getSelectableSystems().map(s => (
+                <option key={s.id} value={s.id}>{s.displayName}</option>
+              ))}
+            </select>
+          </label>
+        )}
       </Modal>
 
       <Modal

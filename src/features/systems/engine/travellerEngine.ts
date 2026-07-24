@@ -10,6 +10,33 @@ import type { SystemEngine } from './types';
 
 export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'];
 
+/**
+ * The characteristics that carry a damage track.
+ *
+ * @remarks
+ * These ids intentionally collide with the resource ids of the same name —
+ * `attr:str` is the characteristic, `res:str` is the damage taken to it. See
+ * {@link statKey}.
+ */
+export const TRAVELLER_DAMAGE_TRACK_IDS = ['str', 'dex', 'end'];
+
+/**
+ * A characteristic's current score, after damage.
+ *
+ * @remarks
+ * In Traveller, damage is applied *to the characteristic*, so a wounded
+ * character rolls worse: END 7 with 5 damage is END 2, which is DM −2, not the
+ * DM +0 the undamaged score would give. Every DM in this engine is derived from
+ * this function rather than from `attributes` directly, so the damage track
+ * actually bites. Characteristics without a track (INT/EDU/SOC) have no
+ * matching resource and so are returned unchanged.
+ */
+export function effectiveCharacteristic(character: CharacterRecord, id: string): number {
+  const base = character.attributes?.[id] ?? 0;
+  const damage = character.resources?.[id]?.current ?? 0;
+  return Math.max(0, base - damage);
+}
+
 /** Formats a DM as a signed string, e.g. 2 -> '+2', -1 -> '-1'. */
 export function formatDM(dm: number): string {
   return dm >= 0 ? `+${dm}` : `${dm}`;
@@ -25,7 +52,7 @@ export interface TravellerDerivedValues extends DerivedValues {
 export function computeTravellerDerivedValues(character: CharacterRecord): TravellerDerivedValues {
   const characteristicDMs: Record<string, number> = {};
   for (const id of TRAVELLER_ATTRIBUTE_IDS) {
-    characteristicDMs[id] = characteristicToDM(character.attributes?.[id] ?? 0);
+    characteristicDMs[id] = characteristicToDM(effectiveCharacteristic(character, id));
   }
   const initiativeDM = characteristicDMs['dex'] ?? 0;
 
@@ -72,7 +99,7 @@ export const travellerEngine: SystemEngine = {
   attributeBadge: (attributeId, character) => {
     const score = character.attributes?.[attributeId];
     if (score === undefined || score === null) return null;
-    return formatDM(characteristicToDM(score));
+    return formatDM(characteristicToDM(effectiveCharacteristic(character, attributeId)));
   },
   attributeIds: TRAVELLER_ATTRIBUTE_IDS,
   skill: {
@@ -83,7 +110,7 @@ export const travellerEngine: SystemEngine = {
     display: (value, context) => {
       const linkedId = context?.linkedAttributeId;
       const dm = linkedId
-        ? characteristicToDM(context?.character.attributes?.[linkedId] ?? 0)
+        ? characteristicToDM(effectiveCharacteristic(context.character, linkedId))
         : 0;
       return formatSkillDisplay(value, dm, context?.boonBane ?? 'none');
     },
@@ -104,7 +131,7 @@ export const travellerEngine: SystemEngine = {
   panels: ['characteristics', 'skills', 'resources', 'finances', 'careers', 'augments', 'inventory', 'combat', 'notes'],
   currency: {
     mode: 'single',
-    denominations: [{ id: 'credits', label: 'Credits', abbr: 'Cr', value: 1 }],
+    denominations: [{ id: 'credits', label: 'Credits', abbr: 'Cr', value: 1, step: 100 }],
     read: character => ({ credits: character.wealth?.credits ?? 0 }),
     write: (character, amounts) => ({
       wealth: { ...character.wealth, ...amounts },
@@ -159,7 +186,7 @@ export const travellerEngine: SystemEngine = {
     chance: (value, state, context) => {
       const linkedId = context?.linkedAttributeId;
       const dm = linkedId
-        ? characteristicToDM(context?.character.attributes?.[linkedId] ?? 0)
+        ? characteristicToDM(effectiveCharacteristic(context.character, linkedId))
         : 0;
       const modifier = value + dm;
       if (state === 'boon') return threeD6KeepTwoProbability(8, modifier, 'best');

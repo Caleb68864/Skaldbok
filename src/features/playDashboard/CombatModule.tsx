@@ -79,14 +79,16 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
           <p className="m-0 font-semibold text-[var(--color-text)]">Coins</p>
           {denominations.map(denom => {
             const unit = denom.label.toLowerCase();
+            // See CurrencyDenomination.step — scale is a system property.
+            const step = denom.step ?? 1;
             return (
               <div key={denom.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2">
                 <span className="text-xs font-semibold text-[var(--color-text-muted)]">{denom.label}</span>
                 <button
                   type="button"
-                  aria-label={`Spend 1 ${unit}`}
+                  aria-label={`Spend ${step} ${unit}`}
                   className="flex min-h-8 min-w-8 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
-                  onClick={() => adjustCoin(denom.id, -1)}
+                  onClick={() => adjustCoin(denom.id, -step)}
                 >
                   -
                 </button>
@@ -95,9 +97,9 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
                 </span>
                 <button
                   type="button"
-                  aria-label={`Gain 1 ${unit}`}
+                  aria-label={`Gain ${step} ${unit}`}
                   className="flex min-h-8 min-w-8 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
-                  onClick={() => adjustCoin(denom.id, 1)}
+                  onClick={() => adjustCoin(denom.id, step)}
                 >
                   +
                 </button>

@@ -29,6 +29,16 @@ export interface CurrencyDenomination {
   abbr: string;
   /** Worth in the smallest denomination, used for change-making and totals. */
   value: number;
+  /**
+   * How much one press of a +/− control moves this denomination. Defaults to 1.
+   *
+   * @remarks
+   * Scale is a per-system property, not a UI one. Dragonbane prices sit in
+   * single coins, so 1 is right; Traveller prices run to thousands of credits,
+   * where a step of 1 means ~800 presses to buy a vacc suit. Screens read this
+   * rather than assuming a unit step.
+   */
+  step?: number;
 }
 
 /**

@@ -5,6 +5,7 @@ import { createParty } from '../../storage/repositories/partyRepository';
 import { updateCampaign } from '../../storage/repositories/campaignRepository';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
+import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../../systems/registry';
 
 interface CampaignCreateModalProps {
   onClose: () => void;
@@ -15,7 +16,9 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
   const { showToast } = useToast();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [system, setSystem] = useState(DEFAULT_SYSTEM_ID);
   const [saving, setSaving] = useState(false);
+  const selectableSystems = getSelectableSystems();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +29,7 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
       const campaign = await createCampaign({
         name: name.trim(),
         description: description.trim() || undefined,
-        system: 'classic-fantasy',
+        system,
         status: 'active',
       });
 
@@ -77,6 +80,24 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
               required
               className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
             />
+          </div>
+          <div className="mb-3">
+            <label htmlFor="campaign-system" className="block text-[var(--color-text-muted)] mb-1 text-sm">
+              Game system
+            </label>
+            <select
+              id="campaign-system"
+              value={system}
+              onChange={e => setSystem(e.target.value)}
+              className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base box-border"
+            >
+              {selectableSystems.map(s => (
+                <option key={s.id} value={s.id}>{s.displayName}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[var(--color-text-muted)] text-xs">
+              Sets the character sheet for characters created in this campaign.
+            </p>
           </div>
           <div className="mb-4">
             <label className="block text-[var(--color-text-muted)] mb-1 text-sm">
