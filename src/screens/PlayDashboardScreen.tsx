@@ -13,6 +13,7 @@ import { AbilityModule } from '../features/playDashboard/AbilityModule';
 import { MagicModule } from '../features/playDashboard/MagicModule';
 import { RestModule } from '../features/playDashboard/RestModule';
 import { DerivedStatsModule } from '../features/playDashboard/DerivedStatsModule';
+import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 
 export default function PlayDashboardScreen() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function PlayDashboardScreen() {
   const { settings, isLoading: settingsLoading } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   const { error } = useAutosave(character, characterRepository.save, 500);
+  useSyncedResourceMaxima(character, system, updateCharacter);
 
   useEffect(() => {
     const stillLoading = settingsLoading || isLoading;

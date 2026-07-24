@@ -328,6 +328,19 @@ function SkillsSection({
   const generalSkills: SkillDefinition[] = generalCategory?.skills ?? [];
   const weaponSkills: SkillDefinition[] = weaponCategory?.skills ?? [];
 
+  /**
+   * Systems that do not use the legacy `core`/`weapon` category ids print each
+   * category they declare, under its own name.
+   *
+   * @remarks
+   * Looking up those two ids and nothing else meant a system with different
+   * categories printed *no skills at all* — a Traveller sheet lost every one of
+   * its six groups. Keyed off the legacy ids being absent so the Dragonbane
+   * layout, which is tuned to a fixed page, is left exactly as it was.
+   */
+  const usesLegacyCategories = Boolean(generalCategory || weaponCategory);
+  const declaredCategories = usesLegacyCategories ? [] : skillCategories;
+
   // Build set of all system skill IDs to identify secondary/custom skills
   const allSystemSkillIds = new Set<string>(
     skillCategories.flatMap((cat) => cat.skills.map((s: SkillDefinition) => s.id)),
@@ -342,7 +355,24 @@ function SkillsSection({
 
   return (
     <div className="sheet-skills-section">
-      <div className="sheet-section-header">General Skills</div>
+      {declaredCategories.map((category) => (
+        <React.Fragment key={category.id}>
+          <div className="sheet-section-header">{category.name}</div>
+          {category.skills.map((skill: SkillDefinition) => {
+            const charSkill = character.skills?.[skill.id];
+            return (
+              <SkillRow
+                key={skill.id}
+                name={skill.name}
+                value={charSkill?.value ?? ''}
+                trained={charSkill?.trained ?? false}
+              />
+            );
+          })}
+        </React.Fragment>
+      ))}
+
+      {usesLegacyCategories && <div className="sheet-section-header">General Skills</div>}
       {generalSkills.map((skill) => {
         const charSkill = character.skills?.[skill.id];
         return (
@@ -355,7 +385,7 @@ function SkillsSection({
         );
       })}
 
-      <div className="sheet-section-header">Weapon Skills</div>
+      {usesLegacyCategories && <div className="sheet-section-header">Weapon Skills</div>}
       {weaponSkills.map((skill) => {
         const charSkill = character.skills?.[skill.id];
         return (

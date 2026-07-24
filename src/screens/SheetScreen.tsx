@@ -6,6 +6,7 @@ import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { getEngine } from '../features/systems/engine';
 import type { RestDefinition } from '../features/systems/engine/types';
 import { useAutosave } from '../hooks/useAutosave';
+import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 import { useFieldEditable, useIsEditMode } from '../utils/modeGuards';
 import { AttributeField } from '../components/fields/AttributeField';
 import { CharacterPortrait } from '../components/fields/CharacterPortrait';
@@ -69,6 +70,7 @@ export default function SheetScreen() {
   const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
+  useSyncedResourceMaxima(character, system, updateCharacter);
   const { showToast } = useToast();
   const { logHPChange, logDeathRoll, logRest } = useSessionLog();
 
