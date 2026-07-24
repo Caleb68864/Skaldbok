@@ -3,16 +3,19 @@ import type { ReferenceGroup, ReferenceImportBundle, ReferenceSection } from '..
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 
+/** Every user-owned reference section, sorted by explicit order then category then title. */
 export async function getAll(): Promise<ReferenceSection[]> {
   const rows = await db.referenceSections.toArray();
   return rows.sort((a, b) => a.order - b.order || a.category.localeCompare(b.category) || a.title.localeCompare(b.title));
 }
 
+/** The reorderable grouping cards for reference sections, sorted by order then title. */
 export async function getGroups(): Promise<ReferenceGroup[]> {
   const rows = await db.referenceGroups.toArray();
   return rows.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
 }
 
+/** Upserts one grouping card, mapping a storage-quota failure to a user-friendly message. */
 export async function saveGroup(group: ReferenceGroup): Promise<void> {
   try {
     await db.referenceGroups.put(group);
@@ -24,6 +27,7 @@ export async function saveGroup(group: ReferenceGroup): Promise<void> {
   }
 }
 
+/** Deletes a grouping card by id. */
 export async function removeGroup(id: string): Promise<void> {
   try {
     await db.referenceGroups.delete(id);
@@ -32,6 +36,15 @@ export async function removeGroup(id: string): Promise<void> {
   }
 }
 
+/**
+ * Creates any grouping cards missing for the given sections' categories.
+ *
+ * @remarks
+ * Every section belongs to a category, and each distinct category needs a card
+ * to live under. New cards are appended after the existing ones (order preserved)
+ * so this can be called after an import without disturbing the user's layout.
+ * Returns the full, sorted set of groups.
+ */
 export async function ensureGroupsForSections(sections: ReferenceSection[]): Promise<ReferenceGroup[]> {
   const existing = await getGroups();
   const existingTitles = new Set(existing.map(group => group.title));
@@ -52,6 +65,7 @@ export async function ensureGroupsForSections(sections: ReferenceSection[]): Pro
   return [...existing, ...groups].sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
 }
 
+/** Upserts one reference section, mapping a storage-quota failure to a user-friendly message. */
 export async function save(section: ReferenceSection): Promise<void> {
   try {
     await db.referenceSections.put(section);
@@ -63,6 +77,7 @@ export async function save(section: ReferenceSection): Promise<void> {
   }
 }
 
+/** Deletes a reference section by id. */
 export async function remove(id: string): Promise<void> {
   try {
     await db.referenceSections.delete(id);
@@ -71,6 +86,18 @@ export async function remove(id: string): Promise<void> {
   }
 }
 
+/**
+ * Imports a reference bundle, creating the sections and the grouping cards they
+ * need in one transaction.
+ *
+ * @remarks
+ * Tolerant of partial input: missing ids, orders, categories, and timestamps are
+ * synthesised so a hand-authored or third-party bundle still imports cleanly.
+ * A `referencePages` entry, if present, supplies the category and ordering for
+ * its listed sections.
+ *
+ * @returns The number of sections imported.
+ */
 export async function importBundle(bundle: ReferenceImportBundle): Promise<number> {
   const now = nowISO();
   const pageOrder = new Map<string, { category: string; order: number }>();
@@ -127,6 +154,14 @@ export async function importBundle(bundle: ReferenceImportBundle): Promise<numbe
   return sections.length;
 }
 
+/**
+ * Persists a reordered layout, rewriting group `order` from array position.
+ *
+ * @remarks
+ * Called after a drag-and-drop reorder. Group order is derived from the passed
+ * array index so the stored order always matches what the user sees; every
+ * touched row's `updatedAt` is refreshed in the same transaction.
+ */
 export async function saveLayout(groups: ReferenceGroup[], sections: ReferenceSection[]): Promise<void> {
   const now = nowISO();
   await db.transaction('rw', [db.referenceSections, db.referenceGroups], async () => {

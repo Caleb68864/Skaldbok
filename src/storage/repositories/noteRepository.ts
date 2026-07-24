@@ -226,6 +226,7 @@ export async function deleteNote(id: string): Promise<void> {
   }
 }
 
+/** Soft-deletes a note (the user-facing delete). Enlist in a cascade via `txId`. No-op if missing or already deleted. */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
     const row = await db.notes.get(id);
@@ -243,6 +244,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
   }
 }
 
+/** Restores a soft-deleted note. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.notes.get(id);
@@ -258,6 +260,7 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
+/** Permanently removes a note row. Internal only — never called from UI, which soft-deletes. */
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.notes.delete(id);

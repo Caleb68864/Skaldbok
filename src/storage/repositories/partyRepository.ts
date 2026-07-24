@@ -5,6 +5,13 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 
+/**
+ * The party for a campaign, if one exists.
+ *
+ * @remarks
+ * A campaign has at most one party, so the first validating, non-deleted row is
+ * returned. Rows that fail validation are skipped with a warning.
+ */
 export async function getPartyByCampaign(campaignId: string, options?: { includeDeleted?: boolean }): Promise<Party | undefined> {
   try {
     const records = await db.parties.where('campaignId').equals(campaignId).toArray();
@@ -23,6 +30,7 @@ export async function getPartyByCampaign(campaignId: string, options?: { include
   }
 }
 
+/** Creates a party, generating its id, timestamps, and schema version. */
 export async function createParty(data: Omit<Party, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>): Promise<Party> {
   try {
     const now = nowISO();
@@ -40,6 +48,7 @@ export async function createParty(data: Omit<Party, 'id' | 'createdAt' | 'update
   }
 }
 
+/** The members of a party, excluding soft-deleted rows unless opted in; invalid rows are dropped with a warning. */
 export async function getPartyMembers(partyId: string, options?: { includeDeleted?: boolean }): Promise<PartyMember[]> {
   try {
     const records = await db.partyMembers.where('partyId').equals(partyId).toArray();
@@ -59,6 +68,7 @@ export async function getPartyMembers(partyId: string, options?: { includeDelete
   }
 }
 
+/** Adds a member to a party, generating its id, timestamps, and schema version. */
 export async function addPartyMember(data: Omit<PartyMember, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>): Promise<PartyMember> {
   try {
     const now = nowISO();
@@ -76,6 +86,13 @@ export async function addPartyMember(data: Omit<PartyMember, 'id' | 'createdAt' 
   }
 }
 
+/**
+ * Hard-removes a party member row.
+ *
+ * @remarks
+ * Predates the soft-delete convention; {@link softDeletePartyMember} is the
+ * reversible path. This is retained for callers that intend a permanent removal.
+ */
 export async function removePartyMember(memberId: string): Promise<void> {
   try {
     await db.partyMembers.delete(memberId);
@@ -84,6 +101,7 @@ export async function removePartyMember(memberId: string): Promise<void> {
   }
 }
 
+/** Soft-deletes a party. Enlist in a cascade via `txId`. No-op if missing or already deleted. */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
     const row = await db.parties.get(id);
@@ -101,6 +119,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
   }
 }
 
+/** Restores a soft-deleted party. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.parties.get(id);
@@ -116,6 +135,7 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
+/** Permanently removes a party row. Internal only — never called from UI, which soft-deletes. */
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.parties.delete(id);
@@ -124,6 +144,7 @@ export async function hardDelete(id: string): Promise<void> {
   }
 }
 
+/** Soft-deletes one party member (reversible). Enlist in a cascade via `txId`. No-op if missing or already deleted. */
 export async function softDeletePartyMember(memberId: string, txId?: string): Promise<void> {
   try {
     const row = await db.partyMembers.get(memberId);
@@ -141,6 +162,7 @@ export async function softDeletePartyMember(memberId: string, txId?: string): Pr
   }
 }
 
+/** Restores a soft-deleted party member. No-op if missing or already live. */
 export async function restorePartyMember(memberId: string): Promise<void> {
   try {
     const row = await db.partyMembers.get(memberId);

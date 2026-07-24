@@ -5,6 +5,16 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { resizeAndCompress } from '../../utils/imageResize';
 
+/**
+ * Resizes an image and stores it as an attachment on a note.
+ *
+ * @remarks
+ * The source image is downscaled and re-encoded to JPEG (see
+ * {@link resizeAndCompress}) before the Blob is written, so the local database
+ * does not fill up with full-resolution photos. A `QuotaExceededError` is
+ * re-thrown with its name preserved so the UI can distinguish "storage full"
+ * from other failures.
+ */
 export async function createAttachment(
   noteId: string,
   campaignId: string,
@@ -35,6 +45,7 @@ export async function createAttachment(
   }
 }
 
+/** A note's attachments, validated and sorted oldest-first; invalid rows are dropped with a warning. */
 export async function getAttachmentsByNote(noteId: string): Promise<Attachment[]> {
   try {
     const records = await db.attachments.where('noteId').equals(noteId).toArray();
@@ -54,6 +65,7 @@ export async function getAttachmentsByNote(noteId: string): Promise<Attachment[]
   }
 }
 
+/** Every attachment in a campaign, validated and sorted oldest-first. */
 export async function getAttachmentsByCampaign(campaignId: string): Promise<Attachment[]> {
   try {
     const records = await db.attachments.where('campaignId').equals(campaignId).toArray();
@@ -73,6 +85,14 @@ export async function getAttachmentsByCampaign(campaignId: string): Promise<Atta
   }
 }
 
+/**
+ * Removes one attachment row.
+ *
+ * @remarks
+ * Attachments are not part of the soft-delete convention — they store binary
+ * Blobs whose whole point is to free space when removed — so this is a hard
+ * delete.
+ */
 export async function deleteAttachment(id: string): Promise<void> {
   try {
     await db.attachments.delete(id);
@@ -81,6 +101,7 @@ export async function deleteAttachment(id: string): Promise<void> {
   }
 }
 
+/** Hard-deletes every attachment belonging to a note, e.g. when the note is purged. */
 export async function deleteAttachmentsByNote(noteId: string): Promise<void> {
   try {
     await db.attachments.where('noteId').equals(noteId).delete();
@@ -89,6 +110,7 @@ export async function deleteAttachmentsByNote(noteId: string): Promise<void> {
   }
 }
 
+/** Updates just the caption on an attachment. */
 export async function updateAttachmentCaption(id: string, caption: string): Promise<void> {
   try {
     await db.attachments.update(id, { caption });

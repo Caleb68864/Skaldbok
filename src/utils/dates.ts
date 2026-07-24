@@ -1,3 +1,4 @@
+/** Current instant as a UTC ISO-8601 timestamp — the canonical form for all stored `*At` fields. */
 export function nowISO(): string {
   return new Date().toISOString();
 }
@@ -34,6 +35,10 @@ export function formatLocalDateOnly(
   }
 }
 
+/**
+ * Formats a full ISO timestamp as a locale date-and-time string, echoing the
+ * input back unchanged if it cannot be parsed.
+ */
 export function formatLocalDateTime(
   isoDateTime: string,
   locale: string | string[] | undefined = undefined,

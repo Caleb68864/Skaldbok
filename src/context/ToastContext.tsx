@@ -2,12 +2,21 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Toaster } from '../components/ui/toaster';
 import type { ToastAction, ToastItem, ToastVariant } from '../components/ui/toaster';
 
+/** Optional toast behaviour: auto-dismiss delay and an optional action button. */
 interface ShowToastOptions {
   duration?: number;
   action?: ToastAction;
 }
 
+/** Imperative toast API exposed to the tree. */
 interface ToastContextValue {
+  /**
+   * Shows a transient toast.
+   *
+   * @remarks
+   * The third argument accepts either a raw duration in ms (legacy call sites)
+   * or a {@link ShowToastOptions} object; both are handled.
+   */
   showToast: (
     message: string,
     variant?: ToastVariant,
@@ -17,12 +26,14 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+/** Accesses the toast API; throws if used outside {@link ToastProvider}. */
 export function useToast(): ToastContextValue {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error('useToast must be used within ToastProvider');
   return ctx;
 }
 
+/** Holds the active toast queue and renders the {@link Toaster}, auto-dismissing each toast after its duration. */
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 

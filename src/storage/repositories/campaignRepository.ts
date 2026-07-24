@@ -5,6 +5,7 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 
+/** Fetches and validates one campaign by id; a soft-deleted or invalid row reads as absent unless opted in. */
 export async function getCampaignById(id: string, options?: { includeDeleted?: boolean }): Promise<Campaign | undefined> {
   try {
     const record = await db.campaigns.get(id);
@@ -21,6 +22,7 @@ export async function getCampaignById(id: string, options?: { includeDeleted?: b
   }
 }
 
+/** Returns every campaign, dropping rows that fail validation (with a warning) and soft-deleted ones unless opted in. */
 export async function getAllCampaigns(options?: { includeDeleted?: boolean }): Promise<Campaign[]> {
   try {
     const records = await db.campaigns.toArray();
@@ -40,6 +42,7 @@ export async function getAllCampaigns(options?: { includeDeleted?: boolean }): P
   }
 }
 
+/** Creates a campaign, generating its id, timestamps, and schema version. */
 export async function createCampaign(data: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>): Promise<Campaign> {
   try {
     const now = nowISO();
@@ -57,6 +60,7 @@ export async function createCampaign(data: Omit<Campaign, 'id' | 'createdAt' | '
   }
 }
 
+/** Applies a partial update, always refreshing `updatedAt`, and returns the re-read record. */
 export async function updateCampaign(id: string, data: Partial<Campaign>): Promise<Campaign> {
   try {
     const now = nowISO();
@@ -69,6 +73,7 @@ export async function updateCampaign(id: string, data: Partial<Campaign>): Promi
   }
 }
 
+/** Soft-deletes a campaign (the user-facing delete). Enlist in a cascade via `txId`. No-op if missing or already deleted. */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
     const row = await db.campaigns.get(id);
@@ -86,6 +91,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
   }
 }
 
+/** Restores a soft-deleted campaign. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.campaigns.get(id);
@@ -101,6 +107,7 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
+/** Permanently removes a campaign row. Internal only — never called from UI, which soft-deletes. */
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.campaigns.delete(id);

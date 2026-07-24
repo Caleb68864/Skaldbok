@@ -16,6 +16,15 @@ const BLANK_TEMPLATES: Record<string, unknown> = {
   traveller: travellerBlankTemplate,
 };
 
+/**
+ * Builds a fresh blank character for a system from its bundled template.
+ *
+ * @remarks
+ * The template JSON is a module singleton shared across every call, so it is
+ * deep-cloned to keep nested objects (attributes, resources, weapons, inventory,
+ * systemData) from being aliased across characters. An unrecognised system id
+ * falls back to the classic-fantasy template.
+ */
 export function createBlankCharacter(systemId: string): CharacterRecord {
   const template = BLANK_TEMPLATES[systemId] ?? blankTemplate;
   // Deep clone: the imported JSON is a module singleton shared by every call.

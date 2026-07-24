@@ -15,6 +15,14 @@ function yamlValue(val: unknown): string {
   return str;
 }
 
+/**
+ * Renders a Markdown sidecar file carrying an attachment's metadata.
+ *
+ * @remarks
+ * The binary itself is written separately; this companion `.md` preserves the
+ * caption, original filename, and provenance (which note/session/campaign it
+ * belongs to) so the context survives an export into a plain-file vault.
+ */
 export function renderAttachmentSidecar(attachment: Attachment, parentNote: Note): string {
   const fields: Record<string, unknown> = {
     title: parentNote.title,

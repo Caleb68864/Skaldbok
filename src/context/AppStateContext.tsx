@@ -6,15 +6,19 @@ import * as systemRepository from '../storage/repositories/systemRepository';
 import { classicFantasySystem } from '../systems/classic-fantasy';
 import type { AppSettings, ModeName, BoonBaneState, SessionState } from '../types/settings';
 
+/** App-wide settings plus the in-memory, per-run session state (boon/bane selections). */
 interface AppStateContextValue {
   settings: AppSettings;
   updateSettings: (partial: Partial<AppSettings>) => Promise<void>;
   isLoading: boolean;
   settingsError: string | null;
+  /** Flips between play and edit mode. */
   toggleMode: () => void;
-  // Session state (in-memory only, resets on app restart)
+  /** Transient roll-advantage state; in-memory only and reset on app restart. */
   sessionState: SessionState;
+  /** Sets the table-wide boon/bane selector. */
   setGlobalBoonBane: (value: BoonBaneState) => void;
+  /** Sets or clears (with `undefined`) a per-skill boon/bane override. */
   setSkillOverride: (skillId: string, value: 'boon' | 'bane' | undefined) => void;
 }
 
@@ -29,6 +33,15 @@ interface AppStateProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Provides persisted app settings and transient session state to the tree.
+ *
+ * @remarks
+ * Bridges two lifetimes: `settings` are durable (theme, mode, active ids) and
+ * `sessionState` is per-run advantage state that intentionally resets on
+ * restart. Also drives two side effects — syncing the theme from loaded settings
+ * and seeding the bundled classic-fantasy system into IndexedDB on first run.
+ */
 export function AppStateProvider({ children }: AppStateProviderProps) {
   const { settings, updateSettings, isLoading, error: settingsError } = useAppSettings();
   const { setTheme } = useTheme();
@@ -89,6 +102,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
   );
 }
 
+/** Accesses app settings and session state; throws if used outside {@link AppStateProvider}. */
 export function useAppState(): AppStateContextValue {
   const ctx = useContext(AppStateContext);
   if (!ctx) throw new Error('useAppState must be used within AppStateProvider');

@@ -42,6 +42,7 @@ export const NOTE_CHILD_TRACK_KINDS = [
   'recap',
 ] as const;
 
+/** Maps a note's type to its timeline track kind, falling back to `generic` for unknown types. */
 export function resolveSessionTimelineTrackKind(note: Pick<Note, 'type'>): string {
   return DEFAULT_SESSION_TIMELINE_NOTE_TRACKS[note.type] ?? 'generic';
 }

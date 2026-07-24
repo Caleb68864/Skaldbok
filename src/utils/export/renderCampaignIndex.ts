@@ -16,6 +16,15 @@ function yamlValue(val: unknown): string {
   return str;
 }
 
+/**
+ * Renders a campaign's top-level index Markdown file.
+ *
+ * @remarks
+ * The landing page of a campaign export: front matter plus wiki-linked sections
+ * for sessions, NPCs, and open rumors. Empty sections render an explicit
+ * "None yet" line rather than being omitted, so the structure is predictable in
+ * the reader's vault.
+ */
 export function renderCampaignIndex(
   campaign: Campaign,
   sessions: Session[],

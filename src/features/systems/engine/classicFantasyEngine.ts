@@ -88,6 +88,18 @@ const classicFantasyRests: RestDefinition[] = [
   },
 ];
 
+/**
+ * The Dragonbane-like default ruleset, expressed as a {@link SystemEngine}.
+ *
+ * @remarks
+ * This is the fallback engine returned by `getEngine` for any unknown system
+ * id, so it doubles as the shape a user-authored system is measured against.
+ * It deliberately *delegates* to the pre-existing helpers in
+ * `utils/derivedValues`, `utils/restActions` and `utils/boonBane` rather than
+ * restating the rules inline — that is what keeps Dragonbane behaviour provably
+ * identical to before the engine abstraction existed. `damageTrack` is `null`
+ * (HP is a single pool) and death is handled by the {@link DeathModel} instead.
+ */
 export const classicFantasyEngine: SystemEngine = {
   resolution: 'd20-roll-under',
   hasMagic: true,

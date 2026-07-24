@@ -3,12 +3,22 @@ import type { Note } from '../../types/note';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 
+/**
+ * How to decide which encounter (if any) a new note attaches to.
+ *
+ * @remarks
+ * `targetEncounterId` is a three-state field: an explicit id pins the note to
+ * that encounter, `null` means "campaign-level, do not attach", and `undefined`
+ * defers to `resolveActiveEncounterId` for the session's currently-open
+ * encounter. See {@link resolveEncounterAttachmentTarget}.
+ */
 export interface NoteEncounterTargetOptions {
   sessionId?: string;
   targetEncounterId?: string | null;
   resolveActiveEncounterId?: (sessionId: string) => Promise<string | null>;
 }
 
+/** Fields for {@link buildNoteRecord}; the auto-generated id/timestamps/schemaVersion are added for you. */
 export interface BuildNoteRecordInput {
   campaignId: string;
   sessionId?: string;
@@ -23,6 +33,7 @@ export interface BuildNoteRecordInput {
   scope?: Note['scope'];
 }
 
+/** Inputs to {@link persistCanonicalNoteLinks}: the note plus the session/encounter it belongs to. */
 export interface PersistCanonicalNoteLinksInput {
   note: Pick<Note, 'id' | 'type'>;
   sessionId?: string;
@@ -54,6 +65,15 @@ function splitNoteContent(body: unknown, typeData: unknown): { body: unknown; st
   };
 }
 
+/**
+ * Resolves the encounter a new note should attach to from the caller's options.
+ *
+ * @remarks
+ * Encodes the three-state {@link NoteEncounterTargetOptions.targetEncounterId}:
+ * an explicit id is returned as-is, `null` yields `null` (campaign-level), and
+ * `undefined` falls through to the session's active encounter via
+ * `resolveActiveEncounterId`.
+ */
 export async function resolveEncounterAttachmentTarget({
   sessionId,
   targetEncounterId,
@@ -74,6 +94,16 @@ export async function resolveEncounterAttachmentTarget({
   return await resolveActiveEncounterId(sessionId);
 }
 
+/**
+ * Builds a complete {@link Note} record from creation inputs.
+ *
+ * @remarks
+ * Normalises where the rich-text body lives: some callers pass it as `body`,
+ * others tuck it inside `typeData.body`. Either way the body is hoisted to the
+ * top-level `body` field and stripped from the stored `typeData`, so downstream
+ * readers have one place to look. Defaults visibility to `public` and scope to
+ * `campaign`.
+ */
 export function buildNoteRecord(input: BuildNoteRecordInput): Note {
   const now = nowISO();
   const normalized = splitNoteContent(input.body, input.typeData);
@@ -122,6 +152,16 @@ async function ensureLink(
   });
 }
 
+/**
+ * Creates the canonical entity links a note needs, idempotently.
+ *
+ * @remarks
+ * A note belongs to its session (`session --contains--> note`) and, when logged
+ * inside one, its encounter. An NPC note additionally records where it was first
+ * introduced (`note --introduced_in--> session`). Each edge is created only if an
+ * equivalent one does not already exist, so re-saving a note never duplicates
+ * links.
+ */
 export async function persistCanonicalNoteLinks({
   note,
   sessionId,

@@ -109,6 +109,18 @@ export function formatSkillDisplay(
   return `Level ${value}${dmLabel} · ${Math.round(prob * 100)}%${stateLabel}`;
 }
 
+/**
+ * The Traveller ruleset, expressed as a {@link SystemEngine}.
+ *
+ * @remarks
+ * Contrasts with {@link classicFantasyEngine} on almost every axis and is the
+ * project's proof that ruleset-specific behaviour stays out of the screens:
+ * 2d6-plus resolution instead of d20-roll-under, characteristic DMs instead of
+ * flat scores, a cascading {@link DamageTrackModel} (END then a chosen physical
+ * characteristic) instead of a single HP pool, and `null` for the rest, death,
+ * and advancement models because Traveller has no such fixed procedures — which
+ * is how those panels get hidden.
+ */
 export const travellerEngine: SystemEngine = {
   resolution: '2d6-plus',
   hasMagic: false,

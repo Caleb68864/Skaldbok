@@ -6,6 +6,19 @@ type ProseMirrorNode = {
   marks?: Array<{ type: string; attrs?: Record<string, unknown> }>;
 };
 
+/**
+ * Serializes a ProseMirror document to Markdown, converting note mentions to
+ * Obsidian `[[wiki links]]`.
+ *
+ * @remarks
+ * A mention resolves to `[[title]]` when its target id is found in `allNotes`;
+ * a mention pointing at a deleted note degrades to its stored plain-text title
+ * so nothing dangles. Unknown node types fall back to serializing their children,
+ * so an unrecognised mark never drops content.
+ *
+ * @param prosemirrorJson - The note body as a ProseMirror JSON document.
+ * @param allNotes - Id/title pairs used to resolve mention link targets.
+ */
 export function resolveWikiLinks(
   prosemirrorJson: unknown,
   allNotes: Array<{ id: string; title: string }>

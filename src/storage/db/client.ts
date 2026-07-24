@@ -16,6 +16,14 @@ import type { ReferenceGroup, ReferenceSection } from '../../types/reference';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
+/**
+ * Legacy standalone reference note.
+ *
+ * @remarks
+ * Superseded by user-owned reference sections (v11) and by folding reference
+ * content into the `notes` table with `scope: 'shared'` (v7 migration). Retained
+ * so the old table still types correctly during upgrades.
+ */
 export interface ReferenceNote {
   id: string;
   title: string;
@@ -24,6 +32,14 @@ export interface ReferenceNote {
   updatedAt: string;
 }
 
+/**
+ * A node in the per-campaign knowledge-base graph.
+ *
+ * @remarks
+ * Derived content: nodes are projected from notes and their mentions, not
+ * authored directly. `sourceId` points back at the entity a node was materialised
+ * from; `scope` distinguishes campaign-local nodes from shared ones.
+ */
 export interface KBNode {
   id: string;
   type: 'note' | 'character' | 'location' | 'item' | 'tag' | 'unresolved';
@@ -35,6 +51,14 @@ export interface KBNode {
   updatedAt: string;
 }
 
+/**
+ * A directed edge in the knowledge-base graph, linking two {@link KBNode}s.
+ *
+ * @remarks
+ * Distinct from the domain `entityLinks` table: KB edges model the derived
+ * wiki-link/mention/descriptor graph rendered in the KB view, whereas
+ * `entityLinks` express authored domain relationships.
+ */
 export interface KBEdge {
   id: string;
   fromId: string;
@@ -44,6 +68,16 @@ export interface KBEdge {
   createdAt: string;
 }
 
+/**
+ * The app's single Dexie/IndexedDB database.
+ *
+ * @remarks
+ * Each `version(n).stores(...)` block is an append-only migration — never edit an
+ * existing block; add a new one. Schema changes that add a new lookup pattern
+ * should add a matching (often compound) index, mirroring the `entityLinks`
+ * indexes. Repositories are the only code that touches these tables; UI and hooks
+ * go through repositories, never the tables directly.
+ */
 class SkaldbokDatabase extends Dexie {
   characters!: Table<CharacterRecord, string>;
   systems!: Table<SystemDefinition, string>;
@@ -448,4 +482,5 @@ class SkaldbokDatabase extends Dexie {
   }
 }
 
+/** The process-wide database singleton every repository reads and writes through. */
 export const db = new SkaldbokDatabase();

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as settingsRepository from '../../storage/repositories/settingsRepository';
 import type { AppSettings } from '../../types/settings';
 
+/** Default visibility of each bottom-nav tab, merged into stored settings so new tabs appear for existing users. */
 export const DEFAULT_BOTTOM_NAV_TABS: Record<string, boolean> = {
   sheet: true,
   skills: true,
@@ -23,6 +24,17 @@ const DEFAULT_SETTINGS: AppSettings = {
   showGlobalFAB: true,
 };
 
+/**
+ * Loads and persists the singleton app settings, merging in defaults for
+ * forward compatibility.
+ *
+ * @remarks
+ * Writes are composed off a synchronously-updated ref, not the `settings` state,
+ * so two `updateSettings` calls in the same tick both build on the latest value
+ * instead of the second silently reverting the first. Stored settings are merged
+ * over {@link DEFAULT_SETTINGS} on load so a record written by an older build
+ * gains any new fields.
+ */
 export function useAppSettings() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);

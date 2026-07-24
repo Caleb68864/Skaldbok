@@ -1,7 +1,9 @@
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
 import { shareFile } from './delivery';
 
+/** Optional metadata stamped onto a serialized bundle envelope. */
 export interface SerializeOptions {
+  /** Display name recorded in the envelope's `exportedBy` field. */
   exportedBy?: string;
 }
 

@@ -103,6 +103,15 @@ export async function remove(id: string): Promise<void> {
   }
 }
 
+/**
+ * Soft-deletes a character.
+ *
+ * @remarks
+ * The user-facing "Delete" path — the row stays in IndexedDB with a `deletedAt`
+ * stamp so it can be restored. Pass `txId` to enlist this in a wider cascade;
+ * otherwise a fresh transaction id is minted. No-op if the character is missing
+ * or already deleted.
+ */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
     const row = await db.characters.get(id);
@@ -120,6 +129,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
   }
 }
 
+/** Restores a soft-deleted character by clearing its `deletedAt`/`softDeletedBy`. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.characters.get(id);
@@ -135,6 +145,7 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
+/** Permanently removes a character row. Internal only — purge/cleanup jobs, never UI (which soft-deletes). */
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.characters.delete(id);

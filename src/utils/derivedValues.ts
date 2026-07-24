@@ -2,6 +2,14 @@ import type { CharacterRecord, StatKey } from '../types/character';
 import { parseStatKey, type StatNamespace } from './statKeys';
 import type { SystemDefinition } from '../types/system';
 
+/**
+ * The Dragonbane-derived stat block computed from a character's attributes and gear.
+ *
+ * @remarks
+ * The classic-fantasy engine's `derivedStats` returns this shape; other systems
+ * extend it (see {@link TravellerDerivedValues}). Damage bonuses are strings
+ * because they are dice expressions (`+D6`), not numbers.
+ */
 export interface DerivedValues {
   hpMax: number;
   wpMax: number;
@@ -11,9 +19,13 @@ export interface DerivedValues {
   encumbranceLimit: number;
 }
 
+/** A single derived stat with its computed value, any manual override, and the effective result. */
 export interface DerivedValueResult {
+  /** Value the rules produce from the character's stats. */
   computed: number | string;
+  /** User-entered override, or `null` when the computed value stands. */
   override: number | string | null;
+  /** The value actually used: `override` when set, otherwise `computed`. */
   effective: number | string;
 }
 
@@ -115,6 +127,14 @@ export function computeMaxPreparedSpells(character: CharacterRecord): number {
   return getSkillBaseChance(int);
 }
 
+/**
+ * Computes the full Dragonbane derived-stat block for a character.
+ *
+ * @remarks
+ * The classic-fantasy engine delegates its `derivedStats` here. `system` is
+ * accepted for signature parity with the engine surface but unused — the
+ * Dragonbane formulas read attributes directly.
+ */
 export function computeDerivedValues(character: CharacterRecord, _system?: SystemDefinition): DerivedValues {
   return {
     hpMax: computeHPMax(character),
@@ -126,6 +146,7 @@ export function computeDerivedValues(character: CharacterRecord, _system?: Syste
   };
 }
 
+/** Resolves one derived stat by key, folding in any user override to give the effective value. */
 export function getDerivedValue(character: CharacterRecord, key: string): DerivedValueResult {
   const all = computeDerivedValues(character);
   const computed = all[key as keyof DerivedValues];
@@ -138,10 +159,15 @@ export function getDerivedValue(character: CharacterRecord, key: string): Derive
   };
 }
 
+/** A stat's base value plus the temp modifiers acting on it and the resulting effective total. */
 export interface EffectiveValueResult {
+  /** Value before any temporary modifiers. */
   base: number;
+  /** The active modifiers touching this stat, each with its label and signed delta. */
   modifiers: Array<{ label: string; delta: number }>;
+  /** `base` plus the sum of every modifier delta. */
   effective: number;
+  /** True when at least one modifier applies. */
   isModified: boolean;
 }
 

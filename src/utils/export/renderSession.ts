@@ -30,6 +30,17 @@ function deduplicateFilename(filename: string, existing: Set<string>): string {
   return candidate;
 }
 
+/**
+ * Renders a session and its notes into a map of filename → Markdown content.
+ *
+ * @remarks
+ * Produces a session index file plus one file per linked note, ready to write
+ * into a zip. Filenames are deduplicated up front so two notes with the same
+ * title cannot clobber one another in the archive.
+ *
+ * @returns A map keyed by output filename; the session index is included
+ * alongside each note file.
+ */
 export function renderSessionBundle(
   session: Session,
   linkedNotes: Note[],

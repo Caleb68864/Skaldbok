@@ -8,10 +8,15 @@ import { normalizeCharacter } from '../utils/characterNormalization';
 
 type CharacterUpdater = Partial<CharacterRecord> | ((prev: CharacterRecord) => Partial<CharacterRecord>);
 
+/** The active character and the operations for switching, editing, and clearing it. */
 interface ActiveCharacterContextValue {
+  /** The character currently open on the sheet, or `null` when none is selected. */
   character: CharacterRecord | null;
+  /** Selects a character by id and persists the choice to settings. */
   setCharacter: (id: string) => Promise<void>;
+  /** Merges a partial (or reducer-style) update into the in-memory character; autosave persists it. */
   updateCharacter: (partialOrFn: CharacterUpdater) => void;
+  /** Deselects the active character, flushing any pending autosave first. */
   clearCharacter: () => Promise<void>;
   isLoading: boolean;
 }
@@ -22,6 +27,17 @@ interface ActiveCharacterProviderProps {
   children: ReactNode;
 }
 
+/**
+ * Provides the active character to the tree and keeps it in sync with settings.
+ *
+ * @remarks
+ * The active character id lives in persisted settings, so the character reloads
+ * on app restart and survives navigation. Edits are held in memory here and
+ * written by the autosave layer; {@link clearCharacter} flushes that autosave
+ * before clearing so a debounced save cannot fire afterwards and resurrect the
+ * data. A character deleted out from under the provider self-heals by clearing
+ * the stale `activeCharacterId`.
+ */
 export function ActiveCharacterProvider({ children }: ActiveCharacterProviderProps) {
   const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
   const [character, setCharacterState] = useState<CharacterRecord | null>(null);
@@ -93,6 +109,7 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
   );
 }
 
+/** Accesses the active-character context; throws if used outside {@link ActiveCharacterProvider}. */
 export function useActiveCharacter(): ActiveCharacterContextValue {
   const ctx = useContext(ActiveCharacterContext);
   if (!ctx) throw new Error('useActiveCharacter must be used within ActiveCharacterProvider');

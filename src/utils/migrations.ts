@@ -4,6 +4,14 @@ import type { CharacterRecord } from '../types/character';
 import type { SystemDefinition } from '../types/system';
 import { isNamespaced, attrKey, armorKey, derivedKey } from './statKeys';
 
+/**
+ * The schema version every character record is upgraded to on read.
+ *
+ * @remarks
+ * Bump this when adding a `migrateCharacterVnToVn+1` rung to the ladder below,
+ * and add tests in `migrations.test.ts`. A record's own `schemaVersion` is
+ * compared against this to decide which migrations still need to run.
+ */
 export const CURRENT_SCHEMA_VERSION = 4;
 
 type MigrationFn = (data: unknown) => unknown;
@@ -216,6 +224,16 @@ export function upgradeCharacter(data: unknown): CharacterRecord {
   return current as CharacterRecord;
 }
 
+/**
+ * Runs the migration ladder and validates the result against the character schema.
+ *
+ * @remarks
+ * The import path, where the data is untrusted. Contrast with
+ * {@link upgradeCharacter}, which skips validation for records read from our own
+ * storage. Throws with a joined list of Zod issue paths when the upgraded record
+ * fails validation, so a bad import surfaces a specific field rather than a
+ * generic failure.
+ */
 export function migrateCharacter(data: unknown): CharacterRecord {
   const current = upgradeCharacter(data);
 
@@ -227,6 +245,14 @@ export function migrateCharacter(data: unknown): CharacterRecord {
   return result.data as CharacterRecord;
 }
 
+/**
+ * Validates an imported system definition against its schema.
+ *
+ * @remarks
+ * System definitions have no version ladder — they are validated, not migrated —
+ * but this lives alongside {@link migrateCharacter} so the import flow has one
+ * place to go for both. Throws with the offending field paths on failure.
+ */
 export function migrateSystem(data: unknown): SystemDefinition {
   const result = systemDefinitionSchema.safeParse(data);
   if (!result.success) {

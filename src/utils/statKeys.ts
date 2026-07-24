@@ -24,6 +24,7 @@ export function statKey(namespace: StatNamespace, id: string): string {
   return `${namespace}:${id}`;
 }
 
+/** A stat key broken into its namespace and bare id; see {@link parseStatKey}. */
 export interface ParsedStatKey {
   /** `null` for a legacy, unprefixed key. */
   namespace: StatNamespace | null;

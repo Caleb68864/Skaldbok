@@ -189,6 +189,7 @@ export async function updateSession(id: string, data: Partial<Session>): Promise
   }
 }
 
+/** Soft-deletes a session (the user-facing delete). Enlist in a cascade via `txId`. No-op if missing or already deleted. */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
     const row = await db.sessions.get(id);
@@ -206,6 +207,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
   }
 }
 
+/** Restores a soft-deleted session. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.sessions.get(id);
@@ -221,6 +223,7 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
+/** Permanently removes a session row. Internal only — never called from UI, which soft-deletes. */
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.sessions.delete(id);

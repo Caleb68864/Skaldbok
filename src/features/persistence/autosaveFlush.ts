@@ -15,6 +15,13 @@ import { generateId } from '../../utils/ids';
 
 const registry = new Map<string, () => Promise<void>>();
 
+/**
+ * Registers a pending-write flush callback and returns its unregister handle.
+ *
+ * @remarks
+ * Components with debounced autosaves register on mount and must call
+ * `unregister` on cleanup so a stale flush is never invoked after unmount.
+ */
 export function registerFlush(fn: () => Promise<void>): {
   id: string;
   unregister: () => void;
@@ -29,6 +36,15 @@ export function registerFlush(fn: () => Promise<void>): {
   };
 }
 
+/**
+ * Runs every registered flush and waits for all of them to settle.
+ *
+ * @remarks
+ * Called by lifecycle operations (end session, clear/delete character) before
+ * they mutate state, so a debounced write cannot fire afterwards and resurrect
+ * data. Uses `allSettled` on a snapshot so one rejection does not abort the rest
+ * and late unregisters do not disturb the in-flight batch.
+ */
 export function flushAll(): Promise<PromiseSettledResult<void>[]> {
   // Snapshot at entry — late unregisters don't affect the in-flight batch.
   const snapshot = Array.from(registry.values());

@@ -165,6 +165,7 @@ export async function getDeleted(): Promise<CreatureTemplate[]> {
   }
 }
 
+/** Permanently removes a creature template row. Internal only — never called from UI, which soft-deletes. */
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.creatureTemplates.delete(id);

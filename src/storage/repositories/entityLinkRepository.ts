@@ -10,6 +10,15 @@ import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 // 'party', 'partyMember', 'encounter', 'encounterParticipant', 'creature'
 // Verified: 2026-04-10 (encounter-notes-folder-unification)
 
+/**
+ * Outgoing edges of one relationship type from an entity.
+ *
+ * @remarks
+ * Uses the `[fromEntityId+relationshipType]` compound index for an O(log n)
+ * lookup. Rows that fail schema validation are dropped with a warning rather
+ * than throwing, so one corrupt edge cannot break a whole query. Soft-deleted
+ * edges are excluded unless `includeDeleted` is set.
+ */
 export async function getLinksFrom(fromEntityId: string, relationshipType: string, options?: { includeDeleted?: boolean }): Promise<EntityLink[]> {
   try {
     const records = await db.entityLinks
@@ -32,6 +41,13 @@ export async function getLinksFrom(fromEntityId: string, relationshipType: strin
   }
 }
 
+/**
+ * Incoming edges of one relationship type into an entity.
+ *
+ * @remarks
+ * The mirror of {@link getLinksFrom}, served by the `[toEntityId+relationshipType]`
+ * compound index. Same validation-skips-bad-rows and soft-delete behaviour.
+ */
 export async function getLinksTo(toEntityId: string, relationshipType: string, options?: { includeDeleted?: boolean }): Promise<EntityLink[]> {
   try {
     const records = await db.entityLinks
@@ -98,6 +114,15 @@ export async function getAllLinksTo(toEntityId: string, options?: { includeDelet
   }
 }
 
+/**
+ * Creates a new directed edge between two entities.
+ *
+ * @remarks
+ * Edges are immutable identities — to reassign a relationship, delete the old
+ * edge and create a new one rather than mutating an existing row. The id and
+ * timestamps are generated here; the caller supplies only the endpoints and
+ * `relationshipType`.
+ */
 export async function createLink(data: Omit<EntityLink, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>): Promise<EntityLink> {
   try {
     const now = nowISO();
@@ -115,6 +140,15 @@ export async function createLink(data: Omit<EntityLink, 'id' | 'createdAt' | 'up
   }
 }
 
+/**
+ * Soft-deletes every edge touching a note, in either direction.
+ *
+ * @remarks
+ * The cleanup helper called from the note deletion flow so dangling edges do not
+ * accumulate. Pass the cascade's `txId` to tie these edges to the same
+ * transaction as the note (so they restore together); omit it to mint a fresh
+ * one. Already-deleted edges are left untouched.
+ */
 export async function deleteLinksForNote(noteId: string, txId?: string): Promise<void> {
   try {
     const fromLinks = await db.entityLinks.where('fromEntityId').equals(noteId).toArray();
@@ -228,6 +262,7 @@ export async function restoreLinksForTxId(txId: string): Promise<void> {
   }
 }
 
+/** Soft-deletes one edge by id, sharing `txId` when part of a larger cascade. No-op if missing or already deleted. */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
     const row = await db.entityLinks.get(id);
@@ -245,6 +280,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
   }
 }
 
+/** Restores one soft-deleted edge by clearing its `deletedAt`/`softDeletedBy`. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.entityLinks.get(id);
@@ -260,6 +296,7 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
+/** Permanently removes an edge row. Internal only — purge/cleanup jobs, never UI. */
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.entityLinks.delete(id);

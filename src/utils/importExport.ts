@@ -66,6 +66,15 @@ function sanitizeCharacterStrings(char: CharacterRecord): CharacterRecord {
   return sanitized;
 }
 
+/**
+ * Downloads a single character as a `.skaldbok.json` file.
+ *
+ * @remarks
+ * The lightweight per-character export, distinct from the campaign bundle
+ * exporter under `utils/export/`. Serialises the record verbatim and triggers a
+ * browser download via a temporary object URL — no server round-trip, in keeping
+ * with the local-first design.
+ */
 export function exportCharacter(character: CharacterRecord): void {
   const json = JSON.stringify(character, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
@@ -79,13 +88,28 @@ export function exportCharacter(character: CharacterRecord): void {
   URL.revokeObjectURL(url);
 }
 
+/** Outcome of importing a character file: success flag plus the record, or an error/warning message. */
 export interface ImportResult {
   success: boolean;
   character?: CharacterRecord;
   error?: string;
+  /** Non-fatal note, e.g. the character's system id is not one we can render. */
   warning?: string;
 }
 
+/**
+ * Reads, migrates, sanitises, and saves a character import file.
+ *
+ * @remarks
+ * The full untrusted-input path: parse JSON, run the migration ladder with
+ * validation ({@link migrateCharacter}), strip HTML from every string field
+ * (including the open `metadata`/`systemData` bags via {@link sanitizeDeep}),
+ * re-key on id collision so an import never overwrites an existing character, and
+ * stamp fresh timestamps. Every failure mode returns a populated
+ * {@link ImportResult} rather than throwing, so the caller can surface a specific
+ * message. An unknown system id imports with a `warning` rather than being
+ * rejected.
+ */
 export async function importCharacter(file: File): Promise<ImportResult> {
   let raw: string;
   try {

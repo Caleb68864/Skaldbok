@@ -1,11 +1,13 @@
 import type { CharacterRecord } from '../types/character';
 
+/** Outcome of a round rest: the new WP total, how much was recovered, and whether it was already full. */
 export interface RoundRestResult {
   newWpCurrent: number;
   recovered: number;
   alreadyFull: boolean;
 }
 
+/** Outcome of a stretch rest: new WP/HP totals, amounts recovered, and any condition cleared. */
 export interface StretchRestResult {
   newWpCurrent: number;
   newHpCurrent: number;
@@ -71,6 +73,7 @@ export function applyStretchRest(
   return result;
 }
 
+/** Outcome of a shift rest: HP/WP restored to full and the ids of every condition cleared. */
 export interface ShiftRestResult {
   hpRestored: number;
   wpRestored: number;

@@ -10,6 +10,7 @@ import { generateId } from '../../utils/ids';
  * `{ includeDeleted: true }` is passed explicitly.
  */
 
+/** Lists a campaign's inventory containers, excluding soft-deleted rows unless opted in. */
 export async function list(
   campaignId: string,
   options?: { includeDeleted?: boolean },
@@ -18,6 +19,7 @@ export async function list(
   return options?.includeDeleted ? rows : excludeDeleted(rows);
 }
 
+/** Fetches one container by id; treats a soft-deleted row as absent unless opted in. */
 export async function getById(
   id: string,
   options?: { includeDeleted?: boolean },
@@ -28,6 +30,13 @@ export async function getById(
   return row;
 }
 
+/**
+ * Creates a new inventory container, defaulting `items`/`wealth` to empty.
+ *
+ * @remarks
+ * A fresh container starts with no currency rather than an assumed
+ * gold/silver/copper purse — the active system decides which denominations exist.
+ */
 export async function create(
   data: Omit<InventoryContainer, 'id' | 'createdAt' | 'updatedAt' | 'items' | 'wealth'> & {
     items?: InventoryContainer['items'];
@@ -53,6 +62,7 @@ export async function create(
   return container;
 }
 
+/** Upserts a container, refreshing `updatedAt`; maps a storage-quota failure to a user-friendly message. */
 export async function save(container: InventoryContainer): Promise<void> {
   try {
     await db.inventoryContainers.put({ ...container, updatedAt: nowISO() });
@@ -64,6 +74,7 @@ export async function save(container: InventoryContainer): Promise<void> {
   }
 }
 
+/** Soft-deletes a container (the user-facing delete). Enlist in a cascade via `txId`. No-op if missing or already deleted. */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   const row = await db.inventoryContainers.get(id);
   if (!row || row.deletedAt) return;
@@ -76,6 +87,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
   });
 }
 
+/** Restores a soft-deleted container. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   const row = await db.inventoryContainers.get(id);
   if (!row || !row.deletedAt) return;
@@ -86,6 +98,7 @@ export async function restore(id: string): Promise<void> {
   });
 }
 
+/** Permanently removes a container row. Internal only — never called from UI, which soft-deletes. */
 export async function hardDelete(id: string): Promise<void> {
   await db.inventoryContainers.delete(id);
 }

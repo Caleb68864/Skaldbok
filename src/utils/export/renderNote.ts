@@ -16,6 +16,21 @@ function yamlValue(val: unknown): string {
   return str;
 }
 
+/**
+ * Renders a note as an Obsidian-flavoured Markdown file with YAML front matter.
+ *
+ * @remarks
+ * The Markdown export targets a personal knowledge base, so entity links become a
+ * `related` front-matter list, mentions in the body are rewritten to `[[wiki
+ * links]]` (see {@link resolveWikiLinks}), and attachments are appended as
+ * embeds. `allNotes` is the title lookup that lets a mention resolve to a
+ * human-readable link target rather than a raw id.
+ *
+ * @param note - The note to render.
+ * @param entityLinks - Links touching this note, surfaced as `related` targets.
+ * @param allNotes - Id/title pairs used to resolve wiki-link targets.
+ * @param attachmentFilenames - Filenames to embed under an Attachments heading.
+ */
 export function renderNoteToMarkdown(
   note: Note,
   entityLinks: EntityLink[],

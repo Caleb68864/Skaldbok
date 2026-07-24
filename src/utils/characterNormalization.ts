@@ -21,6 +21,18 @@ function normalizeSkill(skill: CharacterSkill | undefined): CharacterSkill {
   };
 }
 
+/**
+ * Coerces a character record into well-formed, in-range values without changing
+ * its identity.
+ *
+ * @remarks
+ * A defensive pass run so a malformed field — a string where a number belongs, a
+ * `current` above its `max`, a missing array — cannot crash the sheet. Every
+ * clamp is generic over whatever keys are present (metadata, attributes,
+ * resources, wealth) rather than assuming one ruleset's field set, so a
+ * Traveller or user-authored character is normalised as safely as a Dragonbane
+ * one. Unrelated fields are spread through untouched.
+ */
 export function normalizeCharacter(character: CharacterRecord): CharacterRecord {
   const metadata = character.metadata ?? {};
   const resources = Object.fromEntries(

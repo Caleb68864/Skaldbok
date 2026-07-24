@@ -10,12 +10,22 @@ import { CalendarClock, Swords } from 'lucide-react';
 import { resolveSessionTimelineTrackKind, NOTE_CHILD_TRACK_KINDS } from './sessionTimelineConfig';
 import { sessionTimelineIcon } from './sessionTimelineIcons';
 
+/**
+ * Pre-resolved data the timeline builder needs, gathered from the repositories.
+ *
+ * @remarks
+ * The encounter maps are derived from `entityLinks` (`contains` and
+ * `happened_during`) so the pure {@link buildSessionTimelineDataset} does no I/O.
+ */
 export interface SessionTimelineSourceData {
   notes: Note[];
+  /** Note id → the encounter that logged it (its `contains` parent). */
   noteEncounterMap: Record<string, string>;
+  /** Encounter id → the encounter it happened during (soft parent link). */
   parentEncounterMap: Record<string, string>;
 }
 
+/** Inputs to {@link buildSessionTimelineDataset}; `now` defaults to the session end or the current time. */
 export interface BuildSessionTimelineDatasetInput {
   session: Session;
   encounters: Encounter[];
@@ -79,6 +89,14 @@ function getNoteVariant(note: Note): TimelineItem['variant'] {
   }
 }
 
+/**
+ * Loads the active notes and encounter-link maps a session timeline needs.
+ *
+ * @remarks
+ * The I/O half of the adapter: resolves the note→encounter (`contains`) and
+ * encounter→parent (`happened_during`) relationships from `entityLinks` so the
+ * builder stays pure and synchronous. Only active, non-deleted rows are included.
+ */
 export async function loadSessionTimelineSourceData(
   sessionId: string,
   encounters: Encounter[],
@@ -120,6 +138,16 @@ export async function loadSessionTimelineSourceData(
   return { notes, noteEncounterMap, parentEncounterMap };
 }
 
+/**
+ * Assembles the tracks, items, and markers for a session's timeline view.
+ *
+ * @remarks
+ * Pure and synchronous — all data access happens up front in
+ * {@link loadSessionTimelineSourceData}. Note child tracks are always emitted
+ * (even when empty) so the Notes hierarchy is visible before anything is logged,
+ * while `npc` stays a top-level sibling and encounters render as ranges spanning
+ * their segments. An open segment extends to `now`.
+ */
 export function buildSessionTimelineDataset({
   session,
   encounters,
