@@ -4,6 +4,7 @@ import { nowISO } from '../../utils/dates';
 import { clamp, type PlayModuleProps } from './types';
 import { useSessionLog } from '../session/useSessionLog';
 import { getEngine } from '../systems/engine';
+import { DamageTrackControl } from './DamageTrackControl';
 
 export function ResourceModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { logHPChange } = useSessionLog();
@@ -42,6 +43,22 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
           );
         })}
       </div>
+      {engine.damageTrack && (
+        <DamageTrackControl
+          character={character}
+          system={system}
+          model={engine.damageTrack}
+          onApply={(resources: Record<string, number>) => {
+            updateCharacter(prev => {
+              const next = { ...prev.resources };
+              for (const [id, current] of Object.entries(resources)) {
+                next[id] = { ...next[id], current };
+              }
+              return { resources: next, updatedAt: nowISO() };
+            });
+          }}
+        />
+      )}
     </SectionPanel>
   );
 }

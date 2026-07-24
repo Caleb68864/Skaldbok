@@ -34,6 +34,20 @@ export interface SkillCategory {
   skills: SkillDefinition[];
 }
 
+/**
+ * One system-specific field on an item, stored in the item's `systemFields` bag.
+ *
+ * @remarks
+ * Exported so the editors that write these fields and the cards that display
+ * them share a single definition — a summary line that invents its own shape is
+ * how Traveller weapons ended up showing Dragonbane's grip and durability.
+ */
+export interface ItemFieldDef {
+  id: string;
+  label: string;
+  type?: 'text' | 'number';
+}
+
 export interface SectionLayout {
   id: string;
   label: string;
@@ -76,8 +90,8 @@ export interface SystemDefinition {
    * declares nothing keeps exactly the built-in fields.
    */
   itemFields?: {
-    weapon?: Array<{ id: string; label: string; type?: 'text' | 'number' }>;
-    armor?: Array<{ id: string; label: string; type?: 'text' | 'number' }>;
+    weapon?: ItemFieldDef[];
+    armor?: ItemFieldDef[];
     /**
      * Built-in item fields this system does not use, by field id.
      *

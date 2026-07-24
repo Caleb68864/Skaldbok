@@ -5,6 +5,7 @@ import type {
   CharacterRecord,
   Spell,
   HeroicAbility,
+  Weapon,
 } from '../types/character';
 import type { SystemDefinition, SkillDefinition } from '../types/system';
 import { compareSpellsByRankThenName, formatCastingTime, formatRequirements, getSpellRank } from '../utils/spells';
@@ -430,7 +431,7 @@ function InventorySection({
 // Section 5 Left — Armor & Helmet (SS-11)
 // ──────────────────────────────────────────────
 
-function ArmorHelmet({ character }: { character: CharacterRecord }): React.ReactElement {
+function ArmorHelmet({ character, engine }: { character: CharacterRecord; engine: SystemEngine }): React.ReactElement {
   return (
     <div className="sheet-armor-section">
       <div className="sheet-section-header">Armor &amp; Helmet</div>
@@ -448,7 +449,7 @@ function ArmorHelmet({ character }: { character: CharacterRecord }): React.React
             <span className="sheet-field-value">{character.armor?.rating ?? ''}</span>
           </div>
           <div className="sheet-equipment-field sheet-equipment-features">
-            <span className="sheet-field-label">Features / Bane-on</span>
+            <span className="sheet-field-label">{engine.labels.armorFeatures}</span>
             <span className="sheet-field-value">{character.armor?.features ?? ''}</span>
           </div>
         </div>
@@ -467,7 +468,7 @@ function ArmorHelmet({ character }: { character: CharacterRecord }): React.React
             <span className="sheet-field-value">{character.helmet?.rating ?? ''}</span>
           </div>
           <div className="sheet-equipment-field sheet-equipment-features">
-            <span className="sheet-field-label">Features / Bane-on</span>
+            <span className="sheet-field-label">{engine.labels.armorFeatures}</span>
             <span className="sheet-field-value">{character.helmet?.features ?? ''}</span>
           </div>
         </div>
@@ -488,19 +489,79 @@ function formatGrip(grip: string | undefined): string {
   return grip; // pass-through for unexpected values
 }
 
-function WeaponsTable({ character }: { character: CharacterRecord }): React.ReactElement {
+/** One weapon column: a header plus how to read its cell off a weapon. */
+interface WeaponColumn {
+  key: string;
+  label: string;
+  className: string;
+  read: (weapon: Weapon) => string;
+}
+
+/**
+ * Builds the weapon columns the active system actually uses.
+ *
+ * @remarks
+ * The printed table used to hardcode Grip and Dur., so a Traveller sheet
+ * printed two empty fantasy columns and omitted the TL, range in metres and
+ * magazine the player had filled in. Columns now follow the same
+ * `itemFields` / `hiddenBuiltIns` contract as the on-screen editor.
+ */
+function buildWeaponColumns(system: SystemDefinition | null): WeaponColumn[] {
+  const hidden = system?.itemFields?.hiddenBuiltIns?.weapon ?? [];
+  const shows = (id: string) => !hidden.includes(id);
+  const columns: WeaponColumn[] = [
+    { key: 'name', label: 'Name', className: 'col-name', read: w => w.name ?? '' },
+  ];
+
+  if (shows('grip')) {
+    columns.push({ key: 'grip', label: 'Grip', className: 'col-grip', read: w => formatGrip(w.grip) });
+  }
+  if (shows('range')) {
+    columns.push({ key: 'range', label: 'Range', className: 'col-range', read: w => String(w.range ?? '') });
+  }
+  columns.push({ key: 'damage', label: 'Damage', className: 'col-damage', read: w => String(w.damage ?? '') });
+  if (shows('durability')) {
+    columns.push({
+      key: 'durability',
+      label: 'Dur.',
+      className: 'col-durability',
+      read: w => String(w.durability ?? ''),
+    });
+  }
+
+  for (const field of system?.itemFields?.weapon ?? []) {
+    columns.push({
+      key: field.id,
+      label: field.label,
+      className: 'col-features',
+      read: w => {
+        const raw = w.systemFields?.[field.id];
+        return raw === undefined || raw === null ? '' : String(raw);
+      },
+    });
+  }
+
+  columns.push({ key: 'features', label: 'Features', className: 'col-features', read: w => w.features ?? '' });
+  return columns;
+}
+
+function WeaponsTable({
+  character,
+  system,
+}: {
+  character: CharacterRecord;
+  system: SystemDefinition | null;
+}): React.ReactElement {
+  const columns = buildWeaponColumns(system);
   return (
     <div className="sheet-weapons">
       <div className="sheet-section-header">Weapons</div>
       <table className="sheet-weapons-table">
         <thead>
           <tr>
-            <th className="col-name">Name</th>
-            <th className="col-grip">Grip</th>
-            <th className="col-range">Range</th>
-            <th className="col-damage">Damage</th>
-            <th className="col-durability">Dur.</th>
-            <th className="col-features">Features</th>
+            {columns.map(col => (
+              <th key={col.key} className={col.className}>{col.label}</th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -508,12 +569,9 @@ function WeaponsTable({ character }: { character: CharacterRecord }): React.Reac
             const weapon = character.weapons?.[i];
             return (
               <tr key={i} className={weapon ? '' : 'sheet-blank-row'}>
-                <td>{weapon?.name ?? ''}</td>
-                <td>{weapon ? formatGrip(weapon.grip) : ''}</td>
-                <td>{weapon?.range ?? ''}</td>
-                <td>{weapon?.damage ?? ''}</td>
-                <td>{weapon?.durability ?? ''}</td>
-                <td>{weapon?.features ?? ''}</td>
+                {columns.map(col => (
+                  <td key={col.key}>{weapon ? col.read(weapon) : ''}</td>
+                ))}
               </tr>
             );
           })}
@@ -694,10 +752,10 @@ export default function PrintableSheet({
       {/* 5. Lower section (3 columns) */}
       <div className="print-lower-columns">
         <div className="print-col print-col--left">
-          <ArmorHelmet character={character} />
+          <ArmorHelmet character={character} engine={engine} />
         </div>
         <div className="print-col print-col--center">
-          <WeaponsTable character={character} />
+          <WeaponsTable character={character} system={system} />
         </div>
         <div className="print-col print-col--right">
           <ResourceTrackers character={character} derived={derived} system={system} engine={engine} />

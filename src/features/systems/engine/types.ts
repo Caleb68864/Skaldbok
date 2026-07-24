@@ -200,6 +200,52 @@ export interface SystemLabels {
   encounterTagExamples: string;
   /** Placeholder for an example location name, e.g. `Riverside Clearing`. */
   locationExample: string;
+  /**
+   * Header for the armour features column on the printed sheet.
+   * Dragonbane armour imposes a bane on some skills; Traveller's does not.
+   */
+  armorFeatures: string;
+}
+
+/**
+ * How incoming damage flows across a system's health resources.
+ *
+ * @remarks
+ * `null` on the engine means the system has no cascading track — damage lands
+ * on one pool and stops, which is Dragonbane. Traveller applies damage to END
+ * first and spills the remainder into a chosen physical characteristic, and a
+ * character with enough depleted tracks is out of the fight. Encoding that here
+ * keeps the rule in one testable place instead of in a damage widget.
+ */
+export interface DamageTrackModel {
+  /** Resource ids that absorb damage, in the order they are filled. */
+  order: string[];
+  /**
+   * Resource ids the remainder may spill into once `order` is exhausted, if
+   * any. The player picks which, since the choice is theirs to make.
+   */
+  overflowTo: string[];
+  /** How many fully-depleted resources leave the character out of the fight. */
+  downAtDepleted: number;
+  /** How many fully-depleted resources are fatal, or `null` if none are. */
+  deadAtDepleted: number | null;
+  /** Banner text when `downAtDepleted` is reached. */
+  downLabel: string;
+  /** Banner text when `deadAtDepleted` is reached. */
+  deadLabel: string;
+}
+
+/** Outcome of applying damage through a {@link DamageTrackModel}. */
+export interface DamageApplication {
+  /** New `current` values, keyed by resource id. */
+  resources: Record<string, number>;
+  /** Per-resource damage actually dealt, for reporting back to the player. */
+  dealt: Record<string, number>;
+  /** Damage that could not be placed because every track was full. */
+  unassigned: number;
+  /** Resource ids now fully depleted. */
+  depleted: string[];
+  status: 'ok' | 'down' | 'dead';
 }
 
 /**
@@ -373,6 +419,11 @@ export interface SystemEngine {
    * hardcoded palette leaks one system's vocabulary into every other.
    */
   logActions: LogAction[];
+  /**
+   * How damage cascades across health resources, or `null` when it does not.
+   * See {@link DamageTrackModel}.
+   */
+  damageTrack: DamageTrackModel | null;
   /**
    * Resource that generic damage/healing applies to, or `null` when the system
    * has no single health pool (consumers must then defer to the system's own UI).

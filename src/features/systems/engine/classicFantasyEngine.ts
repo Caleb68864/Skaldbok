@@ -165,6 +165,7 @@ export const classicFantasyEngine: SystemEngine = {
     conditionExamples: 'e.g. poisoned, prone',
     encounterTagExamples: 'e.g. ambush, forest, kobolds',
     locationExample: 'e.g. Riverside Clearing',
+    armorFeatures: 'Features / Bane-on',
   },
   logActions: [
     { id: 'attack', label: 'attack' },
@@ -176,6 +177,9 @@ export const classicFantasyEngine: SystemEngine = {
     { id: 'note', label: 'note' },
   ],
   primaryHealthResourceId: 'hp',
+  // Dragonbane damage lands on HP and stops; being at 0 is handled by the
+  // death-roll model below, not by a cascading track.
+  damageTrack: null,
   rest: classicFantasyRests,
   death: {
     triggerResourceId: 'hp',

@@ -176,6 +176,7 @@ export const travellerEngine: SystemEngine = {
     conditionExamples: 'e.g. stunned, wounded',
     encounterTagExamples: 'e.g. boarding, starport, pirates',
     locationExample: 'e.g. Cargo Bay 3',
+    armorFeatures: 'Features',
   },
   logActions: [
     { id: 'attack', label: 'attack' },
@@ -188,9 +189,18 @@ export const travellerEngine: SystemEngine = {
     { id: 'condition', label: 'condition' },
     { id: 'note', label: 'note' },
   ],
-  // Damage lands on END first in Traveller; STR/DEX overflow is a rules decision
-  // the generic damage helper should not make on its own.
   primaryHealthResourceId: 'end',
+  // Damage fills END first, then spills into whichever physical characteristic
+  // the player chooses. Two empty tracks put a Traveller out of the fight;
+  // all three is fatal.
+  damageTrack: {
+    order: ['end'],
+    overflowTo: ['str', 'dex'],
+    downAtDepleted: 2,
+    deadAtDepleted: 3,
+    downLabel: 'UNCONSCIOUS',
+    deadLabel: 'DEAD',
+  },
   // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
   rest: null,
   // No death-roll track; a downed character is handled by the damage track.

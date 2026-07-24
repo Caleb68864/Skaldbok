@@ -432,6 +432,8 @@ export default function GearScreen() {
               onEdit={() => { setEditingWeapon(weapon); setWeaponSystemFields(weapon.systemFields ?? {}); setWeaponDrawerOpen(true); }}
               onDelete={() => handleWeaponDelete(weapon.id)}
               isEditMode={isEditMode}
+              hiddenBuiltIns={hiddenWeaponBuiltIns}
+              systemFields={weaponItemFields}
             />
           ))}
         </div>
