@@ -1,3 +1,4 @@
+/** Empty-state shown where campaign-scoped content would appear when no campaign is selected, directing the user to the campaign selector. */
 export function NoCampaignPrompt() {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-12 text-center text-text-muted">

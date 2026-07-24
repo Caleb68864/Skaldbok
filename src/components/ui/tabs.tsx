@@ -1,3 +1,11 @@
+/**
+ * Skaldbok-styled tabs built on Radix Tabs.
+ *
+ * @remarks
+ * Styling layer over `@radix-ui/react-tabs`; `Tabs`, `TabsList`, `TabsTrigger`, and
+ * `TabsContent` compose like the primitives and preserve their roving-tabindex
+ * keyboard behavior.
+ */
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 

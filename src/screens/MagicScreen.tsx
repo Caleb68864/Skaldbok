@@ -25,6 +25,17 @@ type PrepFilter = 'prepared' | 'grimoire';
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
 
+/**
+ * Spellcasting screen: the character's spells and heroic abilities, with a
+ * prepared/known filter and per-spell power-level controls.
+ *
+ * @remarks
+ * Only shown for magic-capable characters — gated on the `showCharacterMagic`
+ * setting, which the engine drives. Power level is UI-only state (not persisted):
+ * it scales a cast at render time without mutating the stored spell. Spell/ability
+ * cards, casting cost, and the magic resource vocabulary all come from the engine so
+ * the screen is ruleset-agnostic. Edits autosave on a 1s debounce.
+ */
 export default function MagicScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();

@@ -3,6 +3,7 @@ import type { CustomCard } from '../../types/character';
 
 // ── CustomNoteCard ────────────────────────────────────────────────────────────
 
+/** Props for {@link CustomNoteCard}. In edit mode the title/body become editable and a delete control appears. */
 interface CustomNoteCardProps {
   card: CustomCard;
   isEditMode: boolean;
@@ -10,6 +11,14 @@ interface CustomNoteCardProps {
   onDelete: (id: string) => void;
 }
 
+/**
+ * A user-authored freeform card on the character sheet.
+ *
+ * @remarks
+ * Title/body edits are held in local state and pushed up through `onUpdate` (the
+ * parent owns persistence); outside edit mode the card is read-only. Lets players
+ * pin arbitrary notes to a character without a schema change.
+ */
 export function CustomNoteCard({ card, isEditMode, onUpdate, onDelete }: CustomNoteCardProps) {
   const [localTitle, setLocalTitle] = useState(card.title);
   const [localBody, setLocalBody] = useState(card.body);

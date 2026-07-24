@@ -1,10 +1,12 @@
 import type { TimelineMarkerLayout, TimelineTick } from './types';
 
+/** Props for {@link TimelineGrid}: the tick lines and marker lines to draw. */
 interface TimelineGridProps {
   ticks: TimelineTick[];
   markers: TimelineMarkerLayout[];
 }
 
+/** Decorative absolute-positioned background grid: major/minor tick lines plus dashed marker lines. Non-interactive (`aria-hidden`). */
 export function TimelineGrid({ ticks, markers }: TimelineGridProps) {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0">

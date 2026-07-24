@@ -6,6 +6,7 @@ import { getAllCampaigns } from '../../storage/repositories/campaignRepository';
 import type { Campaign } from '../../types/campaign';
 import { cn } from '../../lib/utils';
 
+/** One import conflict: an incoming entity whose id already exists locally, with both timestamps for the user to compare. */
 interface ConflictInfo {
   entityType: string;
   entityId: string;
@@ -14,6 +15,7 @@ interface ConflictInfo {
   localUpdatedAt: string;
 }
 
+/** Props for {@link ImportPreview}. `onImport` commits with the chosen {@link MergeOptions}; `isImporting` disables the controls while it runs. */
 interface ImportPreviewProps {
   bundle: BundleEnvelope;
   warnings: ValidationWarning[];
@@ -38,6 +40,7 @@ const ENTITY_LABELS: Record<string, string> = {
   attachments: 'Attachments',
 };
 
+/** Entity-group keys present in the bundle with at least one row, in a stable display order. */
 function getAvailableEntityTypes(contents: BundleContents): string[] {
   return Object.keys(ENTITY_LABELS).filter((key) => {
     const val = (contents as Record<string, unknown>)[key];
@@ -47,6 +50,7 @@ function getAvailableEntityTypes(contents: BundleContents): string[] {
   });
 }
 
+/** Number of rows for one entity group (1 for the singular `campaign`, array length otherwise). */
 function getEntityCount(contents: BundleContents, type: string): number {
   const val = (contents as Record<string, unknown>)[type];
   if (!val) return 0;

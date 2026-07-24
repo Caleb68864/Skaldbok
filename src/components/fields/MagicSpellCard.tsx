@@ -4,6 +4,14 @@ import { formatCastingTime, formatRequirements, getSpellRank } from '../../utils
 import { Button } from '../primitives/Button';
 import { Card } from '../primitives/Card';
 
+/**
+ * Props for {@link MagicSpellCard}.
+ *
+ * @remarks
+ * `isGrimoireView` shows the whole spellbook (prepare/unprepare); otherwise only
+ * prepared spells are castable. `preparedCount`/`maxPrepared` gate the prepare
+ * toggle, and `currentWP` gates casting so an unaffordable cast is disabled.
+ */
 interface MagicSpellCardProps {
   spell: Spell;
   isTrick: boolean;
@@ -19,6 +27,15 @@ interface MagicSpellCardProps {
   onDelete?: () => void;
 }
 
+/**
+ * Interactive play card for a spell or magic trick: prepare toggle, power-level
+ * selector, and cast button.
+ *
+ * @remarks
+ * WP cost scales with `powerLevel` (a trick is always 1 WP; otherwise `powerLevel * 2`).
+ * Magic tricks render a simplified layout. This is the play-oriented counterpart to
+ * {@link SpellCard}, which is a static summary.
+ */
 export function MagicSpellCard({
   spell, isTrick, isGrimoireView, preparedCount, maxPrepared, currentWP, powerLevel,
   onPowerLevelChange, onTogglePrepare, onCast, onEdit, onDelete,

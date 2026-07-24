@@ -1,9 +1,18 @@
 import type { ReferenceSection } from '../../types/reference';
 
+/** Props for {@link ReferenceSectionRenderer} and its per-type sub-renderers. */
 interface ReferenceSectionRendererProps {
   section: ReferenceSection;
 }
 
+/**
+ * Renders one reference section by dispatching on its `type`.
+ *
+ * @remarks
+ * Acts as the switch over {@link ReferenceSectionType} (`table`, `key_value_list`,
+ * `rules_text`), delegating to a dedicated sub-renderer for each. An unknown type
+ * renders `null` so a forward-compatible bundle never crashes the screen.
+ */
 export function ReferenceSectionRenderer({ section }: ReferenceSectionRendererProps) {
   if (section.type === 'table') {
     return <ReferenceTable section={section} />;
@@ -17,6 +26,7 @@ export function ReferenceSectionRenderer({ section }: ReferenceSectionRendererPr
   return null;
 }
 
+/** Renders a `table` section as a horizontally scrollable table from its columns/rows. */
 function ReferenceTable({ section }: ReferenceSectionRendererProps) {
   const columns = section.columns ?? [];
   const rows = section.rows ?? [];
@@ -63,6 +73,7 @@ function ReferenceTable({ section }: ReferenceSectionRendererProps) {
   );
 }
 
+/** Renders a `key_value_list` section as label/description rows. */
 function ReferenceKeyValueList({ section }: ReferenceSectionRendererProps) {
   const items = section.items ?? [];
 
@@ -83,6 +94,7 @@ function ReferenceKeyValueList({ section }: ReferenceSectionRendererProps) {
   );
 }
 
+/** Renders a `rules_text` section as a stack of paragraphs. */
 function ReferenceRulesText({ section }: ReferenceSectionRendererProps) {
   const paragraphs = section.paragraphs ?? [];
 

@@ -11,6 +11,7 @@ import { PluginKey } from '@tiptap/pm/state';
  */
 export const DescriptorMentionPluginKey = new PluginKey('descriptorMention');
 
+/** The `#descriptor` inline-chip extension: a `#`-triggered Mention variant that coexists with `@mention` in the same editor. */
 export const DescriptorMention = Mention.extend({
   name: 'descriptorMention',
 }).configure({

@@ -26,6 +26,7 @@ import {
 import { computeTrackLanesForOverlap } from '../utils/lanes';
 import { getAxisTicks, getItemPixelPosition } from '../utils/layout';
 
+/** Inputs to {@link useTimelineLayout}: the raw data, current filter/view state, "now", and the pixel geometry knobs. */
 interface UseTimelineLayoutArgs {
   tracks: TimelineTrack[];
   items: TimelineItem[];
@@ -38,6 +39,22 @@ interface UseTimelineLayoutArgs {
   laneGap: number;
 }
 
+/**
+ * Turns raw tracks/items plus filter and view state into fully-positioned layout data.
+ *
+ * @remarks
+ * This is the timeline's pure geometry engine — everything is derived inside one
+ * memo. Key passes, in order: resolve the scale unit and pixel width for the visible
+ * range; roll collapsed parent tracks up (a collapsed parent hides its descendants'
+ * rows and *redirects* their items onto the parent so it shows an aggregate); filter
+ * and range-clip the redirected items; pack each track's items into non-overlapping
+ * lanes ({@link computeTrackLanesForOverlap}) and size the row from the lane count;
+ * and place markers and the "now" line. The redirect runs before filtering so
+ * aggregated items land on the correct visible row.
+ *
+ * @returns The computed scale, ticks, per-track/marker/now layouts, timeline width,
+ *   and visible counts consumed by {@link TimelineRoot}.
+ */
 export function useTimelineLayout({
   tracks,
   items,

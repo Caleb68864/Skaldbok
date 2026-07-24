@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils';
 import type { TimelineLegendItem } from './types';
 
+/** Maps a legend item's semantic tone to its border/text utility classes. */
 function resolveToneClass(tone: TimelineLegendItem['tone']) {
   switch (tone) {
     case 'accent':
@@ -19,6 +20,7 @@ function resolveToneClass(tone: TimelineLegendItem['tone']) {
   }
 }
 
+/** Normalizes a color token to a CSS value: raw `var(...)` passes through, a bare `--token` is wrapped, anything else is returned as-is. */
 function resolveTokenColor(colorToken?: string): string | undefined {
   if (!colorToken) {
     return undefined;
@@ -31,10 +33,12 @@ function resolveTokenColor(colorToken?: string): string | undefined {
   return colorToken.startsWith('--') ? `var(${colorToken})` : colorToken;
 }
 
+/** Props for {@link TimelineLegend}: the legend entries to render. */
 interface TimelineLegendProps {
   items: TimelineLegendItem[];
 }
 
+/** Pill-chip legend describing the timeline's categories; renders nothing when empty. */
 export function TimelineLegend({ items }: TimelineLegendProps) {
   if (items.length === 0) {
     return null;

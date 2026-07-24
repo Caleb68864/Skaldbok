@@ -8,6 +8,7 @@ import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { Drawer } from '../primitives/Drawer';
 
+/** Props for {@link AddModifierDrawer}. `onSave` receives the assembled modifier minus its id/timestamp, which the caller mints. */
 interface AddModifierDrawerProps {
   open: boolean;
   onClose: () => void;
@@ -16,6 +17,7 @@ interface AddModifierDrawerProps {
 
 type Duration = TempModifier['duration'];
 
+/** One stat-adjustment row in the form: a namespaced stat key and its signed delta. */
 interface EffectRow {
   stat: string;
   delta: number;
@@ -25,6 +27,17 @@ const EMPTY_EFFECT: EffectRow = { stat: '', delta: 0 };
 
 const inputClasses = "min-h-[var(--touch-target-min)] px-[var(--space-sm)] text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface)] text-[var(--color-text)] w-full box-border";
 
+/**
+ * Drawer form for creating a temporary modifier (buff/debuff) on the active character.
+ *
+ * @remarks
+ * Both the duration choices ({@link SystemEngine.timeUnits}) and the pickable stat
+ * targets ({@link SystemEngine.modifiableStats}) come from the engine, so the form
+ * offers exactly the stats and time units the active ruleset supports. Target ids are
+ * namespaced (`attr:str` vs `res:str`) so a system may name a resource after an
+ * attribute without the two colliding, and stored modifiers stay valid across a
+ * system change.
+ */
 export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerProps) {
   const engine = useSystemEngine();
   const { character } = useActiveCharacter();

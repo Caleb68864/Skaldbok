@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 
+/** Props for {@link Chip}: `active` toggles the filled/selected styling. */
 interface ChipProps {
   label: string;
   active?: boolean;
@@ -7,6 +8,7 @@ interface ChipProps {
   disabled?: boolean;
 }
 
+/** A pill-shaped toggle button used for filters and tags, with a 44px minimum touch target. */
 export function Chip({ label, active = false, onClick, disabled = false }: ChipProps) {
   return (
     <button

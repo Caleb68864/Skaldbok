@@ -50,12 +50,14 @@ function formatDate(iso: string): string {
 const actionBtnClass = "min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] cursor-pointer text-sm font-medium whitespace-nowrap";
 const primaryBtnClass = "min-h-11 min-w-11 px-5 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-base font-semibold cursor-pointer whitespace-nowrap";
 
+/** Props for {@link PastSessionsSection}: archived sessions plus their export handlers. */
 interface PastSessionsSectionProps {
   sessions: Session[];
   onExportMarkdown: (sessionId: string) => void;
   onExportBundle: (sessionId: string) => void;
 }
 
+/** Collapsible list of archived sessions, each with Markdown / ZIP export actions. Renders nothing when there are none. */
 function PastSessionsSection({ sessions, onExportMarkdown, onExportBundle }: PastSessionsSectionProps) {
   if (sessions.length === 0) {
     return null;
@@ -114,6 +116,7 @@ function PastSessionsSection({ sessions, onExportMarkdown, onExportBundle }: Pas
   );
 }
 
+/** Titled/described section wrapper used to group the no-active-session workspace panels. */
 function WorkspacePanel({
   title,
   description,
@@ -134,6 +137,16 @@ function WorkspacePanel({
   );
 }
 
+/**
+ * The session workspace — the campaign's live play surface at `/session`.
+ *
+ * @remarks
+ * Three states: no campaign selected → {@link NoCampaignPrompt}; a campaign but no
+ * active session → past sessions plus "Start Session"; an active session → the
+ * session-scoped content wrapped in `SessionEncounterProvider`. The provider is only
+ * mounted when a session is active because it requires a `sessionId`, letting the
+ * session bar, start-encounter form, and embedded encounter share one hook instance.
+ */
 export function SessionScreen() {
   const { activeCampaign, activeSession } = useCampaignContext();
 

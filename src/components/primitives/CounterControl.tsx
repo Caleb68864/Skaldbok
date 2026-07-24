@@ -1,5 +1,6 @@
 import { cn } from '@/lib/utils';
 
+/** Props for {@link CounterControl}. `min`/`max` clamp the value; omit for unbounded. */
 interface CounterControlProps {
   value: number;
   min?: number;
@@ -9,6 +10,14 @@ interface CounterControlProps {
   disabled?: boolean;
 }
 
+/**
+ * Labeled stepper with −/+ buttons for a bounded integer value.
+ *
+ * @remarks
+ * Clamping happens in the handlers rather than in `onChange`: a step that would
+ * cross `min`/`max` is dropped entirely (no callback fires), and the offending
+ * button is also disabled, so a held key cannot push past the bound.
+ */
 export function CounterControl({ value, min, max, onChange, label, disabled = false }: CounterControlProps) {
   function decrement() {
     if (disabled) return;

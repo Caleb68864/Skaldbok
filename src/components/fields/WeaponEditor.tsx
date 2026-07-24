@@ -5,6 +5,7 @@ import { Drawer } from '../primitives/Drawer';
 import { Button } from '../primitives/Button';
 import { generateId } from '../../utils/ids';
 
+/** Props for {@link WeaponEditor}. A `null` `weapon` means "create new". */
 interface WeaponEditorProps {
   open: boolean;
   onClose: () => void;
@@ -40,6 +41,15 @@ const empty: Omit<Weapon, 'id'> = {
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
 
+/**
+ * Drawer form to create or edit a weapon, including system-declared extra fields.
+ *
+ * @remarks
+ * The built-in fields here only cover the core weapon shape; a system's own per-item
+ * fields are passed in as `extraFields` and rendered in the same drawer so both are
+ * saved together. Built-ins listed in `hiddenBuiltIns` are omitted, letting a ruleset
+ * suppress concepts it doesn't use without a code change.
+ */
 export function WeaponEditor({ open, onClose, weapon, onSave, extraFields, hiddenBuiltIns }: WeaponEditorProps) {
   /** A built-in field renders unless the system declared it unused. */
   const shows = (fieldId: string) => !(hiddenBuiltIns ?? []).includes(fieldId);

@@ -7,6 +7,7 @@ import { TimelineItemMarker } from './TimelineItemMarker';
 import { TimelineNowMarker } from './TimelineNowMarker';
 import type { TimelineMarkerLayout, TimelineTick, TimelineTrackLayout } from './types';
 
+/** Normalizes a track color token to a CSS value: raw `var(...)` passes through, a bare `--token` is wrapped, anything else is returned as-is. */
 function resolveTrackColor(colorToken?: string): string | undefined {
   if (!colorToken) {
     return undefined;
@@ -19,6 +20,7 @@ function resolveTrackColor(colorToken?: string): string | undefined {
   return colorToken.startsWith('--') ? `var(${colorToken})` : colorToken;
 }
 
+/** Props for {@link TimelineTrackRow}: the track's computed layout, shared selection/hover state, interaction callbacks, and parent/child nesting flags. */
 interface TimelineTrackRowProps {
   layout: TimelineTrackLayout;
   labelColumnWidth: number;
@@ -50,6 +52,16 @@ interface TimelineTrackRowProps {
   onToggleCollapsed?: () => void;
 }
 
+/**
+ * One track lane: a sticky label cell (with indent and expand/collapse for parents)
+ * beside a plotting area of {@link TimelineItemBar}/{@link TimelineItemMarker} items.
+ *
+ * @remarks
+ * Each item's lane placement comes pre-computed in `layout` (see
+ * {@link useTimelineLayout}); the row just positions and styles them. Reuses the
+ * shared {@link TimelineGrid} so lane gridlines align with the header axis, and
+ * overlays the {@link TimelineNowMarker} when a position is supplied.
+ */
 export function TimelineTrackRow({
   layout,
   labelColumnWidth,

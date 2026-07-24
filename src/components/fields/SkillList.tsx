@@ -3,6 +3,7 @@ import type { CharacterSkill } from '../../types/character';
 import { SectionPanel } from '../primitives/SectionPanel';
 import { SkillRow } from './SkillRow';
 
+/** Props for {@link SkillList}. `filter='relevant'` hides untrained, zero-value skills (and empty categories). */
 interface SkillListProps {
   categories: SkillCategory[];
   characterSkills: Record<string, CharacterSkill>;
@@ -11,6 +12,7 @@ interface SkillListProps {
   filter: 'all' | 'relevant';
 }
 
+/** Skills grouped into collapsible category panels, each row a {@link SkillRow}. */
 export function SkillList({ categories, characterSkills, onSkillChange, disabled, filter }: SkillListProps) {
   return (
     <div>

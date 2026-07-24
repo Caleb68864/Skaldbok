@@ -17,6 +17,18 @@ import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { createParty, addPartyMember } from '../storage/repositories/partyRepository';
 import { updateCampaign } from '../storage/repositories/campaignRepository';
 
+/**
+ * Landing screen listing every saved character, with create / duplicate / delete /
+ * import / export and "make active" actions.
+ *
+ * @remarks
+ * Creating a character defaults its ruleset to the active campaign's system (see
+ * {@link campaignSystemId}) and, when a campaign is active, adds it to that
+ * campaign's party so encounters pick it up automatically — party failures are
+ * swallowed so a party hiccup never reads as "character creation failed". Deletes
+ * route through {@link useCharacterActions} (soft delete); the list reloads from the
+ * repository after each mutation.
+ */
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [deleteTarget, setDeleteTarget] = useState<CharacterRecord | null>(null);

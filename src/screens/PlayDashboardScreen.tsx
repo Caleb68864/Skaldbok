@@ -15,6 +15,19 @@ import { RestModule } from '../features/playDashboard/RestModule';
 import { DerivedStatsModule } from '../features/playDashboard/DerivedStatsModule';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 
+/**
+ * At-the-table dashboard for the active character: a dense grid of play modules
+ * (resources, conditions, skills, combat, abilities, magic, rest, derived stats).
+ *
+ * @remarks
+ * Every module is fed the same `{ character, system, updateCharacter }` props and
+ * writes through the active-character autosave, so edits made mid-session persist
+ * without an explicit save. The redirect to `/library` is deliberately gated on
+ * both settings and character loading having settled *and* no pending
+ * `activeCharacterId` — the character provider re-fires when that id changes, so
+ * bailing early would bounce the user out while the character is still resolving.
+ * {@link useSyncedResourceMaxima} keeps resource caps in step with attribute edits.
+ */
 export default function PlayDashboardScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();

@@ -21,12 +21,14 @@ const NODE_COLORS: Record<string, string> = {
 };
 const DEFAULT_NODE_COLOR = '#6b7280';
 
+/** A KB graph node; extends d3-force's datum so the simulation writes x/y onto it in place. `type` selects its color. */
 export interface GraphNode extends SimulationNodeDatum {
   id: string;
   label: string;
   type: string;
 }
 
+/** A KB graph edge; extends d3-force's link datum whose `source`/`target` d3 resolves from ids to node references. */
 export interface GraphEdge extends SimulationLinkDatum<GraphNode> {
   id: string;
 }

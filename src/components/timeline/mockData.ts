@@ -1,5 +1,10 @@
+/**
+ * Static sample tracks, items, and markers for {@link TimelineExample} and manual
+ * development. Not used by any production screen.
+ */
 import type { TimelineItem, TimelineMarker, TimelineTrack } from './types';
 
+/** Sample tracks for the timeline demo. */
 export const timelineMockTracks: TimelineTrack[] = [
   {
     id: 'track-session',
@@ -48,6 +53,7 @@ export const timelineMockTracks: TimelineTrack[] = [
   },
 ];
 
+/** Sample items for the timeline demo. */
 export const timelineMockItems: TimelineItem[] = [
   {
     id: 'session-12',
@@ -136,6 +142,7 @@ export const timelineMockItems: TimelineItem[] = [
   },
 ];
 
+/** Sample markers for the timeline demo. */
 export const timelineMockMarkers: TimelineMarker[] = [
   {
     id: 'marker-sunset',

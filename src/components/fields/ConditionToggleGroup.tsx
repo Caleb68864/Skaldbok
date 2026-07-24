@@ -1,6 +1,7 @@
 import type { ConditionDefinition } from '../../types/system';
 import { Chip } from '../primitives/Chip';
 
+/** Props for {@link ConditionToggleGroup}: the on/off map plus the system's condition definitions to render. */
 interface ConditionToggleGroupProps {
   conditions: Record<string, boolean>;
   definitions: ConditionDefinition[];
@@ -8,6 +9,7 @@ interface ConditionToggleGroupProps {
   disabled?: boolean;
 }
 
+/** Wrapping row of {@link Chip} toggles, one per system-defined condition. */
 export function ConditionToggleGroup({ conditions, definitions, onChange, disabled = false }: ConditionToggleGroupProps) {
   return (
     <div className="flex flex-wrap gap-[var(--space-sm)]">

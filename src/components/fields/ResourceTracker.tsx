@@ -1,3 +1,4 @@
+/** Props for {@link ResourceTracker}. `onCurrentChange`/`onMaxChange` receive a ±1 delta; omitting `onMaxChange` (or `maxEditable=false`) renders max as read-only. */
 interface ResourceTrackerProps {
   resourceId: string;
   label: string;
@@ -10,6 +11,16 @@ interface ResourceTrackerProps {
   maxEditable?: boolean;
 }
 
+/**
+ * Tracker for a current/max resource (HP, WP, etc.) with prominent current-value
+ * steppers and optional max editing.
+ *
+ * @remarks
+ * The layout adapts: when max is not editable the current value stacks over a small
+ * `/max`, otherwise current and max get side-by-side controls. Current is clamped to
+ * `[0, max]` in the handlers rather than in the callback. `disabled` freezes both;
+ * `maxDisabled` freezes only the max controls.
+ */
 export function ResourceTracker({ label, current, max, onCurrentChange, onMaxChange, disabled = false, maxDisabled = false, maxEditable = true }: ResourceTrackerProps) {
   function decrementCurrent() {
     if (!disabled && current > 0) onCurrentChange(-1);

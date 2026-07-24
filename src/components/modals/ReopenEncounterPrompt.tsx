@@ -1,6 +1,7 @@
 import { Modal } from '../primitives/Modal';
 import type { Encounter } from '../../types/encounter';
 
+/** Props for {@link ReopenEncounterPrompt}. `onSkip` also handles dismissal (ESC / backdrop). */
 interface ReopenEncounterPromptProps {
   encounter: Encounter;
   open: boolean;

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 
+/** Props for {@link DerivedFieldDisplay}. `override` is `null` when the computed value is in effect. */
 interface DerivedFieldDisplayProps {
   label: string;
   computedValue: number | string;
@@ -10,6 +11,16 @@ interface DerivedFieldDisplayProps {
   editable: boolean;
 }
 
+/**
+ * One derived-stat row that shows the engine-computed value but allows a manual
+ * override.
+ *
+ * @remarks
+ * When an `override` is set it wins over `computedValue` and a reset control appears
+ * to drop back to the computed number. Editing commits on Enter or blur and ignores
+ * non-numeric input; Escape cancels. This is how a table can hand-tune a derived
+ * value the formula got "wrong" for their game without losing the formula.
+ */
 export function DerivedFieldDisplay({ label, computedValue, override, onOverride, onReset, editable }: DerivedFieldDisplayProps) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState('');

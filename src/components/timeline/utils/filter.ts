@@ -7,6 +7,7 @@ import type {
 } from '../types';
 import { coerceItemToRange, DEFAULT_MIN_ITEM_DURATION_MS } from './date';
 
+/** Sorts tracks by their `order`, breaking ties by label then id for a stable ordering. */
 export function sortTracks(tracks: ReadonlyArray<TimelineTrack>): TimelineTrack[] {
   return [...tracks].sort((left, right) => {
     if (left.order !== right.order) {
@@ -17,6 +18,7 @@ export function sortTracks(tracks: ReadonlyArray<TimelineTrack>): TimelineTrack[
   });
 }
 
+/** Buckets items by their `trackId`. */
 export function groupItemsByTrack(items: ReadonlyArray<TimelineItem>): Record<string, TimelineItem[]> {
   return items.reduce<Record<string, TimelineItem[]>>((accumulator, item) => {
     if (!accumulator[item.trackId]) {
@@ -28,6 +30,16 @@ export function groupItemsByTrack(items: ReadonlyArray<TimelineItem>): Record<st
   }, {});
 }
 
+/**
+ * Applies the full filter state (tracks, kinds, tags, status, free-text search) to a
+ * list of items.
+ *
+ * @remarks
+ * A track's semantic "kind" falls back through `kind → sourceType → type`, so items
+ * that only carry a source type still filter correctly. Tag filtering is AND (all
+ * selected tags must be present); search matches across title/subtitle/tooltip/kind/
+ * status/tags, case-insensitively.
+ */
 export function filterItems(
   items: ReadonlyArray<TimelineItem>,
   filterState: TimelineFilterState,
@@ -97,6 +109,7 @@ export function filterItems(
   });
 }
 
+/** Keeps only items whose resolved range overlaps the visible window (edge-touching counts). */
 export function computeVisibleItems(
   items: ReadonlyArray<TimelineItem>,
   visibleRange: TimelineRange,
@@ -112,6 +125,7 @@ export function computeVisibleItems(
   });
 }
 
+/** Scans items to gather the distinct, sorted kind/status/tag values that populate the toolbar's filter menus. */
 export function collectAvailableFilters(items: ReadonlyArray<TimelineItem>): TimelineAvailableFilters {
   const kinds = new Set<string>();
   const statuses = new Set<string>();

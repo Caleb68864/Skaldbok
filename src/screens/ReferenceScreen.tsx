@@ -71,6 +71,17 @@ function parseEditorBody(section: ReferenceSection, body: string): ReferenceSect
   };
 }
 
+/**
+ * Reference library screen: two tabs — curated rules "Reference" sections (grouped,
+ * reorderable, renderable rich content) and freeform "Notes".
+ *
+ * @remarks
+ * Reference content is campaign-independent house rules / rules snippets, stored in
+ * its own repositories (not the note graph) and importable as a bundle. Sections
+ * belong to groups and both support drag reorder; the {@link ReferenceSectionRenderer}
+ * renders each section by its {@link ReferenceSectionType}. Search filters across the
+ * active tab.
+ */
 export default function ReferenceScreen() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);

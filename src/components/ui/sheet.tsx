@@ -1,3 +1,13 @@
+/**
+ * Skaldbok-styled slide-in sheet (side drawer) built on Radix Dialog.
+ *
+ * @remarks
+ * Uses the Radix Dialog primitive but animates in from an edge rather than
+ * centering, giving a mobile-friendly drawer. The exported parts (`Sheet`,
+ * `SheetContent`, `SheetHeader`, `SheetBody`, `SheetTitle`, `SheetDescription`,
+ * `SheetCloseButton`) compose like the underlying primitives; most call sites use
+ * the higher-level {@link Drawer} wrapper.
+ */
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";

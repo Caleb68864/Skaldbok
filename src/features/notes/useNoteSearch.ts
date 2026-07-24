@@ -4,6 +4,7 @@ import type { Note } from '../../types/note';
 import { extractText } from '../../utils/prosemirror';
 import { extractDescriptors } from '../../utils/notes/extractDescriptors';
 
+/** The flattened, searchable projection of a note fed to MiniSearch (rich body reduced to plain text). */
 interface IndexedDoc {
   id: string;
   title: string;
@@ -24,6 +25,7 @@ const searchIndex = new MiniSearch<IndexedDoc>({
   },
 });
 
+/** Flattens a {@link Note} into an {@link IndexedDoc}: extracts plain text and descriptors from the ProseMirror body and joins tags. */
 function noteToDoc(note: Note): IndexedDoc {
   return {
     id: note.id,
@@ -35,6 +37,16 @@ function noteToDoc(note: Note): IndexedDoc {
   };
 }
 
+/**
+ * Full-text note search backed by a MiniSearch index, with incremental maintenance.
+ *
+ * @remarks
+ * The index is a module-level singleton, so it survives component remounts but not a
+ * page reload — {@link rebuildIndex} must be called after load to repopulate it.
+ * Title/tags/descriptors are boosted over body text and matching is fuzzy + prefix so
+ * partial and slightly misspelled queries still hit. `add`/`update` guard against
+ * duplicate ids by removing first, keeping the index consistent as notes change.
+ */
 export function useNoteSearch() {
   const [isIndexed, setIsIndexed] = useState(false);
 

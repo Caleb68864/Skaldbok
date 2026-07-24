@@ -1,11 +1,21 @@
 import type { TimelineTrack } from '../types';
 
+/** The catalog-level shape of a track: its identity/order/visibility plus optional presentation and nesting hints. */
 export type TimelineTrackCatalogEntry = Pick<
   TimelineTrack,
   'label' | 'kind' | 'order' | 'visible'
 > &
   Partial<Pick<TimelineTrack, 'collapsible' | 'collapsed' | 'colorToken' | 'description' | 'parentTrackId'>>;
 
+/**
+ * Default mapping of note/entity kind → timeline track (label, order, color, nesting).
+ *
+ * @remarks
+ * This is the out-of-the-box grouping the "configuration over hardcoding" rule calls
+ * for: which kinds cluster into which lane lives here, not inside
+ * {@link buildTimelineFromNotesAdapter}, so it can be overridden per call (and later
+ * surfaced as a user preference). Kinds with no entry fall back to `generic`.
+ */
 export const DEFAULT_TIMELINE_TRACK_CATALOG: Record<string, TimelineTrackCatalogEntry> = {
   session: {
     label: 'Session',

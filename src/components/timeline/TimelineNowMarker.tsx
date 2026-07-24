@@ -1,7 +1,9 @@
+/** Props for {@link TimelineNowMarker}: the horizontal position of "now" as a percentage of the timeline width. */
 interface TimelineNowMarkerProps {
   leftPercent: number;
 }
 
+/** Vertical accent line with a "Now" chip marking the current time on the timeline. */
 export function TimelineNowMarker({ leftPercent }: TimelineNowMarkerProps) {
   return (
     <div

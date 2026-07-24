@@ -1,12 +1,24 @@
 import type { TimelineItem } from '../types';
 import { coerceItemToRange, DEFAULT_MIN_ITEM_DURATION_MS } from './date';
 
+/** An item's assigned lane within its track, plus the track's total lane count. */
 export interface TimelineLaneAssignment {
   item: TimelineItem;
   lane: number;
   laneCount: number;
 }
 
+/**
+ * Packs a track's items into the fewest non-overlapping horizontal lanes.
+ *
+ * @remarks
+ * A greedy interval-scheduling sweep: items are sorted by start (ties broken by
+ * longer-first, then id for stability) and each is dropped into the first lane whose
+ * previous item has already ended, opening a new lane only when none is free. Zero-
+ * duration points are treated as ending at their start so adjacent points can share a
+ * lane. Items with an unparseable date are dropped. Every returned assignment carries
+ * the same final `laneCount` so the caller can size the row in one pass.
+ */
 export function computeTrackLanesForOverlap(
   items: ReadonlyArray<TimelineItem>,
   minimumDurationMs = DEFAULT_MIN_ITEM_DURATION_MS,

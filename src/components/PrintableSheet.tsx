@@ -16,6 +16,7 @@ import type { SystemEngine } from '../features/systems/engine';
 // Exported types (consumed by SS-02 screen)
 // ──────────────────────────────────────────────
 
+/** Pre-resolved derived stats the print screen computes once and passes down, already accounting for per-character overrides. */
 export interface PrintDerivedValues {
   damageBonus: string;
   aglDamageBonus: string;
@@ -25,6 +26,7 @@ export interface PrintDerivedValues {
   wpMax: number;
 }
 
+/** Props for {@link PrintableSheet}. `colorMode` selects the color vs black-and-white print stylesheet. */
 interface PrintableSheetProps {
   character: CharacterRecord;
   system: SystemDefinition | null;
@@ -115,6 +117,7 @@ function buildAttributePairs(
   });
 }
 
+/** Prints the row of attribute values alongside their linked condition checkboxes. */
 function AttributeBand({
   character,
   system,
@@ -175,6 +178,7 @@ const PRINT_DERIVED_LABELS: Record<string, string> = {
 };
 const PRINT_DERIVED_ORDER = ['damageBonus', 'aglDamageBonus', 'movement', 'encumbranceLimit'];
 
+/** Prints the derived-stats strip (damage bonus, movement, encumbrance limit, …) in a fixed order. */
 function DerivedStatsRow({
   derived,
   engine,
@@ -219,6 +223,7 @@ function DerivedStatsRow({
 const ABILITY_SLOTS = 3;
 const SPELL_SLOTS = 3;
 
+/** Prints heroic abilities and spells, padded to a fixed number of blank slots for handwriting. */
 function AbilitiesSpells({
   character,
   engine,
@@ -271,6 +276,7 @@ function AbilitiesSpells({
 // Section 4 Left — Currency (SS-09)
 // ──────────────────────────────────────────────
 
+/** Prints the character's money per the engine's currency denominations. */
 function Currency({ character, engine }: { character: CharacterRecord; engine: SystemEngine }): React.ReactElement {
   const denominations = engine.currency.denominations;
   const amounts = engine.currency.read(character);
@@ -298,6 +304,7 @@ function Currency({ character, engine }: { character: CharacterRecord; engine: S
 // Section 4 Center — Skills (SS-07)
 // ──────────────────────────────────────────────
 
+/** Prints one skill's name and value as a single table row. */
 function SkillRow({
   name,
   value,
@@ -316,6 +323,7 @@ function SkillRow({
   );
 }
 
+/** Prints the skills column, grouped by the system's skill categories. */
 function SkillsSection({
   character,
   system,
@@ -424,6 +432,7 @@ function SkillsSection({
 // Section 4 Right — Inventory (SS-10)
 // ──────────────────────────────────────────────
 
+/** Prints carried inventory with a few blank rows for additions. */
 function InventorySection({
   character,
   engine,
@@ -469,6 +478,7 @@ function InventorySection({
 // Section 5 Left — Armor & Helmet (SS-11)
 // ──────────────────────────────────────────────
 
+/** Prints the equipped armor and helmet with their ratings. */
 function ArmorHelmet({ character, engine }: { character: CharacterRecord; engine: SystemEngine }): React.ReactElement {
   return (
     <div className="sheet-armor-section">
@@ -519,6 +529,7 @@ function ArmorHelmet({ character, engine }: { character: CharacterRecord; engine
 // Section 5 Center — Weapons Table (SS-12)
 // ──────────────────────────────────────────────
 
+/** Formats a weapon grip value into its short printed label. */
 function formatGrip(grip: string | undefined): string {
   if (!grip) return '';
   const lower = grip.toLowerCase();
@@ -583,6 +594,7 @@ function buildWeaponColumns(system: SystemDefinition | null): WeaponColumn[] {
   return columns;
 }
 
+/** Prints the weapons table with columns resolved from the system via {@link buildWeaponColumns}. */
 function WeaponsTable({
   character,
   system,
@@ -637,6 +649,7 @@ const PRINT_DEATH_TRACK_LABELS: Record<string, string> = {
   deathRolls: 'Failure',
 };
 
+/** Prints a row of fillable dots/boxes for tracking a countable value (e.g. death-roll failures) by hand. */
 function DotTracker({
   label,
   current,
@@ -664,6 +677,7 @@ function DotTracker({
   );
 }
 
+/** Prints the resource trackers (HP/WP and any death/condition dot trackers) for the lower-right column. */
 function ResourceTrackers({
   character,
   derived,
@@ -748,6 +762,17 @@ function ResourceTrackers({
 // Main Export — PrintableSheet
 // ══════════════════════════════════════════════
 
+/**
+ * Full print layout for a character sheet — a pure, side-effect-free render.
+ *
+ * @remarks
+ * Composes the section sub-components (header, attribute band, derived row, and the
+ * three-column body/lower sections) into a single printable page. Everything that
+ * varies by ruleset is resolved through the passed-in {@link SystemEngine} and
+ * `system` definition rather than any Dragonbane-specific logic, so a different
+ * system prints its own fields, currency, and stats. Interactivity and data loading
+ * live in {@link PrintableSheetScreen}; this component only renders.
+ */
 export default function PrintableSheet({
   character,
   system,

@@ -1,6 +1,7 @@
 import { cn } from '../../lib/utils';
 import type { ConditionDefinition } from '../../types/system';
 
+/** Props for {@link QuickConditionPanel}. `attributes` supplies the abbreviation shown under each condition's linked attribute. */
 interface QuickConditionPanelProps {
   conditions: Record<string, boolean>;
   definitions: ConditionDefinition[];
@@ -8,6 +9,14 @@ interface QuickConditionPanelProps {
   onChange: (id: string, value: boolean) => void;
 }
 
+/**
+ * Large-target grid of condition toggles tuned for at-the-table play.
+ *
+ * @remarks
+ * A play-optimized alternative to {@link ConditionToggleGroup}: bigger tap targets
+ * and each button labels the attribute the condition affects, so a player can toggle
+ * "Exhausted (STR)" without cross-referencing the rules.
+ */
 export function QuickConditionPanel({ conditions, definitions, attributes, onChange }: QuickConditionPanelProps) {
   function getAbbreviation(linkedAttributeId: string): string {
     const attr = attributes.find(a => a.id === linkedAttributeId);

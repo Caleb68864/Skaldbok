@@ -31,11 +31,23 @@ import { AppLogo } from '../primitives/AppLogo';
 
 // ── Campaign Header ─────────────────────────────────────────────
 
+/** Props for {@link CampaignHeader}: callbacks the shell wires to open the create-campaign modal and party drawer. */
 interface CampaignHeaderProps {
   onCreateCampaign?: () => void;
   onManageParty?: () => void;
 }
 
+/**
+ * Top app-bar: campaign switcher, active-session indicator, and the overflow menu
+ * for import/export, play-mode toggle, fullscreen, and wake-lock.
+ *
+ * @remarks
+ * Import runs through {@link useImportActions}, which may surface a preview /
+ * conflict step ({@link ImportPreview}) before committing — the header hosts that
+ * modal. Fullscreen and wake-lock are best-effort browser features (via
+ * {@link useFullscreen}/{@link useWakeLock}) and silently no-op where unsupported,
+ * which matters for tablets at the table.
+ */
 export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHeaderProps) {
   const { activeCampaign, activeSession, activeCharacterInCampaign, setActiveCampaign } = useCampaignContext();
   const { exportAllNotes, exportCampaign } = useExportActions();

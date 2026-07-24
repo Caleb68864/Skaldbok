@@ -19,10 +19,12 @@ const cardVariants = cva(
   },
 );
 
+/** Props for {@link Card}: native div attributes plus a `variant` from {@link cardVariants}. */
 export interface CardProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof cardVariants> {}
 
+/** Surface container with border and shadow; adds a pointer cursor automatically when an `onClick` is supplied. */
 const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant, onClick, ...props }, ref) => {
     return (

@@ -2,6 +2,7 @@ import { cn } from '../../lib/utils';
 import type { SkillDefinition } from '../../types/system';
 import type { CharacterSkill } from '../../types/character';
 
+/** Props for {@link SkillRow}. `characterSkill` is undefined for a skill the character has never touched — it falls back to the definition's base chance. */
 interface SkillRowProps {
   skillDef: SkillDefinition;
   characterSkill: CharacterSkill | undefined;
@@ -9,6 +10,7 @@ interface SkillRowProps {
   disabled: boolean;
 }
 
+/** One editable skill row: a trained checkbox, the skill name with its base chance, and a numeric value input. */
 export function SkillRow({ skillDef, characterSkill, onChange, disabled }: SkillRowProps) {
   const value = characterSkill?.value ?? skillDef.baseChance;
   const trained = characterSkill?.trained ?? false;

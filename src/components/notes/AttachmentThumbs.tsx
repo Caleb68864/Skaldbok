@@ -1,18 +1,29 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 
+/** A single thumbnail entry. `objectUrl` is a blob/object URL the caller owns and revokes. */
 interface AttachmentThumb {
   id: string;
   objectUrl: string;
   caption?: string;
 }
 
+/** Props for {@link AttachmentThumbs}. */
 interface AttachmentThumbsProps {
   attachments: AttachmentThumb[];
   onDelete: (id: string) => void;
   onCaptionChange: (id: string, caption: string) => void;
 }
 
+/**
+ * Horizontal scroll strip of note image attachments; tapping a thumb reveals its
+ * inline caption input.
+ *
+ * @remarks
+ * Only one caption editor is open at a time (`activeId`); tapping the active thumb
+ * again collapses it. Renders nothing when there are no attachments. Delete clicks
+ * stop propagation so removing a thumb never also toggles its caption editor.
+ */
 export function AttachmentThumbs({ attachments, onDelete, onCaptionChange }: AttachmentThumbsProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 

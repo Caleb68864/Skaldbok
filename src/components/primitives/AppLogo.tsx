@@ -1,5 +1,6 @@
 import { cn } from '../../lib/utils';
 
+/** Props for {@link AppLogo}. `size` selects one of the preset square dimensions. */
 interface AppLogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
@@ -11,6 +12,7 @@ const sizes = {
   lg: 'h-20 w-20',
 };
 
+/** The Skaldbok app icon as a rounded, non-draggable image at one of three preset sizes. */
 export function AppLogo({ className, size = 'md' }: AppLogoProps) {
   return (
     <img

@@ -42,10 +42,19 @@ const buttonVariants = cva(
   },
 );
 
+/** Props for {@link Button}: native button attributes plus `variant`/`size` from {@link buttonVariants}. */
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {}
 
+/**
+ * The app's base button, styled through {@link buttonVariants}.
+ *
+ * @remarks
+ * `primary`/`danger` variants are legacy aliases of `default`/`destructive` kept so
+ * older call sites keep working. Every size holds at least a 44px min target for
+ * touch. Forwards its ref and all native button props.
+ */
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, ...props }, ref) => {
     return (

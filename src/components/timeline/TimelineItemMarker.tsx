@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { TimelineItemLayout } from './types';
 
+/** Normalizes a color token to a CSS value: raw `var(...)` passes through, a bare `--token` is wrapped, anything else is returned as-is. */
 function resolveTokenColor(colorToken?: string): string | undefined {
   if (!colorToken) {
     return undefined;
@@ -16,6 +17,7 @@ function resolveTokenColor(colorToken?: string): string | undefined {
   return colorToken.startsWith('--') ? `var(${colorToken})` : colorToken;
 }
 
+/** Props for {@link TimelineItemMarker}: the item's computed layout, its track label for the a11y name/tooltip, and selection/hover state + callbacks. */
 interface TimelineItemMarkerProps {
   layout: TimelineItemLayout;
   trackLabel: string;
@@ -25,6 +27,14 @@ interface TimelineItemMarkerProps {
   onHoverChange: (hovered: boolean) => void;
 }
 
+/**
+ * Point-in-time timeline event rendered as a diamond button with a hover/focus tooltip.
+ *
+ * @remarks
+ * Used for instantaneous items (a {@link TimelineItemBar} covers spans instead). Fully
+ * keyboard operable — Enter/Space select — and shows a link glyph when the item has a
+ * `sourceId`, signaling it traces back to an underlying entity.
+ */
 export function TimelineItemMarker({
   layout,
   trackLabel,

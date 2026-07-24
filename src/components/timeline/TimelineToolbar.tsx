@@ -29,6 +29,7 @@ const scaleOptions: Array<{ value: TimelineScaleUnit; label: string }> = [
   { value: 'month', label: 'Months' },
 ];
 
+/** Props for {@link TimelineToolbar}: current filter/scale state, the available filter options, visible counts, and the control callbacks. */
 interface TimelineToolbarProps {
   title?: string;
   tracks: TimelineTrack[];
@@ -54,6 +55,7 @@ interface TimelineToolbarProps {
   addItemLabel?: string;
 }
 
+/** Renders a dropdown toggle row: the label with a check affordance reflecting `active`. */
 function renderToggleLabel(label: string, active: boolean) {
   return (
     <span className="flex w-full items-center justify-between gap-4">
@@ -63,6 +65,16 @@ function renderToggleLabel(label: string, active: boolean) {
   );
 }
 
+/**
+ * Timeline control strip: search, track/kind/tag/status filter menus, zoom, scale
+ * selection, reset, and an optional add-item button.
+ *
+ * @remarks
+ * Search updates are wrapped in `startTransition` so typing stays responsive while
+ * the (potentially large) filtered layout recomputes at a lower priority. The toolbar
+ * is stateless — it reflects the filter state passed in and reports every change
+ * through callbacks, leaving ownership to {@link TimelineRoot}/{@link useTimelineState}.
+ */
 export function TimelineToolbar({
   title = 'Timeline Explorer',
   tracks,

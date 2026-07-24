@@ -7,6 +7,7 @@ import { getEngine } from '../features/systems/engine';
 import PrintableSheet from '../components/PrintableSheet';
 import '../styles/print-sheet.css';
 
+/** Derived stats resolved once for the printout, after per-character overrides. */
 interface PrintDerivedValues {
   damageBonus: string;
   aglDamageBonus: string;
@@ -16,6 +17,18 @@ interface PrintDerivedValues {
   wpMax: number;
 }
 
+/**
+ * Shell-less print route: renders {@link PrintableSheet} for the active character
+ * plus a floating toolbar (Back / Print / color toggle) that is hidden at print time.
+ *
+ * @remarks
+ * Derived numbers are pulled from the {@link getEngine | system engine} rather than
+ * the Dragonbane formulas, so a non-classic ruleset prints its own values; manual
+ * `derivedOverrides` still win, matching the on-screen sheet. The color/B&W toggle
+ * only swaps a render mode — the print stylesheet in `print-sheet.css` hides the
+ * toolbar itself. Redirect-to-library gating mirrors the play dashboard: wait for
+ * both loads to settle before concluding there is no character.
+ */
 export default function PrintableSheetScreen() {
   const navigate = useNavigate();
   const { isLoading: settingsLoading, settings } = useAppState();

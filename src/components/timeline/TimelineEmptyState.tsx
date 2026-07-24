@@ -1,10 +1,12 @@
 import { CalendarRange } from 'lucide-react';
 
+/** Props for {@link TimelineEmptyState}: optional overrides for the default heading/body copy. */
 interface TimelineEmptyStateProps {
   title?: string;
   description?: string;
 }
 
+/** Placeholder shown in place of the timeline when there are no tracks or items to display. */
 export function TimelineEmptyState({
   title = 'No timeline data yet',
   description = 'Add tracks or events to populate this timeline view.',

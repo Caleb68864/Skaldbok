@@ -1,3 +1,11 @@
+/**
+ * Skaldbok-styled tooltip built on Radix Tooltip.
+ *
+ * @remarks
+ * Styling layer over `@radix-ui/react-tooltip`; re-exports `TooltipProvider`,
+ * `Tooltip`, `TooltipTrigger`, and a styled `TooltipContent`. A `TooltipProvider`
+ * must wrap any tree that uses these.
+ */
 import * as React from "react";
 import * as TooltipPrimitive from "@radix-ui/react-tooltip";
 

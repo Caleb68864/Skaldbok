@@ -1,11 +1,21 @@
 import { useRef } from 'react';
 import { cn } from '../../lib/utils';
 
+/** Props for {@link AttachButton}: `onFileSelected` receives the chosen image file. */
 interface AttachButtonProps {
   onFileSelected: (file: File) => void;
   disabled?: boolean;
 }
 
+/**
+ * "Attach Photo" button that opens the device camera / image picker via a hidden
+ * file input.
+ *
+ * @remarks
+ * `capture="environment"` hints mobile browsers to open the rear camera directly.
+ * The input value is reset after each pick so selecting the *same* file again still
+ * fires `onChange` — otherwise a re-selection would be silently ignored.
+ */
 export function AttachButton({ onFileSelected, disabled }: AttachButtonProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 

@@ -2,6 +2,7 @@ import type { Spell } from '../../types/character';
 import { Card } from '../primitives/Card';
 import { Button } from '../primitives/Button';
 
+/** Props for {@link SpellCard}. Edit/delete controls appear only in `isEditMode`. */
 interface SpellCardProps {
   spell: Spell;
   onEdit: () => void;
@@ -9,6 +10,7 @@ interface SpellCardProps {
   isEditMode: boolean;
 }
 
+/** Read-oriented card for one spell: name, school, WP cost / range / duration, and summary. See {@link MagicSpellCard} for the interactive play variant. */
 export function SpellCard({ spell, onEdit, onDelete, isEditMode }: SpellCardProps) {
   return (
     <Card>

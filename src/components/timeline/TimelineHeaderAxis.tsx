@@ -2,6 +2,7 @@ import { CalendarDays } from 'lucide-react';
 import { TimelineGrid } from './TimelineGrid';
 import type { TimelineMarkerLayout, TimelineScaleUnit, TimelineTick } from './types';
 
+/** Props for {@link TimelineHeaderAxis}: layout widths, the ticks/markers to label, and the active scale unit. */
 interface TimelineHeaderAxisProps {
   labelColumnWidth: number;
   timelineWidth: number;
@@ -10,6 +11,7 @@ interface TimelineHeaderAxisProps {
   scaleUnit: TimelineScaleUnit;
 }
 
+/** Sticky top axis: the label-column header plus major-tick date labels and marker chips over the shared {@link TimelineGrid}. */
 export function TimelineHeaderAxis({
   labelColumnWidth,
   timelineWidth,

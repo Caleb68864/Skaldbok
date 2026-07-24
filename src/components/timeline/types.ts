@@ -1,27 +1,46 @@
+/**
+ * Shared type vocabulary for the reusable timeline widget.
+ *
+ * @remarks
+ * Two layers live here: the *input* model a caller supplies ({@link TimelineTrack},
+ * {@link TimelineItem}, {@link TimelineMarker}) and the *computed* layout model the
+ * rendering components consume ({@link TimelineItemLayout}, {@link TimelineTrackLayout},
+ * {@link TimelineTick}). The state interfaces ({@link TimelineFilterState},
+ * {@link TimelineSelectionState}, {@link TimelineViewState}) can each be controlled or
+ * uncontrolled at {@link TimelineRootProps}.
+ */
 import type { ReactNode } from 'react';
 
+/** A date accepted anywhere in the timeline API — ISO string, epoch ms, or `Date`. */
 export type TimelineDateInput = string | number | Date;
+/** Whether an item is instantaneous (`point`/`milestone`) or spans a range. */
 export type TimelineItemType = 'point' | 'range' | 'milestone';
+/** Granularity of the time axis; `custom` lets the layout pick a fitting unit automatically. */
 export type TimelineScaleUnit = 'minute' | 'hour' | 'day' | 'week' | 'month' | 'custom';
+/** Semantic color/emphasis of an item, mapped to theme tokens by the render components. */
 export type TimelineItemVariant = 'default' | 'accent' | 'warning' | 'muted' | 'success' | 'danger';
 
+/** A resolved millisecond span (start/end/duration) after date inputs are normalized. */
 export interface TimelineRange {
   startMs: number;
   endMs: number;
   durationMs: number;
 }
 
+/** The window of time currently shown, in raw (un-normalized) date inputs. */
 export interface TimelineVisibleRange {
   start: TimelineDateInput;
   end: TimelineDateInput;
 }
 
+/** The active axis scale: its unit, that unit's length in ms, and its pixel width. */
 export interface TimelineScale {
   unit: TimelineScaleUnit;
   unitMs: number;
   pixelsPerUnit: number;
 }
 
+/** Pan/zoom state of the viewport: the visible ms window, zoom level, and scale unit. */
 export interface TimelineViewState {
   visibleStartMs: number;
   visibleEndMs: number;
@@ -31,12 +50,14 @@ export interface TimelineViewState {
   scaleUnit: TimelineScaleUnit;
 }
 
+/** Which item/track is selected or hovered — the transient interaction state. */
 export interface TimelineSelectionState {
   selectedItemId: string | null;
   hoveredItemId: string | null;
   selectedTrackId: string | null;
 }
 
+/** The active filtering: visible/hidden/collapsed tracks, included/excluded kinds, search text, and tag/status filters. */
 export interface TimelineFilterState {
   visibleTrackIds: string[];
   hiddenTrackIds: string[];
@@ -52,6 +73,7 @@ export interface TimelineFilterState {
   statusFilters?: string[];
 }
 
+/** An input track (a horizontal lane) that items are grouped into; may nest under a parent. */
 export interface TimelineTrack {
   id: string;
   key?: string;
@@ -75,6 +97,7 @@ export interface TimelineTrack {
   metadata?: Record<string, unknown>;
 }
 
+/** An input event placed on a track. `sourceId`/`sourceType`/`noteId` link it back to the domain entity it was derived from. */
 export interface TimelineItem {
   id: string;
   trackId: string;
@@ -97,6 +120,7 @@ export interface TimelineItem {
   metadata?: Record<string, unknown>;
 }
 
+/** A labeled vertical reference line at a single instant (e.g. a session boundary), spanning all tracks. */
 export interface TimelineMarker {
   id: string;
   label: string;
@@ -106,6 +130,7 @@ export interface TimelineMarker {
   metadata?: Record<string, unknown>;
 }
 
+/** A computed axis gridline: its time, label, major/minor weight, and horizontal position. */
 export interface TimelineTick {
   valueMs: number;
   label: string;
@@ -113,11 +138,13 @@ export interface TimelineTick {
   leftPercent: number;
 }
 
+/** A marker with its computed horizontal position. */
 export interface TimelineMarkerLayout {
   marker: TimelineMarker;
   leftPercent: number;
 }
 
+/** An item with its fully-computed geometry: resolved range, assigned lane, and pixel/percentage box, including clip flags when it overflows the visible range. */
 export interface TimelineItemLayout {
   item: TimelineItem;
   range: TimelineRange;
@@ -132,6 +159,7 @@ export interface TimelineItemLayout {
   isClippedEnd: boolean;
 }
 
+/** A track with its laid-out items and the resulting row height (driven by its lane count). */
 export interface TimelineTrackLayout {
   track: TimelineTrack;
   items: TimelineItemLayout[];
@@ -139,6 +167,7 @@ export interface TimelineTrackLayout {
   rowHeight: number;
 }
 
+/** One legend entry describing a category by label, tone, and color token. */
 export interface TimelineLegendItem {
   id: string;
   label: string;
@@ -146,22 +175,26 @@ export interface TimelineLegendItem {
   colorToken?: string;
 }
 
+/** The complete input the timeline renders: tracks, items, and optional markers. */
 export interface TimelineDataset {
   tracks: TimelineTrack[];
   items: TimelineItem[];
   markers?: TimelineMarker[];
 }
 
+/** Contract for turning some domain input into a {@link TimelineDataset} (see {@link notesToTimeline}). */
 export interface TimelineAdapter<TInput> {
   buildTimeline: (input: TInput) => TimelineDataset;
 }
 
+/** The distinct kind/status/tag values present in the data, used to populate the toolbar filter menus. */
 export interface TimelineAvailableFilters {
   kinds: string[];
   statuses: string[];
   tags: string[];
 }
 
+/** Full prop surface of {@link TimelineRoot}: data, controlled/uncontrolled state hooks, render overrides, layout dimensions, and feature toggles. */
 export interface TimelineRootProps {
   tracks: TimelineTrack[];
   items: TimelineItem[];

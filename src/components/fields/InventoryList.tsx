@@ -1,6 +1,7 @@
 import type { InventoryItem } from '../../types/character';
 import { Button } from '../primitives/Button';
 
+/** Props for {@link InventoryList}. `onQuantityChange` enables inline +/- steppers, shown only for consumable items. */
 interface InventoryListProps {
   items: InventoryItem[];
   onEdit: (item: InventoryItem) => void;
@@ -10,6 +11,15 @@ interface InventoryListProps {
   isEditMode: boolean;
 }
 
+/**
+ * List of carried inventory items with weight, tags, and (for consumables) quantity
+ * steppers.
+ *
+ * @remarks
+ * Renders an empty note when there are no items and the sheet is read-only; edit mode
+ * always shows the add affordance. `tiny` items are badged and counted as weight 0.
+ * Quantity controls only appear for consumables when a handler is supplied.
+ */
 export function InventoryList({ items, onEdit, onDelete, onAdd, onQuantityChange, isEditMode }: InventoryListProps) {
   if (items.length === 0 && !isEditMode) {
     return <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No inventory items.</p>;

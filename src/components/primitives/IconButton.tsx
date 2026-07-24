@@ -1,11 +1,13 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
+/** Props for {@link IconButton}: `label` is required and becomes the `aria-label` since the button has no visible text. */
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon: ReactNode;
   label: string;
 }
 
+/** Square, icon-only button with a 44px touch target; the required `label` supplies its accessible name. */
 export function IconButton({ icon, label, className, disabled, ...props }: IconButtonProps) {
   return (
     <button

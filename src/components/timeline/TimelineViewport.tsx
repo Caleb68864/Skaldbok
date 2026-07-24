@@ -3,6 +3,7 @@ import type { TimelineMarkerLayout, TimelineScaleUnit, TimelineTick, TimelineTra
 import { TimelineHeaderAxis } from './TimelineHeaderAxis';
 import { TimelineTrackList } from './TimelineTrackList';
 
+/** Props for {@link TimelineViewport}: the fully-computed layout plus selection state and the item/track interaction callbacks, threaded down to the header and rows. */
 interface TimelineViewportProps {
   labelColumnWidth: number;
   timelineWidth: number;
@@ -26,6 +27,7 @@ interface TimelineViewportProps {
   collapsedTrackIds: string[];
 }
 
+/** Scrollable frame that pairs the sticky {@link TimelineHeaderAxis} with the {@link TimelineTrackList}, sized to the computed timeline width. */
 export function TimelineViewport({
   labelColumnWidth,
   timelineWidth,

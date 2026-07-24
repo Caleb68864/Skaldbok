@@ -3,6 +3,7 @@ import { cn } from '../../lib/utils';
 import type { TempModifier } from '../../types/character';
 import { useSystemEngine } from '../../features/systems/engine';
 
+/** Props for {@link BuffChipBar}. `onAdd` opens the modifier form; the rest mutate the active list. */
 interface BuffChipBarProps {
   modifiers: TempModifier[];
   onRemove: (id: string) => void;
@@ -10,21 +11,33 @@ interface BuffChipBarProps {
   onAdd: () => void;
 }
 
+/** Formats a signed delta with an explicit leading `+` for non-negatives. */
 function formatDelta(n: number): string {
   if (n >= 0) return `+${n}`;
   return `${n}`;
 }
 
+/** Net signed adjustment across all of a modifier's effects, used for the collapsed chip label. */
 function sumDelta(mod: TempModifier): number {
   return mod.effects.reduce((sum, e) => sum + e.delta, 0);
 }
 
+/** Human-readable "STR +2, AGL -1" summary of a modifier's individual effects. */
 function formatEffectsList(mod: TempModifier): string {
   return mod.effects
     .map((e) => `${e.stat.toUpperCase()} ${formatDelta(e.delta)}`)
     .join(', ');
 }
 
+/**
+ * Row of chips summarizing the active temporary modifiers, with per-chip remove, a
+ * clear-all, and an add button.
+ *
+ * @remarks
+ * Each chip collapses a modifier to its net delta and expands to the full per-stat
+ * breakdown on tap. This is the sheet's at-a-glance buff/debuff surface; it renders
+ * state only and delegates every mutation to the callbacks.
+ */
 export function BuffChipBar({
   modifiers,
   onRemove,

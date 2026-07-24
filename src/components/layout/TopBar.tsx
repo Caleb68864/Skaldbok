@@ -9,6 +9,17 @@ import { useWakeLock } from '../../hooks/useWakeLock';
 import { EndOfSessionModal } from '../modals/EndOfSessionModal';
 import { cn } from '@/lib/utils';
 
+/**
+ * Legacy top app bar: play/edit mode toggle, fullscreen, wake-lock, and an overflow
+ * menu of navigation shortcuts.
+ *
+ * @remarks
+ * A colored bottom border signals the current mode (play vs edit). The overflow menu
+ * closes on outside click via a document `mousedown` listener that is only attached
+ * while open. Fullscreen and wake-lock are best-effort browser features and hide
+ * their controls where unsupported. Much of this role now lives in
+ * {@link CampaignHeader}; this component predates the shell chrome.
+ */
 export function TopBar() {
   const { settings, toggleMode } = useAppState();
   const { character } = useActiveCharacter();

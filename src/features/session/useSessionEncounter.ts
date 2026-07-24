@@ -6,6 +6,7 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import type { Encounter } from '../../types/encounter';
 
+/** Fields for starting a new encounter within a session. */
 export interface StartEncounterInput {
   title: string;
   type: 'combat' | 'social' | 'exploration';
@@ -21,6 +22,7 @@ export interface StartEncounterInput {
   parentOverride?: string | null;
 }
 
+/** State and actions returned by {@link useSessionEncounter}. */
 export interface UseSessionEncounterResult {
   activeEncounter: Encounter | null;
   recentEnded: Encounter[];
@@ -33,6 +35,18 @@ export interface UseSessionEncounterResult {
 
 const VALID_TYPES = new Set(['combat', 'social', 'exploration']);
 
+/**
+ * Manages the lifecycle of encounters within one session: the active encounter,
+ * recently ended ones, and start/end/reopen actions.
+ *
+ * @remarks
+ * At most one encounter is active per session — that invariant is phrased over
+ * non-deleted rows, matching the soft-delete convention. Starting an encounter
+ * records a `happened_during` entity-link to the previously active encounter so the
+ * timeline can nest them; {@link StartEncounterInput.parentOverride} tunes or
+ * suppresses that link. All reads go through the encounter repository, so
+ * soft-deleted encounters never surface.
+ */
 export function useSessionEncounter(sessionId: string): UseSessionEncounterResult {
   const [activeEncounter, setActiveEncounter] = useState<Encounter | null>(null);
   const [recentEnded, setRecentEnded] = useState<Encounter[]>([]);

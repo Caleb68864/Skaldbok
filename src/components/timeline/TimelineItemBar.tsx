@@ -5,6 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { TimelineItemLayout } from './types';
 import { truncateVisibleLabel } from './utils/layout';
 
+/** Maps a bar's semantic variant to its border/background/text utility classes. */
 function resolveToneClass(variant: TimelineItemLayout['item']['variant']) {
   switch (variant) {
     case 'accent':
@@ -23,6 +24,7 @@ function resolveToneClass(variant: TimelineItemLayout['item']['variant']) {
   }
 }
 
+/** Normalizes a color token to a CSS value: raw `var(...)` passes through, a bare `--token` is wrapped, anything else is returned as-is. */
 function resolveTokenColor(colorToken?: string): string | undefined {
   if (!colorToken) {
     return undefined;
@@ -35,6 +37,7 @@ function resolveTokenColor(colorToken?: string): string | undefined {
   return colorToken.startsWith('--') ? `var(${colorToken})` : colorToken;
 }
 
+/** Props for {@link TimelineItemBar}: the bar's layout/state plus an optional `renderContent` override for custom bar bodies. */
 interface TimelineItemBarProps {
   layout: TimelineItemLayout;
   trackLabel: string;
@@ -45,6 +48,14 @@ interface TimelineItemBarProps {
   renderContent?: (item: TimelineItemLayout['item'], layout: TimelineItemLayout) => ReactNode;
 }
 
+/**
+ * Span (start→end) timeline event rendered as a horizontal bar with a tooltip.
+ *
+ * @remarks
+ * The counterpart to {@link TimelineItemMarker}, which handles instantaneous events.
+ * Keyboard operable (Enter/Space select) and shows a link glyph for items with a
+ * `sourceId`. Callers may override the bar body via `renderContent`.
+ */
 export function TimelineItemBar({
   layout,
   trackLabel,

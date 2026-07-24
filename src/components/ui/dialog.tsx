@@ -1,3 +1,13 @@
+/**
+ * Skaldbok-styled composable dialog built on Radix Dialog.
+ *
+ * @remarks
+ * A thin styling layer over `@radix-ui/react-dialog` — the exported parts
+ * (`Dialog`, `DialogContent`, `DialogHeader`, `DialogBody`, `DialogFooter`,
+ * `DialogTitle`, `DialogDescription`, …) compose the same way as the underlying
+ * primitives and inherit their accessibility (focus trap, escape-to-close). Most
+ * screens use the higher-level {@link Modal} wrapper instead of these directly.
+ */
 import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";

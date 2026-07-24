@@ -1,5 +1,6 @@
 import type { Weapon } from '../../types/character';
 
+/** Props for {@link ShieldCard}. Mark-damaged / repair actions only appear in play mode and only when the shield tracks durability. */
 interface ShieldCardProps {
   shield: Weapon;
   isPlayMode: boolean;
@@ -7,6 +8,14 @@ interface ShieldCardProps {
   onRepair: (id: string) => void;
 }
 
+/**
+ * Card for an equipped shield showing durability and a damaged/OK state.
+ *
+ * @remarks
+ * A shield is modeled as a {@link Weapon} record; this view surfaces just its
+ * durability and the play-mode toggle between damaged and repaired. The durability
+ * block and actions are hidden entirely when the shield has no durability value.
+ */
 export function ShieldCard({ shield, isPlayMode, onMarkDamaged, onRepair }: ShieldCardProps) {
   const isDamaged = shield.damaged === true;
   const hasDurability = shield.durability != null && shield.durability !== undefined;

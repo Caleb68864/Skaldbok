@@ -7,6 +7,10 @@ import type {
   TimelineVisibleRange,
 } from '../types';
 
+/**
+ * Date/time math for the timeline: normalizing inputs, coercing items to ms ranges,
+ * clamping to the viewport, and choosing a scale.
+ */
 export const MINUTE_MS = 60 * 1000;
 export const HOUR_MS = 60 * MINUTE_MS;
 export const DAY_MS = 24 * HOUR_MS;
@@ -14,6 +18,7 @@ export const WEEK_MS = 7 * DAY_MS;
 export const MONTH_APPROX_MS = 30 * DAY_MS;
 export const DEFAULT_MIN_ITEM_DURATION_MS = 5 * MINUTE_MS;
 
+/** Converts any {@link TimelineDateInput} to epoch ms, or `null` if it is missing or unparseable. */
 export function normalizeDateInput(value: TimelineDateInput | null | undefined): number | null {
   if (value == null) {
     return null;
@@ -32,6 +37,7 @@ export function normalizeDateInput(value: TimelineDateInput | null | undefined):
   return Number.isFinite(timestamp) ? timestamp : null;
 }
 
+/** Resolves a visible range to ms, ordering start/end and giving a zero-width range a minimum duration so it never collapses. */
 export function normalizeVisibleRange(range: TimelineVisibleRange): TimelineRange | null {
   const startMs = normalizeDateInput(range.start);
   const endMs = normalizeDateInput(range.end);
@@ -53,6 +59,7 @@ export function normalizeVisibleRange(range: TimelineVisibleRange): TimelineRang
   };
 }
 
+/** Decides whether an item is a point or a range: explicit `type` wins, otherwise a later `end` than `start` implies a range. */
 export function inferPointVsRange(item: Pick<TimelineItem, 'start' | 'end' | 'type'>): 'point' | 'range' {
   if (item.type === 'range') {
     return 'range';
@@ -67,6 +74,13 @@ export function inferPointVsRange(item: Pick<TimelineItem, 'start' | 'end' | 'ty
   return endMs > startMs ? 'range' : 'point';
 }
 
+/**
+ * Resolves an item to a concrete ms range, or `null` if it has no valid start.
+ *
+ * @remarks
+ * A range-typed item with no usable `end` is given `minimumDurationMs` so it stays
+ * clickable; a point keeps zero duration (its `endMs` equals `startMs`).
+ */
 export function coerceItemToRange(
   item: Pick<TimelineItem, 'start' | 'end' | 'type'>,
   minimumDurationMs = DEFAULT_MIN_ITEM_DURATION_MS,
@@ -94,6 +108,7 @@ export function coerceItemToRange(
   };
 }
 
+/** Clips a range to the visible window, reporting whether either edge was cut off so the bar can show a clipped affordance. */
 export function clampToVisibleRange(
   range: TimelineRange,
   visibleRange: TimelineRange,
@@ -115,6 +130,13 @@ export function clampToVisibleRange(
   };
 }
 
+/**
+ * Computes a default visible range that fits all items and markers, with padding.
+ *
+ * @remarks
+ * Falls back to a `fallbackDurationMs` window centered on now when there is no dated
+ * content, so an empty timeline still renders a sensible axis.
+ */
 export function resolveTimelineBounds(
   items: ReadonlyArray<Pick<TimelineItem, 'start' | 'end' | 'type'>>,
   markerDates: ReadonlyArray<TimelineDateInput> = [],
@@ -159,6 +181,7 @@ export function resolveTimelineBounds(
   };
 }
 
+/** Picks an axis scale unit to match a duration (minutes for hours-long spans up to months for very long ones), unless a non-`custom` unit is forced. */
 export function resolveScaleUnit(
   durationMs: number,
   preferredScaleUnit: TimelineScaleUnit = 'custom',
@@ -186,6 +209,7 @@ export function resolveScaleUnit(
   return 'month';
 }
 
+/** Returns the pixels-per-unit config for a scale unit at a given zoom, clamping zoom to a safe 0.5–4× range. */
 export function getScaleConfig(unit: TimelineScaleUnit, zoomLevel = 1): TimelineScale {
   const safeZoom = Math.max(0.5, Math.min(zoomLevel, 4));
 
@@ -206,6 +230,7 @@ export function getScaleConfig(unit: TimelineScaleUnit, zoomLevel = 1): Timeline
   }
 }
 
+/** Formats a tick timestamp with locale-aware detail appropriate to the scale (time of day for fine units, month/year for coarse ones). */
 export function formatTimelineDate(valueMs: number, unit: TimelineScaleUnit): string {
   const date = new Date(valueMs);
 

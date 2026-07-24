@@ -9,6 +9,7 @@ import {
   SheetCloseButton,
 } from "../ui/sheet";
 
+/** Props for {@link Drawer}. `onClose` fires whenever the underlying sheet requests dismissal. */
 interface DrawerProps {
   open: boolean;
   onClose: () => void;
@@ -16,6 +17,7 @@ interface DrawerProps {
   children: ReactNode;
 }
 
+/** Convenience wrapper over the {@link Sheet} primitive: a titled slide-in panel with an accessible hidden description. */
 export function Drawer({ open, onClose, title, children }: DrawerProps) {
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>

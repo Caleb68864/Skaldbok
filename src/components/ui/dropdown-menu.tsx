@@ -1,3 +1,12 @@
+/**
+ * Skaldbok-styled dropdown menu built on Radix DropdownMenu.
+ *
+ * @remarks
+ * A styling layer over `@radix-ui/react-dropdown-menu`; the exported parts
+ * (`DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`,
+ * `DropdownMenuLabel`, `DropdownMenuSeparator`) compose exactly like the primitives
+ * and keep their keyboard navigation and focus behavior.
+ */
 import * as React from "react";
 import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 

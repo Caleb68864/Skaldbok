@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { TimelineMarkerLayout, TimelineTick, TimelineTrackLayout } from './types';
 import { TimelineTrackRow } from './TimelineTrackRow';
 
+/** Props for {@link TimelineTrackList}: the per-track layouts and the shared selection state / interaction callbacks passed to each row. */
 interface TimelineTrackListProps {
   trackLayouts: TimelineTrackLayout[];
   labelColumnWidth: number;
@@ -24,6 +25,15 @@ interface TimelineTrackListProps {
   collapsedTrackIds: string[];
 }
 
+/**
+ * Renders one {@link TimelineTrackRow} per track layout, wiring up parent/child indentation.
+ *
+ * @remarks
+ * A track counts as a parent (and gets an expand/collapse chevron) if any track
+ * references it as a `parentTrackId` *or* if it is currently collapsed — its children
+ * are absent from `trackLayouts` while collapsed, so the collapsed-id set is consulted
+ * to keep the affordance stable across collapse/expand cycles.
+ */
 export function TimelineTrackList({
   trackLayouts,
   labelColumnWidth,

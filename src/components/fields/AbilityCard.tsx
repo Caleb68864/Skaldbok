@@ -2,6 +2,7 @@ import type { HeroicAbility } from '../../types/character';
 import { Card } from '../primitives/Card';
 import { Button } from '../primitives/Button';
 
+/** Props for {@link AbilityCard}. Edit/delete controls appear only in `isEditMode`. */
 interface AbilityCardProps {
   ability: HeroicAbility;
   onEdit: () => void;
@@ -9,6 +10,7 @@ interface AbilityCardProps {
   isEditMode: boolean;
 }
 
+/** Card summarizing one heroic ability (name + summary), with edit/delete controls in edit mode. */
 export function AbilityCard({ ability, onEdit, onDelete, isEditMode }: AbilityCardProps) {
   return (
     <Card>

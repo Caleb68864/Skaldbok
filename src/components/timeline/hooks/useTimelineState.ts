@@ -11,6 +11,7 @@ import type {
 } from '../types';
 import { normalizeVisibleRange, resolveTimelineBounds } from '../utils/date';
 
+/** Inputs to {@link useTimelineState}: the data plus the controlled/uncontrolled hooks for filter, selection, and view state. */
 interface UseTimelineStateArgs {
   tracks: TimelineTrack[];
   items: TimelineItem[];
@@ -25,6 +26,15 @@ interface UseTimelineStateArgs {
   initialScaleUnit?: TimelineScaleUnit;
 }
 
+/**
+ * Generic controlled-or-uncontrolled state hook.
+ *
+ * @remarks
+ * When `controlledValue` is provided the caller owns the value and this hook only
+ * relays changes through `onChange`; otherwise it keeps the value internally. A ref
+ * mirrors the current value so the functional-updater form reads fresh state even
+ * while controlled, where there is no internal state to derive `prev` from.
+ */
 function useControllableState<T>(
   controlledValue: T | undefined,
   initialValue: T,
@@ -60,6 +70,7 @@ function useControllableState<T>(
   return [value, setValue] as const;
 }
 
+/** Seeds the initial filter state from the tracks (visible vs hidden, catalog-collapsed) merged with any caller overrides. */
 function buildInitialFilterState(
   tracks: TimelineTrack[],
   initialFilterState?: Partial<TimelineFilterState>,
@@ -86,6 +97,7 @@ function buildInitialFilterState(
   };
 }
 
+/** Seeds selection state — nothing selected/hovered unless the caller supplies an initial value. */
 function buildInitialSelectionState(
   initialSelectionState?: TimelineSelectionState,
 ): TimelineSelectionState {
@@ -96,6 +108,7 @@ function buildInitialSelectionState(
   };
 }
 
+/** Seeds view (pan/zoom) state, using an explicit range if given and otherwise auto-fitting bounds to the data. */
 function buildInitialViewState(
   items: TimelineItem[],
   markers: TimelineMarker[],
@@ -115,6 +128,16 @@ function buildInitialViewState(
   };
 }
 
+/**
+ * Owns the timeline's interaction state — filters, selection, and pan/zoom — and the
+ * actions that mutate them.
+ *
+ * @remarks
+ * Each of the three state slices is independently controllable: pass the value plus
+ * its `on*Change` to drive it from outside, or omit them to let the hook manage it
+ * (see {@link useControllableState}). Exposes the toggles/setters the toolbar and
+ * viewport call. Layout geometry is computed separately by {@link useTimelineLayout}.
+ */
 export function useTimelineState({
   tracks,
   items,

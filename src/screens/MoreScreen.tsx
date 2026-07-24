@@ -2,6 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ManagePartyDrawer } from '../features/campaign/ManagePartyDrawer';
 
+/**
+ * Overflow menu for nav destinations that don't warrant a bottom-nav slot:
+ * "Manage Party" (opens {@link ManagePartyDrawer}) plus links to Settings and other
+ * secondary screens.
+ */
 export function MoreScreen() {
   const [showParty, setShowParty] = useState(false);
 

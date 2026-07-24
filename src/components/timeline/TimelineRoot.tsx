@@ -10,6 +10,7 @@ import { useTimelineLayout } from './hooks/useTimelineLayout';
 import { useTimelineState } from './hooks/useTimelineState';
 import type { TimelineLegendItem, TimelineRootProps } from './types';
 
+/** Derives a legend from the tracks that actually have items, one entry per used track, when no explicit `legendItems` are provided. */
 function buildDefaultLegend(items: TimelineRootProps['items'], tracks: TimelineRootProps['tracks']): TimelineLegendItem[] {
   const trackMap = new Map(tracks.map((track) => [track.id, track]));
   const usedTrackIds = new Set(items.map((item) => item.trackId));
@@ -25,6 +26,19 @@ function buildDefaultLegend(items: TimelineRootProps['items'], tracks: TimelineR
     }));
 }
 
+/**
+ * The reusable timeline widget: toolbar, legend, scrollable track viewport, and a
+ * details panel, composed over the timeline state and layout hooks.
+ *
+ * @remarks
+ * A generic, data-source-agnostic component — screens feed it `tracks`/`items`
+ * (Skaldbok maps notes in via {@link notesToTimeline}) and it owns rendering.
+ * Filtering, selection, and scale can each be either uncontrolled (seeded by the
+ * `initial*` props) or controlled (via the paired value + `on*Change` props). Layout
+ * math lives in {@link useTimelineLayout}; interaction/derived state in
+ * {@link useTimelineState}. Renders {@link TimelineEmptyState} when there is nothing
+ * to show. Most sub-parts (toolbar/legend/details/now-marker) can be toggled off.
+ */
 export function TimelineRoot({
   tracks,
   items,

@@ -9,6 +9,7 @@ import {
   DialogDescription,
 } from "../ui/dialog";
 
+/** Props for {@link Modal}. `actions` render in the footer; omit them for a body-only dialog. */
 interface ModalProps {
   open: boolean;
   onClose: () => void;
@@ -17,6 +18,7 @@ interface ModalProps {
   actions?: ReactNode;
 }
 
+/** Convenience wrapper over the {@link Dialog} primitive: a titled modal with optional footer actions and an accessible hidden description. */
 export function Modal({ open, onClose, title, children, actions }: ModalProps) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>

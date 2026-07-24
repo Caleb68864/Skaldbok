@@ -1,3 +1,12 @@
+/**
+ * Public entry point for the reusable timeline module.
+ *
+ * @remarks
+ * Re-exports the types, the {@link TimelineRoot} widget and its sub-components, and
+ * the layout/state hooks. Consumers should import from here rather than reaching into
+ * individual files. Adapters/config/utils are intentionally not re-exported — they
+ * are internal wiring.
+ */
 export * from './types';
 export * from './TimelineRoot';
 export * from './TimelineToolbar';

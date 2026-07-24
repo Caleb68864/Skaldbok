@@ -13,6 +13,7 @@ import {
 import type { TimelineItem, TimelineTrack } from './types';
 import { formatTimelineDate, normalizeDateInput } from './utils/date';
 
+/** Props for {@link TimelineDetailsPanel}. `onNavigateToSource` enables a "go to source" action; `renderItemDetails` overrides the default body. */
 interface TimelineDetailsPanelProps {
   item: TimelineItem | null;
   track?: TimelineTrack;
@@ -22,6 +23,7 @@ interface TimelineDetailsPanelProps {
   renderItemDetails?: (item: TimelineItem, track?: TimelineTrack) => ReactNode;
 }
 
+/** Human-readable date-range label for an item, or `null` when it has no parseable start. */
 function getRangeLabel(item: TimelineItem): string | null {
   const startMs = normalizeDateInput(item.start);
   if (startMs == null) {
@@ -36,6 +38,7 @@ function getRangeLabel(item: TimelineItem): string | null {
   return formatTimelineDate(startMs, 'hour');
 }
 
+/** Side sheet showing the selected timeline item's details (date range, track, tags) with an optional link back to its source entity. */
 export function TimelineDetailsPanel({
   item,
   track,

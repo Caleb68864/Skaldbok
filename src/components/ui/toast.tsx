@@ -23,6 +23,7 @@ const toastVariants = cva(
   },
 );
 
+/** Props for {@link Toast}: the message and optional {@link ToastAction}, plus a color `variant`. */
 export interface ToastProps
   extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof toastVariants> {
@@ -31,6 +32,7 @@ export interface ToastProps
   action?: ToastAction;
 }
 
+/** A single toast bubble with an animated entrance and an optional inline action button. */
 const Toast = React.forwardRef<HTMLDivElement, ToastProps>(
   ({ className, variant, message, action, ...props }, ref) => {
     return (

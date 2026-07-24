@@ -50,6 +50,7 @@ export const ICON_PATHS: Record<string, string> = {
 
 export type IconName = keyof typeof ICON_PATHS;
 
+/** Props for {@link GameIcon}. `name` must be a key of {@link ICON_PATHS}; an unknown name renders nothing. */
 interface GameIconProps {
   name: string;
   size?: number;
@@ -58,6 +59,14 @@ interface GameIconProps {
   style?: React.CSSProperties;
 }
 
+/**
+ * Renders a single game-icons.net glyph as an inline SVG.
+ *
+ * @remarks
+ * Paths are inlined in {@link ICON_PATHS} rather than loaded from a sprite or font
+ * so the app stays fully offline. An unrecognized `name` returns `null` instead of
+ * throwing, so a stale icon reference degrades to blank rather than crashing.
+ */
 export function GameIcon({ name, size = 24, color = 'currentColor', className, style }: GameIconProps) {
   const path = ICON_PATHS[name];
   if (!path) return null;

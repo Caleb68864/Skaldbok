@@ -4,8 +4,22 @@ import { useCampaignContext } from '../campaign/CampaignContext';
 import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
 import type { Attachment } from '../../types/attachment';
 
+/** An attachment record paired with a live object URL for rendering its blob. */
 type AttachmentWithUrl = Attachment & { objectUrl: string };
 
+/**
+ * Loads and mutates the image attachments for a note, managing blob object-URL
+ * lifetimes.
+ *
+ * @remarks
+ * Attachment blobs live in IndexedDB; each is exposed as an `objectUrl` created with
+ * `URL.createObjectURL`, and the hook revokes every URL it made on reload and unmount
+ * so blob memory isn't leaked. Guards enforce the rules that a note must be saved
+ * (have an id) and a campaign active before attaching, and caps a note at 10
+ * attachments. `addAttachment` distinguishes a quota error from an unreadable image
+ * so the toast is actionable. A `noteId` of `undefined` clears state (the new-note
+ * case).
+ */
 export function useNoteAttachments(noteId: string | undefined) {
   const { activeCampaign } = useCampaignContext();
   const { showToast } = useToast();

@@ -3,6 +3,7 @@ import type { ItemFieldDef } from '../../types/system';
 import { Card } from '../primitives/Card';
 import { Button } from '../primitives/Button';
 
+/** Props for {@link WeaponCard}: the weapon plus the active system's field-visibility config. */
 interface WeaponCardProps {
   weapon: Weapon;
   onEquipToggle: () => void;
@@ -60,6 +61,15 @@ function buildSummary(
   return parts;
 }
 
+/**
+ * Card for one weapon: name, equip toggle, a system-aware summary line, and
+ * edit/delete in edit mode.
+ *
+ * @remarks
+ * The summary is built by {@link buildSummary} from only the fields the active system
+ * uses, so a non-Dragonbane weapon shows its own stats instead of blank Dragonbane
+ * ones.
+ */
 export function WeaponCard({
   weapon,
   onEquipToggle,

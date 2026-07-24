@@ -4,6 +4,7 @@ import { Drawer } from '../primitives/Drawer';
 import { Button } from '../primitives/Button';
 import { generateId } from '../../utils/ids';
 
+/** Props for {@link InventoryItemEditor}. A `null` `item` means "create new"; a non-null one pre-fills the form for editing. */
 interface InventoryItemEditorProps {
   open: boolean;
   onClose: () => void;
@@ -13,6 +14,14 @@ interface InventoryItemEditorProps {
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
 
+/**
+ * Drawer form to create or edit a single inventory item.
+ *
+ * @remarks
+ * Form fields sync from the `item` prop on open; a new item gets a fresh id via
+ * {@link generateId} on save. The same component covers both create and edit so the
+ * two paths can't drift apart.
+ */
 export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryItemEditorProps) {
   const [name, setName] = useState('');
   const [weight, setWeight] = useState(0);

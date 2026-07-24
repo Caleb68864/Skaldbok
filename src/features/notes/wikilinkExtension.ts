@@ -40,6 +40,7 @@ export interface WikiLinkOptions {
   suggestion: Partial<SuggestionOptions>;
 }
 
+/** The `[[wikilink]]` inline atom node extension: `[[` suggestion autocomplete plus input/paste rules, rendered as an interactive chip via {@link WikiLinkComponent}. */
 export const WikiLink = Node.create<WikiLinkOptions>({
   name: 'wikiLink',
   group: 'inline',

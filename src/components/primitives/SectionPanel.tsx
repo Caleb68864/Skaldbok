@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+/** Props for {@link SectionPanel}. `collapsible` enables the header toggle; `defaultOpen` sets the initial state. */
 interface SectionPanelProps {
   title: string;
   subtitle?: string;
@@ -12,6 +13,14 @@ interface SectionPanelProps {
   defaultOpen?: boolean;
 }
 
+/**
+ * Bordered content panel with a gold-accented title header, optionally collapsible.
+ *
+ * @remarks
+ * The collapse is a CSS grid-rows transition (`1fr`↔`0fr`) rather than conditional
+ * mounting, so children stay mounted and keep their state while hidden and the
+ * open/close animates. Open state is local; there is no persistence.
+ */
 export function SectionPanel({ title, subtitle, icon, children, collapsible = false, defaultOpen = true }: SectionPanelProps) {
   const [open, setOpen] = useState(defaultOpen);
 

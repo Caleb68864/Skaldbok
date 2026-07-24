@@ -4,11 +4,20 @@ import React, { useRef, useState, useCallback } from 'react';
 // Types
 // ============================================================
 
+/** A reorderable panel: a stable `key` and the rendered `element`. */
 export interface PanelItem {
   key: string;
   element: React.ReactNode;
 }
 
+/**
+ * Props for {@link DraggableCardContainer}.
+ *
+ * @remarks
+ * `cardOrder` is the persisted ordering by key; `panelVisibility` hides panels
+ * without removing them from the order, so a hidden-then-shown panel returns to its
+ * saved slot. Dragging is only enabled in `isEditMode`.
+ */
 export interface DraggableCardContainerProps {
   panels: PanelItem[];
   cardOrder: string[];
@@ -17,6 +26,7 @@ export interface DraggableCardContainerProps {
   onOrderChange: (newOrder: string[]) => void;
 }
 
+/** Transient pointer-drag bookkeeping while a card is being dragged. */
 interface DragState {
   activeIndex: number;     // index in orderedPanels
   startY: number;
@@ -65,6 +75,15 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
 // Component
 // ============================================================
 
+/**
+ * Vertically reorderable stack of sheet panels using pointer-drag.
+ *
+ * @remarks
+ * Ordering is driven by `cardOrder`; unknown panels (newly added, not yet in the
+ * saved order) fall to the end via {@link sortPanels} rather than disappearing. A
+ * completed drag emits the new key order through `onOrderChange` — the container
+ * itself never persists. Uses Pointer Events so touch and mouse share one code path.
+ */
 const DraggableCardContainer: React.FC<DraggableCardContainerProps> = ({
   panels,
   cardOrder,

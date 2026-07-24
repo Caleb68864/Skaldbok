@@ -7,11 +7,13 @@ import {
   formatTimelineDate,
 } from './date';
 
+/** The major/minor gridline spacing (in ms) chosen for a given scale unit. */
 interface TickPlan {
   majorStepMs: number;
   minorStepMs: number;
 }
 
+/** Picks sensible major/minor tick spacing for a scale unit (e.g. hours → major every 2h, minor every 30m). */
 function getTickPlan(unit: TimelineScaleUnit): TickPlan {
   switch (unit) {
     case 'minute':
@@ -30,10 +32,12 @@ function getTickPlan(unit: TimelineScaleUnit): TickPlan {
   }
 }
 
+/** Rounds a timestamp down to the nearest multiple of `stepMs`, so ticks land on tidy boundaries. */
 function alignTimestamp(valueMs: number, stepMs: number): number {
   return Math.floor(valueMs / stepMs) * stepMs;
 }
 
+/** Generates ticks at a fixed step across the visible range, positioned as percentages. */
 function buildTicksForStep(
   visibleRange: TimelineRange,
   stepMs: number,
@@ -59,6 +63,13 @@ function buildTicksForStep(
   return ticks;
 }
 
+/**
+ * Builds the full set of axis ticks (major and minor) for the visible range.
+ *
+ * @remarks
+ * Minor and major ticks are merged by timestamp with major winning, so a line that is
+ * both never renders twice and always takes its major styling.
+ */
 export function getAxisTicks(
   visibleRange: TimelineRange,
   scaleUnit: TimelineScaleUnit,
@@ -79,6 +90,7 @@ export function getAxisTicks(
   return [...tickMap.values()].sort((left, right) => left.valueMs - right.valueMs);
 }
 
+/** Computes an item's left/width in both pixels and percent of the timeline, enforcing a minimum width so zero-duration points stay visible. */
 export function getItemPixelPosition(
   range: TimelineRange,
   visibleRange: TimelineRange,
@@ -101,6 +113,7 @@ export function getItemPixelPosition(
   };
 }
 
+/** Ellipsizes a label to roughly fit `widthPx`, estimating ~7px per character with a small floor. */
 export function truncateVisibleLabel(label: string, widthPx: number): string {
   const approximateCharacters = Math.max(Math.floor(widthPx / 7), 4);
   if (label.length <= approximateCharacters) {

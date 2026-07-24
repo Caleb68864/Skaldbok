@@ -1,5 +1,6 @@
 import { cn } from '../../lib/utils';
 
+/** Props for {@link CombatResourcePanel}. `colorVar` is the normal-state color; `lowThreshold` sets when the value turns warning-colored. */
 interface CombatResourcePanelProps {
   label: string;
   current: number;
@@ -10,6 +11,13 @@ interface CombatResourcePanelProps {
   onDecrement: () => void;
 }
 
+/**
+ * Oversized current/max resource readout for the combat screen.
+ *
+ * @remarks
+ * The number changes color by state: `colorVar` normally, warning when at or below
+ * `lowThreshold`, danger at zero — a glanceable HP/WP indicator during a fight.
+ */
 export function CombatResourcePanel({
   label,
   current,

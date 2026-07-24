@@ -1,11 +1,13 @@
 import { cn } from '../../lib/utils';
 import type { ConditionDefinition } from '../../types/system';
 
+/** A condition tied to this attribute, plus whether it is currently active. */
 interface LinkedCondition {
   definition: ConditionDefinition;
   active: boolean;
 }
 
+/** Props for {@link AttributeField}. `onChange` receives a step delta (±1), not an absolute value. */
 interface AttributeFieldProps {
   attributeId: string;
   abbreviation: string;
@@ -20,6 +22,15 @@ interface AttributeFieldProps {
   modifierDelta?: number;
 }
 
+/**
+ * Single attribute cell: abbreviation, a stepper for its value, and any linked
+ * condition toggles.
+ *
+ * @remarks
+ * When `disabled` the stepper collapses to a read-only number. A non-zero
+ * {@link AttributeFieldProps.modifierDelta} surfaces a colored ± badge next to the
+ * label so temporary buffs/debuffs are visible without opening the modifier list.
+ */
 export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false, linkedConditions, onConditionToggle, modifierDelta }: AttributeFieldProps) {
   const hasModifier = modifierDelta !== undefined && modifierDelta !== 0;
 
