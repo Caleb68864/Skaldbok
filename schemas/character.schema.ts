@@ -91,6 +91,11 @@ export const characterRecordSchema = z.object({
   inventory: z.array(inventoryItemSchema).default([]),
   tinyItems: z.array(z.string()).default([]).describe('List of tiny item names'),
   memento: z.string().default('').describe('Character memento description'),
+  storyBank: z.array(z.object({
+    id: z.string(),
+    cue: z.string(),
+    text: z.string(),
+  })).optional().describe('Roleplay prompts / story-bank beats'),
   wealth: z
     .record(z.string(), z.number().nonnegative())
     .default({})

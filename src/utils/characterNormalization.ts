@@ -58,6 +58,7 @@ export function normalizeCharacter(character: CharacterRecord): CharacterRecord 
     weapons: Array.isArray(character.weapons) ? character.weapons : [],
     inventory: Array.isArray(character.inventory) ? character.inventory : [],
     tinyItems: Array.isArray(character.tinyItems) ? character.tinyItems : [],
+    storyBank: Array.isArray(character.storyBank) ? character.storyBank : [],
     abilities: Array.isArray(character.abilities) ? character.abilities : [],
     // Money is keyed by the system's own denomination ids, so clamp each entry
     // generically instead of assuming gold/silver/copper.

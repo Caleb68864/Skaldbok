@@ -14,6 +14,7 @@ import { MagicModule } from '../features/playDashboard/MagicModule';
 import { RestModule } from '../features/playDashboard/RestModule';
 import { DerivedStatsModule } from '../features/playDashboard/DerivedStatsModule';
 import { QuickReferenceModule } from '../features/playDashboard/QuickReferenceModule';
+import { StoryBankModule } from '../features/playDashboard/StoryBankModule';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 
 /**
@@ -69,6 +70,7 @@ export default function PlayDashboardScreen() {
           <AbilityModule {...moduleProps} />
           <MagicModule {...moduleProps} />
         </div>
+        <StoryBankModule {...moduleProps} />
         <QuickReferenceModule {...moduleProps} />
       </div>
     </div>

@@ -381,6 +381,15 @@ export interface CharacterResource {
  * This is the root document stored in IndexedDB via Dexie.  Every field
  * is serialisable to JSON.  Timestamps follow ISO 8601 format.
  */
+/** One roleplay prompt: a short cue for when to reach for it, plus the beat. */
+export interface StoryBeat {
+  id: string;
+  /** Short trigger — a tag or "use when…" ("patience", "someone has died"). */
+  cue: string;
+  /** The prompt itself: an anecdote title, a reminder, a line to deliver. */
+  text: string;
+}
+
 export interface CharacterRecord extends Versioned, Timestamped {
   /** Unique identifier for this character. */
   id: ID;
@@ -413,6 +422,16 @@ export interface CharacterRecord extends Versioned, Timestamped {
   tinyItems: string[];
   /** The character's memento item description. */
   memento: string;
+  /**
+   * Roleplay prompts / story-bank beats the player keeps at hand — each a short
+   * cue ("when to use") and the beat itself.
+   *
+   * @remarks
+   * System-agnostic: a cue could be a Traveller anecdote trigger or a Dragonbane
+   * weakness reminder. Optional and defaulted to `[]` on read, so characters
+   * saved before it existed need no migration.
+   */
+  storyBank?: StoryBeat[];
   /**
    * Money held, keyed by the active system's currency denomination id.
    *

@@ -23,6 +23,7 @@ import { Modal } from '../components/primitives/Modal';
 import { useToast } from '../context/ToastContext';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { nowISO } from '../utils/dates';
+import { generateId } from '../utils/ids';
 import { cn } from '../lib/utils';
 import { useSessionLog } from '../features/session/useSessionLog';
 import DraggableCardContainer from '../components/panels/DraggableCardContainer';
@@ -82,6 +83,26 @@ export default function SheetScreen() {
 
   // Reorder mode state
   const [reorderMode, setReorderMode] = useState(false);
+
+  // Story Bank editor draft (a new beat being composed)
+  const [newBeatCue, setNewBeatCue] = useState('');
+  const [newBeatText, setNewBeatText] = useState('');
+
+  function addStoryBeat() {
+    const text = newBeatText.trim();
+    if (!text) return;
+    const beat = { id: generateId(), cue: newBeatCue.trim(), text };
+    updateCharacter(prev => ({ storyBank: [...(prev.storyBank ?? []), beat], updatedAt: nowISO() }));
+    setNewBeatCue('');
+    setNewBeatText('');
+  }
+
+  function removeStoryBeat(id: string) {
+    updateCharacter(prev => ({
+      storyBank: (prev.storyBank ?? []).filter(b => b.id !== id),
+      updatedAt: nowISO(),
+    }));
+  }
 
   // Death track helpers (mirrored from CombatScreen)
   function updateDeathRollCurrent(id: string, value: number) {
@@ -144,8 +165,8 @@ export default function SheetScreen() {
   const currencyAmounts = engine.currency.read(character);
 
   const DEFAULT_PANEL_ORDER = isTraveller
-    ? ['identity', 'characteristics', 'resources', 'finances', 'careers', 'augments']
-    : ['identity', 'attributes', 'resources', 'derived', 'rest'];
+    ? ['identity', 'characteristics', 'resources', 'finances', 'careers', 'augments', 'storyBank']
+    : ['identity', 'attributes', 'resources', 'derived', 'rest', 'storyBank'];
   const storedPanelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
   const panelOrder = [
     ...storedPanelOrder.filter(key => DEFAULT_PANEL_ORDER.includes(key)),
@@ -612,6 +633,68 @@ export default function SheetScreen() {
     </SectionPanel>
   );
 
+  const storyBankPanel = (
+    <SectionPanel title="Story Bank" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
+      <div className="flex flex-col gap-[var(--space-sm)]">
+        {(character.storyBank ?? []).length === 0 && (
+          <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
+            No roleplay prompts yet. Add cues you want at hand during play.
+          </p>
+        )}
+        {(character.storyBank ?? []).map(beat => (
+          <div key={beat.id} className="flex items-start justify-between gap-[var(--space-sm)] border-b border-[var(--color-border)] pb-[var(--space-xs)]">
+            <div className="min-w-0">
+              {beat.cue && (
+                <span className="mr-2 rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] px-1.5 py-0.5 text-[length:var(--font-size-sm)] font-semibold text-[var(--color-accent)]">
+                  {beat.cue}
+                </span>
+              )}
+              <span className="text-[var(--color-text)] text-[length:var(--font-size-md)]">{beat.text}</span>
+            </div>
+            {isEditMode && (
+              <button
+                type="button"
+                onClick={() => removeStoryBeat(beat.id)}
+                aria-label={`Remove ${beat.text}`}
+                className="shrink-0 min-h-[44px] px-2 text-[var(--color-danger)] cursor-pointer"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        ))}
+        {isEditMode && (
+          <div className="flex flex-wrap gap-[var(--space-xs)]">
+            <input
+              type="text"
+              value={newBeatCue}
+              onChange={e => setNewBeatCue(e.target.value)}
+              placeholder="Cue (e.g. patience)"
+              aria-label="New story cue"
+              className="w-32 min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
+            />
+            <input
+              type="text"
+              value={newBeatText}
+              onChange={e => setNewBeatText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addStoryBeat(); }}
+              placeholder="Prompt / anecdote title"
+              aria-label="New story prompt"
+              className="flex-1 min-w-[140px] min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
+            />
+            <button
+              type="button"
+              onClick={addStoryBeat}
+              className="min-h-[44px] px-3 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] cursor-pointer"
+            >
+              Add
+            </button>
+          </div>
+        )}
+      </div>
+    </SectionPanel>
+  );
+
   const derivedPanel = (
     <SectionPanel title="Derived Values" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col">
@@ -745,6 +828,7 @@ export default function SheetScreen() {
         finances: financesPanel,
         careers: careersPanel,
         augments: augmentsPanel,
+        storyBank: storyBankPanel,
       }
     : {
         identity: identityPanel,
@@ -752,6 +836,7 @@ export default function SheetScreen() {
         resources: resourcesPanel,
         derived: derivedPanel,
         rest: restPanel,
+        storyBank: storyBankPanel,
       };
 
   const panelVisibility: Record<string, boolean> = isTraveller
@@ -762,6 +847,7 @@ export default function SheetScreen() {
         finances: true,
         careers: true,
         augments: true,
+        storyBank: true,
       }
     : {
         identity: true,
@@ -769,6 +855,7 @@ export default function SheetScreen() {
         resources: true,
         derived: true,
         rest: engine.rest !== null && isPlayMode,
+        storyBank: true,
       };
 
   const panelItems: PanelItem[] = panelOrder
