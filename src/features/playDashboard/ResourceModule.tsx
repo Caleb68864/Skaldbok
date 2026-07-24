@@ -25,7 +25,7 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
 
   return (
     <SectionPanel title="Vitals" collapsible defaultOpen>
-      <div className="flex flex-col gap-[var(--space-sm)] h-full justify-start 2xl:grid 2xl:grid-cols-2">
+      <div className="flex flex-col gap-[var(--space-sm)] 2xl:grid 2xl:grid-cols-2">
         {engine.resourceIds.map(id => {
           const resource = character.resources[id];
           if (!resource) return null;
