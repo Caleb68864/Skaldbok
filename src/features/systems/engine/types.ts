@@ -207,6 +207,11 @@ export interface SystemLabels {
    * Dragonbane armour imposes a bane on some skills; Traveller's does not.
    */
   armorFeatures: string;
+  /**
+   * Label for the keepsake slot on the printed sheet, or `null` when the system
+   * has no such concept — a Memento is a Dragonbane idea, not a universal one.
+   */
+  memento: string | null;
 }
 
 /**

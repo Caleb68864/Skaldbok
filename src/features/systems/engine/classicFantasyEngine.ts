@@ -167,6 +167,7 @@ export const classicFantasyEngine: SystemEngine = {
     encounterTagExamples: 'e.g. ambush, forest, kobolds',
     locationExample: 'e.g. Riverside Clearing',
     armorFeatures: 'Features / Bane-on',
+    memento: 'Memento:',
   },
   logActions: [
     { id: 'attack', label: 'attack' },

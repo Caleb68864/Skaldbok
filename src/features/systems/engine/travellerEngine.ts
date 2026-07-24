@@ -194,6 +194,8 @@ export const travellerEngine: SystemEngine = {
     encounterTagExamples: 'e.g. boarding, starport, pirates',
     locationExample: 'e.g. Cargo Bay 3',
     armorFeatures: 'Features',
+    // No keepsake concept in Traveller; the slot is hidden entirely.
+    memento: null,
   },
   logActions: [
     { id: 'attack', label: 'attack' },

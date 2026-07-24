@@ -99,15 +99,18 @@ function SheetHeader({ character, system }: { character: CharacterRecord; system
 function buildAttributePairs(
   engine: SystemEngine,
   system: SystemDefinition | null,
-): Array<{ attrKey: string; attr: string; cond: string | null; condKey: string | null }> {
+): Array<{ attrKey: string; attr: string; conditions: Array<{ id: string; name: string }> }> {
   return engine.attributeIds.map(attrKey => {
     const def = system?.attributes?.find(a => a.id === attrKey);
-    const condition = system?.conditions?.find(c => c.linkedAttributeId === attrKey);
+    // `find` printed only the first condition per attribute, which silently
+    // dropped two of Traveller's three — all of them hang off END.
+    const conditions = (system?.conditions ?? [])
+      .filter(c => c.linkedAttributeId === attrKey)
+      .map(c => ({ id: c.id, name: c.name }));
     return {
       attrKey,
       attr: def?.abbreviation ?? attrKey.toUpperCase(),
-      cond: condition?.name ?? null,
-      condKey: condition?.id ?? null,
+      conditions,
     };
   });
 }
@@ -124,29 +127,30 @@ function AttributeBand({
   const pairs = buildAttributePairs(engine, system);
   return (
     <div className="sheet-attribute-grid">
-      {pairs.map(({ attr, attrKey, cond, condKey }) => {
-        const active = condKey ? character.conditions?.[condKey] === true : false;
-        return (
-          <div key={attrKey} className="sheet-attribute-column">
-            <div className="sheet-attribute-box">
-              <div className="sheet-attribute-label">{attr}</div>
-              <div className="sheet-attribute-value">
-                {character.attributes?.[attrKey] != null ? character.attributes[attrKey] : ''}
-              </div>
+      {pairs.map(({ attr, attrKey, conditions }) => (
+        <div key={attrKey} className="sheet-attribute-column">
+          <div className="sheet-attribute-box">
+            <div className="sheet-attribute-label">{attr}</div>
+            <div className="sheet-attribute-value">
+              {character.attributes?.[attrKey] != null ? character.attributes[attrKey] : ''}
             </div>
-            {cond ? (
-              <div className="sheet-condition">
-                <span className="sheet-condition-diamond">{active ? '◆' : '◇'}</span>
-                <span className="sheet-condition-label">{cond}</span>
-              </div>
-            ) : (
-              // Keeps column heights aligned for systems whose attributes have
-              // no linked condition.
-              <div className="sheet-condition">&nbsp;</div>
-            )}
           </div>
-        );
-      })}
+          {conditions.length > 0 ? (
+            conditions.map(condition => (
+              <div key={condition.id} className="sheet-condition">
+                <span className="sheet-condition-diamond">
+                  {character.conditions?.[condition.id] === true ? '◆' : '◇'}
+                </span>
+                <span className="sheet-condition-label">{condition.name}</span>
+              </div>
+            ))
+          ) : (
+            // Keeps column heights aligned for systems whose attributes have
+            // no linked condition.
+            <div className="sheet-condition">&nbsp;</div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
@@ -422,8 +426,10 @@ function SkillsSection({
 
 function InventorySection({
   character,
+  engine,
 }: {
   character: CharacterRecord;
+  engine: SystemEngine;
 }): React.ReactElement {
   return (
     <div className="sheet-inventory">
@@ -440,11 +446,13 @@ function InventorySection({
         );
       })}
 
-      {/* Memento */}
-      <div className="sheet-inventory-slot sheet-inventory-memento">
-        <span className="sheet-inventory-label">Memento:</span>
-        <span className="sheet-inventory-name">{character.memento ?? ''}</span>
-      </div>
+      {/* Keepsake slot — hidden for systems with no such concept. */}
+      {engine.labels.memento && (
+        <div className="sheet-inventory-slot sheet-inventory-memento">
+          <span className="sheet-inventory-label">{engine.labels.memento}</span>
+          <span className="sheet-inventory-name">{character.memento ?? ''}</span>
+        </div>
+      )}
 
       {/* Tiny Items */}
       <div className="sheet-tiny-items">
@@ -775,7 +783,7 @@ export default function PrintableSheet({
 
         {/* Right: Inventory */}
         <div className="print-col print-col--right">
-          <InventorySection character={character} />
+          <InventorySection character={character} engine={engine} />
         </div>
       </div>
 
