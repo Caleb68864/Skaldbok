@@ -4,6 +4,7 @@ import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAutosave } from '../hooks/useAutosave';
 import { WeaponCard } from '../components/fields/WeaponCard';
+import { CurrencyAdjuster } from '../components/fields/CurrencyAdjuster';
 import { WeaponEditor } from '../components/fields/WeaponEditor';
 import { InventoryList } from '../components/fields/InventoryList';
 import { InventoryItemEditor } from '../components/fields/InventoryItemEditor';
@@ -27,10 +28,6 @@ const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-bord
  * one-unit aria-label ("Credits" → "Gain 1 credit"). Labels that are already
  * singular ("Gold") are returned unchanged.
  */
-function singularize(label: string): string {
-  return label.length > 1 && label.endsWith('s') ? label.slice(0, -1) : label;
-}
-
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, Math.round(value)));
@@ -379,9 +376,6 @@ export default function GearScreen() {
 
   const denominations = engine.currency.denominations;
   const currencyAmounts = engine.currency.read(character);
-  // Any stock at all in any denomination means a decrement can be covered by
-  // borrowing downwards, so one shared flag gates every "spend" button.
-  const hasAnyCurrency = denominations.some(d => (currencyAmounts[d.id] ?? 0) > 0);
   const currencyTitle = engine.currency.mode === 'single'
     ? (denominations[0]?.label ?? 'Currency')
     : 'Coins';
@@ -513,35 +507,11 @@ export default function GearScreen() {
 
       {denominations.length > 0 && (
       <SectionPanel title={currencyTitle} subtitle={exchangeSubtitle} collapsible defaultOpen>
-        <div className="flex flex-col gap-3">
-          {denominations.map(denom => {
-            const value = currencyAmounts[denom.id] ?? 0;
-            // Step size is a system property — Traveller's credits move in
-            // hundreds where Dragonbane's coins move one at a time.
-            const step = denom.step ?? 1;
-            // Only singularise when the step actually is one ("Spend 100 credits").
-            const unit = step === 1 ? singularize(denom.label.toLowerCase()) : denom.label.toLowerCase();
-            return (
-              <div key={denom.id} className="flex items-center gap-[var(--space-sm)]">
-                <span className="text-sm text-[var(--color-text-muted)] min-w-[60px]">{denom.label}</span>
-                <button
-                  type="button"
-                  aria-label={`Spend ${step} ${unit}`}
-                  onClick={() => adjustCurrency(denom.id, -step)}
-                  disabled={!hasAnyCurrency}
-                  className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110 disabled:opacity-60 disabled:pointer-events-none"
-                >−</button>
-                <span className="min-w-[40px] text-center text-lg font-bold text-[var(--color-text)]">{value}</span>
-                <button
-                  type="button"
-                  aria-label={`Gain ${step} ${unit}`}
-                  onClick={() => adjustCurrency(denom.id, step)}
-                  className="min-w-[44px] min-h-[44px] text-xl bg-[var(--color-surface-alt)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)] cursor-pointer flex items-center justify-center hover:brightness-110"
-                >+</button>
-              </div>
-            );
-          })}
-        </div>
+        <CurrencyAdjuster
+          denominations={denominations}
+          amounts={currencyAmounts}
+          onDelta={adjustCurrency}
+        />
       </SectionPanel>
       )}
 
