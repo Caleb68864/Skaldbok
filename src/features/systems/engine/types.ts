@@ -220,10 +220,18 @@ export interface SystemLabels {
    */
   armorFeatures: string;
   /**
-   * Label for the keepsake slot on the printed sheet, or `null` when the system
-   * has no such concept — a Memento is a Dragonbane idea, not a universal one.
+   * Label for the keepsake slot on the printed sheet and gear screen, or `null`
+   * when the system has no such concept — a Memento is a Dragonbane idea, not a
+   * universal one.
    */
   memento: string | null;
+  /**
+   * Title of the "tiny items" gear panel, or `null` when the system has no such
+   * concept. Tiny items are Dragonbane's inventory that does not count toward
+   * encumbrance; weight-based systems like Traveller track every item's mass, so
+   * the panel is hidden.
+   */
+  tinyItems: string | null;
 }
 
 /**

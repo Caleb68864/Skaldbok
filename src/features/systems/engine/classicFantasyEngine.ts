@@ -180,6 +180,7 @@ export const classicFantasyEngine: SystemEngine = {
     locationExample: 'e.g. Riverside Clearing',
     armorFeatures: 'Features / Bane-on',
     memento: 'Memento:',
+    tinyItems: 'Tiny Items',
   },
   logActions: [
     { id: 'attack', label: 'attack' },

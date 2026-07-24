@@ -515,7 +515,8 @@ export default function GearScreen() {
       </SectionPanel>
       )}
 
-      <SectionPanel title="Tiny Items" collapsible defaultOpen>
+      {engine.labels.tinyItems && (
+      <SectionPanel title={engine.labels.tinyItems} collapsible defaultOpen>
         <div className="flex flex-col gap-3">
           {character.tinyItems.length === 0 && <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">No tiny items.</p>}
           {character.tinyItems.map((item, index) => (
@@ -541,8 +542,10 @@ export default function GearScreen() {
           )}
         </div>
       </SectionPanel>
+      )}
 
-      <SectionPanel title="Memento" collapsible defaultOpen>
+      {engine.labels.memento && (
+      <SectionPanel title={engine.labels.memento.replace(/:$/, '')} collapsible defaultOpen>
         {isEditMode ? (
           <input
             type="text"
@@ -560,6 +563,7 @@ export default function GearScreen() {
           </span>
         )}
       </SectionPanel>
+      )}
 
       <SectionPanel title={engine.labels.encumbrance} collapsible defaultOpen>
         <p className={cn(

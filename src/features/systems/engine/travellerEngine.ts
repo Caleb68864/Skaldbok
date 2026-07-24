@@ -210,6 +210,8 @@ export const travellerEngine: SystemEngine = {
     armorFeatures: 'Features',
     // No keepsake concept in Traveller; the slot is hidden entirely.
     memento: null,
+    // Weight-based encumbrance counts every item; no free "tiny" tier.
+    tinyItems: null,
   },
   logActions: [
     { id: 'attack', label: 'attack' },
