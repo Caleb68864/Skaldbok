@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Download, Ellipsis, Menu } from 'lucide-react';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
+import { useSystemEngineFor } from '../features/systems/engine';
 import { EndSessionModal } from '../features/campaign/EndSessionModal';
 import { useExportActions } from '../features/export/useExportActions';
 import { useToast } from '../context/ToastContext';
@@ -286,6 +287,7 @@ function ActiveSessionContent() {
   const navigate = useNavigate();
   const { openNote, skillCheckNote, closeSkillCheckEditor } = useNoteOpenDispatcher();
   const { activeCampaign, activeSession, activeParty, endSession } = useCampaignContext();
+  const engine = useSystemEngineFor(activeCampaign?.system);
   const { exportSessionMarkdown, exportSessionBundle, exportSessionSkaldmark } = useExportActions();
   const { showToast } = useToast();
 
@@ -643,7 +645,7 @@ function ActiveSessionContent() {
             </label>
             <input
               type="text"
-              placeholder="e.g. ambush, forest, kobolds"
+              placeholder={engine.labels.encounterTagExamples}
               value={newEncounterTagsInput}
               onChange={e => setNewEncounterTagsInput(e.target.value)}
               className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"
@@ -655,7 +657,7 @@ function ActiveSessionContent() {
             </label>
             <input
               type="text"
-              placeholder="e.g. Riverside Clearing"
+              placeholder={engine.labels.locationExample}
               value={newEncounterLocation}
               onChange={e => setNewEncounterLocation(e.target.value)}
               className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"

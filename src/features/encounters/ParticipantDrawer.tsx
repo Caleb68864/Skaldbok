@@ -3,6 +3,8 @@ import type { EncounterParticipant } from '../../types/encounter';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { getById } from '../../storage/repositories/creatureTemplateRepository';
 import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
+import { useSystemEngineFor } from '../systems/engine';
+import { useCampaignContext } from '../campaign/CampaignContext';
 
 interface ParticipantDrawerProps {
   participant: EncounterParticipant;
@@ -18,6 +20,8 @@ const inputClass = 'w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] b
  * Tap-to-record flow: tap participant (1) -> tap field (2) -> type value + auto-save (3).
  */
 export function ParticipantDrawer({ participant, onUpdateState, onClose }: ParticipantDrawerProps) {
+  const { activeCampaign } = useCampaignContext();
+  const engine = useSystemEngineFor(activeCampaign?.system);
   const [template, setTemplate] = useState<CreatureTemplate | null>(null);
   const [currentHp, setCurrentHp] = useState<string>(String(participant.instanceState.currentHp ?? ''));
   const [notes, setNotes] = useState(participant.instanceState.notes ?? '');
@@ -119,7 +123,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
         <div className="flex flex-col gap-3">
           <div>
             <label className="block text-[var(--color-text-muted)] text-xs font-semibold mb-1">
-              Current HP
+              {engine.labels.participantHealth}
             </label>
             <input
               type="number"
@@ -140,7 +144,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setConditionsText(e.target.value)}
               onBlur={handleConditionsBlur}
               className={inputClass}
-              placeholder="e.g. poisoned, prone"
+              placeholder={engine.labels.conditionExamples}
             />
           </div>
           <div>

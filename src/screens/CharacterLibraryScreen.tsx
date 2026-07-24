@@ -14,6 +14,8 @@ import { useAppState } from '../context/AppStateContext';
 import { AppLogo } from '../components/primitives/AppLogo';
 import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../systems/registry';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
+import { createParty, addPartyMember } from '../storage/repositories/partyRepository';
+import { updateCampaign } from '../storage/repositories/campaignRepository';
 
 export default function CharacterLibraryScreen() {
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
@@ -27,7 +29,7 @@ export default function CharacterLibraryScreen() {
   const { createCharacter, duplicateCharacter, deleteCharacter } = useCharacterActions();
   const { showToast } = useToast();
   const { updateSettings } = useAppState();
-  const { activeCampaign } = useCampaignContext();
+  const { activeCampaign, activeParty, refreshParty } = useCampaignContext();
   const navigate = useNavigate();
 
   /**
@@ -62,6 +64,37 @@ export default function CharacterLibraryScreen() {
     setShowNamePrompt(true);
   }
 
+  /**
+   * Adds a freshly created character to the active campaign's party.
+   *
+   * @remarks
+   * A character made inside a campaign is a member of that campaign's party by
+   * definition. Without this, "Include active party" on a new encounter
+   * silently yields zero participants and the only fix is buried in
+   * Menu → Manage Party. Party membership is still editable there.
+   *
+   * Failure is non-fatal: the character exists, so a party hiccup must not
+   * surface as "character creation failed".
+   */
+  async function addToActiveParty(characterId: string, name: string) {
+    if (!activeCampaign) return;
+    try {
+      let partyId = activeParty?.id;
+      if (!partyId) {
+        const party = await createParty({
+          campaignId: activeCampaign.id,
+          name: `${activeCampaign.name} Party`,
+        });
+        await updateCampaign(activeCampaign.id, { activePartyId: party.id });
+        partyId = party.id;
+      }
+      await addPartyMember({ partyId, linkedCharacterId: characterId, name, isActivePlayer: false });
+      await refreshParty();
+    } catch (e) {
+      console.error('CharacterLibraryScreen: could not add character to party', e);
+    }
+  }
+
   async function handleCreateConfirm() {
     const trimmed = nameInput.trim();
     if (!trimmed) return; // Guard: should not reach here with save disabled, but safety net
@@ -70,6 +103,7 @@ export default function CharacterLibraryScreen() {
     try {
       const newChar = await createCharacter(trimmed, systemInput);
       await loadCharacters();
+      await addToActiveParty(newChar.id, trimmed);
       if (!hadActiveCharacter) {
         // First character: auto-activate (AC3.1)
         await setCharacter(newChar.id);

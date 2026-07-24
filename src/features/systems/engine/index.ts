@@ -58,3 +58,17 @@ export function useSystemEngine(): SystemEngine {
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   return getEngine(system);
 }
+
+/**
+ * Resolves the SystemEngine for an explicit system id.
+ *
+ * @remarks
+ * Session-layer screens are scoped to a *campaign*, not to whichever character
+ * happens to be active — a GM running a Traveller game may have no active
+ * character at all, or one from another campaign. Those screens pass the
+ * campaign's system id here rather than using {@link useSystemEngine}.
+ */
+export function useSystemEngineFor(systemId: string | undefined | null): SystemEngine {
+  const { system } = useSystemDefinition(systemId ?? 'classic-fantasy');
+  return getEngine(system);
+}

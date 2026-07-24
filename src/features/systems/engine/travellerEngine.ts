@@ -171,7 +171,23 @@ export const travellerEngine: SystemEngine = {
     resourcesPanel: 'Damage Track',
     attributesPanel: 'Characteristics',
     encumbrance: 'Encumbrance',
+    // Traveller has no hit points; END is the pool a hit actually depletes.
+    participantHealth: 'Current END',
+    conditionExamples: 'e.g. stunned, wounded',
+    encounterTagExamples: 'e.g. boarding, starport, pirates',
+    locationExample: 'e.g. Cargo Bay 3',
   },
+  logActions: [
+    { id: 'attack', label: 'attack' },
+    // No spellcasting; 'spell' is reused as the psionics slot so already-logged
+    // events keep resolving while the label reads correctly for the setting.
+    { id: 'spell', label: 'psionics' },
+    { id: 'ability', label: 'talent' },
+    { id: 'damage', label: 'damage' },
+    { id: 'heal', label: 'first aid' },
+    { id: 'condition', label: 'condition' },
+    { id: 'note', label: 'note' },
+  ],
   // Damage lands on END first in Traveller; STR/DEX overflow is a rules decision
   // the generic damage helper should not make on its own.
   primaryHealthResourceId: 'end',

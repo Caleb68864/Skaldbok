@@ -12,6 +12,7 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
 import { registerFlush } from '../persistence/autosaveFlush';
+import { useSystemEngineFor } from '../systems/engine';
 import { useSessionLog } from '../session/useSessionLog';
 import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 import { useCampaignContext } from '../campaign/CampaignContext';
@@ -441,6 +442,8 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
  * Simplified inline event adder for combat encounters.
  */
 function QuickEventAdd({ onAdd }: { onAdd: (data: { type: string; description: string }) => Promise<void> }) {
+  const { activeCampaign } = useCampaignContext();
+  const engine = useSystemEngineFor(activeCampaign?.system);
   const [type, setType] = useState('attack');
   const [description, setDescription] = useState('');
 
@@ -457,8 +460,8 @@ function QuickEventAdd({ onAdd }: { onAdd: (data: { type: string; description: s
         onChange={(e) => setType(e.target.value)}
         className="min-h-11 px-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs"
       >
-        {['attack', 'spell', 'ability', 'damage', 'heal', 'condition', 'note'].map((t) => (
-          <option key={t} value={t}>{t}</option>
+        {engine.logActions.map((a) => (
+          <option key={a.id} value={a.id}>{a.label}</option>
         ))}
       </select>
       <input

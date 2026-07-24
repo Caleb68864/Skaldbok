@@ -188,6 +188,31 @@ export interface SystemLabels {
   attributesPanel: string;
   /** Title of the encumbrance panel. */
   encumbrance: string;
+  /**
+   * Label for a combat participant's health field — "Current HP" vs
+   * "Current END". Traveller has no hit points, so a generic "HP" is wrong on
+   * the encounter screen even though the field itself is system-neutral.
+   */
+  participantHealth: string;
+  /** Placeholder listing example conditions, e.g. `poisoned, prone`. */
+  conditionExamples: string;
+  /** Placeholder listing example encounter tags, e.g. `ambush, forest, kobolds`. */
+  encounterTagExamples: string;
+  /** Placeholder for an example location name, e.g. `Riverside Clearing`. */
+  locationExample: string;
+}
+
+/**
+ * One entry in the encounter quick-log palette.
+ *
+ * @remarks
+ * `id` is persisted on the logged event, so it must stay stable; only `label`
+ * is shown. This is why the palette cannot simply be a list of display strings
+ * — renaming "spell" to "power" must not orphan already-logged events.
+ */
+export interface LogAction {
+  id: string;
+  label: string;
 }
 
 /** One input the rest modal collects before applying a rest. */
@@ -340,6 +365,14 @@ export interface SystemEngine {
   terms: SystemTerms;
   /** Panel/screen titles; see {@link SystemLabels}. */
   labels: SystemLabels;
+  /**
+   * Quick-log actions offered during an encounter.
+   *
+   * @remarks
+   * Dragonbane logs spells; Traveller has none and logs psionics instead. A
+   * hardcoded palette leaks one system's vocabulary into every other.
+   */
+  logActions: LogAction[];
   /**
    * Resource that generic damage/healing applies to, or `null` when the system
    * has no single health pool (consumers must then defer to the system's own UI).
