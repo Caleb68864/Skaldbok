@@ -3,6 +3,7 @@ import { CurrencyAdjuster } from '../../components/fields/CurrencyAdjuster';
 import { nowISO } from '../../utils/dates';
 import { remakeCurrency } from '../../utils/currency';
 import { useSessionLog } from '../session/useSessionLog';
+import { useToast } from '../../context/ToastContext';
 import { getEngine } from '../systems/engine';
 import type { PlayModuleProps } from './types';
 
@@ -17,6 +18,7 @@ import type { PlayModuleProps } from './types';
  */
 export function CurrencyModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { logCoinChange } = useSessionLog();
+  const { showToast } = useToast();
   const engine = getEngine(system);
   const currency = engine.currency;
   const denominations = currency.denominations;
@@ -26,14 +28,17 @@ export function CurrencyModule({ character, system, updateCharacter }: PlayModul
   function adjust(denomId: string, delta: number) {
     const denom = denominations.find(d => d.id === denomId);
     if (!denom) return;
-    let changed = false;
-    updateCharacter(prev => {
-      const next = remakeCurrency(denominations, currency.read(prev), denomId, delta);
-      if (!next) return {};
-      changed = true;
-      return { ...currency.write(prev, next), updatedAt: nowISO() };
-    });
-    if (changed) logCoinChange(character.name, denomId, delta, denom.abbr);
+    // Resolve the change once, outside the state updater. Computing (and reading
+    // the result) inside `updateCharacter` is unreliable — React may batch the
+    // updater, so a flag set in it isn't observable synchronously, which dropped
+    // log entries. `null` means the spend would overdraw the purse.
+    const next = remakeCurrency(denominations, currency.read(character), denomId, delta);
+    if (!next) {
+      showToast(`Not enough ${currency.label.toLowerCase()} to spend that.`, 'error');
+      return;
+    }
+    updateCharacter(prev => ({ ...currency.write(prev, next), updatedAt: nowISO() }));
+    logCoinChange(character.name, denomId, delta, denom.abbr);
   }
 
   return (

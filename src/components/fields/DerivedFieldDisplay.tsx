@@ -35,8 +35,13 @@ export function DerivedFieldDisplay({ label, computedValue, override, onOverride
   }
 
   function handleCommit() {
-    const parsed = Number(editValue);
-    if (!isNaN(parsed)) {
+    // A blank field must NOT commit: `Number('') === 0`, and an override of 0
+    // silently disables the derived stat (e.g. an encumbrance limit of 0 turns
+    // off carry tracking entirely). Treat empty as "no change" — use Reset to
+    // clear an override. Only commit a real, finite number.
+    const trimmed = editValue.trim();
+    const parsed = Number(trimmed);
+    if (trimmed !== '' && Number.isFinite(parsed)) {
       onOverride(parsed);
     }
     setEditing(false);

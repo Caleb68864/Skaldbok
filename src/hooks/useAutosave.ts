@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CharacterRecord } from '../types/character';
 import { registerFlush } from '../features/persistence/autosaveFlush';
+import { useToast } from '../context/ToastContext';
 
 export function useAutosave(
   character: CharacterRecord | null,
@@ -11,7 +12,14 @@ export function useAutosave(
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Holds the most recent character with an *unsaved* change. Cleared once that
+  // exact record is persisted, so the unmount flush below can tell "genuinely
+  // dirty" from "already saved" and never re-saves needlessly.
   const pendingRef = useRef<CharacterRecord | null>(null);
+  const { showToast } = useToast();
+  // Guards against toast spam: while saves keep failing on every debounce tick,
+  // surface the error once per failure streak, not once per keystroke.
+  const erroredRef = useRef(false);
 
   useEffect(() => {
     if (!character) {
@@ -26,14 +34,23 @@ export function useAutosave(
 
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
-      if (!pendingRef.current) return;
+      const record = pendingRef.current;
+      if (!record) return;
       setIsSaving(true);
       setError(null);
       try {
-        await saveFn(pendingRef.current);
+        await saveFn(record);
         setLastSaved(new Date().toISOString());
+        erroredRef.current = false;
+        // Only clear if nothing newer arrived while we were awaiting, so a change
+        // made mid-save is still flagged dirty for the next tick / unmount flush.
+        if (pendingRef.current === record) pendingRef.current = null;
       } catch (e) {
         setError(`Failed to save changes. ${String(e)}`);
+        if (!erroredRef.current) {
+          erroredRef.current = true;
+          showToast(`Couldn't save changes — ${String(e)}`, 'error', { duration: 8000 });
+        }
       } finally {
         setIsSaving(false);
       }
@@ -50,14 +67,18 @@ export function useAutosave(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [character]);
 
-  // Flush pending save on unmount
+  // Flush pending save on unmount. Gated on pendingRef (the dirty flag), NOT on
+  // timerRef — the debounce-cancel cleanup above runs first on unmount and nulls
+  // timerRef, so a timer-gated flush would always skip and silently drop the edit
+  // made in the last debounce window (e.g. tapping a tab mid-edit).
   useEffect(() => {
     return () => {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
-        if (pendingRef.current) {
-          saveFn(pendingRef.current).catch(console.error);
-        }
+        timerRef.current = null;
+      }
+      if (pendingRef.current) {
+        saveFn(pendingRef.current).catch(console.error);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

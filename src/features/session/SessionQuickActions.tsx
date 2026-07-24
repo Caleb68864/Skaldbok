@@ -631,12 +631,22 @@ export function SessionQuickActions({
    * character, returning how many sheets were actually updated.
    *
    * @remarks
+   * `delta` is expressed in **health terms** (negative = took damage, positive =
+   * healed), independent of how the underlying resource stores it. For a depleting
+   * pool (Dragonbane HP) that maps straight through: damage lowers `current`. For
+   * an accumulating damage track (Traveller END, where 0 = healthy and `max` =
+   * incapacitated) the storage runs the other way, so the delta is inverted — a
+   * damaging delta raises the counter and healing lowers it. Without this, party
+   * "Damage" would heal a Traveller and "Heal" would wound them.
+   *
    * Returns 0 when the system declares no single health pool
    * (`primaryHealthResourceId === null`) or none of the selected characters
    * carry that resource — callers must not claim success in that case.
    */
   const adjustHealth = async (delta: number): Promise<number> => {
     if (!healthResourceId) return 0;
+    const accumulates = engine.damageTrack != null;
+    const resourceDelta = accumulates ? -delta : delta;
     let updated = 0;
     for (const memberId of selectedMembers) {
       const member = resolvedMembers.find(m => m.id === memberId);
@@ -645,10 +655,7 @@ export function SessionQuickActions({
       if (!fresh) continue;
       const pool = fresh.resources[healthResourceId];
       if (!pool) continue;
-      const newCurrent =
-        delta < 0
-          ? Math.max(0, pool.current + delta)
-          : Math.min(pool.max, pool.current + delta);
+      const newCurrent = Math.max(0, Math.min(pool.max, pool.current + resourceDelta));
       await saveCharacter({
         ...fresh,
         resources: { ...fresh.resources, [healthResourceId]: { ...pool, current: newCurrent } },

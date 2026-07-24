@@ -3,12 +3,14 @@ import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
 import type { PlayModuleProps } from './types';
 import { useSessionLog } from '../session/useSessionLog';
+import { useToast } from '../../context/ToastContext';
 import { getEngine } from '../systems/engine';
 import { CurrencyAdjuster } from '../../components/fields/CurrencyAdjuster';
 import { remakeCurrency } from '../../utils/currency';
 
 export function CombatModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { logCoinChange } = useSessionLog();
+  const { showToast } = useToast();
   const equipped = character.weapons.filter(w => w.equipped).slice(0, 6);
   const engine = getEngine(system);
   const currency = engine.currency;
@@ -30,18 +32,16 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
   function adjustCoin(denominationId: string, delta: number) {
     const denom = denominations.find(d => d.id === denominationId);
     if (!denom) return;
-    let changed = false;
-
-    updateCharacter(prev => {
-      const next = remakeCurrency(denominations, currency.read(prev), denominationId, delta);
-      if (!next) return {};
-      changed = true;
-      return { ...currency.write(prev, next), updatedAt: nowISO() };
-    });
-
-    if (changed) {
-      logCoinChange(character.name, denominationId, delta, denom.abbr);
+    // Resolve the change once, outside the state updater (see CurrencyModule for
+    // the why — a flag set inside `updateCharacter` isn't observable synchronously
+    // under batching). `null` means the spend would overdraw the purse.
+    const next = remakeCurrency(denominations, currency.read(character), denominationId, delta);
+    if (!next) {
+      showToast(`Not enough ${currency.label.toLowerCase()} to spend that.`, 'error');
+      return;
     }
+    updateCharacter(prev => ({ ...currency.write(prev, next), updatedAt: nowISO() }));
+    logCoinChange(character.name, denominationId, delta, denom.abbr);
   }
 
   return (
