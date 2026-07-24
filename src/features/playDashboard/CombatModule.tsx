@@ -5,16 +5,17 @@ import type { PlayModuleProps } from './types';
 import { useSessionLog } from '../session/useSessionLog';
 import { getEngine } from '../systems/engine';
 import { CurrencyAdjuster } from '../../components/fields/CurrencyAdjuster';
+import { remakeCurrency } from '../../utils/currency';
 
 export function CombatModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { logCoinChange } = useSessionLog();
   const equipped = character.weapons.filter(w => w.equipped).slice(0, 6);
   const engine = getEngine(system);
   const currency = engine.currency;
-  // Every system with money gets the purse, not just multi-denomination coin
-  // systems — Traveller players need Credits to hand during play too. The
-  // greedy re-make below is a no-op for a single denomination of value 1.
-  const showCoins = currency.denominations.length > 0;
+  // Damage-track systems (Traveller) show the purse under Vitals via
+  // CurrencyModule, so it is not repeated here. Pool systems (Dragonbane) keep
+  // their coins in Ready Gear.
+  const showCoins = currency.denominations.length > 0 && !engine.damageTrack;
   // Durability is a Dragonbane mechanic; systems that hide the field have no
   // notion of a weapon being "damaged", so the toggle must not appear.
   const usesDurability = !(system?.itemFields?.hiddenBuiltIns?.weapon ?? []).includes('durability');
@@ -32,24 +33,10 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
     let changed = false;
 
     updateCharacter(prev => {
-      const current = currency.read(prev);
-      const total = denominations.reduce((sum, d) => sum + (current[d.id] ?? 0) * d.value, 0);
-      const nextTotal = total + delta * denom.value;
-      if (nextTotal < 0) return {};
-
-      // Greedy decomposition — denominations are ordered highest value first.
-      let remainder = nextTotal;
-      const next: Record<string, number> = {};
-      for (const d of denominations) {
-        const count = Math.floor(remainder / d.value);
-        next[d.id] = count;
-        remainder -= count * d.value;
-      }
+      const next = remakeCurrency(denominations, currency.read(prev), denominationId, delta);
+      if (!next) return {};
       changed = true;
-      return {
-        ...currency.write(prev, next),
-        updatedAt: nowISO(),
-      };
+      return { ...currency.write(prev, next), updatedAt: nowISO() };
     });
 
     if (changed) {
