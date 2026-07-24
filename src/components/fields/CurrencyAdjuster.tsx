@@ -2,10 +2,10 @@ import { useState } from 'react';
 import type { CurrencyDenomination } from '../../features/systems/engine/types';
 
 /**
- * Fixed quick-adjust amounts offered per denomination, smallest first.
- * Rendered as −10 / −5 on the spend side and +5 / +10 on the gain side.
+ * Quick-adjust amounts used when a denomination declares none of its own.
+ * Coin-scale by default; systems override via `CurrencyDenomination.quickSteps`.
  */
-const QUICK_STEPS = [5, 10] as const;
+const DEFAULT_QUICK_STEPS = [5, 10];
 
 interface CurrencyAdjusterProps {
   denominations: CurrencyDenomination[];
@@ -56,6 +56,9 @@ function DenomRow({
 }) {
   const [custom, setCustom] = useState('');
   const unit = denom.label.toLowerCase();
+  // Quick amounts are a ruleset setting; ascending so −desc / +asc reads outward
+  // from the value (…−1000 −100 · +100 +1000…).
+  const quickSteps = [...(denom.quickSteps ?? DEFAULT_QUICK_STEPS)].sort((a, b) => a - b);
 
   /** Applies the typed amount; sign +1 gains, −1 spends. Ignores empty/≤0. */
   function applyCustom(sign: 1 | -1) {
@@ -72,7 +75,7 @@ function DenomRow({
         <span className="text-lg font-bold text-[var(--color-text)]">{value}</span>
       </div>
       <div className="flex flex-wrap items-center gap-[var(--space-xs)]">
-        {[...QUICK_STEPS].reverse().map(step => (
+        {[...quickSteps].reverse().map(step => (
           <button
             key={`minus-${step}`}
             type="button"
@@ -83,7 +86,7 @@ function DenomRow({
             −{step}
           </button>
         ))}
-        {QUICK_STEPS.map(step => (
+        {quickSteps.map(step => (
           <button
             key={`plus-${step}`}
             type="button"

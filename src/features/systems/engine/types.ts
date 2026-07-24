@@ -39,6 +39,18 @@ export interface CurrencyDenomination {
    * rather than assuming a unit step.
    */
   step?: number;
+  /**
+   * Fixed quick-adjust amounts the money control offers for this denomination,
+   * smallest first — e.g. `[5, 10]` renders −10/−5/+5/+10, and
+   * `[100, 1000, 10000]` renders the Traveller-scale ladder. Defaults to
+   * `[5, 10]` when omitted.
+   *
+   * @remarks
+   * The amounts belong to the ruleset, not the widget: coins move in fives,
+   * credits in hundreds and thousands. An empty array offers only the custom
+   * amount field.
+   */
+  quickSteps?: number[];
 }
 
 /**

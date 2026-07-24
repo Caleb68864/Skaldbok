@@ -4,6 +4,7 @@ import { nowISO } from '../../utils/dates';
 import type { PlayModuleProps } from './types';
 import { useSessionLog } from '../session/useSessionLog';
 import { getEngine } from '../systems/engine';
+import { CurrencyAdjuster } from '../../components/fields/CurrencyAdjuster';
 
 export function CombatModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { logCoinChange } = useSessionLog();
@@ -96,39 +97,7 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
         {showCoins && (
         <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)]">
           <p className="m-0 font-semibold text-[var(--color-text)]">{currency.label}</p>
-          {denominations.map(denom => {
-            const unit = denom.label.toLowerCase();
-            // See CurrencyDenomination.step — scale is a system property.
-            const step = denom.step ?? 1;
-            return (
-              <div key={denom.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2">
-                {/* A single-denomination purse already says "Credits" in the
-                    panel heading; repeating it on the row reads as a bug. */}
-                <span className="text-xs font-semibold text-[var(--color-text-muted)]">
-                  {denominations.length > 1 ? denom.label : ''}
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Spend ${step} ${unit}`}
-                  className="flex min-h-8 min-w-8 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
-                  onClick={() => adjustCoin(denom.id, -step)}
-                >
-                  -
-                </button>
-                <span className="min-w-7 text-center text-[length:var(--font-size-md)] font-bold text-[var(--color-accent)]">
-                  {amounts[denom.id] ?? 0}
-                </span>
-                <button
-                  type="button"
-                  aria-label={`Gain ${step} ${unit}`}
-                  className="flex min-h-8 min-w-8 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
-                  onClick={() => adjustCoin(denom.id, step)}
-                >
-                  +
-                </button>
-              </div>
-            );
-          })}
+          <CurrencyAdjuster denominations={denominations} amounts={amounts} onDelta={adjustCoin} />
         </div>
         )}
       </div>
