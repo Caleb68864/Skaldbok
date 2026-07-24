@@ -42,10 +42,16 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
     // A field the engine declares but does not compute would render as a blank
     // tile; skip it rather than show an empty box.
     .filter(field => derivedValues[field.key] !== undefined)
-    .map(field => ({
-      label: field.shortLabel ?? field.label,
-      value: derivedValues[field.key] ?? '—',
-    }));
+    .map(field => {
+      // Honour a manual override (e.g. a hand-tuned Carry limit set on the Gear
+      // screen) so the dashboard tile matches the sheet rather than showing the
+      // raw computed value. A cleared override is null → falls back to computed.
+      const override = field.overridable ? character.derivedOverrides?.[field.key] : undefined;
+      return {
+        label: field.shortLabel ?? field.label,
+        value: override ?? derivedValues[field.key] ?? '—',
+      };
+    });
 
   const stats: StatEntry[] = [...modifierStats, ...fieldStats];
 

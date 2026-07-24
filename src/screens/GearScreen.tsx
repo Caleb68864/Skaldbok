@@ -9,6 +9,7 @@ import { WeaponEditor } from '../components/fields/WeaponEditor';
 import { InventoryList } from '../components/fields/InventoryList';
 import { InventoryItemEditor } from '../components/fields/InventoryItemEditor';
 import { SectionPanel } from '../components/primitives/SectionPanel';
+import { DerivedFieldDisplay } from '../components/fields/DerivedFieldDisplay';
 import { Button } from '../components/primitives/Button';
 import { Drawer } from '../components/primitives/Drawer';
 import type { Weapon, InventoryItem, ArmorPiece } from '../types/character';
@@ -126,6 +127,7 @@ export default function GearScreen() {
   const isEditMode = useIsEditMode();
   const armorEquipEditable = useFieldEditable('armor.equipped');
   const helmetEquipEditable = useFieldEditable('helmet.equipped');
+  const derivedEditable = useFieldEditable('derivedOverrides');
   const { logToSession, logCoinChange } = useSessionLog();
 
   const [activeTab, setActiveTab] = useState<'mine' | 'party'>('mine');
@@ -308,6 +310,16 @@ export default function GearScreen() {
     updateCharacter({ inventory, updatedAt: nowISO() });
   }
 
+  function setDerivedOverride(key: string, value: number) {
+    if (!character) return;
+    updateCharacter({ derivedOverrides: { ...character.derivedOverrides, [key]: value }, updatedAt: nowISO() });
+  }
+
+  function resetDerivedOverride(key: string) {
+    if (!character) return;
+    updateCharacter({ derivedOverrides: { ...character.derivedOverrides, [key]: null }, updatedAt: nowISO() });
+  }
+
   function addTinyItem() {
     if (!character) return;
     const trimmed = newTinyItem.trim();
@@ -368,7 +380,17 @@ export default function GearScreen() {
   const totalWeight = character.inventory.reduce((sum, i) => sum + (i.tiny ? 0 : i.weight), 0)
     + (character.armor?.weight ?? 0)
     + (character.helmet?.weight ?? 0);
-  const encumbranceLimit = engine.derivedStats(character, system ?? undefined).encumbranceLimit;
+  // The carry limit is engine-computed (e.g. STR+END for Traveller, ceil(STR/2)
+  // for classic-fantasy) but the user may hand-tune it through the same
+  // derivedOverrides channel the sheet uses. engine.derivedStats does not fold
+  // overrides in, so we apply it here on top of the computed value.
+  const computedEncumbranceLimit = engine.derivedStats(character, system ?? undefined).encumbranceLimit;
+  const encumbranceField = engine.derivedFields.find(f => f.key === 'encumbranceLimit');
+  const encumbranceOverridable = !!encumbranceField?.overridable;
+  const encumbranceOverrideRaw = character.derivedOverrides?.encumbranceLimit;
+  const encumbranceOverride =
+    encumbranceOverridable && typeof encumbranceOverrideRaw === 'number' ? encumbranceOverrideRaw : null;
+  const encumbranceLimit = encumbranceOverride !== null ? encumbranceOverride : computedEncumbranceLimit;
   // A falsy limit means the active system does not track encumbrance — never
   // flag the character as overloaded in that case.
   const tracksEncumbrance = encumbranceLimit > 0;
@@ -573,6 +595,20 @@ export default function GearScreen() {
           {tracksEncumbrance ? `${totalWeight} / ${encumbranceLimit}` : totalWeight}
           {isOverloaded ? ' (Overloaded!)' : ''}
         </p>
+        {/* Carried weight is auto-summed from item weights above; the carry
+            limit can be hand-tuned when a group plays encumbrance differently
+            from the engine's default formula. Persisted to
+            derivedOverrides.encumbranceLimit — the same channel the sheet uses. */}
+        {encumbranceOverridable && (
+          <DerivedFieldDisplay
+            label={encumbranceField?.label ?? 'Carry Limit'}
+            computedValue={computedEncumbranceLimit}
+            override={encumbranceOverride}
+            onOverride={v => setDerivedOverride('encumbranceLimit', v)}
+            onReset={() => resetDerivedOverride('encumbranceLimit')}
+            editable={derivedEditable}
+          />
+        )}
       </SectionPanel>
 
       <WeaponEditor
