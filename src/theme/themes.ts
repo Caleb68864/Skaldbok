@@ -3,6 +3,7 @@ export type ThemeName =
   | 'parchment'
   | 'light'
   | 'starfarers-cockpit'
+  | 'deep-space'
   | 'databank'
   | 'neon-sprawl';
 
@@ -14,6 +15,7 @@ export const THEME_DISPLAY_NAMES: Record<ThemeName, string> = {
   dark: 'Torchlight in the Barrow',
   parchment: "The Adventurer's Ledger",
   'starfarers-cockpit': "Starfarer's Cockpit",
+  'deep-space': 'Deep Space',
   databank: 'Databank',
   'neon-sprawl': 'Neon Sprawl',
 };
@@ -23,6 +25,7 @@ export const THEME_LIST: ThemeName[] = [
   'dark',
   'parchment',
   'starfarers-cockpit',
+  'deep-space',
   'databank',
   'neon-sprawl',
 ];

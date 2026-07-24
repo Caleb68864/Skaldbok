@@ -162,8 +162,77 @@
   --texture-highlight-strength: 0.15;
 }
 
-/* Starfarer's Cockpit theme — dark space-black/navy, amber + cyan */
+/* Starfarer's Cockpit — brushed steel & chrome, hard machined edges, HUD type.
+   A skin, not a recolour: it overrides structure (radius, shadows, fonts) as
+   well as palette so it reads as metal, not "the dark theme in blue". */
 [data-theme="starfarers-cockpit"] {
+  /* Silver / gunmetal palette — cool greys dominate, one cold chrome accent */
+  --color-bg: #0D1116;
+  --color-surface: #191F27;
+  --color-surface-alt: #242C36;
+  --color-text: #E7ECF2;
+  --color-text-muted: #93A1B2;
+  --color-accent: #6FC1D6;       /* polished chrome-cyan */
+  --color-accent-alt: #ADE1EC;
+  --color-danger: #E45757;
+  --color-border: #46535F;       /* bright steel seam, deliberately visible */
+  --color-gold: #B4C0CC;         /* SILVER — replaces fantasy gold on panel seams + money */
+  --color-success: #57C68C;
+  --color-warning: #E2A94E;
+  --color-info: #6FC1D6;
+
+  /* Mode indicators */
+  --color-mode-play: #1f7a5a;
+  --color-mode-edit: #2a5aa8;
+
+  /* Hard edges — machined, not rounded. Overrides the shared rounded tokens. */
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 2px;
+  --radius-xl: 3px;
+
+  /* Crisp metallic shadows — tight blur with a bright top-edge highlight,
+     like light catching a bevelled steel plate. */
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 6px rgba(0, 0, 0, 0.55);
+  --shadow-medium: 0 1px 0 rgba(255, 255, 255, 0.07), 0 6px 16px rgba(0, 0, 0, 0.6);
+  --shadow-deep: 0 1px 0 rgba(255, 255, 255, 0.08), 0 12px 26px rgba(0, 0, 0, 0.7);
+  --shadow-inset-soft: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+
+  /* Industrial HUD type. Bahnschrift ships on Windows; the bundled Source Sans
+     is the offline fallback so headings are never a fantasy serif anywhere. */
+  --font-display: 'Bahnschrift', 'DIN Alternate', 'Oswald', 'Arial Narrow', 'Source Sans 3', system-ui, sans-serif;
+  --font-ui: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+
+  /* Smooth metal: little grain, deep crisp shadow, bright bevel highlight. */
+  --texture-grain-opacity: 0.02;
+  --texture-shadow-strength: 0.5;
+  --texture-highlight-strength: 0.18;
+}
+
+/* Hard edges everywhere: the token overrides above only reach
+   `rounded-[var(--radius-*)]`, so also flatten Tailwind-native rounded utilities
+   for this theme. `rounded-full` (avatars, status dots) is preserved. */
+[data-theme="starfarers-cockpit"] [class*="rounded"]:not([class*="rounded-full"]) {
+  border-radius: 2px !important;
+}
+
+/* HUD headings — spaced letters; titles and panel headers go uppercase. h2 is
+   spared uppercasing because it carries entity names (characters, campaigns). */
+[data-theme="starfarers-cockpit"] h1,
+[data-theme="starfarers-cockpit"] h2,
+[data-theme="starfarers-cockpit"] h3,
+[data-theme="starfarers-cockpit"] h4 {
+  letter-spacing: 0.05em;
+}
+[data-theme="starfarers-cockpit"] h1,
+[data-theme="starfarers-cockpit"] h3,
+[data-theme="starfarers-cockpit"] h4 {
+  text-transform: uppercase;
+}
+
+/* Deep Space — the original dark sci-fi look (space-black/navy, amber + cyan),
+   preserved as a soft/rounded variant so nothing was lost in the redesign. */
+[data-theme="deep-space"] {
   --color-bg: #0A0E17;
   --color-surface: #121A2B;
   --color-surface-alt: #1A2740;
