@@ -61,6 +61,25 @@ describe('applyDamage', () => {
     expect(applyDamage(character(), model, -5, 'str').dealt).toEqual({});
   });
 
+  it('applies to a chosen primary track before overflow', () => {
+    // Apply straight to STR, overflow to DEX. END is untouched.
+    const r = applyDamage(character(), model, 9, 'dex', 'str');
+    expect(r.dealt).toEqual({ str: 7, dex: 2 });
+    expect(r.resources['end']).toBeUndefined();
+  });
+
+  it('defaults the primary to the model order when none is given', () => {
+    // No primaryTarget → END-first, unchanged legacy behaviour.
+    const r = applyDamage(character(), model, 5);
+    expect(r.dealt).toEqual({ end: 5 });
+  });
+
+  it('ignores a primary the model does not know about', () => {
+    // 'soc' is not a damage track → falls back to the model order (END).
+    const r = applyDamage(character(), model, 5, 'str', 'soc');
+    expect(r.dealt).toEqual({ end: 5 });
+  });
+
   it('never exceeds a track maximum', () => {
     const r = applyDamage(character(), model, 100, 'str');
     expect(r.resources['end']).toBe(7);

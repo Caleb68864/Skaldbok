@@ -18,13 +18,17 @@ import type { DamageApplication, DamageTrackModel } from '../features/systems/en
  * @param character - Character taking the damage.
  * @param model - The system's damage-track rules.
  * @param amount - Points of damage to apply; non-positive amounts are a no-op.
- * @param overflowTarget - Resource to take the remainder once `order` is full.
+ * @param overflowTarget - Resource to take the remainder once the primary is full.
+ * @param primaryTarget - The track damage lands on first. Defaults to the
+ *   model's `order` (END for Traveller). Any track the model knows about is
+ *   allowed, so the player can apply a hit straight to a chosen characteristic.
  */
 export function applyDamage(
   character: CharacterRecord,
   model: DamageTrackModel,
   amount: number,
   overflowTarget?: string,
+  primaryTarget?: string,
 ): DamageApplication {
   const resources: Record<string, number> = {};
   const dealt: Record<string, number> = {};
@@ -33,9 +37,15 @@ export function applyDamage(
   const currentOf = (id: string) => character.resources?.[id]?.current ?? 0;
   const maxOf = (id: string) => character.resources?.[id]?.max ?? 0;
 
-  // Only spill into a track the model actually permits.
-  const overflow = overflowTarget && model.overflowTo.includes(overflowTarget) ? [overflowTarget] : [];
-  const sequence = [...model.order, ...overflow];
+  const allTracks = [...new Set([...model.order, ...model.overflowTo])];
+  // Primary defaults to the model's order (END-first); a caller may name any
+  // track the model knows about. Overflow stays restricted to `overflowTo`.
+  const primary = primaryTarget && allTracks.includes(primaryTarget) ? [primaryTarget] : [...model.order];
+  const overflow =
+    overflowTarget && model.overflowTo.includes(overflowTarget) && overflowTarget !== primary[0]
+      ? [overflowTarget]
+      : [];
+  const sequence = [...new Set([...primary, ...overflow])];
 
   for (const id of sequence) {
     if (remaining <= 0) break;
@@ -49,7 +59,6 @@ export function applyDamage(
 
   // Depletion is judged across every track the model knows about, not just the
   // ones this hit touched — a character already at 0 STR is still down.
-  const allTracks = [...new Set([...model.order, ...model.overflowTo])];
   const depleted = allTracks.filter(id => {
     const current = resources[id] ?? currentOf(id);
     return maxOf(id) > 0 && current >= maxOf(id);

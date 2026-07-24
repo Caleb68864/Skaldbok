@@ -16,6 +16,7 @@ import { RestModule } from '../features/playDashboard/RestModule';
 import { DerivedStatsModule } from '../features/playDashboard/DerivedStatsModule';
 import { QuickReferenceModule } from '../features/playDashboard/QuickReferenceModule';
 import { StoryBankModule } from '../features/playDashboard/StoryBankModule';
+import { DamageHealModule } from '../features/playDashboard/DamageHealModule';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 
 /**
@@ -78,9 +79,10 @@ export default function PlayDashboardScreen() {
         ) : (
           <div className="grid gap-[var(--space-xs)] items-start [grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr))] min-[640px]:[grid-template-columns:1fr_2fr]">
             <ResourceModule {...moduleProps} />
-            <div className="flex flex-col gap-[var(--space-xs)]">
+            <div className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)]">
               <DerivedStatsModule {...moduleProps} />
               <ConditionModule {...moduleProps} />
+              <DamageHealModule {...moduleProps} />
             </div>
           </div>
         )}
