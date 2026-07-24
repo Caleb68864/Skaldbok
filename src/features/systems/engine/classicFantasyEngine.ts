@@ -117,6 +117,7 @@ export const classicFantasyEngine: SystemEngine = {
   panels: ['attributes', 'skills', 'resources', 'inventory', 'magic', 'combat', 'rest', 'death', 'notes'],
   currency: {
     mode: 'coins',
+    label: 'Coins',
     denominations: [
       { id: 'gold', label: 'Gold', abbr: 'g', value: 100 },
       { id: 'silver', label: 'Silver', abbr: 's', value: 10 },

@@ -87,6 +87,25 @@ describe('damage feeds through to DMs', () => {
   });
 });
 
+describe('carry limit', () => {
+  it('is STR + END', () => {
+    expect(computeTravellerDerivedValues(character()).encumbranceLimit).toBe(14);
+  });
+
+  it('uses base characteristics, so damage does not change carry capacity mid-fight', () => {
+    const wounded = character({
+      resources: { str: { current: 5, max: 7 }, dex: { current: 0, max: 7 }, end: { current: 3, max: 7 } },
+    });
+    expect(computeTravellerDerivedValues(wounded).encumbranceLimit).toBe(14);
+  });
+
+  it('is surfaced on the dashboard and print, not the sheet panel', () => {
+    const field = travellerEngine.derivedFields.find(f => f.key === 'encumbranceLimit');
+    expect(field?.surfaces).toEqual(['dashboard', 'print']);
+    expect(field?.overridable).toBe(true);
+  });
+});
+
 describe('currency', () => {
   it('steps credits in hundreds, not single units', () => {
     // Traveller prices run to thousands; a step of 1 makes purchases unusable.

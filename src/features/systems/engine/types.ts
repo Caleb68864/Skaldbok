@@ -52,6 +52,8 @@ export interface CurrencyDenomination {
  */
 export interface CurrencyModel {
   mode: CurrencyMode;
+  /** Panel heading for the purse — "Coins" vs "Credits". */
+  label: string;
   denominations: CurrencyDenomination[];
   /** Current amounts, keyed by denomination id. */
   read: (character: CharacterRecord) => Record<string, number>;

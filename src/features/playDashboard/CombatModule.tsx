@@ -8,9 +8,16 @@ import { getEngine } from '../systems/engine';
 export function CombatModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { logCoinChange } = useSessionLog();
   const equipped = character.weapons.filter(w => w.equipped).slice(0, 6);
-  const currency = getEngine(system).currency;
-  // Only multi-denomination coin systems get the make-change widget.
-  const showCoins = currency.mode === 'coins';
+  const engine = getEngine(system);
+  const currency = engine.currency;
+  // Every system with money gets the purse, not just multi-denomination coin
+  // systems — Traveller players need Credits to hand during play too. The
+  // greedy re-make below is a no-op for a single denomination of value 1.
+  const showCoins = currency.denominations.length > 0;
+  // Durability is a Dragonbane mechanic; systems that hide the field have no
+  // notion of a weapon being "damaged", so the toggle must not appear.
+  const usesDurability = !(system?.itemFields?.hiddenBuiltIns?.weapon ?? []).includes('durability');
+  const weaponFields = system?.itemFields?.weapon ?? [];
   const denominations = currency.denominations;
   const amounts = currency.read(character);
 
@@ -59,31 +66,47 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
                 <p className="m-0 font-semibold text-[var(--color-text)]">{weapon.name}</p>
                 {weapon.damaged && <span className="text-xs text-[var(--color-danger)] font-semibold">Damaged</span>}
               </div>
-              <p className="m-0 text-xs text-[var(--color-text-muted)]">{weapon.damage} · {weapon.range} · durability {weapon.durability}</p>
+              <p className="m-0 text-xs text-[var(--color-text-muted)]">
+                {[
+                  weapon.damage,
+                  usesDurability ? weapon.range : null,
+                  usesDurability ? `durability ${weapon.durability}` : null,
+                  ...weaponFields.map(f => {
+                    const raw = weapon.systemFields?.[f.id];
+                    return raw === undefined || raw === null || raw === '' ? null : `${f.label}: ${raw}`;
+                  }),
+                ].filter(Boolean).join(' · ')}
+              </p>
             </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="self-start"
-              onClick={() => updateCharacter(prev => ({
-                weapons: prev.weapons.map(w => w.id === weapon.id ? { ...w, damaged: !w.damaged } : w),
-                updatedAt: new Date().toISOString(),
-              }))}
-            >
-              {weapon.damaged ? 'Repair' : 'Damage'}
-            </Button>
+            {usesDurability && (
+              <Button
+                size="sm"
+                variant="secondary"
+                className="self-start"
+                onClick={() => updateCharacter(prev => ({
+                  weapons: prev.weapons.map(w => w.id === weapon.id ? { ...w, damaged: !w.damaged } : w),
+                  updatedAt: new Date().toISOString(),
+                }))}
+              >
+                {weapon.damaged ? 'Repair' : 'Damage'}
+              </Button>
+            )}
           </div>
         ))}
         {showCoins && (
         <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)]">
-          <p className="m-0 font-semibold text-[var(--color-text)]">Coins</p>
+          <p className="m-0 font-semibold text-[var(--color-text)]">{currency.label}</p>
           {denominations.map(denom => {
             const unit = denom.label.toLowerCase();
             // See CurrencyDenomination.step — scale is a system property.
             const step = denom.step ?? 1;
             return (
               <div key={denom.id} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2">
-                <span className="text-xs font-semibold text-[var(--color-text-muted)]">{denom.label}</span>
+                {/* A single-denomination purse already says "Credits" in the
+                    panel heading; repeating it on the row reads as a bug. */}
+                <span className="text-xs font-semibold text-[var(--color-text-muted)]">
+                  {denominations.length > 1 ? denom.label : ''}
+                </span>
                 <button
                   type="button"
                   aria-label={`Spend ${step} ${unit}`}

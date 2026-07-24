@@ -5,6 +5,11 @@ import { getById } from '../../storage/repositories/creatureTemplateRepository';
 import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
 import { useSystemEngineFor } from '../systems/engine';
 import { useCampaignContext } from '../campaign/CampaignContext';
+import { useSystemDefinition } from '../systems/useSystemDefinition';
+import { useActiveCharacter } from '../../context/ActiveCharacterContext';
+import * as characterRepository from '../../storage/repositories/characterRepository';
+import type { CharacterRecord } from '../../types/character';
+import { nowISO } from '../../utils/dates';
 
 interface ParticipantDrawerProps {
   participant: EncounterParticipant;
@@ -22,7 +27,10 @@ const inputClass = 'w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] b
 export function ParticipantDrawer({ participant, onUpdateState, onClose }: ParticipantDrawerProps) {
   const { activeCampaign } = useCampaignContext();
   const engine = useSystemEngineFor(activeCampaign?.system);
+  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { character: activeCharacter, updateCharacter } = useActiveCharacter();
   const [template, setTemplate] = useState<CreatureTemplate | null>(null);
+  const [linkedCharacter, setLinkedCharacter] = useState<CharacterRecord | null>(null);
   const [currentHp, setCurrentHp] = useState<string>(String(participant.instanceState.currentHp ?? ''));
   const [notes, setNotes] = useState(participant.instanceState.notes ?? '');
   const [conditionsText, setConditionsText] = useState(
@@ -33,22 +41,82 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
     let cancelled = false;
     (async () => {
       const links = await getLinksFrom(participant.id, 'represents');
+
       const creatureEdge = links.find((l) => l.toEntityType === 'creature');
-      if (!creatureEdge) {
-        if (!cancelled) setTemplate(null);
+      if (creatureEdge) {
+        const t = await getById(creatureEdge.toEntityId);
+        if (!cancelled) setTemplate(t ?? null);
+      } else if (!cancelled) {
+        setTemplate(null);
+      }
+
+      // A participant that represents a PC must edit that character's own
+      // health, not a second number that silently disagrees with their sheet.
+      const characterEdge = links.find((l) => l.toEntityType === 'character');
+      if (!characterEdge) {
+        if (!cancelled) setLinkedCharacter(null);
         return;
       }
-      const t = await getById(creatureEdge.toEntityId);
-      if (!cancelled) setTemplate(t ?? null);
+      const c = await characterRepository.getById(characterEdge.toEntityId);
+      if (!cancelled) setLinkedCharacter(c ?? null);
     })();
     return () => {
       cancelled = true;
     };
   }, [participant]);
 
+  /** The PC's health resource, when this participant represents a character. */
+  const healthResourceId = engine.primaryHealthResourceId;
+  const linkedResource =
+    linkedCharacter && healthResourceId ? linkedCharacter.resources?.[healthResourceId] : undefined;
+  const linkedHealthLabel =
+    (healthResourceId && system?.resources?.find(r => r.id === healthResourceId)?.name) ??
+    engine.labels.participantHealth;
+
+  // Show the character's own value once the link resolves, so the GM is never
+  // editing a stale copy of a number the player has already changed.
+  useEffect(() => {
+    if (linkedResource) setCurrentHp(String(linkedResource.current));
+  }, [linkedResource?.current, linkedResource]);
+
   const handleHpBlur = () => {
     const hp = currentHp === '' ? undefined : Number(currentHp);
     onUpdateState({ currentHp: hp });
+  };
+
+  /**
+   * Writes a linked PC's health back to the character record.
+   *
+   * @remarks
+   * Always persists through the repository. Routing this through the
+   * active-character context alone is not enough: that context only holds state
+   * in memory and is persisted by the `useAutosave` hook on the character
+   * screens, which is not mounted while the GM is on the session screen — the
+   * edit would be silently lost on reload. The context is *also* updated when
+   * this is the active character, so an open sheet re-renders rather than
+   * showing a stale number.
+   */
+  const handleLinkedHealthBlur = async () => {
+    if (!linkedCharacter || !healthResourceId) return;
+    const parsed = Number(currentHp);
+    if (currentHp === '' || !Number.isFinite(parsed)) return;
+    const max = linkedResource?.max ?? 0;
+    const next = Math.max(0, Math.min(parsed, max));
+
+    const updated: CharacterRecord = {
+      ...linkedCharacter,
+      resources: {
+        ...linkedCharacter.resources,
+        [healthResourceId]: { ...linkedCharacter.resources[healthResourceId], current: next },
+      },
+      updatedAt: nowISO(),
+    };
+    await characterRepository.save(updated);
+    setLinkedCharacter(updated);
+
+    if (activeCharacter?.id === linkedCharacter.id) {
+      updateCharacter(() => ({ resources: updated.resources, updatedAt: updated.updatedAt }));
+    }
   };
 
   const handleNotesBlur = () => {
@@ -123,13 +191,18 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
         <div className="flex flex-col gap-3">
           <div>
             <label className="block text-[var(--color-text-muted)] text-xs font-semibold mb-1">
-              {engine.labels.participantHealth}
+              {linkedCharacter ? linkedHealthLabel : engine.labels.participantHealth}
+              {linkedResource && (
+                <span className="ml-1 font-normal text-[var(--color-text-muted)]">
+                  / {linkedResource.max} · syncs with sheet
+                </span>
+              )}
             </label>
             <input
               type="number"
               value={currentHp}
               onChange={(e) => setCurrentHp(e.target.value)}
-              onBlur={handleHpBlur}
+              onBlur={linkedCharacter ? handleLinkedHealthBlur : handleHpBlur}
               className={inputClass}
               placeholder="HP"
             />

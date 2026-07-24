@@ -27,17 +27,27 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
   // dashboard tile prefers the short label when the engine supplies one.
   const derivedValues = derived as unknown as Record<string, string | number | undefined>;
 
-  const stats: StatEntry[] = attributeModifiers
+  // The two lists are additive, not either/or. Rendering only the modifier grid
+  // silently dropped every declared field a modifier-based system had —
+  // Traveller's Initiative DM and Carry Limit never reached the dashboard.
+  const modifierStats: StatEntry[] = attributeModifiers
     ? Object.entries(attributeModifiers).map(([id, dm]) => ({
         label: system?.attributes.find(attr => attr.id === id)?.abbreviation ?? id.toUpperCase(),
         value: formatModifier(dm),
       }))
-    : engine.derivedFields
-        .filter(field => !field.surfaces || field.surfaces.includes('dashboard'))
-        .map(field => ({
-          label: field.shortLabel ?? field.label,
-          value: derivedValues[field.key] ?? '—',
-        }));
+    : [];
+
+  const fieldStats: StatEntry[] = engine.derivedFields
+    .filter(field => !field.surfaces || field.surfaces.includes('dashboard'))
+    // A field the engine declares but does not compute would render as a blank
+    // tile; skip it rather than show an empty box.
+    .filter(field => derivedValues[field.key] !== undefined)
+    .map(field => ({
+      label: field.shortLabel ?? field.label,
+      value: derivedValues[field.key] ?? '—',
+    }));
+
+  const stats: StatEntry[] = [...modifierStats, ...fieldStats];
 
   return (
     <SectionPanel title="Derived Stats" collapsible defaultOpen>

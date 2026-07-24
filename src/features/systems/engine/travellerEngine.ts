@@ -37,6 +37,22 @@ export function effectiveCharacteristic(character: CharacterRecord, id: string):
   return Math.max(0, base - damage);
 }
 
+/**
+ * Carry limit in kg: STR + END.
+ *
+ * @remarks
+ * Deliberately a simple, legible default rather than an imported encumbrance
+ * table — bundling the tables is what this project avoids. It reads the *base*
+ * characteristics, not the damaged ones, so a hit mid-fight does not silently
+ * make a character encumbered; and any character can override the computed
+ * value from the sheet if a group plays it differently.
+ */
+export function computeTravellerCarryLimit(character: CharacterRecord): number {
+  const str = character.attributes?.['str'] ?? 0;
+  const end = character.attributes?.['end'] ?? 0;
+  return str + end;
+}
+
 /** Formats a DM as a signed string, e.g. 2 -> '+2', -1 -> '-1'. */
 export function formatDM(dm: number): string {
   return dm >= 0 ? `+${dm}` : `${dm}`;
@@ -62,7 +78,7 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
     movement: 0,
     damageBonus: '+0',
     aglDamageBonus: '+0',
-    encumbranceLimit: 0,
+    encumbranceLimit: computeTravellerCarryLimit(character),
     characteristicDMs,
     initiativeDM,
   };
@@ -131,6 +147,7 @@ export const travellerEngine: SystemEngine = {
   panels: ['characteristics', 'skills', 'resources', 'finances', 'careers', 'augments', 'inventory', 'combat', 'notes'],
   currency: {
     mode: 'single',
+    label: 'Credits',
     denominations: [{ id: 'credits', label: 'Credits', abbr: 'Cr', value: 1, step: 100 }],
     read: character => ({ credits: character.wealth?.credits ?? 0 }),
     write: (character, amounts) => ({
@@ -222,6 +239,13 @@ export const travellerEngine: SystemEngine = {
   },
   derivedFields: [
     { key: 'initiativeDM', label: 'Initiative DM', shortLabel: 'Init' },
+    {
+      key: 'encumbranceLimit',
+      label: 'Carry Limit (kg)',
+      shortLabel: 'Carry',
+      overridable: true,
+      surfaces: ['dashboard', 'print'],
+    },
   ],
   // Characteristics and damage-track resources share ids (str/dex/end), so the
   // namespace is what keeps `attr:str` and `res:str` distinct targets.
