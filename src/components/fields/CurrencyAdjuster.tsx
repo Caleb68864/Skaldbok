@@ -17,6 +17,12 @@ interface CurrencyAdjusterProps {
    * this control stays a pure input surface.
    */
   onDelta: (denomId: string, delta: number) => void;
+  /**
+   * Whether to render the fixed quick-step buttons. Defaults to `true`. The Play
+   * dashboard passes `false` to keep the purse compact — just the custom-amount
+   * field with ± — while Ready Gear keeps the quick buttons.
+   */
+  quickButtons?: boolean;
 }
 
 /**
@@ -29,12 +35,14 @@ interface CurrencyAdjusterProps {
  * custom field covers arbitrary amounts (type 800, hit − to spend it). All
  * changes route through {@link CurrencyAdjusterProps.onDelta}, so overspend
  * protection and denomination change-making live in one place in the parent.
+ * Set {@link CurrencyAdjusterProps.quickButtons} to `false` to drop the quick
+ * buttons and show only the custom field.
  */
-export function CurrencyAdjuster({ denominations, amounts, onDelta }: CurrencyAdjusterProps) {
+export function CurrencyAdjuster({ denominations, amounts, onDelta, quickButtons = true }: CurrencyAdjusterProps) {
   return (
     <div className="flex flex-col gap-[var(--space-md)]">
       {denominations.map(denom => (
-        <DenomRow key={denom.id} denom={denom} value={amounts[denom.id] ?? 0} onDelta={onDelta} />
+        <DenomRow key={denom.id} denom={denom} value={amounts[denom.id] ?? 0} onDelta={onDelta} quickButtons={quickButtons} />
       ))}
     </div>
   );
@@ -49,10 +57,12 @@ function DenomRow({
   denom,
   value,
   onDelta,
+  quickButtons,
 }: {
   denom: CurrencyDenomination;
   value: number;
   onDelta: (denomId: string, delta: number) => void;
+  quickButtons: boolean;
 }) {
   const [custom, setCustom] = useState('');
   const unit = denom.label.toLowerCase();
@@ -75,7 +85,7 @@ function DenomRow({
         <span className="text-lg font-bold text-[var(--color-text)]">{value}</span>
       </div>
       <div className="flex flex-wrap items-center gap-[var(--space-xs)]">
-        {[...quickSteps].reverse().map(step => (
+        {quickButtons && [...quickSteps].reverse().map(step => (
           <button
             key={`minus-${step}`}
             type="button"
@@ -86,7 +96,7 @@ function DenomRow({
             −{step}
           </button>
         ))}
-        {quickSteps.map(step => (
+        {quickButtons && quickSteps.map(step => (
           <button
             key={`plus-${step}`}
             type="button"
@@ -97,7 +107,7 @@ function DenomRow({
             +{step}
           </button>
         ))}
-        <span className="mx-1 h-6 w-px bg-[var(--color-border)]" aria-hidden="true" />
+        {quickButtons && <span className="mx-1 h-6 w-px bg-[var(--color-border)]" aria-hidden="true" />}
         <input
           type="number"
           min={1}

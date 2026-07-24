@@ -38,7 +38,7 @@ export function CurrencyModule({ character, system, updateCharacter }: PlayModul
 
   return (
     <SectionPanel title={currency.label} collapsible defaultOpen>
-      <CurrencyAdjuster denominations={denominations} amounts={currency.read(character)} onDelta={adjust} />
+      <CurrencyAdjuster denominations={denominations} amounts={currency.read(character)} onDelta={adjust} quickButtons={false} />
     </SectionPanel>
   );
 }
