@@ -12,6 +12,7 @@ import ReferenceScreen from '../screens/ReferenceScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CharacterLibraryScreen from '../screens/CharacterLibraryScreen';
+import ShipsScreen from '../screens/ShipsScreen';
 import PrintableSheetScreen from '../screens/PrintableSheetScreen';
 import { BestiaryScreenRoute } from '../features/bestiary/BestiaryScreenRoute';
 import TrashScreen from '../screens/TrashScreen';
@@ -82,6 +83,7 @@ export const routes: RouteObject[] = [
       { path: '/settings', element: <SettingsScreen /> },
       { path: '/profile', element: <ProfileScreen /> },
       { path: '/library', element: <CharacterLibraryScreen /> },
+      { path: '/ships', element: <ShipsScreen /> },
       { path: '*', element: <Navigate to="/character/sheet" replace /> },
     ],
   },

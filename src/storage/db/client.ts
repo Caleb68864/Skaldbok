@@ -8,6 +8,7 @@ import type { Session } from '../../types/session';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
 import type { Party, PartyMember } from '../../types/party';
+import type { Ship } from '../../types/ship';
 import type { Attachment } from '../../types/attachment';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { Encounter } from '../../types/encounter';
@@ -98,6 +99,7 @@ class SkaldbokDatabase extends Dexie {
   kb_nodes!: Table<KBNode, string>;
   kb_edges!: Table<KBEdge, string>;
   inventoryContainers!: Table<InventoryContainer, string>;
+  ships!: Table<Ship, string>;
 
   constructor() {
     super('skaldbok-db');
@@ -478,6 +480,14 @@ class SkaldbokDatabase extends Dexie {
     // Adds reorderable user-owned grouping cards for local reference sections.
     this.version(12).stores({
       referenceGroups: 'id, title, order, updatedAt',
+    });
+
+    // --- Version 13: Ships ---
+    // Campaign-scoped starships, optionally owned by a character. Indexed on
+    // campaignId and ownerCharacterId for the two lookup patterns, plus
+    // deletedAt for the soft-delete filter.
+    this.version(13).stores({
+      ships: 'id, campaignId, ownerCharacterId, deletedAt',
     });
   }
 }

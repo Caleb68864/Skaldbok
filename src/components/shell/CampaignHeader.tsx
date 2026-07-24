@@ -167,6 +167,14 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
             </button>
 
             <Link
+              to="/ships"
+              onClick={() => setSheetOpen(false)}
+              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
+            >
+              Ships
+            </Link>
+
+            <Link
               to="/settings"
               onClick={() => setSheetOpen(false)}
               className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
