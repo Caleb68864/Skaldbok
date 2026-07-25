@@ -35,7 +35,7 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
   // Damage-track systems: read-only readout; the Take Damage & Heal panel owns edits.
   if (engine.damageTrack) {
     return (
-      <SectionPanel title="Vitals" collapsible defaultOpen>
+      <SectionPanel title={engine.labels.vitalsPanel ?? 'Vitals'} collapsible defaultOpen>
         <div className="flex flex-col gap-[var(--space-xs)]">
           {engine.resourceIds.map(id => {
             const resource = character.resources[id];
@@ -64,7 +64,7 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
 
   // Pool-based systems: directly editable steppers.
   return (
-    <SectionPanel title="Vitals" collapsible defaultOpen>
+    <SectionPanel title={engine.labels.vitalsPanel ?? 'Vitals'} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-sm)] 2xl:grid 2xl:grid-cols-2">
         {engine.resourceIds.map(id => {
           const resource = character.resources[id];

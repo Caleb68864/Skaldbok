@@ -45,7 +45,7 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
   }
 
   return (
-    <SectionPanel title="Ready Gear" collapsible defaultOpen>
+    <SectionPanel title={engine.labels.readyGearPanel ?? 'Ready Gear'} collapsible defaultOpen>
       <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
         {equipped.map(weapon => (
           <div key={weapon.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)]">

@@ -1,13 +1,15 @@
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
+import { getEngine } from '../systems/engine';
 import type { PlayModuleProps } from './types';
 
 export function ConditionModule({ character, system, updateCharacter }: PlayModuleProps) {
   if (!system) return null;
+  const engine = getEngine(system);
 
   return (
-    <SectionPanel title="Conditions" collapsible defaultOpen>
+    <SectionPanel title={engine.labels.conditionsPanel ?? 'Conditions'} collapsible defaultOpen>
       <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(6rem,1fr))]">
         {system.conditions.map(condition => {
           const active = !!character.conditions[condition.id];

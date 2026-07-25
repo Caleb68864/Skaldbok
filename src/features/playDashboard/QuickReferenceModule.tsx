@@ -1,5 +1,6 @@
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import type { QuickRefCard } from '../../types/system';
+import { getEngine } from '../systems/engine';
 import type { PlayModuleProps } from './types';
 
 /**
@@ -15,9 +16,10 @@ import type { PlayModuleProps } from './types';
 export function QuickReferenceModule({ system }: PlayModuleProps) {
   const cards = system?.quickReference ?? [];
   if (cards.length === 0) return null;
+  const engine = getEngine(system);
 
   return (
-    <SectionPanel title="Quick Reference" collapsible defaultOpen={false}>
+    <SectionPanel title={engine.labels.quickReferencePanel ?? 'Quick Reference'} collapsible defaultOpen={false}>
       <div className="grid gap-[var(--space-sm)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr))]">
         {cards.map((card, i) => (
           <QuickRefCardView key={`${card.title}-${i}`} card={card} />

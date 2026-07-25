@@ -80,7 +80,7 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
     'min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]';
 
   return (
-    <SectionPanel title="Take Damage & Heal" collapsible defaultOpen>
+    <SectionPanel title={engine.labels.damageHealPanel ?? 'Take Damage & Heal'} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-sm)]">
         {status !== 'ok' && (
           <p role="status" className="m-0 text-center text-[length:var(--font-size-sm)] font-bold text-[var(--color-danger)]">

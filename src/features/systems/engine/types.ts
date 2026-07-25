@@ -232,6 +232,18 @@ export interface SystemLabels {
    * the panel is hidden.
    */
   tinyItems: string | null;
+  /**
+   * Play-dashboard card titles. Optional: each module falls back to its built-in
+   * default when unset, so these exist only to let a system rename a card without
+   * a code change (config-over-hardcoding). E7.
+   */
+  vitalsPanel?: string;
+  derivedPanel?: string;
+  conditionsPanel?: string;
+  readyGearPanel?: string;
+  damageHealPanel?: string;
+  quickReferencePanel?: string;
+  storyBankPanel?: string;
 }
 
 /**

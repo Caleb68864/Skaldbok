@@ -1,4 +1,5 @@
 import { SectionPanel } from '../../components/primitives/SectionPanel';
+import { getEngine } from '../systems/engine';
 import type { PlayModuleProps } from './types';
 
 /**
@@ -9,12 +10,13 @@ import type { PlayModuleProps } from './types';
  * Read-only and hidden when the character has no beats, so it never clutters a
  * sheet that does not use them. Editing happens on the character sheet.
  */
-export function StoryBankModule({ character }: PlayModuleProps) {
+export function StoryBankModule({ character, system }: PlayModuleProps) {
   const beats = character.storyBank ?? [];
   if (beats.length === 0) return null;
+  const engine = getEngine(system);
 
   return (
-    <SectionPanel title="Story Bank" collapsible defaultOpen={false}>
+    <SectionPanel title={engine.labels.storyBankPanel ?? 'Story Bank'} collapsible defaultOpen={false}>
       <div className="flex flex-col gap-[var(--space-xs)]">
         {beats.map(beat => (
           <div

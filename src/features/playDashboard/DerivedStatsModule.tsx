@@ -56,7 +56,7 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
   const stats: StatEntry[] = [...modifierStats, ...fieldStats];
 
   return (
-    <SectionPanel title="Derived Stats" collapsible defaultOpen>
+    <SectionPanel title={engine.labels.derivedPanel ?? 'Derived Stats'} collapsible defaultOpen>
       <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,7rem),1fr))]">
         {stats.map(stat => (
           <div
