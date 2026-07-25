@@ -51,4 +51,21 @@ describe('parseBundle — character validation', () => {
     expect(result.bundle.contents.characters).toHaveLength(1);
     expect(result.warnings.filter(w => w.entityType === 'characters')).toHaveLength(0);
   });
+
+  it('preserves fields the schema does not enumerate (no silent strip on import)', () => {
+    // portraitUri and uiState sheet-layout keys aren't in characterRecordSchema;
+    // validation must NOT drop them (that would reset a portrait / card layout).
+    const rich = {
+      ...validChar,
+      portraitUri: 'data:image/png;base64,AAAA',
+      uiState: { expandedSections: [], sheetCardOrder: ['identity', 'attributes'], pinnedSkills: ['gunCombat'] },
+    };
+    const result = parseBundle(bundleJson([rich]));
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    const imported = result.bundle.contents.characters?.[0] as Record<string, unknown>;
+    expect(imported.portraitUri).toBe('data:image/png;base64,AAAA');
+    expect((imported.uiState as Record<string, unknown>).sheetCardOrder).toEqual(['identity', 'attributes']);
+    expect((imported.uiState as Record<string, unknown>).pinnedSkills).toEqual(['gunCombat']);
+  });
 });

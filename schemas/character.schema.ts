@@ -102,15 +102,23 @@ export const characterRecordSchema = z.object({
     .describe('Money held, keyed by currency denomination id'),
   abilities: z.array(abilitySchema).default([]),
   derivedOverrides: z.record(z.string(), z.number().nullable()).default({}).describe('Override map for derived values'),
+  // passthrough: uiState carries more keys than expandedSections (sheetCardOrder,
+  // sheetPanelVisibility, pinnedSkills, restsUsed, ...). Keep them on import rather
+  // than stripping — the card-template sheet layout lives here.
   uiState: z.object({
     expandedSections: z.array(z.string()).default([]),
-  }).default({ expandedSections: [] }),
+  }).passthrough().default({ expandedSections: [] }),
   deletedAt: z.string().optional().describe('ISO timestamp when soft-deleted; absent when live'),
   softDeletedBy: z.string().optional().describe('Transaction UUID identifying the cascade that soft-deleted this character'),
   systemData: z
     .record(z.string(), z.unknown())
     .optional()
     .describe('Free-form data owned by the character game system'),
-});
+})
+  // passthrough so validation-on-import (migrateCharacter) never DROPS a field the
+  // CharacterRecord type carries but this schema doesn't yet enumerate (portraitUri,
+  // tempModifiers, advancementChecks, ...). It still validates every known field, so
+  // a malformed record is rejected — it just isn't silently narrowed.
+  .passthrough();
 
 export type CharacterRecordSchema = z.infer<typeof characterRecordSchema>;
