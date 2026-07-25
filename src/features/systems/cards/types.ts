@@ -1,0 +1,14 @@
+import type { z } from 'zod';
+import type {
+  cardGuardSchema,
+  cardEntrySchema,
+  surfaceLayoutSchema,
+  sheetTemplateSchema,
+  componentDefinitionSchema,
+} from './schema';
+
+export type CardGuard = z.infer<typeof cardGuardSchema>;
+export type CardEntry = z.infer<typeof cardEntrySchema>;
+export type SurfaceLayout = z.infer<typeof surfaceLayoutSchema>;
+export type SheetTemplate = z.infer<typeof sheetTemplateSchema>;
+export type ComponentDefinition = z.infer<typeof componentDefinitionSchema>;
