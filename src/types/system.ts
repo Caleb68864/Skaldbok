@@ -19,6 +19,14 @@ export interface ResourceDefinition {
   derivedFrom?: string;
   min: number;
   defaultMax: number;
+  /**
+   * Whether the resource *depletes* (starts at max, counts down, 0 = bad — e.g.
+   * Dragonbane HP) or *accumulates* (starts at 0, counts up, `current >= max` =
+   * bad — e.g. a Traveller damage track). Declared here so damage/heal code
+   * reads polarity as a fact instead of proxying it off `engine.damageTrack`.
+   * Defaults to `'depletes'` when unset. E2.
+   */
+  direction?: 'depletes' | 'accumulates';
 }
 
 export interface SkillDefinition {

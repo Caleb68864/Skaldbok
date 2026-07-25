@@ -645,7 +645,8 @@ export function SessionQuickActions({
    */
   const adjustHealth = async (delta: number): Promise<number> => {
     if (!healthResourceId) return 0;
-    const accumulates = engine.damageTrack != null;
+    // Polarity is a declared fact on the resource, not a proxy off damageTrack. E2.
+    const accumulates = system?.resources.find(r => r.id === healthResourceId)?.direction === 'accumulates';
     const resourceDelta = accumulates ? -delta : delta;
     let updated = 0;
     for (const memberId of selectedMembers) {

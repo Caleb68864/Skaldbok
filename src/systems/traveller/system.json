@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 5,
+  "version": 6,
   "name": "traveller",
   "displayName": "Traveller",
   "resolution": "2d6-plus",
@@ -79,21 +79,24 @@
       "name": "Strength Damage",
       "derivedFrom": "str",
       "min": 0,
-      "defaultMax": 8
+      "defaultMax": 8,
+      "direction": "accumulates"
     },
     {
       "id": "dex",
       "name": "Dexterity Damage",
       "derivedFrom": "dex",
       "min": 0,
-      "defaultMax": 8
+      "defaultMax": 8,
+      "direction": "accumulates"
     },
     {
       "id": "end",
       "name": "Endurance Damage",
       "derivedFrom": "end",
       "min": 0,
-      "defaultMax": 8
+      "defaultMax": 8,
+      "direction": "accumulates"
     }
   ],
   "skillCategories": [
