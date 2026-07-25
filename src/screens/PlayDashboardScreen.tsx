@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
@@ -74,13 +74,33 @@ export default function PlayDashboardScreen() {
       {error && <div className="mb-[var(--space-sm)] text-[var(--color-danger)] text-[length:var(--font-size-sm)]">{error}</div>}
       <div className="flex flex-col gap-[var(--space-sm)] md:gap-[var(--space-md)]">
         {playTemplate ? (
-          playTemplate.regions.map((region, index) => (
-            <div key={index} className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)]">
-              {region.map((entry, entryIndex) => (
-                <CardRenderer key={entryIndex} entry={entry} {...moduleProps} />
-              ))}
-            </div>
-          ))
+          playTemplate.regions.map((region, index) =>
+            Array.isArray(region) ? (
+              // Full-width column: a vertical stack of cards.
+              <div key={index} className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)]">
+                {region.map((entry, entryIndex) => (
+                  <CardRenderer key={entryIndex} entry={entry} {...moduleProps} />
+                ))}
+              </div>
+            ) : (
+              // Grid row: cells sit side by side at ≥640px (tablet+) and stack on
+              // narrow screens, matching the original responsive dashboard grids.
+              // `columns` maps to grid-template-columns via a CSS var.
+              <div
+                key={index}
+                className="grid gap-[var(--space-xs)] items-start md:gap-[var(--space-sm)] min-[640px]:[grid-template-columns:var(--tpl-cols)]"
+                style={{ '--tpl-cols': region.columns } as CSSProperties}
+              >
+                {region.cells.map((cell, cellIndex) => (
+                  <div key={cellIndex} className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)]">
+                    {cell.map((entry, entryIndex) => (
+                      <CardRenderer key={entryIndex} entry={entry} {...moduleProps} />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ),
+          )
         ) : hasRest ? (
           <>
             <div className="grid gap-[var(--space-xs)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr))] min-[640px]:[grid-template-columns:1fr_minmax(200px,1fr)_1fr]">

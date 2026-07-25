@@ -20,9 +20,29 @@ export const cardEntrySchema: z.ZodType<string | z.infer<typeof cardEntryObjectS
   cardEntryObjectSchema,
 ]);
 
+/**
+ * A grid-row region: its cards lay out in a CSS grid whose `columns` maps to
+ * `grid-template-columns`. Each cell is itself a vertical stack of card entries,
+ * so a two-column region can hold two independent card stacks side by side.
+ */
+export const gridRegionSchema = z.object({
+  columns: z.string().min(1).optional().describe('CSS grid-template-columns for this region row'),
+  cells: z.array(z.array(cardEntrySchema)).describe('Grid cells; each cell is a vertical stack of card entries'),
+});
+
+/**
+ * A region is either a bare `CardEntry[]` (a full-width column stack — the legacy
+ * form) or a `{ columns, cells }` grid row. The two originals reduce to a mix of
+ * both, giving pixel-parity without a system-specific branch in the screen.
+ */
+export const regionSchema = z.union([
+  z.array(cardEntrySchema),
+  gridRegionSchema,
+]);
+
 export const surfaceLayoutSchema = z.object({
-  layout: z.string().min(1).describe('Layout identifier for this surface'),
-  regions: z.array(z.array(cardEntrySchema)).describe('Regions, each a list of card entries'),
+  layout: z.string().min(1).optional().describe('Optional layout identifier for this surface'),
+  regions: z.array(regionSchema).describe('Regions: a full-width stack (array) or a grid row ({columns, cells})'),
 });
 
 export const sheetTemplateSchema = z.object({
