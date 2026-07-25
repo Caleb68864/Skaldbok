@@ -220,7 +220,14 @@ export default function SheetScreen() {
     .flatMap(region => (Array.isArray(region) ? region : region.cells.flat()))
     .map(entry => (typeof entry === 'string' ? entry : entry.card));
   const SHEET_PANEL_SEQUENCE = templatePanelKeys.length > 0 ? templatePanelKeys : FALLBACK_PANEL_SEQUENCE;
-  const DEFAULT_PANEL_ORDER = SHEET_PANEL_SEQUENCE.filter(key => panelAvailability[key]);
+  // If a template's keys are all unavailable (e.g. a community sheet surface that
+  // listed card keys or typos), the filtered order comes out empty and the sheet
+  // would render nothing — even Identity. Treat that as "no template" and fall
+  // back to the canonical order so the sheet is always usable.
+  const orderedFromSequence = SHEET_PANEL_SEQUENCE.filter(key => panelAvailability[key]);
+  const DEFAULT_PANEL_ORDER = orderedFromSequence.length > 0
+    ? orderedFromSequence
+    : FALLBACK_PANEL_SEQUENCE.filter(key => panelAvailability[key]);
   const storedPanelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
   // Reconcile three inputs: (1) the persisted drag order, kept first so a user's
   // arrangement survives; (2) availability — any persisted key no longer available

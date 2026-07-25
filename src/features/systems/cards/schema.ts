@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+/**
+ * Guard keys a card can be gated on via `when`. Each maps to a predicate over the
+ * active `SystemEngine` (see `GUARDS` in guards.ts):
+ * - `always` — always render
+ * - `hasMagic` — `engine.hasMagic`
+ * - `hasRest` — `engine.rest !== null`
+ * - `hasDamageTrack` — `engine.damageTrack !== null`
+ * - `hasCurrency` — the system defines at least one currency denomination
+ * - `hasStoryBank` — always true today (Story Bank is universal)
+ */
 export const cardGuardSchema = z.enum([
   'always',
   'hasMagic',
@@ -45,6 +55,31 @@ export const surfaceLayoutSchema = z.object({
   regions: z.array(regionSchema).describe('Regions: a full-width stack (array) or a grid row ({columns, cells})'),
 });
 
+/**
+ * A full `sheet.json` template: a `version` plus optional play/sheet/print
+ * surfaces. Bump `version` when editing a bundled template so the IndexedDB cache
+ * refreshes.
+ *
+ * @example A minimal sheet.json exercising both region forms + a guarded card:
+ * ```jsonc
+ * {
+ *   "version": 1,
+ *   "play": {
+ *     "regions": [
+ *       ["vitals", "conditions"],                        // full-width stack of two cards
+ *       {                                                // two-column grid row
+ *         "columns": "2fr 1fr",
+ *         "cells": [
+ *           [{ "card": "skills" }],
+ *           [{ "card": "magic", "when": "hasMagic" }]    // guarded card
+ *         ]
+ *       },
+ *       [{ "card": "tile", "props": { "title": "Speed", "source": "derived:pace" } }]
+ *     ]
+ *   }
+ * }
+ * ```
+ */
 export const sheetTemplateSchema = z.object({
   version: z.number().int().positive().describe('Template schema version'),
   play: surfaceLayoutSchema.optional().describe('Play-surface layout'),
@@ -64,6 +99,23 @@ const componentCardEntryObjectSchema = z.object({
 
 const componentCardEntrySchema = z.union([z.string().min(1), componentCardEntryObjectSchema]);
 
+/**
+ * A reusable community component: a named body of card entries whose props are
+ * filled from `$prop` named slots at expansion time.
+ *
+ * @example A component with a named-slot prop, and how a region invokes it:
+ * ```jsonc
+ * {
+ *   "name": "statTile",
+ *   "props": ["label", "path"],
+ *   "body": [
+ *     { "card": "tile", "props": { "title": { "$prop": "label" }, "source": { "$prop": "path" } } }
+ *   ]
+ * }
+ * // Invoked from a region as:
+ * //   { "card": "statTile", "props": { "label": "Pace", "path": "derived:pace" } }
+ * ```
+ */
 export const componentDefinitionSchema = z.object({
   name: z.string().min(1).describe('Component name, referenced by CardEntry.card'),
   props: z.array(z.string().min(1)).optional().describe('Names of props this component accepts'),

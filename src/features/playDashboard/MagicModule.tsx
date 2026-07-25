@@ -80,9 +80,9 @@ export function MagicModule({ character, system, updateCharacter }: PlayModulePr
                         key={level}
                         type="button"
                         className={cn(
-                          'h-8 w-8 rounded-full border text-sm font-semibold transition-colors',
+                          'min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] rounded-full border text-sm font-semibold transition-colors',
                           selected
-                            ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-white'
+                            ? 'border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-bg)]'
                             : 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] hover:border-[var(--color-accent)]',
                           pool && pool.current < levelCost && !selected && 'opacity-50'
                         )}

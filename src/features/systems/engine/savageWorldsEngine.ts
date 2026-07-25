@@ -19,11 +19,6 @@ export interface SavageWorldsDerivedValues extends DerivedValues {
 }
 
 /**
- * Pace 6, Parry `2 + ½ Fighting`, Toughness `2 + ½ Vigor + armor`, Load Limit
- * `Strength × 5`. Parry reads a *skill* and Toughness folds in *equipped armor* —
- * the first derived stats to depend on more than attributes.
- */
-/**
  * Toughness = `2 + ½ Vigor + Armor`, with armor-piercing `ap` stripping armor
  * first (floored at 0). Split out from {@link computeSavageWorldsDerivedValues}
  * so {@link savageWorldsEngine.resolveDamage} can apply AP without recomputing
@@ -37,6 +32,13 @@ export function computeToughness(character: CharacterRecord, ap = 0): number {
   return 2 + Math.floor(vigor / 2) + effectiveArmor;
 }
 
+/**
+ * SWADE derived stats: Pace 6, Parry `2 + ½ Fighting`, Toughness `2 + ½ Vigor +
+ * armor`, Load Limit `Strength × 5`. Parry reads a *skill* and Toughness folds in
+ * *equipped armor* — the first derived stats to depend on more than attributes.
+ * hpMax/wpMax/movement/damageBonus are held at neutral values only to satisfy the
+ * shared DerivedValues type (see the inline note).
+ */
 export function computeSavageWorldsDerivedValues(character: CharacterRecord): SavageWorldsDerivedValues {
   const strength = dieSides(character, 'strength');
   const fighting = character.skills?.['fighting']?.value ?? 0;

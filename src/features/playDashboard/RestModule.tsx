@@ -131,7 +131,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
 
   const btnBase = 'min-h-[var(--touch-target-min)] w-full justify-center px-1 py-[var(--space-sm)] rounded-[var(--radius-sm)] border text-[length:var(--font-size-md)] font-medium cursor-pointer transition-colors flex items-center gap-1 whitespace-nowrap';
   const unusedClass = 'border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] hover:bg-[var(--color-surface)]';
-  const usedClass = 'border-[var(--color-success,#27ae60)] bg-[var(--color-success,#27ae60)] text-white opacity-70';
+  const usedClass = 'border-[var(--color-success)] bg-[var(--color-success)] text-[var(--color-bg)] opacity-70';
 
   // Systems without a rest ladder (e.g. Traveller) have no rest mechanic at all.
   if (!rests || rests.length === 0) return null;

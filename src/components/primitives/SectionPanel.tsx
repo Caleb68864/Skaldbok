@@ -30,10 +30,20 @@ export function SectionPanel({ title, subtitle, icon, children, collapsible = fa
         className={cn(
           "flex items-center justify-between px-[var(--space-sm)] py-[var(--space-xs)]",
           "bg-gradient-to-r from-surface-alt to-surface border-b-2 border-b-gold",
-          collapsible && "cursor-pointer min-h-[var(--touch-target-min)]",
+          collapsible && "cursor-pointer min-h-[var(--touch-target-min)] focus-visible:outline-2 focus-visible:outline-gold",
           !open && "border-b-0",
         )}
         onClick={collapsible ? () => setOpen(o => !o) : undefined}
+        // Keyboard operability for the role="button" header: Enter/Space toggle,
+        // Space preventDefault so it doesn't also scroll the page. Additive — the
+        // non-collapsible path stays a plain, unfocusable div.
+        onKeyDown={collapsible ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setOpen(o => !o);
+          }
+        } : undefined}
+        tabIndex={collapsible ? 0 : undefined}
         role={collapsible ? 'button' : undefined}
         aria-expanded={collapsible ? open : undefined}
       >

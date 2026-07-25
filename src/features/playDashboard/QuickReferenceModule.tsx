@@ -35,6 +35,7 @@ function QuickRefCardView({ card }: { card: QuickRefCard }) {
       <p className="m-0 mb-[var(--space-xs)] text-[length:var(--font-size-sm)] font-semibold text-[var(--color-accent)]">
         {card.title}
       </p>
+      <div className="overflow-x-auto">
       <table className="w-full border-collapse text-[length:var(--font-size-sm)]">
         {card.columns && (
           <thead>
@@ -71,6 +72,7 @@ function QuickRefCardView({ card }: { card: QuickRefCard }) {
           ))}
         </tbody>
       </table>
+      </div>
       {card.note && (
         <p className="m-0 mt-[var(--space-xs)] text-[length:var(--font-size-sm)] leading-snug text-[var(--color-text-muted)]">
           {card.note}

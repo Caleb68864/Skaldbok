@@ -101,14 +101,19 @@ export function useSheetTemplate(systemId: string) {
       const bundled = BUNDLED_SHEET_TEMPLATES[systemId];
       const result = resolveSheetTemplate(bundled, cached);
 
-      if (result.cacheWrite) {
-        await metadataRepository.set(metadataKey(systemId), JSON.stringify(result.cacheWrite));
-      }
       if (!mounted) return;
-
+      // Apply the resolved template first, then attempt the cache refresh as a
+      // fire-and-forget — a failing write (e.g. quota exceeded) must not discard
+      // an already-valid in-memory template.
       setTemplate(result.template);
       setError(result.error);
       setIsLoading(false);
+
+      if (result.cacheWrite) {
+        metadataRepository.set(metadataKey(systemId), JSON.stringify(result.cacheWrite)).catch(err => {
+          if (import.meta.env.DEV) console.warn('useSheetTemplate: failed to cache template', err);
+        });
+      }
     }).catch(err => {
       if (mounted) {
         setError(String(err));

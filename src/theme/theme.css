@@ -41,6 +41,7 @@
   --space-10: 2.5rem;
 
   /* Legacy spacing aliases */
+  --space-2xs: 2px;
   --space-xs: 4px;
   --space-sm: 8px;
   --space-md: 16px;
@@ -67,6 +68,7 @@
   --touch-target-min: 44px;
 
   /* Legacy font-size aliases */
+  --font-size-xs: var(--size-xs);
   --font-size-sm: var(--size-sm);
   --font-size-md: var(--size-md);
   --font-size-lg: var(--size-lg);

@@ -1,3 +1,4 @@
+import { Component, type ReactNode } from 'react';
 import { getEngine } from '../engine';
 import { GUARDS } from './guards';
 import { CARD_REGISTRY, isCardKey } from './registry';
@@ -5,6 +6,28 @@ import { resolveComponent } from './resolveComponent';
 import type { ComponentRegistry } from './resolveComponent';
 import type { CardEntry } from './types';
 import type { PlayModuleProps } from '../../playDashboard/types';
+
+/**
+ * Per-card render isolation: a single card that throws (e.g. an untrusted
+ * community template with malformed props) degrades to nothing instead of
+ * propagating to the app-level boundary and blanking the whole screen — the same
+ * "degrade the subtree" guarantee already given to unknown keys and failed
+ * component expansions.
+ */
+class CardErrorBoundary extends Component<{ cardKey: string; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(err: unknown) {
+    if (import.meta.env.DEV) {
+      console.warn(`CardRenderer: card "${this.props.cardKey}" threw during render`, err);
+    }
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 /** Props for {@link CardRenderer}. */
 export interface CardRendererProps extends PlayModuleProps {
@@ -74,5 +97,9 @@ export function CardRenderer({ entry, componentRegistry = {}, character, system,
   }
 
   const Component = CARD_REGISTRY[normalized.card];
-  return <Component character={character} system={system} updateCharacter={updateCharacter} {...(normalized.props ?? {})} />;
+  return (
+    <CardErrorBoundary cardKey={normalized.card}>
+      <Component character={character} system={system} updateCharacter={updateCharacter} {...(normalized.props ?? {})} />
+    </CardErrorBoundary>
+  );
 }

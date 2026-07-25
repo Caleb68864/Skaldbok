@@ -330,7 +330,7 @@ export default function SkillsScreen() {
                         disabled={!skillsEditable}
                         onChange={e => handleSkillChange(skill.id, { value: clampSkillValue(Number(e.target.value), skillRange), trained: cs?.trained ?? false })}
                         className={cn(
-                          "w-[52px] h-10 text-center text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)]",
+                          "w-[52px] h-[var(--touch-target-min)] text-center text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)]",
                           skillsEditable
                             ? "bg-[var(--color-surface-alt)] cursor-text opacity-100"
                             : "bg-[var(--color-surface)] cursor-default opacity-70"
@@ -340,7 +340,7 @@ export default function SkillsScreen() {
                       {/* Per-skill boon/bane override */}
                       {engine.skill.supportsBoonBane && (
                       <button
-                        className={`w-8 h-8 shrink-0 flex items-center justify-center rounded border-none cursor-pointer text-sm font-bold ${
+                        className={`min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] shrink-0 flex items-center justify-center rounded border-none cursor-pointer text-sm font-bold ${
                           (sessionState.skillOverrides[skill.id] ?? 'inherit') === 'boon'
                             ? 'bg-emerald-600/20 text-emerald-400'
                             : (sessionState.skillOverrides[skill.id] ?? 'inherit') === 'bane'
