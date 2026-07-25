@@ -79,6 +79,7 @@ export const savageWorldsEngine: SystemEngine = {
     valueLabel: 'Die',
     // Die sides, walked along the ladder rather than every integer.
     range: { min: 4, max: 12 },
+    ladder: [4, 6, 8, 10, 12],
     advancementMax: 12,
     defaultValue: 4,
     display: (value) => formatSavageSkill(value),

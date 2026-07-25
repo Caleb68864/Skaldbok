@@ -122,6 +122,12 @@ export interface SkillEngineConfig {
   /** Clamp applied to the skill's editable value input. */
   range: { min: number; max: number };
   /**
+   * Discrete rungs a skill value may take (Savage Worlds die sides
+   * `[4,6,8,10,12]`). When present, edits snap to the nearest rung so a skill
+   * never lands on a nonexistent d5/d7. Absent = any integer in {@link range}.
+   */
+  ladder?: number[];
+  /**
    * Ceiling an end-of-session advancement roll may raise a skill to.
    *
    * @remarks
