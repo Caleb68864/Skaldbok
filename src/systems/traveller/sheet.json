@@ -1,17 +1,22 @@
 {
-  "version": 3,
+  "version": 4,
   "play": {
     "layout": "two-column",
     "regions": [
-      [
-        "vitals",
-        { "card": "currency", "when": "hasCurrency" }
-      ],
-      [
-        "derived",
-        "conditions",
-        { "card": "damageHeal", "when": "hasDamageTrack" }
-      ],
+      {
+        "columns": "1fr 2fr",
+        "cells": [
+          [
+            "vitals",
+            { "card": "currency", "when": "hasCurrency" }
+          ],
+          [
+            "derived",
+            "conditions",
+            { "card": "damageHeal", "when": "hasDamageTrack" }
+          ]
+        ]
+      },
       [
         "skills",
         "readyGear",
