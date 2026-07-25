@@ -631,6 +631,7 @@ function ActiveSessionContent() {
             <input
               type="text"
               placeholder="Encounter title"
+              aria-label="Encounter title"
               value={newEncounterTitle}
               onChange={e => setNewEncounterTitle(e.target.value)}
               className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-base mb-3 box-border"
@@ -659,6 +660,7 @@ function ActiveSessionContent() {
             <input
               type="text"
               placeholder={engine.labels.encounterTagExamples}
+              aria-label="Tags (comma-separated)"
               value={newEncounterTagsInput}
               onChange={e => setNewEncounterTagsInput(e.target.value)}
               className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"
@@ -671,6 +673,7 @@ function ActiveSessionContent() {
             <input
               type="text"
               placeholder={engine.labels.locationExample}
+              aria-label="Location"
               value={newEncounterLocation}
               onChange={e => setNewEncounterLocation(e.target.value)}
               className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"
@@ -683,6 +686,7 @@ function ActiveSessionContent() {
             <select
               value={newEncounterParentOverride}
               onChange={e => setNewEncounterParentOverride(e.target.value)}
+              aria-label="Started during"
               className="w-full px-3 py-2.5 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"
             >
               <option value="auto">Auto (current active)</option>

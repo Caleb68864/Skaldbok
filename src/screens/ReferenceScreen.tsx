@@ -505,7 +505,14 @@ export default function ReferenceScreen() {
           )}
           <div className="flex flex-col gap-[var(--space-md)]">
             {notes.map(note => (
-              <Card key={note.id} onClick={() => openEditNote(note)} className="cursor-pointer">
+              <Card
+                key={note.id}
+                onClick={() => openEditNote(note)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEditNote(note); } }}
+                className="cursor-pointer"
+              >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h2 className="text-[length:var(--font-size-md)] text-[var(--color-text)] mb-[var(--space-xs)]">{note.title || '(Untitled)'}</h2>

@@ -243,9 +243,9 @@ export function SessionQuickActions({
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [shopItem, setShopItem] = useState('');
   const [shopAction, setShopAction] = useState<'buy' | 'sell'>('buy');
-  const [shopGold, setShopGold] = useState(0);
-  const [shopSilver, setShopSilver] = useState(0);
-  const [shopCopper, setShopCopper] = useState(0);
+  // Cost per item, keyed by the active system's currency denomination id, so the
+  // Shopping flow speaks the right money (Traveller Credits / SW Cash / DB coins).
+  const [shopAmounts, setShopAmounts] = useState<Record<string, number>>({});
   const [shopQuantity, setShopQuantity] = useState(1);
 
   const openAction = useCallback((actionId: string) => {
@@ -324,9 +324,7 @@ export function SessionQuickActions({
     setSelectedTags([]);
     setShopItem('');
     setShopAction('buy');
-    setShopGold(0);
-    setShopSilver(0);
-    setShopCopper(0);
+    setShopAmounts({});
     setShopQuantity(1);
     setAttachTo(preferredAttachTo);
   };
@@ -1009,16 +1007,14 @@ export function SessionQuickActions({
   // ── Shopping Flow ──────────────────────────────────────────────
 
   const renderShoppingPicker = () => {
-    const totalGold = shopGold * shopQuantity;
-    const totalSilver = shopSilver * shopQuantity;
-    const totalCopper = shopCopper * shopQuantity;
-    const hasAnyCoin = shopGold > 0 || shopSilver > 0 || shopCopper > 0;
+    const denominations = engine.currency.denominations;
+    const amountFor = (id: string) => shopAmounts[id] ?? 0;
+    const hasAnyCoin = denominations.some(d => amountFor(d.id) > 0);
     const totalStr = hasAnyCoin
-      ? [
-          totalGold > 0 ? `${totalGold}g` : '',
-          totalSilver > 0 ? `${totalSilver}s` : '',
-          totalCopper > 0 ? `${totalCopper}c` : '',
-        ].filter(Boolean).join(' ')
+      ? denominations
+          .filter(d => amountFor(d.id) > 0)
+          .map(d => `${amountFor(d.id) * shopQuantity}${d.abbr}`)
+          .join(' ')
       : '';
 
     return (
@@ -1060,9 +1056,15 @@ export function SessionQuickActions({
           Cost per item
         </p>
         <div className="flex flex-col gap-2 mb-3">
-          <CounterControl label="Gold" value={shopGold} min={0} onChange={setShopGold} />
-          <CounterControl label="Silver" value={shopSilver} min={0} onChange={setShopSilver} />
-          <CounterControl label="Copper" value={shopCopper} min={0} onChange={setShopCopper} />
+          {denominations.map(d => (
+            <CounterControl
+              key={d.id}
+              label={d.label}
+              value={amountFor(d.id)}
+              min={0}
+              onChange={v => setShopAmounts(prev => ({ ...prev, [d.id]: v }))}
+            />
+          ))}
           <CounterControl label="Qty" value={shopQuantity} min={1} onChange={setShopQuantity} />
         </div>
         {hasAnyCoin && shopQuantity > 1 && (
@@ -1080,17 +1082,12 @@ export function SessionQuickActions({
               action: shopAction,
               item: shopItem.trim() || undefined,
               quantity: shopQuantity,
-              costGold: shopGold,
-              costSilver: shopSilver,
-              costCopper: shopCopper,
-              totalGold,
-              totalSilver,
-              totalCopper,
+              // Per-denomination cost, keyed by denomination id (Cr / $ / g,s,c).
+              cost: { ...shopAmounts },
+              total: totalStr,
             });
             setShopItem('');
-            setShopGold(0);
-            setShopSilver(0);
-            setShopCopper(0);
+            setShopAmounts({});
             setShopQuantity(1);
           }}
           className={cn(

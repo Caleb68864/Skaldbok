@@ -94,6 +94,7 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
         placeholder="Search by name or tag..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
+        aria-label="Search creatures by name or tag"
         className="w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-3 box-border"
       />
 
