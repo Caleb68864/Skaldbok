@@ -39,3 +39,20 @@
   font-display: swap;
   src: url('/fonts/source-serif-4-400-italic.woff2') format('woff2');
 }
+
+/* Notebook Paper theme faces — a marker display face and a handwriting body face. */
+@font-face {
+  font-family: 'Bangers';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/bangers.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Patrick Hand';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/patrick-hand.woff2') format('woff2');
+}

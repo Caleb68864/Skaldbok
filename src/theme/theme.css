@@ -186,8 +186,11 @@
   --color-mode-play: #4A9C6D;
   --color-mode-edit: #4A90C9;
 
-  /* Handwriting/marker display face; degrades to a legible sans on a bare tablet. */
-  --font-display: 'Bradley Hand', 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', 'Bangers', cursive;
+  /* Bangers = the marker display face (headings/titles); Patrick Hand = the
+     handwriting body face. Both bundled locally (see src/styles/fonts.css); the
+     rest of each stack is a graceful fallback if the woff2 fails to load. */
+  --font-display: 'Bangers', 'Bradley Hand', 'Comic Sans MS', cursive;
+  --font-ui: 'Patrick Hand', 'Bradley Hand', 'Segoe Print', system-ui, sans-serif;
 
   /* Texture tokens */
   --texture-grain-opacity: 0.03;
