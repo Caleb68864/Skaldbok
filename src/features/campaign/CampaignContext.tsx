@@ -7,6 +7,9 @@ import * as encounterRepository from '../../storage/repositories/encounterReposi
 import type { Encounter } from '../../types/encounter';
 import { db } from '../../storage/db/client';
 import * as metadataRepository from '../../storage/repositories/metadataRepository';
+import * as characterRepository from '../../storage/repositories/characterRepository';
+import { useActiveCharacter } from '../../context/ActiveCharacterContext';
+import { useAppState } from '../../context/AppStateContext';
 import { generateId } from '../../utils/ids';
 import { localDateOnlyISO, nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
@@ -206,6 +209,44 @@ async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyW
  */
 export function CampaignProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
+  const { setCharacter, clearCharacter } = useActiveCharacter();
+  const { settings } = useAppState();
+  // Latest active-character id, read inside the async reconcile without stale closures.
+  const activeCharacterIdRef = useRef<string | null>(settings.activeCharacterId ?? null);
+  activeCharacterIdRef.current = settings.activeCharacterId ?? null;
+
+  /**
+   * Keeps the *global* active character in step with the active campaign. Called
+   * on campaign switch and on hydration with the freshly-resolved party: points
+   * the sheet at the campaign's character (its designated "my character", else the
+   * first party member) so the Characters tab doesn't keep showing a character
+   * from another campaign/system; and clears a foreign-system active character when
+   * the new campaign has no character of its own yet. Only runs on these explicit
+   * transitions, so opening any character manually afterwards is never reverted.
+   */
+  const reconcileActiveCharacter = useCallback(
+    async (campaign: Campaign, party: ActivePartyWithMembers | null) => {
+      const designated = campaign.activeCharacterMemberId
+        ? party?.members.find(m => m.id === campaign.activeCharacterMemberId)?.linkedCharacterId
+        : undefined;
+      const target = designated ?? party?.members[0]?.linkedCharacterId ?? null;
+      const currentId = activeCharacterIdRef.current;
+      try {
+        if (target) {
+          if (currentId !== target) await setCharacter(target);
+          return;
+        }
+        if (currentId) {
+          const cur = await characterRepository.getById(currentId);
+          if (cur && cur.systemId !== campaign.system) await clearCharacter();
+        }
+      } catch (e) {
+        console.error('reconcileActiveCharacter failed:', e);
+      }
+    },
+    [setCharacter, clearCharacter],
+  );
+
   const [isHydrated, setIsHydrated] = useState(false);
   const [activeCampaign, setActiveCampaign_] = useState<Campaign | null>(null);
   const [activeSession, setActiveSession_] = useState<Session | null>(null);
@@ -256,6 +297,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         const party = await resolvePartyWithMembers(campaign.id);
         if (!mounted) return;
         setActiveParty_(party);
+        // Point the global active character at this campaign's character on load,
+        // so a refresh doesn't leave a different campaign's character on the sheet.
+        await reconcileActiveCharacter(campaign, party);
 
         // Resolve active character in campaign
         if (campaign.activeCharacterMemberId && party) {
@@ -444,6 +488,8 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
 
       const party = await resolvePartyWithMembers(campaignId);
       setActiveParty_(party);
+      // Switch the global active character to the newly-active campaign's character.
+      await reconcileActiveCharacter(campaign, party);
 
       if (campaign.activeCharacterMemberId && party) {
         const member = party.members.find(m => m.id === campaign.activeCharacterMemberId) ?? null;

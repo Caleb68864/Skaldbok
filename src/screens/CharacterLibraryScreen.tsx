@@ -270,7 +270,11 @@ export default function CharacterLibraryScreen() {
                     {isActive && <span className="ml-2 text-[length:var(--font-size-sm)] text-[var(--color-primary)]">(Active)</span>}
                   </h2>
                   <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
-                    {[char.metadata.kin, char.metadata.profession].filter(Boolean).join(' · ') || 'No details'}
+                    {[
+                      getSelectableSystems().find(s => s.id === char.systemId)?.displayName ?? char.systemId,
+                      char.metadata.kin,
+                      char.metadata.profession,
+                    ].filter(Boolean).join(' · ') || 'No details'}
                   </p>
                   <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mt-1">
                     Updated: {new Date(char.updatedAt).toLocaleDateString()}

@@ -63,7 +63,12 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
 
   const members: PartyMember[] = activeParty?.members ?? [];
   const memberCharacterIds = new Set(members.map(m => m.linkedCharacterId).filter(Boolean));
-  const availableCharacters = allCharacters.filter(c => !memberCharacterIds.has(c.id));
+  // Only offer characters that match this campaign's system, so a Traveller party
+  // isn't cluttered with — or accidentally given — Dragonbane characters. The
+  // character library stays global; this is just the add-to-this-party picker.
+  const availableCharacters = allCharacters.filter(
+    c => !memberCharacterIds.has(c.id) && c.systemId === activeCampaign.system,
+  );
 
   /**
    * Adds a character to the party as a new member. Lazily creates a party for
