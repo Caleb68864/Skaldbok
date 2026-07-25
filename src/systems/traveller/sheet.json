@@ -1,30 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
   "play": {
-    "layout": "traveller-play",
-    "regions": [
-      [
-        "vitals",
-        { "card": "currency", "when": "hasCurrency" }
-      ],
-      [
-        "derived",
-        "conditions",
-        { "card": "damageHeal", "when": "hasDamageTrack" }
-      ],
-      [
-        "skills",
-        "readyGear",
-        { "card": "abilities", "when": "hasMagic" },
-        { "card": "magic", "when": "hasMagic" },
-        "storyBank",
-        "quickReference",
-        { "card": "tile", "props": { "title": "Initiative DM", "source": "derived:initiativeDM" } }
-      ]
-    ]
-  },
-  "sheet": {
-    "layout": "traveller-sheet",
+    "layout": "two-column",
     "regions": [
       [
         "vitals",

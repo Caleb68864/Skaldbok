@@ -1,29 +1,7 @@
 {
-  "version": 2,
+  "version": 3,
   "play": {
-    "layout": "classic-fantasy-play",
-    "regions": [
-      [
-        "vitals",
-        "derived",
-        { "card": "rest", "when": "hasRest" }
-      ],
-      [
-        "conditions"
-      ],
-      [
-        "skills",
-        "readyGear",
-        { "card": "abilities", "when": "hasMagic" },
-        { "card": "magic", "when": "hasMagic" },
-        "storyBank",
-        "quickReference",
-        { "card": "tile", "props": { "title": "Movement", "source": "derived:movement" } }
-      ]
-    ]
-  },
-  "sheet": {
-    "layout": "classic-fantasy-sheet",
+    "layout": "three-column",
     "regions": [
       [
         "vitals",
