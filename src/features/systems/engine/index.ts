@@ -3,16 +3,19 @@ import { useSystemDefinition } from '../useSystemDefinition';
 import { useActiveCharacter } from '../../../context/ActiveCharacterContext';
 import { classicFantasyEngine } from './classicFantasyEngine';
 import { travellerEngine } from './travellerEngine';
+import { savageWorldsEngine } from './savageWorldsEngine';
 import type { SystemEngine } from './types';
 
 export type { SystemEngine, PanelKey, SystemTerms, SystemLabels, SkillDisplayContext } from './types';
 export { classicFantasyEngine } from './classicFantasyEngine';
 export { travellerEngine } from './travellerEngine';
+export { savageWorldsEngine } from './savageWorldsEngine';
 
 /** Base adapter for a system id, before any system.json overrides are applied. */
 function baseEngineFor(system: SystemDefinition | undefined | null): SystemEngine {
   if (!system) return classicFantasyEngine;
   if (system.id === 'traveller') return travellerEngine;
+  if (system.id === 'savage-worlds') return savageWorldsEngine;
   return classicFantasyEngine;
 }
 

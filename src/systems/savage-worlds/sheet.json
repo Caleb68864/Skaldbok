@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "play": {
+    "layout": "two-column",
+    "regions": [
+      {
+        "columns": "1fr 2fr",
+        "cells": [
+          [
+            "vitals",
+            { "card": "currency", "when": "hasCurrency" }
+          ],
+          [
+            "derived",
+            "conditions",
+            { "card": "damageHeal", "when": "hasDamageTrack" }
+          ]
+        ]
+      },
+      [
+        "skills",
+        "readyGear",
+        "storyBank",
+        "quickReference"
+      ]
+    ]
+  },
+  "sheet": {
+    "regions": [
+      [
+        "identity",
+        "attributes",
+        "resources",
+        "derived",
+        "storyBank"
+      ]
+    ]
+  }
+}

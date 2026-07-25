@@ -3,6 +3,7 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import blankTemplate from '../../../sample-data/classic-fantasy.blank.character.json';
 import travellerBlankTemplate from '../../../sample-data/traveller.blank.character.json';
+import savageWorldsBlankTemplate from '../../../sample-data/savage-worlds.blank.character.json';
 
 /**
  * Blank-character templates by system id.
@@ -14,6 +15,7 @@ import travellerBlankTemplate from '../../../sample-data/traveller.blank.charact
 const BLANK_TEMPLATES: Record<string, unknown> = {
   'classic-fantasy': blankTemplate,
   traveller: travellerBlankTemplate,
+  'savage-worlds': savageWorldsBlankTemplate,
 };
 
 /**

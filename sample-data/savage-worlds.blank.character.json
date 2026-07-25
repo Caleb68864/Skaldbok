@@ -1,0 +1,61 @@
+{
+  "id": "blank-template",
+  "schemaVersion": 4,
+  "systemId": "savage-worlds",
+  "name": "New Wild Card",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "updatedAt": "2026-01-01T00:00:00.000Z",
+  "metadata": {
+    "concept": "",
+    "rank": "Novice",
+    "ancestry": ""
+  },
+  "attributes": {
+    "agility": 4,
+    "smarts": 4,
+    "spirit": 4,
+    "strength": 4,
+    "vigor": 4
+  },
+  "conditions": {
+    "shaken": false,
+    "distracted": false,
+    "vulnerable": false,
+    "prone": false,
+    "entangled": false,
+    "fatigued": false,
+    "exhausted": false
+  },
+  "resources": {
+    "wounds": { "current": 0, "max": 3 },
+    "fatigue": { "current": 0, "max": 2 },
+    "bennies": { "current": 3, "max": 3 }
+  },
+  "skills": {
+    "athletics": { "value": 4, "trained": true },
+    "common-knowledge": { "value": 4, "trained": true },
+    "notice": { "value": 4, "trained": true },
+    "persuasion": { "value": 4, "trained": true },
+    "stealth": { "value": 4, "trained": true }
+  },
+  "weapons": [],
+  "armor": null,
+  "helmet": null,
+  "inventory": [],
+  "tinyItems": [],
+  "memento": "",
+  "abilities": [],
+  "derivedOverrides": {},
+  "uiState": {
+    "expandedSections": []
+  },
+  "systemData": {
+    "edges": "",
+    "hindrances": "",
+    "powers": "",
+    "advances": ""
+  },
+  "wealth": {
+    "cash": 0
+  }
+}

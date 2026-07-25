@@ -1,5 +1,6 @@
 import { classicFantasySystem } from './classic-fantasy';
 import { travellerSystem } from './traveller';
+import { savageWorldsSystem } from './savage-worlds';
 import type { SystemDefinition } from '../types/system';
 
 /**
@@ -14,6 +15,7 @@ import type { SystemDefinition } from '../types/system';
 export const BUNDLED_SYSTEMS: SystemDefinition[] = [
   classicFantasySystem,
   travellerSystem,
+  savageWorldsSystem,
 ];
 
 /** The system used when none is specified (e.g. legacy characters). */

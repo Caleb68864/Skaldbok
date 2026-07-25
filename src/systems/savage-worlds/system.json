@@ -1,0 +1,351 @@
+{
+  "id": "savage-worlds",
+  "version": 1,
+  "name": "savage-worlds",
+  "displayName": "Savage Worlds",
+  "resolution": "trait-die-vs-tn",
+  "attributes": [
+    {
+      "id": "agility",
+      "name": "Agility",
+      "abbreviation": "AGI",
+      "min": 4,
+      "max": 12,
+      "scale": {
+        "kind": "die-ladder",
+        "ladder": [
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "allowsPlus": true
+      }
+    },
+    {
+      "id": "smarts",
+      "name": "Smarts",
+      "abbreviation": "SMA",
+      "min": 4,
+      "max": 12,
+      "scale": {
+        "kind": "die-ladder",
+        "ladder": [
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "allowsPlus": true
+      }
+    },
+    {
+      "id": "spirit",
+      "name": "Spirit",
+      "abbreviation": "SPI",
+      "min": 4,
+      "max": 12,
+      "scale": {
+        "kind": "die-ladder",
+        "ladder": [
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "allowsPlus": true
+      }
+    },
+    {
+      "id": "strength",
+      "name": "Strength",
+      "abbreviation": "STR",
+      "min": 4,
+      "max": 12,
+      "scale": {
+        "kind": "die-ladder",
+        "ladder": [
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "allowsPlus": true
+      }
+    },
+    {
+      "id": "vigor",
+      "name": "Vigor",
+      "abbreviation": "VIG",
+      "min": 4,
+      "max": 12,
+      "scale": {
+        "kind": "die-ladder",
+        "ladder": [
+          4,
+          6,
+          8,
+          10,
+          12
+        ],
+        "allowsPlus": true
+      }
+    }
+  ],
+  "conditions": [
+    {
+      "id": "shaken",
+      "name": "Shaken",
+      "description": "Can only move, no other actions. Roll Spirit at the start of your turn to recover (critical failure = a Wound). A Benny clears it.",
+      "effect": {
+        "scope": "no-actions"
+      },
+      "duration": "until-cleared",
+      "recovery": {
+        "traitId": "spirit",
+        "targetNumber": 4,
+        "onCriticalFailure": "take 1 Wound"
+      }
+    },
+    {
+      "id": "distracted",
+      "name": "Distracted",
+      "description": "−2 to all trait rolls until the end of your next turn.",
+      "effect": {
+        "scope": "all-traits",
+        "modifier": -2
+      },
+      "duration": "end-of-next-turn"
+    },
+    {
+      "id": "vulnerable",
+      "name": "Vulnerable",
+      "description": "Attackers gain +2 against you until the end of your next turn.",
+      "duration": "end-of-next-turn"
+    },
+    {
+      "id": "prone",
+      "name": "Prone",
+      "description": "−2 to attack while prone; −2 to attackers in melee, ranged attackers at −2. Stand to clear.",
+      "duration": "until-cleared"
+    },
+    {
+      "id": "entangled",
+      "name": "Entangled",
+      "description": "−2 to all actions. Break free to clear.",
+      "effect": {
+        "scope": "all-traits",
+        "modifier": -2
+      },
+      "duration": "until-cleared"
+    },
+    {
+      "id": "fatigued",
+      "name": "Fatigued",
+      "description": "−1 to all trait rolls (first Fatigue level).",
+      "effect": {
+        "scope": "all-traits",
+        "modifier": -1
+      },
+      "duration": "until-cleared",
+      "recovery": {
+        "traitId": "vigor",
+        "targetNumber": 4
+      }
+    },
+    {
+      "id": "exhausted",
+      "name": "Exhausted",
+      "description": "−2 to all trait rolls (second Fatigue level). One more level Incapacitates.",
+      "effect": {
+        "scope": "all-traits",
+        "modifier": -2
+      },
+      "duration": "until-cleared",
+      "recovery": {
+        "traitId": "vigor",
+        "targetNumber": 4
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "wounds",
+      "name": "Wounds",
+      "min": 0,
+      "defaultMax": 3,
+      "direction": "accumulates"
+    },
+    {
+      "id": "fatigue",
+      "name": "Fatigue",
+      "min": 0,
+      "defaultMax": 2,
+      "direction": "accumulates"
+    },
+    {
+      "id": "bennies",
+      "name": "Bennies",
+      "min": 0,
+      "defaultMax": 3,
+      "direction": "depletes",
+      "refresh": "session"
+    }
+  ],
+  "skillCategories": [
+    {
+      "id": "core",
+      "name": "Core Skills",
+      "skills": [
+        {
+          "id": "athletics",
+          "name": "Athletics",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        },
+        {
+          "id": "common-knowledge",
+          "name": "Common Knowledge",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "notice",
+          "name": "Notice",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "persuasion",
+          "name": "Persuasion",
+          "baseChance": 0,
+          "linkedAttributeId": "spirit"
+        },
+        {
+          "id": "stealth",
+          "name": "Stealth",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        }
+      ]
+    },
+    {
+      "id": "combat",
+      "name": "Combat & Physical",
+      "skills": [
+        {
+          "id": "fighting",
+          "name": "Fighting",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        },
+        {
+          "id": "shooting",
+          "name": "Shooting",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        },
+        {
+          "id": "intimidation",
+          "name": "Intimidation",
+          "baseChance": 0,
+          "linkedAttributeId": "spirit"
+        },
+        {
+          "id": "taunt",
+          "name": "Taunt",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        }
+      ]
+    },
+    {
+      "id": "knowledge",
+      "name": "Knowledge & Trades",
+      "skills": [
+        {
+          "id": "healing",
+          "name": "Healing",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "repair",
+          "name": "Repair",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "survival",
+          "name": "Survival",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "driving",
+          "name": "Driving",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        }
+      ]
+    }
+  ],
+  "themesSupported": [
+    "parchment",
+    "starfarers-cockpit",
+    "notebook-paper"
+  ],
+  "identityFields": [
+    {
+      "id": "concept",
+      "label": "Concept / Archetype",
+      "type": "text"
+    },
+    {
+      "id": "rank",
+      "label": "Rank",
+      "type": "text"
+    },
+    {
+      "id": "ancestry",
+      "label": "Ancestry / Species",
+      "type": "text"
+    }
+  ],
+  "quickReference": [
+    {
+      "title": "Trait Test",
+      "rows": [
+        [
+          "Roll trait die + Wild Die (d6), keep highest. Both ace (explode). Target Number 4 (melee = target's Parry)."
+        ]
+      ],
+      "note": "Every +4 over the TN is a Raise. Critical failure = a 1 on BOTH the trait die and the Wild Die. Extras roll no Wild Die."
+    },
+    {
+      "title": "Damage & Wounds",
+      "rows": [
+        [
+          "Damage total vs Toughness (2 + ½ Vigor + Armor)."
+        ],
+        [
+          "≥ Toughness → Shaken; if already Shaken → +1 Wound; +1 Wound per +4 over Toughness."
+        ]
+      ],
+      "note": "Each Wound: −1 to all trait rolls. 3 Wounds = Incapacitated (Extras drop at 1). Soak: spend a Benny, roll Vigor, each raise removes a Wound."
+    },
+    {
+      "title": "Bennies",
+      "rows": [
+        [
+          "Reroll any trait test · Soak wounds (Vigor) · remove Shaken."
+        ]
+      ],
+      "note": "Refresh to 3 at the start of each session."
+    }
+  ]
+}

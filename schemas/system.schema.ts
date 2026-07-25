@@ -6,13 +6,30 @@ const attributeDefinitionSchema = z.object({
   abbreviation: z.string().min(1).describe('Short abbreviation, e.g. STR'),
   min: z.number().describe('Minimum attribute value'),
   max: z.number().describe('Maximum attribute value'),
+  scale: z.object({
+    kind: z.literal('die-ladder'),
+    ladder: z.array(z.number()),
+    allowsPlus: z.boolean().optional(),
+  }).optional().describe('Die-ladder scale for trait-die systems (Savage Worlds)'),
 });
+
+const conditionEffectSchema = z.union([
+  z.object({ scope: z.enum(['all-traits', 'attribute-linked']), modifier: z.number() }),
+  z.object({ scope: z.literal('no-actions') }),
+]);
 
 const conditionDefinitionSchema = z.object({
   id: z.string().min(1).describe('Unique condition identifier'),
   name: z.string().min(1).describe('Condition display name'),
-  linkedAttributeId: z.string().min(1).describe('Attribute this condition is linked to'),
+  linkedAttributeId: z.string().min(1).optional().describe('Attribute this condition is linked to (Dragonbane)'),
   description: z.string().describe('Short description of the condition effect'),
+  effect: conditionEffectSchema.optional().describe('Machine-readable penalty while active'),
+  duration: z.enum(['until-cleared', 'end-of-next-turn', 'scene']).optional(),
+  recovery: z.object({
+    traitId: z.string().min(1),
+    targetNumber: z.number(),
+    onCriticalFailure: z.string().optional(),
+  }).optional().describe('A roll that can clear the condition'),
 });
 
 const resourceDefinitionSchema = z.object({
@@ -21,6 +38,8 @@ const resourceDefinitionSchema = z.object({
   derivedFrom: z.string().optional().describe('Attribute id this resource derives from'),
   min: z.number().describe('Minimum resource value'),
   defaultMax: z.number().describe('Default maximum value'),
+  direction: z.enum(['depletes', 'accumulates']).optional().describe('Whether the resource counts down or up'),
+  refresh: z.enum(['never', 'session', 'rest']).optional().describe('When the resource resets to full'),
 });
 
 const skillDefinitionSchema = z.object({
@@ -72,7 +91,7 @@ export const systemDefinitionSchema = z.object({
       armor: z.array(z.string()).optional(),
     }).optional(),
   }).optional().describe('Extra per-item fields, plus built-ins this system does not use'),
-  resolution: z.enum(['d20-roll-under', '2d6-plus']).optional().describe('Core resolution mechanic'),
+  resolution: z.enum(['d20-roll-under', '2d6-plus', 'trait-die-vs-tn']).optional().describe('Core resolution mechanic'),
   currency: z.object({
     label: z.string().min(1),
     abbr: z.string().min(1),
