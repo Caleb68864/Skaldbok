@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "play": {
     "layout": "two-column",
     "regions": [
@@ -24,6 +24,22 @@
         { "card": "magic", "when": "hasMagic" },
         "storyBank",
         "quickReference"
+      ]
+    ]
+  },
+  "sheet": {
+    "regions": [
+      [
+        "identity",
+        "attributes",
+        "characteristics",
+        "resources",
+        "derived",
+        "finances",
+        "careers",
+        "augments",
+        "rest",
+        "storyBank"
       ]
     ]
   }

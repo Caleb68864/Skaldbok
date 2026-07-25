@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
+import { useSheetTemplate } from '../features/systems/useSheetTemplate';
 import { getEngine } from '../features/systems/engine';
 import type { RestDefinition } from '../features/systems/engine/types';
 import { useAutosave } from '../hooks/useAutosave';
@@ -70,6 +71,7 @@ export default function SheetScreen() {
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
+  const { template } = useSheetTemplate(character?.systemId ?? 'classic-fantasy');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   useSyncedResourceMaxima(character, system, updateCharacter);
   const { showToast } = useToast();
@@ -188,8 +190,8 @@ export default function SheetScreen() {
     storyBank: true,
   };
 
-  // Canonical head-to-toe order; each system shows the subset it declares.
-  const SHEET_PANEL_SEQUENCE = [
+  // Canonical head-to-toe fallback order; each system shows the subset it declares.
+  const FALLBACK_PANEL_SEQUENCE = [
     'identity',
     'attributes',
     'characteristics',
@@ -201,6 +203,15 @@ export default function SheetScreen() {
     'rest',
     'storyBank',
   ];
+  // When the system's `sheet.json` declares a `sheet` surface, its panel keys set
+  // the default order/selection — the Sheet is "authored as data". The panels
+  // themselves stay bespoke editors; only which appear and in what order is
+  // template-driven. Availability still gates, so a stale key can't render a
+  // panel the system lacks. Falls back to the canonical order with no template.
+  const templatePanelKeys = (template?.sheet?.regions ?? [])
+    .flatMap(region => (Array.isArray(region) ? region : region.cells.flat()))
+    .map(entry => (typeof entry === 'string' ? entry : entry.card));
+  const SHEET_PANEL_SEQUENCE = templatePanelKeys.length > 0 ? templatePanelKeys : FALLBACK_PANEL_SEQUENCE;
   const DEFAULT_PANEL_ORDER = SHEET_PANEL_SEQUENCE.filter(key => panelAvailability[key]);
   const storedPanelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
   const panelOrder = [
