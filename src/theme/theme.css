@@ -167,8 +167,8 @@
 /* Notebook Paper — "Trapper Keeper". Cream ruled paper, navy ink, red/blue pen.
    Extracted from the user's Pine Box Middle School HTML character sheets. The
    ruled lines + red margin live on the body background (see below); cards read as
-   whiter index cards on the page. Fonts fall back to a handwriting stack —
-   bundling Bangers/Patrick Hand woff2 is a later, self-contained upgrade. */
+   whiter index cards on the page. Bangers (display) + Patrick Hand (UI) are
+   bundled locally as woff2 (see fonts.css) with a handwriting-stack fallback. */
 [data-theme="notebook-paper"] {
   --color-bg: #F5F2EB;
   --color-surface: #FBFAF6;

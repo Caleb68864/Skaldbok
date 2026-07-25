@@ -1031,14 +1031,14 @@ export default function SheetScreen() {
           <>
             <button
               type="button"
-              className="rest-modal-btn rest-modal-btn--cancel"
+              className="min-h-[var(--touch-target-min)] px-4 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] cursor-pointer hover:bg-[var(--color-surface)]"
               onClick={() => setRestPrompt(null)}
             >
               Cancel
             </button>
             <button
               type="button"
-              className="rest-modal-btn rest-modal-btn--confirm"
+              className="min-h-[var(--touch-target-min)] px-4 rounded-[var(--radius-sm)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-bg)] font-semibold cursor-pointer hover:brightness-110"
               onClick={confirmRestPrompt}
             >
               Confirm
@@ -1067,7 +1067,7 @@ export default function SheetScreen() {
                       prev ? { ...prev, rolls: { ...prev.rolls, [field.id]: e.target.value } } : prev,
                     )
                   }
-                  className="rest-modal-input"
+                  className="min-h-[var(--touch-target-min)] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
                   placeholder={`Enter 1–${activeRestPrompt.die}`}
                 />
               </label>
@@ -1080,7 +1080,7 @@ export default function SheetScreen() {
                   onChange={e =>
                     setRestPrompt(prev => (prev ? { ...prev, conditionToClear: e.target.value } : prev))
                   }
-                  className="rest-modal-input"
+                  className="min-h-[var(--touch-target-min)] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
                 >
                   <option value="">— None —</option>
                   {system.conditions
@@ -1111,14 +1111,14 @@ export default function SheetScreen() {
           <>
             <button
               type="button"
-              className="rest-modal-btn rest-modal-btn--cancel"
+              className="min-h-[var(--touch-target-min)] px-4 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] cursor-pointer hover:bg-[var(--color-surface)]"
               onClick={handleExpiryKeepAndRest}
             >
               Keep & Rest
             </button>
             <button
               type="button"
-              className="rest-modal-btn rest-modal-btn--confirm"
+              className="min-h-[var(--touch-target-min)] px-4 rounded-[var(--radius-sm)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-bg)] font-semibold cursor-pointer hover:brightness-110"
               onClick={handleExpiryRemoveAndRest}
             >
               Remove & Rest

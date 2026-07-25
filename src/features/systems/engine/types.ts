@@ -505,8 +505,10 @@ export interface SystemEngine {
   ) => { levels: Record<string, number>; setsConditions: string[]; noEffect?: boolean };
   /**
    * How the attributes panel reads a stored attribute number: `'modifiers'`
-   * (Traveller `+2`), `'value'` (plain `8`), or `'dice'` (Savage Worlds `d8`).
-   * Absent = the module's existing duck-typed behaviour. E12.
+   * (a signed DM like `+2`), `'value'` (plain `8`), or `'dice'` (Savage Worlds
+   * `d8`). Only Savage Worlds sets this today (`'dice'`); classic-fantasy and
+   * Traveller omit it and fall back to the module's duck-typed behaviour
+   * (Traveller surfaces its DMs via `attributeBadge`, not this field). E12.
    */
   attributeReadout?: {
     mode: 'modifiers' | 'value' | 'dice';

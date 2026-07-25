@@ -177,8 +177,8 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
         title={openRest?.label ?? ''}
         actions={
           <>
-            <button type="button" className="rest-modal-btn rest-modal-btn--cancel" onClick={closeModal}>Cancel</button>
-            <button type="button" className="rest-modal-btn rest-modal-btn--confirm" onClick={confirmRest}>Confirm</button>
+            <button type="button" className="min-h-[var(--touch-target-min)] px-4 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] cursor-pointer hover:bg-[var(--color-surface)]" onClick={closeModal}>Cancel</button>
+            <button type="button" className="min-h-[var(--touch-target-min)] px-4 rounded-[var(--radius-sm)] border border-[var(--color-accent)] bg-[var(--color-accent)] text-[var(--color-bg)] font-semibold cursor-pointer hover:brightness-110" onClick={confirmRest}>Confirm</button>
           </>
         }
       >
@@ -197,7 +197,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
                   max={openPrompt.die}
                   value={rollInputs[field.id] ?? ''}
                   onChange={e => setRollInputs(prev => ({ ...prev, [field.id]: e.target.value }))}
-                  className="rest-modal-input"
+                  className="min-h-[var(--touch-target-min)] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
                   placeholder={`Enter 1–${openPrompt.die}`}
                   autoFocus={index === 0}
                 />
@@ -209,7 +209,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
                 <select
                   value={conditionToClear}
                   onChange={e => setConditionToClear(e.target.value)}
-                  className="rest-modal-input"
+                  className="min-h-[var(--touch-target-min)] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
                 >
                   <option value="">— None —</option>
                   {system.conditions

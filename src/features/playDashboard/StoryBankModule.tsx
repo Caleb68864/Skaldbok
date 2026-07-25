@@ -11,7 +11,9 @@ import type { PlayModuleProps } from './types';
  * sheet that does not use them. Editing happens on the character sheet.
  */
 export function StoryBankModule({ character, system }: PlayModuleProps) {
-  const beats = character.storyBank ?? [];
+  // Skip beats that are entirely empty so a blank authored row doesn't render as a
+  // stray divider line.
+  const beats = (character.storyBank ?? []).filter(b => b.cue || b.text?.trim());
   if (beats.length === 0) return null;
   const engine = getEngine(system);
 
