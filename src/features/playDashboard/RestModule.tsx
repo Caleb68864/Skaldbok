@@ -164,7 +164,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
             type="button"
             className={cn(btnBase, 'border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)]')}
             onClick={resetMarks}
-            title="Clear used marks. Does not undo HP/WP changes."
+            title={`Clear used marks. Does not undo ${engine.terms.healthResource}/${engine.terms.magicResource} changes.`}
           >
             Reset
           </button>

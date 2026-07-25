@@ -381,9 +381,9 @@ export default function GearScreen() {
 
   const denominations = engine.currency.denominations;
   const currencyAmounts = engine.currency.read(character);
-  const currencyTitle = engine.currency.mode === 'single'
-    ? (denominations[0]?.label ?? 'Currency')
-    : 'Coins';
+  // The purse heading is engine-owned ("Credits" / "Coins"); don't re-derive or
+  // hardcode 'Coins' for multi-denomination systems. E16.
+  const currencyTitle = engine.currency.label;
   // e.g. "1 gold = 10 silver = 100 copper", derived from the denominations'
   // relative values rather than written out per system.
   const exchangeSubtitle = denominations.length > 1
