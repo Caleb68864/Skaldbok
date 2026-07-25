@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "play": {
     "layout": "two-column",
     "regions": [
@@ -33,6 +33,8 @@
         "attributes",
         "resources",
         "derived",
+        "edges",
+        "hindrances",
         "storyBank"
       ]
     ]

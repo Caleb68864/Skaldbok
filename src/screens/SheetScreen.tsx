@@ -186,6 +186,8 @@ export default function SheetScreen() {
     finances: engine.panels.includes('finances'),
     careers: engine.panels.includes('careers'),
     augments: engine.panels.includes('augments'),
+    edges: engine.panels.includes('edges'),
+    hindrances: engine.panels.includes('hindrances'),
     rest: engine.rest !== null,
     storyBank: true,
   };
@@ -694,6 +696,32 @@ export default function SheetScreen() {
     </SectionPanel>
   );
 
+  const edgesPanel = (
+    <SectionPanel title="Edges" icon={<GameIcon name="star" size={18} />} collapsible defaultOpen>
+      <textarea
+        aria-label="Edges"
+        className={cn(inputClass(identityEditable), 'min-h-[120px]', identityEditable ? 'field--editable' : 'field--locked')}
+        placeholder="One Edge per line — e.g. Two-Fisted, Quick, Alertness…"
+        value={sysStr('edges')}
+        disabled={!identityEditable}
+        onChange={e => setSysStr('edges', e.target.value)}
+      />
+    </SectionPanel>
+  );
+
+  const hindrancesPanel = (
+    <SectionPanel title="Hindrances" icon={<GameIcon name="skull" size={18} />} collapsible defaultOpen>
+      <textarea
+        aria-label="Hindrances"
+        className={cn(inputClass(identityEditable), 'min-h-[120px]', identityEditable ? 'field--editable' : 'field--locked')}
+        placeholder="One Hindrance per line, with (Major)/(Minor) — e.g. Loyal (Minor), Heroic (Major)…"
+        value={sysStr('hindrances')}
+        disabled={!identityEditable}
+        onChange={e => setSysStr('hindrances', e.target.value)}
+      />
+    </SectionPanel>
+  );
+
   const storyBankPanel = (
     <SectionPanel title="Story Bank" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-sm)]">
@@ -890,6 +918,8 @@ export default function SheetScreen() {
     finances: financesPanel,
     careers: careersPanel,
     augments: augmentsPanel,
+    edges: edgesPanel,
+    hindrances: hindrancesPanel,
     rest: restPanel,
     storyBank: storyBankPanel,
   };
