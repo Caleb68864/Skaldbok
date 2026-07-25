@@ -6,6 +6,14 @@ export type ComponentRegistry = Record<string, ComponentDefinition>;
 /** Maximum nesting depth of component expansion before it is rejected. */
 export const MAX_COMPONENT_DEPTH = 10;
 
+/**
+ * Maximum total expanded card entries. Depth alone doesn't bound *breadth*: a
+ * component whose body references ten siblings, nested nine deep, stays under the
+ * depth limit yet fans out to ~10^10 entries and would exhaust memory before
+ * returning. This running budget caps the total and throws instead.
+ */
+export const MAX_COMPONENT_ENTRIES = 2000;
+
 /** Thrown when a component (directly or transitively) references itself. */
 export class ComponentCycleError extends Error {
   constructor(componentName: string, chain: string[]) {
@@ -19,6 +27,14 @@ export class ComponentDepthError extends Error {
   constructor(depth: number) {
     super(`Component expansion exceeded max depth of ${MAX_COMPONENT_DEPTH} (reached ${depth})`);
     this.name = 'ComponentDepthError';
+  }
+}
+
+/** Thrown when total expansion exceeds {@link MAX_COMPONENT_ENTRIES} (breadth/fan-out bound). */
+export class ComponentSizeError extends Error {
+  constructor() {
+    super(`Component expansion exceeded ${MAX_COMPONENT_ENTRIES} total entries`);
+    this.name = 'ComponentSizeError';
   }
 }
 
@@ -68,6 +84,7 @@ function expand(
   registry: ComponentRegistry,
   stack: string[],
   depth: number,
+  budget: { count: number },
 ): CardEntry[] {
   // Two independent stops: `stack` (below) catches self/mutual recursion by
   // name; MAX_COMPONENT_DEPTH catches unbounded *acyclic* nesting — many
@@ -93,8 +110,10 @@ function expand(
         registry,
         [...stack, normalized.card],
         depth + 1,
+        budget,
       );
       for (const nestedEntry of nested) {
+        if (++budget.count > MAX_COMPONENT_ENTRIES) throw new ComponentSizeError();
         if (!normalized.when) {
           entries.push(nestedEntry);
           continue;
@@ -108,6 +127,7 @@ function expand(
       continue;
     }
 
+    if (++budget.count > MAX_COMPONENT_ENTRIES) throw new ComponentSizeError();
     if (!resolvedProps && !normalized.when) {
       entries.push(normalized.card);
     } else {
@@ -132,5 +152,5 @@ export function resolveComponent(
   props: Record<string, unknown> = {},
   registry: ComponentRegistry = {},
 ): CardEntry[] {
-  return expand(def, props, registry, [def.name], 0);
+  return expand(def, props, registry, [def.name], 0, { count: 0 });
 }

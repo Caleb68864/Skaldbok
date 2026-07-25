@@ -37,7 +37,7 @@ export function AbilityModule({ character, system, updateCharacter }: PlayModule
   }
 
   return (
-    <SectionPanel title="Abilities" collapsible defaultOpen>
+    <SectionPanel title={engine.terms.abilities} collapsible defaultOpen>
       <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
         {abilities.map(ability => (
           <div key={ability.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)]">

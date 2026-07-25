@@ -19,7 +19,11 @@ export type GridRegion = z.infer<typeof gridRegionSchema>;
 export type Region = z.infer<typeof regionSchema>;
 /** A surface (play/sheet/print) layout: an ordered list of {@link Region}s. */
 export type SurfaceLayout = z.infer<typeof surfaceLayoutSchema>;
-/** A full sheet template: `version` plus optional play/sheet/print {@link SurfaceLayout}s. */
+/**
+ * A full sheet template: `version` plus optional `play` and `sheet`
+ * {@link SurfaceLayout}s. The `print` surface is reserved but not yet consumed —
+ * the print route renders via a hardcoded component today.
+ */
 export type SheetTemplate = z.infer<typeof sheetTemplateSchema>;
 /** A reusable community component: `{ name, props?, body }`, expanded via `$prop` slots. */
 export type ComponentDefinition = z.infer<typeof componentDefinitionSchema>;

@@ -37,7 +37,9 @@ export const cardEntrySchema: z.ZodType<string | z.infer<typeof cardEntryObjectS
  */
 export const gridRegionSchema = z.object({
   columns: z.string().min(1).optional().describe('CSS grid-template-columns for this region row'),
-  cells: z.array(z.array(cardEntrySchema)).describe('Grid cells; each cell is a vertical stack of card entries'),
+  // Bounded to keep an oversized (or hostile) template from rendering a runaway
+  // number of cards — bundled layouts use only a handful.
+  cells: z.array(z.array(cardEntrySchema).max(100)).max(50).describe('Grid cells; each cell is a vertical stack of card entries'),
 });
 
 /**
@@ -52,7 +54,7 @@ export const regionSchema = z.union([
 
 export const surfaceLayoutSchema = z.object({
   layout: z.string().min(1).optional().describe('Optional layout identifier for this surface'),
-  regions: z.array(regionSchema).describe('Regions: a full-width stack (array) or a grid row ({columns, cells})'),
+  regions: z.array(regionSchema).max(100).describe('Regions: a full-width stack (array) or a grid row ({columns, cells})'),
 });
 
 /**
@@ -84,7 +86,10 @@ export const sheetTemplateSchema = z.object({
   version: z.number().int().positive().describe('Template schema version'),
   play: surfaceLayoutSchema.optional().describe('Play-surface layout'),
   sheet: surfaceLayoutSchema.optional().describe('Sheet-surface layout'),
-  print: surfaceLayoutSchema.optional().describe('Print-surface layout'),
+  // Reserved / not yet consumed: the print route renders via the hardcoded
+  // PrintableSheet component, not this surface. Authoring a `print` block is a
+  // no-op today.
+  print: surfaceLayoutSchema.optional().describe('Print-surface layout (reserved — not yet rendered)'),
 });
 
 const propSlotSchema = z.object({
@@ -119,5 +124,5 @@ const componentCardEntrySchema = z.union([z.string().min(1), componentCardEntryO
 export const componentDefinitionSchema = z.object({
   name: z.string().min(1).describe('Component name, referenced by CardEntry.card'),
   props: z.array(z.string().min(1)).optional().describe('Names of props this component accepts'),
-  body: z.array(componentCardEntrySchema).describe('Card entries making up this component'),
+  body: z.array(componentCardEntrySchema).max(100).describe('Card entries making up this component'),
 });

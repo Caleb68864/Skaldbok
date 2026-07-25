@@ -567,7 +567,7 @@ export default function SheetScreen() {
         const orphanConditions = system.conditions.filter(c => !c.linkedAttributeId || !linkedAttrIds.has(c.linkedAttributeId));
         if (orphanConditions.length === 0) return null;
         return (
-          <SectionPanel title="Conditions" collapsible defaultOpen>
+          <SectionPanel title={engine.labels.conditionsPanel ?? 'Conditions'} collapsible defaultOpen>
             <ConditionToggleGroup
               conditions={character.conditions}
               definitions={orphanConditions}

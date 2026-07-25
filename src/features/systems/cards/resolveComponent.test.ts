@@ -4,6 +4,7 @@ import {
   MAX_COMPONENT_DEPTH,
   ComponentCycleError,
   ComponentDepthError,
+  ComponentSizeError,
   MissingPropError,
   type ComponentRegistry,
 } from './resolveComponent';
@@ -105,6 +106,17 @@ describe('resolveComponent', () => {
     const b: ComponentDefinition = { name: 'B', body: [{ card: 'A' }] };
     const registry: ComponentRegistry = { A: a, B: b };
     expect(() => resolveComponent(a, {}, registry)).toThrow(ComponentCycleError);
+  });
+
+  it('rejects a breadth/fan-out explosion beyond the entry budget', () => {
+    // Depth 2 but 50×50 = 2500 leaves — under the depth limit, over the entry
+    // budget. Must throw rather than build the array and exhaust memory.
+    const wide = (name: string, child: string, n: number): ComponentDefinition => ({
+      name,
+      body: Array.from({ length: n }, () => ({ card: child })),
+    });
+    const registry: ComponentRegistry = { A: wide('A', 'B', 50), B: wide('B', 'leaf', 50) };
+    expect(() => resolveComponent(registry.A, {}, registry)).toThrow(ComponentSizeError);
   });
 
   it('rejects expansion beyond the max depth bound', () => {

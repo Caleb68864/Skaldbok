@@ -98,7 +98,9 @@ export function CardRenderer({ entry, componentRegistry = {}, character, system,
 
   const Component = CARD_REGISTRY[normalized.card];
   return (
-    <CardErrorBoundary cardKey={normalized.card}>
+    // Key by card so a position that swaps to a different card gets a fresh
+    // boundary instead of latching a prior card's failure.
+    <CardErrorBoundary key={normalized.card} cardKey={normalized.card}>
       <Component character={character} system={system} updateCharacter={updateCharacter} {...(normalized.props ?? {})} />
     </CardErrorBoundary>
   );

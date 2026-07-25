@@ -50,7 +50,7 @@ export function MagicModule({ character, system, updateCharacter }: PlayModulePr
   }
 
   return (
-    <SectionPanel title="Prepared Magic" collapsible defaultOpen>
+    <SectionPanel title={`Prepared ${engine.terms.spells}`} collapsible defaultOpen>
       <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
         {spells.map(spell => {
           const trick = isMagicTrick(spell.powerLevel, spell.school);
