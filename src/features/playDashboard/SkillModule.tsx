@@ -72,6 +72,7 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
       character,
       linkedAttributeId: skill.linkedAttributeId,
       boonBane: (autoBane ? 'bane' : 'none') as 'boon' | 'none' | 'bane',
+      trained,
     };
     const displayValue = engine.skill.display(value, displayContext);
     return (

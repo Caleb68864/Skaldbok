@@ -117,6 +117,12 @@ export interface SkillDisplayContext {
    * the odds the player actually faces.
    */
   boonBane?: 'boon' | 'none' | 'bane';
+  /**
+   * Whether the character is trained in this skill. Systems where an untrained
+   * attempt takes a penalty (Traveller's −3 unskilled DM) use this to show honest
+   * odds for skills the character doesn't have. Undefined = treat as trained.
+   */
+  trained?: boolean;
 }
 
 export interface SkillEngineConfig {

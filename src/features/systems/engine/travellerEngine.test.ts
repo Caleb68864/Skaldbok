@@ -85,6 +85,26 @@ describe('damage feeds through to DMs', () => {
     const pct = (s: string) => Number(/(\d+)%/.exec(s)?.[1]);
     expect(pct(woundedText)).toBeLessThan(pct(healthyText));
   });
+
+  it('applies the -3 unskilled DM when the skill is untrained', () => {
+    const c = character();
+    const display = travellerEngine.skill.display;
+    const pct = (s: string) => Number(/(\d+)%/.exec(s)?.[1]);
+    // Same skill (level 0, DEX-linked): trained shows the level-0 baseline,
+    // untrained folds in -3 and reads "Unskilled" with lower odds.
+    const trainedText = display(0, { character: c, linkedAttributeId: 'dex', trained: true });
+    const untrainedText = display(0, { character: c, linkedAttributeId: 'dex', trained: false });
+    expect(trainedText).toContain('Level 0');
+    expect(untrainedText).toContain('Unskilled');
+    expect(untrainedText).toContain('-3');
+    expect(pct(untrainedText)).toBeLessThan(pct(trainedText));
+  });
+
+  it('treats an undefined trained flag as trained (no unskilled penalty)', () => {
+    const c = character();
+    const display = travellerEngine.skill.display;
+    expect(display(0, { character: c, linkedAttributeId: 'dex' })).toContain('Level 0');
+  });
 });
 
 describe('carry limit', () => {

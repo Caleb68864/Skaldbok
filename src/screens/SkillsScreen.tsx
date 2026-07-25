@@ -149,7 +149,7 @@ export default function SkillsScreen() {
 
   const attrAbbrMap = system ? buildAttrAbbrMap(system.attributes) : {};
 
-  function getProbDisplay(skillId: string, value: number, linkedAttributeId?: string): string {
+  function getProbDisplay(skillId: string, value: number, linkedAttributeId?: string, trained?: boolean): string {
     const hasAutoBane = conditionImposesBane(system, character, linkedAttributeId);
     const override = sessionState.skillOverrides[skillId];
     const effective = resolveEffectiveBoonBane(sessionState.globalBoonBane, override, hasAutoBane);
@@ -157,10 +157,11 @@ export default function SkillsScreen() {
     if (!engine.skill.supportsMarks) {
       // Non-d20 systems (e.g. Traveller) express success chance through the engine's own
       // display formula. Pass the linked attribute so it can fold in its characteristic
-      // DM, and the resolved advantage state so the odds reflect boon/bane.
+      // DM, the resolved advantage state so the odds reflect boon/bane, and whether the
+      // skill is trained so an untrained attempt shows the −3 unskilled odds.
       return engine.skill.display(
         value,
-        character ? { character, linkedAttributeId, boonBane: effective } : undefined,
+        character ? { character, linkedAttributeId, boonBane: effective, trained } : undefined,
       );
     }
 
@@ -263,7 +264,7 @@ export default function SkillsScreen() {
                   const skillValue = cs?.value ?? computedValue;
                   const attrAbbr = skill.linkedAttributeId ? (attrAbbrMap[skill.linkedAttributeId] ?? '') : '';
                   const characteristicDM = skill.linkedAttributeId ? engine.attributeBadge(skill.linkedAttributeId, character) : null;
-                  const probDisplay = getProbDisplay(skill.id, skillValue, skill.linkedAttributeId);
+                  const probDisplay = getProbDisplay(skill.id, skillValue, skill.linkedAttributeId, cs?.trained ?? false);
                   const overrideLabel = getOverrideLabel(skill.id);
                   const overrideTitle = getOverrideTitle(skill.id);
 

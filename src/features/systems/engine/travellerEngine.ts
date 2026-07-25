@@ -96,8 +96,13 @@ export function formatSkillDisplay(
   value: number,
   characteristicDM = 0,
   boonBane: 'boon' | 'none' | 'bane' = 'none',
+  unskilled = false,
 ): string {
-  const effectiveModifier = value + characteristicDM;
+  // Attempting a skill the character doesn't have is at DM −3 (Traveller's
+  // unskilled penalty). Folded into the odds so an untrained skill shows the
+  // honest chance, not its trained-at-0 baseline.
+  const unskilledDM = unskilled ? -3 : 0;
+  const effectiveModifier = value + characteristicDM + unskilledDM;
   const prob =
     boonBane === 'boon'
       ? threeD6KeepTwoProbability(8, effectiveModifier, 'best')
@@ -105,8 +110,10 @@ export function formatSkillDisplay(
         ? threeD6KeepTwoProbability(8, effectiveModifier, 'worst')
         : twoD6SuccessProbability(8, effectiveModifier);
   const dmLabel = characteristicDM !== 0 ? ` · DM ${formatDM(characteristicDM)}` : '';
+  const unskilledLabel = unskilled ? ' · -3 unskilled' : '';
+  const levelLabel = unskilled ? 'Unskilled' : `Level ${value}`;
   const stateLabel = boonBane === 'boon' ? ' (boon)' : boonBane === 'bane' ? ' (bane)' : '';
-  return `Level ${value}${dmLabel} · ${Math.round(prob * 100)}%${stateLabel}`;
+  return `${levelLabel}${dmLabel}${unskilledLabel} · ${Math.round(prob * 100)}%${stateLabel}`;
 }
 
 /**
@@ -140,7 +147,10 @@ export const travellerEngine: SystemEngine = {
       const dm = linkedId
         ? characteristicToDM(effectiveCharacteristic(context.character, linkedId))
         : 0;
-      return formatSkillDisplay(value, dm, context?.boonBane ?? 'none');
+      // Untrained = no skill (trained explicitly false, level 0); anything with a
+      // level is trained. Undefined trained flag is treated as trained.
+      const unskilled = context?.trained === false && value === 0;
+      return formatSkillDisplay(value, dm, context?.boonBane ?? 'none', unskilled);
     },
     supportsMarks: false,
     // Traveller level 0 is a real (trained) skill, so presence of the trained
