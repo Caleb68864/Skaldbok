@@ -5,7 +5,8 @@ export type ThemeName =
   | 'starfarers-cockpit'
   | 'deep-space'
   | 'databank'
-  | 'neon-sprawl';
+  | 'neon-sprawl'
+  | 'notebook-paper';
 
 export const DEFAULT_THEME: ThemeName = 'dark';
 export const THEME_STORAGE_KEY = 'skaldbok-theme';
@@ -18,6 +19,7 @@ export const THEME_DISPLAY_NAMES: Record<ThemeName, string> = {
   'deep-space': 'Deep Space',
   databank: 'Databank',
   'neon-sprawl': 'Neon Sprawl',
+  'notebook-paper': 'Notebook Paper',
 };
 
 export const THEME_LIST: ThemeName[] = [
@@ -28,4 +30,5 @@ export const THEME_LIST: ThemeName[] = [
   'deep-space',
   'databank',
   'neon-sprawl',
+  'notebook-paper',
 ];

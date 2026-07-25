@@ -162,6 +162,48 @@
   --texture-highlight-strength: 0.15;
 }
 
+/* Notebook Paper — "Trapper Keeper". Cream ruled paper, navy ink, red/blue pen.
+   Extracted from the user's Pine Box Middle School HTML character sheets. The
+   ruled lines + red margin live on the body background (see below); cards read as
+   whiter index cards on the page. Fonts fall back to a handwriting stack —
+   bundling Bangers/Patrick Hand woff2 is a later, self-contained upgrade. */
+[data-theme="notebook-paper"] {
+  --color-bg: #F5F2EB;
+  --color-surface: #FBFAF6;
+  --color-surface-alt: #EDE9DF;
+  --color-text: #2C3E50;
+  --color-text-muted: #5A6B7A;
+  --color-accent: #C94A4A;
+  --color-accent-alt: #4A90C9;
+  --color-danger: #C0392B;
+  --color-border: #D4D0C8;
+  --color-gold: #C9A24A;
+  --color-success: #4A9C6D;
+  --color-warning: #D08A2C;
+  --color-info: #4A90C9;
+
+  /* Mode indicators */
+  --color-mode-play: #4A9C6D;
+  --color-mode-edit: #4A90C9;
+
+  /* Handwriting/marker display face; degrades to a legible sans on a bare tablet. */
+  --font-display: 'Bradley Hand', 'Chalkboard SE', 'Comic Sans MS', 'Segoe Print', 'Bangers', cursive;
+
+  /* Texture tokens */
+  --texture-grain-opacity: 0.03;
+  --texture-shadow-strength: 0.12;
+  --texture-highlight-strength: 0.18;
+}
+
+/* The ruled page + red margin rule, fixed behind the whole app. */
+[data-theme="notebook-paper"] body {
+  background-color: #F5F2EB;
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0 25px, rgba(90, 107, 122, 0.28) 25px 26px),
+    linear-gradient(to right, transparent 0 50px, rgba(201, 74, 74, 0.35) 50px 52px, transparent 52px);
+  background-attachment: fixed;
+}
+
 /* Starfarer's Cockpit — brushed steel & chrome, hard machined edges, HUD type.
    A skin, not a recolour: it overrides structure (radius, shadows, fonts) as
    well as palette so it reads as metal, not "the dark theme in blue". */
