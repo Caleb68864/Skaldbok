@@ -43,10 +43,26 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
   };
 }
 
-/** Formats a trait die + its exploding-odds string, e.g. `d8 · 73%`. */
-export function formatSavageSkill(value: number, wild = true): string {
-  const pct = Math.round(traitChance(value, 4, { wild }) * 100);
-  return `${dieCode(value)} · ${pct}%`;
+/**
+ * The flat penalty on every trait roll from the character's current state: −1 per
+ * Wound and per Fatigue level, −2 Distracted, −2 Entangled. Wounds/Fatigue read
+ * the level tracks; the two conditions are SWADE's own, so listing them here (in
+ * the SWADE adapter) is the ruleset stating its own rule, not a cross-system leak.
+ */
+export function savageTraitPenalty(character: CharacterRecord): number {
+  let mod = 0;
+  mod -= character.resources?.['wounds']?.current ?? 0;
+  mod -= character.resources?.['fatigue']?.current ?? 0;
+  if (character.conditions?.['distracted']) mod -= 2;
+  if (character.conditions?.['entangled']) mod -= 2;
+  return mod;
+}
+
+/** Formats a trait die + its exploding-odds string, e.g. `d8 · 73%` (penalty folded in). */
+export function formatSavageSkill(value: number, penalty = 0, wild = true): string {
+  const pct = Math.round(traitChance(value, 4, { wild, bonus: penalty }) * 100);
+  const penLabel = penalty !== 0 ? ` (${penalty > 0 ? '+' : ''}${penalty})` : '';
+  return `${dieCode(value)} · ${pct}%${penLabel}`;
 }
 
 /**
@@ -82,7 +98,7 @@ export const savageWorldsEngine: SystemEngine = {
     ladder: [4, 6, 8, 10, 12],
     advancementMax: 12,
     defaultValue: 4,
-    display: (value) => formatSavageSkill(value),
+    display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character) : 0),
     supportsMarks: false,
     // A skill "counts" once the character has trained it (bought a die above the
     // unskilled d4 baseline).
@@ -183,9 +199,10 @@ export const savageWorldsEngine: SystemEngine = {
   death: null,
   advancement: null,
   probability: {
-    // Trait die + Wild Die vs TN 4 (PCs are Wild Cards). Boon/bane unused —
-    // SWADE modifiers are numeric and folded into the target elsewhere.
-    chance: value => traitChance(value, 4, { wild: true }),
+    // Trait die + Wild Die vs TN 4 (PCs are Wild Cards), with the character's
+    // current Wound/Fatigue/condition penalty folded in.
+    chance: (value, _state, context) =>
+      traitChance(value, 4, { wild: true, bonus: context ? savageTraitPenalty(context.character) : 0 }),
   },
   derivedFields: [
     { key: 'pace', label: 'Pace', shortLabel: 'Pace' },
