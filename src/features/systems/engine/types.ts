@@ -15,9 +15,14 @@ export type PanelKey =
   | 'characteristics'
   | 'finances'
   | 'careers'
-  | 'augments';
+  | 'augments'
+  // Savage Worlds surfaces
+  | 'edges'
+  | 'hindrances'
+  | 'bennies'
+  | 'powers';
 
-export type ResolutionMethod = 'd20-roll-under' | '2d6-plus';
+export type ResolutionMethod = 'd20-roll-under' | '2d6-plus' | 'trait-die-vs-tn';
 
 export type CurrencyMode = 'coins' | 'abstract' | 'single';
 
@@ -257,6 +262,17 @@ export interface SystemLabels {
  * keeps the rule in one testable place instead of in a damage widget.
  */
 export interface DamageTrackModel {
+  /**
+   * The shape of the track. `'pool'` = a numeric resource that depletes toward 0
+   * (Dragonbane HP); `'accumulating'` = damage counts up toward a cap (Traveller
+   * characteristic damage); `'levels'` = a small level counter (Savage Worlds
+   * Wounds/Fatigue), each level a flat penalty, with thresholds via status rules.
+   * Absent = inferred from the resources' `direction` (back-compat). E3.
+   */
+  kind?: 'pool' | 'accumulating' | 'levels';
+  /** For `kind: 'levels'` — number of levels before incapacitation and the per-level roll penalty. */
+  levels?: number;
+  penaltyPerLevel?: number;
   /** Resource ids that absorb damage, in the order they are filled. */
   order: string[];
   /**
@@ -463,6 +479,26 @@ export interface SystemEngine {
    * See {@link DamageTrackModel}.
    */
   damageTrack: DamageTrackModel | null;
+  /**
+   * Turns a rolled damage total into track effects, before any track mutation.
+   * Optional: absent means "1 point of input = 1 point applied" (Dragonbane,
+   * Traveller). Savage Worlds implements the Toughness comparison here (total ≥
+   * Toughness → Shaken; +4 per extra wound), which is the step a points-only
+   * model cannot express. E3.
+   */
+  resolveDamage?: (
+    character: CharacterRecord,
+    input: { total: number; ap?: number; raises?: number },
+  ) => { levels: Record<string, number>; setsConditions: string[]; noEffect?: boolean };
+  /**
+   * How the attributes panel reads a stored attribute number: `'modifiers'`
+   * (Traveller `+2`), `'value'` (plain `8`), or `'dice'` (Savage Worlds `d8`).
+   * Absent = the module's existing duck-typed behaviour. E12.
+   */
+  attributeReadout?: {
+    mode: 'modifiers' | 'value' | 'dice';
+    format: (value: number, bonus?: number) => string;
+  };
   /**
    * Resource that generic damage/healing applies to, or `null` when the system
    * has no single health pool (consumers must then defer to the system's own UI).

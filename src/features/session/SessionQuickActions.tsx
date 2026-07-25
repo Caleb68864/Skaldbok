@@ -202,7 +202,7 @@ export function SessionQuickActions({
         name: c.name,
         attr:
           system?.attributes.find(a => a.id === c.linkedAttributeId)?.abbreviation
-          ?? c.linkedAttributeId.toUpperCase(),
+          ?? c.linkedAttributeId?.toUpperCase() ?? '',
       })),
     [system],
   );

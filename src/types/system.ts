@@ -4,13 +4,44 @@ export interface AttributeDefinition {
   abbreviation: string;
   min: number;
   max: number;
+  /**
+   * How the stored number reads and steps. Absent = a plain numeric score
+   * (today's Dragonbane/Traveller behaviour). A `die-ladder` stores die *sides*
+   * (4/6/8/10/12) and steps along that ladder rather than every integer — so a
+   * Savage Worlds attribute stepper offers d4→d6→d8, never d5/d7. `allowsPlus`
+   * permits the `d12+1`/`d12+2` extension beyond the top rung.
+   */
+  scale?: { kind: 'die-ladder'; ladder: number[]; allowsPlus?: boolean };
 }
+
+/** A machine-readable penalty a condition imposes while active. */
+export type ConditionEffect =
+  | { scope: 'all-traits'; modifier: number }
+  | { scope: 'attribute-linked'; modifier: number }
+  | { scope: 'no-actions' };
 
 export interface ConditionDefinition {
   id: string;
   name: string;
-  linkedAttributeId: string;
+  /**
+   * Dragonbane's "this condition banes skills linked to this attribute". Optional
+   * because Savage Worlds conditions (Shaken, Distracted) are flat global effects
+   * with no linked attribute.
+   */
+  linkedAttributeId?: string;
   description: string;
+  /**
+   * The mechanical penalty while active, for systems (Savage Worlds) whose
+   * conditions are live rules rather than flavour. Absent = descriptive only.
+   */
+  effect?: ConditionEffect;
+  /** How long the condition lasts before it clears on its own. */
+  duration?: 'until-cleared' | 'end-of-next-turn' | 'scene';
+  /**
+   * A roll that can clear the condition (Shaken → Spirit; Fatigue → Vigor). A
+   * `onCriticalFailure` string names a consequence (e.g. "take 1 wound").
+   */
+  recovery?: { traitId: string; targetNumber: number; onCriticalFailure?: string };
 }
 
 export interface ResourceDefinition {
@@ -27,6 +58,12 @@ export interface ResourceDefinition {
    * Defaults to `'depletes'` when unset. E2.
    */
   direction?: 'depletes' | 'accumulates';
+  /**
+   * When the resource resets to full. `'never'` (default) = only manual/rest
+   * mechanics touch it (HP, WP); `'session'` = refreshed at the start of each
+   * session (Savage Worlds Bennies); `'rest'` = a rest action restores it.
+   */
+  refresh?: 'never' | 'session' | 'rest';
 }
 
 export interface SkillDefinition {

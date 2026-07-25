@@ -527,7 +527,7 @@ export default function SheetScreen() {
       />
       {system && (() => {
         const linkedAttrIds = new Set(system.attributes.map(a => a.id));
-        const orphanConditions = system.conditions.filter(c => !linkedAttrIds.has(c.linkedAttributeId));
+        const orphanConditions = system.conditions.filter(c => !c.linkedAttributeId || !linkedAttrIds.has(c.linkedAttributeId));
         if (orphanConditions.length === 0) return null;
         return (
           <SectionPanel title="Conditions" collapsible defaultOpen>

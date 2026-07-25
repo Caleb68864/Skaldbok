@@ -18,7 +18,8 @@ interface QuickConditionPanelProps {
  * "Exhausted (STR)" without cross-referencing the rules.
  */
 export function QuickConditionPanel({ conditions, definitions, attributes, onChange }: QuickConditionPanelProps) {
-  function getAbbreviation(linkedAttributeId: string): string {
+  function getAbbreviation(linkedAttributeId: string | undefined): string {
+    if (!linkedAttributeId) return '';
     const attr = attributes.find(a => a.id === linkedAttributeId);
     return attr ? attr.abbreviation : '';
   }
