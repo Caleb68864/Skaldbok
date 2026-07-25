@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 6,
+  "version": 7,
   "name": "traveller",
   "displayName": "Traveller",
   "resolution": "2d6-plus",
@@ -340,6 +340,11 @@
     {
       "id": "title",
       "label": "Title / Rank",
+      "type": "text"
+    },
+    {
+      "id": "rads",
+      "label": "RADS (cumulative)",
       "type": "text"
     }
   ],

@@ -655,6 +655,18 @@ export default function SheetScreen() {
           </div>
         ))}
         <div>
+          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Cost of Living (Cr / month)</label>
+          <input
+            type="number"
+            min={0}
+            aria-label="Cost of Living (Cr / month)"
+            className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
+            value={sysStr('livingCost')}
+            disabled={!identityEditable}
+            onChange={e => setSysStr('livingCost', e.target.value)}
+          />
+        </div>
+        <div>
           <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Finance Notes</label>
           <textarea
             aria-label="Finance Notes"
