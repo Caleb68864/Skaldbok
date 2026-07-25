@@ -15,6 +15,7 @@ import { Drawer } from '../components/primitives/Drawer';
 import type { Weapon, InventoryItem, ArmorPiece } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
+import { remakeCurrency } from '../utils/currency';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
@@ -277,30 +278,12 @@ export default function GearScreen() {
     const denoms = engine.currency.denominations;
     const denom = denoms.find(d => d.id === denominationId);
     if (!denom) return;
-
-    const current = engine.currency.read(character);
-    const amounts: Record<string, number> = {};
-    for (const d of denoms) amounts[d.id] = current[d.id] ?? 0;
-    amounts[denominationId] += delta;
-
-    for (let i = denoms.length - 1; i >= 1; i--) {
-      while (amounts[denoms[i].id] < 0) {
-        let donor = -1;
-        for (let j = i - 1; j >= 0; j--) {
-          if (amounts[denoms[j].id] > 0) { donor = j; break; }
-        }
-        if (donor < 0) break;
-        amounts[denoms[donor].id] -= 1;
-        // Intermediate denominations keep the change from breaking the donor.
-        for (let k = donor + 1; k < i; k++) {
-          amounts[denoms[k].id] += denoms[k - 1].value / denoms[k].value - 1;
-        }
-        amounts[denoms[i].id] += denoms[i - 1].value / denoms[i].value;
-      }
-    }
-
-    if (denoms.some(d => amounts[d.id] < 0)) return; // not enough total currency
-    updateCharacter({ ...engine.currency.write(character, amounts), updatedAt: nowISO() });
+    // Route through the shared change-making util so Gear behaves identically to
+    // the Play/Ready-Gear purse (previously Gear used a divergent borrow-from-donor
+    // algorithm that left gains uncompacted). `null` = the spend would overdraw.
+    const next = remakeCurrency(denoms, engine.currency.read(character), denominationId, delta);
+    if (!next) return;
+    updateCharacter({ ...engine.currency.write(character, next), updatedAt: nowISO() });
     if (delta !== 0) logCoinChange(character.name, denominationId, delta, denom.abbr);
   }
 
