@@ -510,6 +510,23 @@ export interface SystemEngine {
    * has no single health pool (consumers must then defer to the system's own UI).
    */
   primaryHealthResourceId: string | null;
+  /**
+   * The magic economy, or `null` when the system has no spellcasting the app
+   * automates. Replaces the hardcoded `wp`/`cost = level*2`/`[1,2,3]` in the
+   * ability/magic modules. `resourceId` is the pool spent, so it is not assumed
+   * to be `wp`. E11. (Savage Worlds' multi-Arcane-Background model is a future
+   * extension of this shape.)
+   */
+  magic: {
+    /** Resource id the cost is drawn from — e.g. `'wp'`. */
+    resourceId: string;
+    /** Selectable power levels for a spell — e.g. `[1, 2, 3]`. */
+    powerLevels: number[];
+    /** Cost per power level (a level-`n` spell costs `n * costPerLevel`). */
+    costPerLevel: number;
+    /** Flat cost of a trick / cantrip (power level 0). */
+    trickCost: number;
+  } | null;
   /** Rest/recovery actions, or `null` when the system has none. */
   rest: RestDefinition[] | null;
   /** Downed/dying rules, or `null` when the system has none. */

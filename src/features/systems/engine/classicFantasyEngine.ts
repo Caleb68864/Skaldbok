@@ -195,6 +195,9 @@ export const classicFantasyEngine: SystemEngine = {
   // Dragonbane damage lands on HP and stops; being at 0 is handled by the
   // death-roll model below, not by a cascading track.
   damageTrack: null,
+  // Willpower economy: a power level `n` spell costs `n * 2` WP; a magic trick
+  // (power level 0) costs 1. Was hardcoded in the ability/magic modules. E11.
+  magic: { resourceId: 'wp', powerLevels: [1, 2, 3], costPerLevel: 2, trickCost: 1 },
   rest: classicFantasyRests,
   death: {
     triggerResourceId: 'hp',

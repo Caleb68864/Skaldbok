@@ -236,6 +236,8 @@ export const travellerEngine: SystemEngine = {
     downLabel: 'UNCONSCIOUS',
     deadLabel: 'DEAD',
   },
+  // Psionics exist but the app does not automate a PP economy yet.
+  magic: null,
   // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
   rest: null,
   // No death-roll track; a downed character is handled by the damage track.

@@ -177,6 +177,8 @@ export const savageWorldsEngine: SystemEngine = {
     downLabel: 'INCAPACITATED',
     deadLabel: 'DEAD',
   },
+  // No Arcane Background in the base ruleset; a caster build adds a PP pool later.
+  magic: null,
   rest: null,
   death: null,
   advancement: null,
