@@ -15,8 +15,9 @@ import {
 } from '../utils/boonBane';
 import type { BoonBaneState } from '../types/settings';
 import type { CharacterSkill } from '../types/character';
-import type { ConditionDefinition, AttributeDefinition } from '../types/system';
+import type { AttributeDefinition } from '../types/system';
 import { nowISO } from '../utils/dates';
+import { conditionImposesBane } from '../utils/conditionEffects';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { getEngine } from '../features/systems/engine';
 
@@ -131,19 +132,6 @@ export default function SkillsScreen() {
     }
   }
 
-  function buildConditionBaneMap(
-    conditions: ConditionDefinition[],
-    characterConditions: Record<string, boolean>,
-  ): Record<string, boolean> {
-    const map: Record<string, boolean> = {};
-    for (const cond of conditions) {
-      if (characterConditions[cond.id]) {
-        map[cond.linkedAttributeId] = true;
-      }
-    }
-    return map;
-  }
-
   function buildAttrAbbrMap(attributes: AttributeDefinition[]): Record<string, string> {
     const map: Record<string, string> = {};
     for (const attr of attributes) {
@@ -152,13 +140,10 @@ export default function SkillsScreen() {
     return map;
   }
 
-  const conditionBaneMap = system
-    ? buildConditionBaneMap(system.conditions, character.conditions)
-    : {};
   const attrAbbrMap = system ? buildAttrAbbrMap(system.attributes) : {};
 
   function getProbDisplay(skillId: string, value: number, linkedAttributeId?: string): string {
-    const hasAutoBane = linkedAttributeId ? (conditionBaneMap[linkedAttributeId] ?? false) : false;
+    const hasAutoBane = conditionImposesBane(system, character, linkedAttributeId);
     const override = sessionState.skillOverrides[skillId];
     const effective = resolveEffectiveBoonBane(sessionState.globalBoonBane, override, hasAutoBane);
 

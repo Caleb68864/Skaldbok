@@ -4,6 +4,7 @@ import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
 import { formatProb } from '../../utils/boonBane';
+import { conditionImposesBane } from '../../utils/conditionEffects';
 import { cn } from '../../lib/utils';
 import type { CharacterSkill } from '../../types/character';
 import { clamp, type PlayModuleProps } from './types';
@@ -36,11 +37,11 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
     category.skills.map(skill => ({ ...skill, category: category.name })),
   );
   const pinned = character.uiState.pinnedSkills ?? [];
+  // Relevance is the engine's call (trained/marked/etc.); the dashboard just adds
+  // the user's pinned skills. Was a reimplementation of the trained/dragon/demon
+  // check that SkillsScreen already delegates to the engine. E6.
   const isPrimary = (id: string) =>
-    pinned.includes(id) ||
-    character.skills[id]?.trained ||
-    character.skills[id]?.dragonMarked ||
-    character.skills[id]?.demonMarked;
+    pinned.includes(id) || engine.skill.isRelevant(character.skills[id]);
 
   const primary = skillDefs.filter(skill => isPrimary(skill.id));
   const untrained = skillDefs.filter(skill => !isPrimary(skill.id));
@@ -64,9 +65,13 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
     const value = clamp(rawValue, engine.skill.range.min, engine.skill.range.max);
     const fallback = { value, trained };
     const mark = stored?.dragonMarked ? 'Dragon' : stored?.demonMarked ? 'Demon' : 'Mark';
+    // Fold in condition-imposed bane so the dashboard's odds match the Sheet's
+    // (previously the Play line ignored an active condition's bane). E6.
+    const autoBane = conditionImposesBane(system, character, skill.linkedAttributeId);
     const displayContext = {
       character,
       linkedAttributeId: skill.linkedAttributeId,
+      boonBane: (autoBane ? 'bane' : 'none') as 'boon' | 'none' | 'bane',
     };
     const displayValue = engine.skill.display(value, displayContext);
     return (
