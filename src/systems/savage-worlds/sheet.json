@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "play": {
     "layout": "two-column",
     "regions": [
@@ -8,6 +8,7 @@
         "cells": [
           [
             "vitals",
+            "bennies",
             { "card": "currency", "when": "hasCurrency" }
           ],
           [

@@ -18,6 +18,12 @@ import { getEngine } from '../systems/engine';
 export function ResourceModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { logHPChange } = useSessionLog();
   const engine = getEngine(system);
+  // Session-refreshing pools (Savage Worlds Bennies) are spendable counters, not
+  // health tracks — they get their own card, so Vitals never shows them as a red
+  // "wounded" readout.
+  const trackIds = engine.resourceIds.filter(
+    id => system?.resources.find(r => r.id === id)?.refresh !== 'session',
+  );
 
   function updateResourceCurrent(id: string, delta: number) {
     const old = character.resources[id]?.current ?? 0;
@@ -37,7 +43,7 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
     return (
       <SectionPanel title={engine.labels.vitalsPanel ?? 'Vitals'} collapsible defaultOpen>
         <div className="flex flex-col gap-[var(--space-xs)]">
-          {engine.resourceIds.map(id => {
+          {trackIds.map(id => {
             const resource = character.resources[id];
             if (!resource) return null;
             const def = system?.resources.find(r => r.id === id);
@@ -66,7 +72,7 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
   return (
     <SectionPanel title={engine.labels.vitalsPanel ?? 'Vitals'} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-sm)] 2xl:grid 2xl:grid-cols-2">
-        {engine.resourceIds.map(id => {
+        {trackIds.map(id => {
           const resource = character.resources[id];
           if (!resource) return null;
           const def = system?.resources.find(r => r.id === id);

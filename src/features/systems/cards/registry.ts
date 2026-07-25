@@ -11,6 +11,7 @@ import { MagicModule } from '../../playDashboard/MagicModule';
 import { RestModule } from '../../playDashboard/RestModule';
 import { StoryBankModule } from '../../playDashboard/StoryBankModule';
 import { QuickReferenceModule } from '../../playDashboard/QuickReferenceModule';
+import { BenniesModule } from '../../playDashboard/BenniesModule';
 import { TileCard } from './primitives/TileCard';
 import { TableCard } from './primitives/TableCard';
 import { ToggleGridCard } from './primitives/ToggleGridCard';
@@ -29,6 +30,7 @@ export type CardKey =
   | 'rest'
   | 'storyBank'
   | 'quickReference'
+  | 'bennies'
   | 'tile'
   | 'table'
   | 'toggleGrid';
@@ -56,6 +58,7 @@ export const CARD_REGISTRY: Record<CardKey, ComponentType<any>> = {
   rest: RestModule,
   storyBank: StoryBankModule,
   quickReference: QuickReferenceModule,
+  bennies: BenniesModule,
   tile: TileCard,
   table: TableCard,
   toggleGrid: ToggleGridCard,
