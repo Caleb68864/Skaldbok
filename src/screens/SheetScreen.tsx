@@ -224,7 +224,21 @@ export default function SheetScreen() {
     updateCharacter(prev => {
       const current = prev.attributes[id] ?? 10;
       const attrDef = system?.attributes.find(attr => attr.id === id);
-      return { attributes: { ...prev.attributes, [id]: clamp(current + delta, attrDef?.min ?? 1, attrDef?.max ?? 30) }, updatedAt: nowISO() };
+      const scale = attrDef?.scale;
+      let next: number;
+      if (scale?.kind === 'die-ladder') {
+        // Walk the die ladder (d4→d6→d8…) a rung at a time rather than by 1, so a
+        // Savage Worlds attribute never lands on a nonexistent d5/d7.
+        const ladder = scale.ladder;
+        const idx = ladder.indexOf(current);
+        const targetIdx = idx === -1
+          ? (delta > 0 ? ladder.length - 1 : 0)
+          : clamp(idx + Math.sign(delta), 0, ladder.length - 1);
+        next = ladder[targetIdx];
+      } else {
+        next = clamp(current + delta, attrDef?.min ?? 1, attrDef?.max ?? 30);
+      }
+      return { attributes: { ...prev.attributes, [id]: next }, updatedAt: nowISO() };
     });
   }
 
@@ -513,6 +527,7 @@ export default function SheetScreen() {
                 linkedConditions={linked}
                 onConditionToggle={updateCondition}
                 modifierDelta={ev.isModified ? ev.modifiers.reduce((s, m) => s + m.delta, 0) : undefined}
+                format={engine.attributeReadout?.mode === 'dice' ? (n) => engine.attributeReadout!.format(n) : undefined}
               />
             );
           })}

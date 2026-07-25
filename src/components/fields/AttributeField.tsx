@@ -20,6 +20,8 @@ interface AttributeFieldProps {
   onConditionToggle?: (conditionId: string, value: boolean) => void;
   /** Sum of temp modifier deltas for this attribute. Shows a badge when non-zero. */
   modifierDelta?: number;
+  /** Formats the displayed value — e.g. a Savage Worlds die code `8` → `d8`. Defaults to the raw number. */
+  format?: (value: number) => string;
 }
 
 /**
@@ -31,8 +33,9 @@ interface AttributeFieldProps {
  * {@link AttributeFieldProps.modifierDelta} surfaces a colored ± badge next to the
  * label so temporary buffs/debuffs are visible without opening the modifier list.
  */
-export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false, linkedConditions, onConditionToggle, modifierDelta }: AttributeFieldProps) {
+export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false, linkedConditions, onConditionToggle, modifierDelta, format }: AttributeFieldProps) {
   const hasModifier = modifierDelta !== undefined && modifierDelta !== 0;
+  const shown = format ? format(value) : value;
 
   return (
     <div className="flex flex-col items-center gap-[var(--space-xs)] min-w-[60px]">
@@ -59,7 +62,7 @@ export function AttributeField({ attributeId: _attributeId, abbreviation, value,
             −
           </button>
           <span className="min-w-10 text-center text-[length:var(--size-2xl)] font-bold text-[var(--color-text)] font-[family-name:var(--font-display)]">
-            {value}
+            {shown}
           </span>
           <button
             type="button"
