@@ -1,13 +1,16 @@
 {
-  "version": 3,
+  "version": 4,
   "play": {
     "layout": "three-column",
     "regions": [
-      [
-        "vitals",
-        "derived",
-        { "card": "rest", "when": "hasRest" }
-      ],
+      {
+        "columns": "1fr minmax(200px, 1fr) 1fr",
+        "cells": [
+          ["vitals"],
+          ["derived"],
+          [{ "card": "rest", "when": "hasRest" }]
+        ]
+      },
       [
         "conditions"
       ],
