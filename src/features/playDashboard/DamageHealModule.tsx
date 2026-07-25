@@ -123,12 +123,16 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
               onKeyDown={e => { if (e.key === 'Enter') handleTakeDamage(); }}
               aria-label="Damage amount" className={`${field} w-20 mt-1`} />
           </label>
-          <label className="flex flex-col text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
-            Apply to
-            <select value={primary} onChange={e => setPrimary(e.target.value)} aria-label="Damage primary target" className={`${field} mt-1`}>
-              {tracks.map(id => <option key={id} value={id}>{labelFor(id)}</option>)}
-            </select>
-          </label>
+          {/* A single-track / auto-allocated system (Savage Worlds Wounds) gives the
+              player no target choice — hide the selector. E13. */}
+          {tracks.length > 1 && (
+            <label className="flex flex-col text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
+              Apply to
+              <select value={primary} onChange={e => setPrimary(e.target.value)} aria-label="Damage primary target" className={`${field} mt-1`}>
+                {tracks.map(id => <option key={id} value={id}>{labelFor(id)}</option>)}
+              </select>
+            </label>
+          )}
           {model.overflowTo.length > 0 && (
             <label className="flex flex-col text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
               Overflow to
@@ -148,12 +152,14 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
               onKeyDown={e => { if (e.key === 'Enter') handleHeal(); }}
               aria-label="Heal amount" className={`${field} w-20 mt-1`} />
           </label>
-          <label className="flex flex-col text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
-            Target
-            <select value={healTarget} onChange={e => setHealTarget(e.target.value)} aria-label="Heal target" className={`${field} mt-1`}>
-              {tracks.map(id => <option key={id} value={id}>{labelFor(id)}</option>)}
-            </select>
-          </label>
+          {tracks.length > 1 && (
+            <label className="flex flex-col text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
+              Target
+              <select value={healTarget} onChange={e => setHealTarget(e.target.value)} aria-label="Heal target" className={`${field} mt-1`}>
+                {tracks.map(id => <option key={id} value={id}>{labelFor(id)}</option>)}
+              </select>
+            </label>
+          )}
           <button type="button" onClick={handleHeal} disabled={!healAmount} className={btn}>Heal</button>
           <button type="button" onClick={handleRecoverAll} className={btn}>Recover All</button>
         </div>
