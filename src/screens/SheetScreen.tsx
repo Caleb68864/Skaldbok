@@ -155,7 +155,6 @@ export default function SheetScreen() {
 
   const isPlayMode = settings.mode === 'play';
   const engine = getEngine(system);
-  const isTraveller = character.systemId === 'traveller';
   // Engines may surface derived keys beyond the shared `DerivedValues` shape
   // (e.g. Traveller's `initiativeDM`), so index the result by string key.
   const derivedStats = engine.derivedStats(character, system ?? undefined) as unknown as Record<
@@ -164,9 +163,45 @@ export default function SheetScreen() {
   >;
   const currencyAmounts = engine.currency.read(character);
 
-  const DEFAULT_PANEL_ORDER = isTraveller
-    ? ['identity', 'characteristics', 'resources', 'finances', 'careers', 'augments', 'storyBank']
-    : ['identity', 'attributes', 'resources', 'derived', 'rest', 'storyBank'];
+  // Derived fields this surface shows. The Derived Values panel exists to
+  // override them, so a system whose sheet-surfaced fields are all computed-only
+  // gets no panel rather than a read-only list.
+  const sheetDerivedFields = engine.derivedFields.filter(
+    f => !f.surfaces || f.surfaces.includes('sheet'),
+  );
+
+  /**
+   * Which sheet panels the active system has, derived from the engine rather
+   * than from `systemId`. A system that declares no `characteristics` panel
+   * simply never gets one; adding a ruleset needs no change here.
+   */
+  const panelAvailability: Record<string, boolean> = {
+    identity: true,
+    attributes: engine.panels.includes('attributes'),
+    characteristics: engine.panels.includes('characteristics'),
+    resources: engine.panels.includes('resources'),
+    derived: sheetDerivedFields.some(f => f.overridable),
+    finances: engine.panels.includes('finances'),
+    careers: engine.panels.includes('careers'),
+    augments: engine.panels.includes('augments'),
+    rest: engine.rest !== null,
+    storyBank: true,
+  };
+
+  // Canonical head-to-toe order; each system shows the subset it declares.
+  const SHEET_PANEL_SEQUENCE = [
+    'identity',
+    'attributes',
+    'characteristics',
+    'resources',
+    'derived',
+    'finances',
+    'careers',
+    'augments',
+    'rest',
+    'storyBank',
+  ];
+  const DEFAULT_PANEL_ORDER = SHEET_PANEL_SEQUENCE.filter(key => panelAvailability[key]);
   const storedPanelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
   const panelOrder = [
     ...storedPanelOrder.filter(key => DEFAULT_PANEL_ORDER.includes(key)),
@@ -698,9 +733,7 @@ export default function SheetScreen() {
   const derivedPanel = (
     <SectionPanel title="Derived Values" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col">
-        {engine.derivedFields
-          .filter(f => !f.surfaces || f.surfaces.includes('sheet'))
-          .map(({ key, label, overridable }) => {
+        {sheetDerivedFields.map(({ key, label, overridable }) => {
           const computed = derivedStats[key] ?? 0;
           const overrideRaw = character.derivedOverrides?.[key];
           const override =
@@ -820,43 +853,29 @@ export default function SheetScreen() {
     ) : null;
 
   // ---- Panel map & visibility ----
-  const panelMap: Record<string, React.ReactNode> = isTraveller
-    ? {
-        identity: identityPanel,
-        characteristics: characteristicsPanel,
-        resources: resourcesPanel,
-        finances: financesPanel,
-        careers: careersPanel,
-        augments: augmentsPanel,
-        storyBank: storyBankPanel,
-      }
-    : {
-        identity: identityPanel,
-        attributes: attributesPanel,
-        resources: resourcesPanel,
-        derived: derivedPanel,
-        rest: restPanel,
-        storyBank: storyBankPanel,
-      };
+  // Every panel this screen knows how to render, keyed the same way as
+  // `panelAvailability`; the system's declared panels select the subset.
+  const allPanels: Record<string, React.ReactNode> = {
+    identity: identityPanel,
+    attributes: attributesPanel,
+    characteristics: characteristicsPanel,
+    resources: resourcesPanel,
+    derived: derivedPanel,
+    finances: financesPanel,
+    careers: careersPanel,
+    augments: augmentsPanel,
+    rest: restPanel,
+    storyBank: storyBankPanel,
+  };
 
-  const panelVisibility: Record<string, boolean> = isTraveller
-    ? {
-        identity: true,
-        characteristics: true,
-        resources: true,
-        finances: true,
-        careers: true,
-        augments: true,
-        storyBank: true,
-      }
-    : {
-        identity: true,
-        attributes: true,
-        resources: true,
-        derived: true,
-        rest: engine.rest !== null && isPlayMode,
-        storyBank: true,
-      };
+  const panelMap: Record<string, React.ReactNode> = Object.fromEntries(
+    Object.entries(allPanels).filter(([key]) => panelAvailability[key]),
+  );
+
+  // Rest is the one panel that is also mode-gated: it is prep noise in Edit Mode.
+  const panelVisibility: Record<string, boolean> = Object.fromEntries(
+    Object.keys(panelMap).map(key => [key, key === 'rest' ? isPlayMode : true]),
+  );
 
   const panelItems: PanelItem[] = panelOrder
     .filter(key => panelMap[key] !== undefined)
