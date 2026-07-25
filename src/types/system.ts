@@ -177,7 +177,7 @@ export interface SystemDefinition {
       armor?: string[];
     };
   };
-  resolution?: 'd20-roll-under' | '2d6-plus';
+  resolution?: 'd20-roll-under' | '2d6-plus' | 'trait-die-vs-tn';
   currency?: { label: string; abbr: string; mode: 'coins' | 'single' };
   /**
    * Optional overrides for system vocabulary (see `SystemTerms` in the engine).

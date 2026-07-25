@@ -4,6 +4,7 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useSheetTemplate } from '../features/systems/useSheetTemplate';
+import { resolveSheetPanelOrder } from '../features/systems/panelOrder';
 import { getEngine } from '../features/systems/engine';
 import type { RestDefinition } from '../features/systems/engine/types';
 import { useAutosave } from '../hooks/useAutosave';
@@ -219,24 +220,14 @@ export default function SheetScreen() {
   const templatePanelKeys = (template?.sheet?.regions ?? [])
     .flatMap(region => (Array.isArray(region) ? region : region.cells.flat()))
     .map(entry => (typeof entry === 'string' ? entry : entry.card));
-  const SHEET_PANEL_SEQUENCE = templatePanelKeys.length > 0 ? templatePanelKeys : FALLBACK_PANEL_SEQUENCE;
-  // If a template's keys are all unavailable (e.g. a community sheet surface that
-  // listed card keys or typos), the filtered order comes out empty and the sheet
-  // would render nothing — even Identity. Treat that as "no template" and fall
-  // back to the canonical order so the sheet is always usable.
-  const orderedFromSequence = SHEET_PANEL_SEQUENCE.filter(key => panelAvailability[key]);
-  const DEFAULT_PANEL_ORDER = orderedFromSequence.length > 0
-    ? orderedFromSequence
-    : FALLBACK_PANEL_SEQUENCE.filter(key => panelAvailability[key]);
-  const storedPanelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
-  // Reconcile three inputs: (1) the persisted drag order, kept first so a user's
-  // arrangement survives; (2) availability — any persisted key no longer available
-  // is dropped; (3) newly-available panels (e.g. after a template/system change)
-  // appended in canonical order so they surface rather than disappear.
-  const panelOrder = [
-    ...storedPanelOrder.filter(key => DEFAULT_PANEL_ORDER.includes(key)),
-    ...DEFAULT_PANEL_ORDER.filter(key => !storedPanelOrder.includes(key)),
-  ];
+  // The three-layer template→availability→persisted-order reconciliation lives in
+  // a pure, unit-tested helper (see panelOrder.ts).
+  const { defaultOrder: DEFAULT_PANEL_ORDER, panelOrder } = resolveSheetPanelOrder(
+    templatePanelKeys,
+    FALLBACK_PANEL_SEQUENCE,
+    panelAvailability,
+    settings.sheetPanelOrder,
+  );
 
   function updateAttr(id: string, delta: number) {
     if (!character) return;

@@ -69,6 +69,26 @@ describe('sheetTemplateSchema', () => {
     const result = sheetTemplateSchema.safeParse(template);
     expect(result.success).toBe(false);
   });
+
+  it('parses the grid-region form ({ columns, cells })', () => {
+    const template = {
+      version: 1,
+      play: {
+        regions: [
+          { columns: '2fr 1fr', cells: [['SkillsCard'], [{ card: 'MagicCard', when: 'hasMagic' }]] },
+        ],
+      },
+    };
+    expect(sheetTemplateSchema.safeParse(template).success).toBe(true);
+  });
+
+  it('rejects a region array that exceeds the anti-abuse max', () => {
+    const template = {
+      version: 1,
+      play: { regions: Array.from({ length: 101 }, () => ['SkillsCard']) },
+    };
+    expect(sheetTemplateSchema.safeParse(template).success).toBe(false);
+  });
 });
 
 describe('componentDefinitionSchema', () => {

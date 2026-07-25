@@ -48,7 +48,7 @@ export const gridRegionSchema = z.object({
  * both, giving pixel-parity without a system-specific branch in the screen.
  */
 export const regionSchema = z.union([
-  z.array(cardEntrySchema),
+  z.array(cardEntrySchema).max(100),
   gridRegionSchema,
 ]);
 

@@ -85,8 +85,13 @@ describe('formatSavageSkill', () => {
   it('shows the die and exploding odds with no label at zero penalty', () => {
     expect(formatSavageSkill(8)).toBe('d8 · 81%');
   });
-  it('appends a signed penalty label', () => {
+  it('appends a signed penalty label and actually lowers the odds', () => {
     expect(formatSavageSkill(8, -2)).toMatch(/^d8 · \d+% \(-2\)$/);
     expect(formatSavageSkill(8, 1)).toContain('(+1)');
+    // The penalty must flow through the probability, not just the label: a -2 die
+    // has to read a lower % than the unpenalised one (guards a dropped `bonus`).
+    const pct = (s: string) => Number(s.match(/· (\d+)%/)![1]);
+    expect(pct(formatSavageSkill(8, -2))).toBeLessThan(pct(formatSavageSkill(8)));
+    expect(pct(formatSavageSkill(8, 2))).toBeGreaterThan(pct(formatSavageSkill(8)));
   });
 });
