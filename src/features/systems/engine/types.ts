@@ -20,6 +20,8 @@ export type PanelKey =
   | 'edges'
   | 'hindrances'
   | 'bennies'
+  // Reserved for SWADE Arcane Background / Powers — no adapter ships it yet
+  // (savageWorldsEngine.magic is null), so no panel currently uses this key.
   | 'powers';
 
 export type ResolutionMethod = 'd20-roll-under' | '2d6-plus' | 'trait-die-vs-tn';
@@ -491,6 +493,11 @@ export interface SystemEngine {
    * Traveller). Savage Worlds implements the Toughness comparison here (total ≥
    * Toughness → Shaken; +4 per extra wound), which is the step a points-only
    * model cannot express. E3.
+   *
+   * `ap` (armor piercing) reduces the target's armor before the Toughness
+   * comparison. `raises` is accepted for forward-compatibility but not read by
+   * any adapter: SWADE attack raises add to the damage roll (`total`) upstream,
+   * not to the wound count computed here.
    */
   resolveDamage?: (
     character: CharacterRecord,
@@ -524,7 +531,8 @@ export interface SystemEngine {
     powerLevels: number[];
     /** Cost per power level (a level-`n` spell costs `n * costPerLevel`). */
     costPerLevel: number;
-    /** Flat cost of a trick / cantrip (power level 0). */
+    /** Flat cost of a level-0 trick / cantrip, used instead of the `0` that
+     * `level * costPerLevel` would give. */
     trickCost: number;
   } | null;
   /** Rest/recovery actions, or `null` when the system has none. */

@@ -24,11 +24,14 @@ export interface TableCardProps extends PlayModuleProps {
 
 /** Generic read-only label/value table: a title and a list of resolved or literal rows. */
 export function TableCard({ title, rows, character, system }: TableCardProps) {
+  // `rows` arrives from untrusted JSON typed as `unknown` props — a template that
+  // omits it (or supplies a non-array) must render an empty table, never throw.
+  const safeRows = Array.isArray(rows) ? rows : [];
   return (
     <SectionPanel title={title}>
       <table className="w-full text-[length:var(--font-size-sm)]">
         <tbody>
-          {rows.map((row, index) => {
+          {safeRows.map((row, index) => {
             const resolved = row.value !== undefined
               ? row.value
               : row.source

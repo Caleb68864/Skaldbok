@@ -3,7 +3,7 @@ import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { nowISO } from '../../utils/dates';
 import type { PlayModuleProps } from './types';
 import { getEngine } from '../systems/engine';
-import { applyDamage } from '../../utils/damageTrack';
+import { applyDamage, damageStatus } from '../../utils/damageTrack';
 
 /**
  * The single place damage and healing are applied for a system with a cascading
@@ -55,9 +55,13 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
       updateCharacter(prev => {
         const resources = { ...prev.resources };
         for (const [id, add] of Object.entries(r.levels)) {
-          const cur = resources[id]?.current ?? 0;
-          const max = resources[id]?.max ?? 99;
-          resources[id] = { ...resources[id], current: Math.min(cur + add, max) };
+          const existing = resources[id];
+          // The engine may name a track the character record lacks (older/imported
+          // data): don't fabricate a maxless resource — skip it. Cap at the track's
+          // own max, falling back to the model's level count, never a magic 99.
+          if (!existing) continue;
+          const max = existing.max ?? model!.levels ?? add;
+          resources[id] = { ...existing, current: Math.min((existing.current ?? 0) + add, max) };
         }
         const conditions = { ...prev.conditions };
         for (const c of r.setsConditions) conditions[c] = true;
@@ -100,7 +104,8 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
     setMessage('Full recovery — all damage cleared.');
   }
 
-  const status = applyDamage(character, model, 0).status;
+  // Standing track status (no damage applied) — drives the down/dead banner below.
+  const status = damageStatus(character, model);
   const btn =
     'min-h-[44px] px-3 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] cursor-pointer disabled:opacity-50 disabled:pointer-events-none';
   const field =

@@ -16,6 +16,12 @@ function baseEngineFor(system: SystemDefinition | undefined | null): SystemEngin
   if (!system) return classicFantasyEngine;
   if (system.id === 'traveller') return travellerEngine;
   if (system.id === 'savage-worlds') return savageWorldsEngine;
+  // classic-fantasy is the fail-safe default. A registered-but-unmapped id
+  // (a system with a definition but no adapter yet) reaching this fallback is a
+  // wiring gap, so surface it in dev instead of silently rendering as Dragonbane.
+  if (import.meta.env.DEV && system.id !== 'classic-fantasy') {
+    console.warn(`getEngine: no adapter for system "${system.id}", defaulting to classic-fantasy`);
+  }
   return classicFantasyEngine;
 }
 

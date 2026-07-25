@@ -22,8 +22,11 @@
  * `target - sides` more on the open-ended reroll — hence the recursion.
  */
 export function explodingChance(sides: number, target: number): number {
-  if (sides <= 0) return 0;
-  if (target <= 1) return 1;
+  // Guard non-finite first: `NaN <= 0` is false, so a NaN `sides`/`target` would
+  // slip past the range checks and recurse on `target - NaN` (= NaN) forever.
+  if (!Number.isFinite(sides) || sides <= 0) return 0; // degenerate die — no face can be rolled
+  if (!Number.isFinite(target)) return 0;
+  if (target <= 1) return 1; // every die face is >= 1, so target ≤ 1 is met automatically
   if (target <= sides) return (sides - target + 1) / sides;
   return (1 / sides) * explodingChance(sides, target - sides);
 }

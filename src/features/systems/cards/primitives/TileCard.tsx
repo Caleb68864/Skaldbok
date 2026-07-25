@@ -21,6 +21,9 @@ export function resolveDataPath(
   system: SystemDefinition | null,
   engine: SystemEngine = getEngine(system),
 ): unknown {
+  // `path` originates in untrusted `unknown` props on some call paths; a
+  // non-string can't index the whitelist, so bail before `.startsWith`/parse.
+  if (typeof path !== 'string') return undefined;
   if (path.startsWith('quickReference.')) {
     const key = path.slice('quickReference.'.length);
     const cards = system?.quickReference ?? [];
@@ -81,11 +84,14 @@ const INTENT_TEXT_CLASS: Record<TileIntent, string> = {
 export function TileCard({ title, value, source, subLabel, intent = 'default', character, system }: TileCardProps) {
   const resolved = value !== undefined ? value : source ? resolveDataPath(source, character, system) : undefined;
   const display = resolved === undefined || resolved === null ? '—' : String(resolved);
+  // Fall back to the neutral intent for an unrecognized value so an authoring
+  // typo can't emit a literal `undefined` className fragment.
+  const intentClass = INTENT_TEXT_CLASS[intent] ?? INTENT_TEXT_CLASS.default;
 
   return (
     <SectionPanel title={title}>
       <div className="flex flex-col items-start gap-[var(--space-2xs)]">
-        <span className={`text-[length:var(--font-size-lg)] font-semibold ${INTENT_TEXT_CLASS[intent]}`}>
+        <span className={`text-[length:var(--font-size-lg)] font-semibold ${intentClass}`}>
           {display}
         </span>
         {subLabel && <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">{subLabel}</span>}

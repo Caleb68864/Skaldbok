@@ -8,11 +8,18 @@ const attributeDefinitionSchema = z.object({
   max: z.number().describe('Maximum attribute value'),
   scale: z.object({
     kind: z.literal('die-ladder'),
-    ladder: z.array(z.number()),
+    // Must be non-empty positive integers: the attribute stepper indexes into
+    // this ladder, and an empty/garbage ladder would write `undefined` into a
+    // saved attribute (→ NaN derived stats).
+    ladder: z.array(z.number().int().positive()).min(1),
     allowsPlus: z.boolean().optional(),
   }).optional().describe('Die-ladder scale for trait-die systems (Savage Worlds)'),
 });
 
+// Machine-readable penalty a condition imposes while active. Conditions whose
+// penalty targets the *attacker* or only *attack* rolls (SWADE Prone/Vulnerable)
+// intentionally omit this and stay description-only, since `scope` cannot express
+// those cases.
 const conditionEffectSchema = z.union([
   z.object({ scope: z.enum(['all-traits', 'attribute-linked']), modifier: z.number() }),
   z.object({ scope: z.literal('no-actions') }),
@@ -45,7 +52,7 @@ const resourceDefinitionSchema = z.object({
 const skillDefinitionSchema = z.object({
   id: z.string().min(1).describe('Unique skill identifier'),
   name: z.string().min(1).describe('Skill display name'),
-  baseChance: z.number().describe('Base chance percentage'),
+  baseChance: z.number().describe('Base chance percentage (roll-under systems only; 0 and unused for trait-die systems)'),
   linkedAttributeId: z.string().optional().describe('Linked attribute id'),
 });
 

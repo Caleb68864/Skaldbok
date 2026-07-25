@@ -37,16 +37,21 @@ const INTENT_ACTIVE_CLASS: Record<ToggleItemIntent, string> = {
 
 /** Generic read-only toggle grid: a title and a list of resolved or literal on/off indicators. */
 export function ToggleGridCard({ title, items, character, system }: ToggleGridCardProps) {
+  // `items` is untrusted JSON typed as `unknown` — coerce to a safe array so a
+  // template that omits it (or supplies a non-array) renders empty, not a throw.
+  const safeItems = Array.isArray(items) ? items : [];
   return (
     <SectionPanel title={title}>
       <div className="grid grid-cols-2 gap-[var(--space-xs)] sm:grid-cols-3">
-        {items.map((item, index) => {
+        {safeItems.map((item, index) => {
           const resolved = item.active !== undefined
             ? item.active
             : item.source
               ? Boolean(resolveDataPath(item.source, character, system))
               : false;
-          const intent = item.intent ?? 'default';
+          // Fall back to the neutral intent for an unrecognized value so an
+          // authoring typo can't emit a literal `undefined` className fragment.
+          const intent = (item.intent && INTENT_ACTIVE_CLASS[item.intent]) ? item.intent : 'default';
 
           return (
             <div

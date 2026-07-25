@@ -11,6 +11,10 @@ const BUNDLED_SHEET_TEMPLATES: Record<string, unknown> = Object.fromEntries(
     import.meta.glob('../../systems/*/sheet.json', { eager: true }) as Record<string, { default: unknown }>
   )
     .map(([path, mod]) => {
+      // Key by the system-id folder. The `?? path` fallback should never fire
+      // for a well-formed glob path; if it did, the entry keys on its full path
+      // and is simply unreachable (no systemId lookup will match it) — dropped,
+      // not crashed.
       const match = path.match(/systems\/([^/]+)\/sheet\.json$/);
       return [match?.[1] ?? path, mod.default] as const;
     })

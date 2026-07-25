@@ -36,6 +36,15 @@ function isPropSlot(value: unknown): value is { $prop: string } {
   return typeof value === 'object' && value !== null && '$prop' in value;
 }
 
+/**
+ * Resolves a body entry's prop *references* against the values passed to the
+ * component. Each `propsDef` value is a named slot `{ $prop: "x" }`; the result
+ * maps the entry's local prop name to the invocation's `props[x]`. Resolution is
+ * strict — an unsatisfied slot throws {@link MissingPropError} (CardRenderer
+ * catches it and degrades). The `String(slot)` branch is defensive only:
+ * componentDefinitionSchema guarantees every slot is `{ $prop }`, so it is
+ * unreachable for validated input and is not a supported "literal prop" feature.
+ */
 function resolveProps(
   propsDef: ComponentCardEntryObject['props'],
   props: Record<string, unknown>,
@@ -60,6 +69,9 @@ function expand(
   stack: string[],
   depth: number,
 ): CardEntry[] {
+  // Two independent stops: `stack` (below) catches self/mutual recursion by
+  // name; MAX_COMPONENT_DEPTH catches unbounded *acyclic* nesting — many
+  // distinct components chained deeper than we will ever legitimately render.
   if (depth > MAX_COMPONENT_DEPTH) {
     throw new ComponentDepthError(depth);
   }

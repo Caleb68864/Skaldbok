@@ -23,14 +23,32 @@ export interface SavageWorldsDerivedValues extends DerivedValues {
  * `Strength × 5`. Parry reads a *skill* and Toughness folds in *equipped armor* —
  * the first derived stats to depend on more than attributes.
  */
-export function computeSavageWorldsDerivedValues(character: CharacterRecord): SavageWorldsDerivedValues {
+/**
+ * Toughness = `2 + ½ Vigor + Armor`, with armor-piercing `ap` stripping armor
+ * first (floored at 0). Split out from {@link computeSavageWorldsDerivedValues}
+ * so {@link savageWorldsEngine.resolveDamage} can apply AP without recomputing
+ * Pace/Parry/Load. `ap` defaults to 0, so the derived-stats caller gets the
+ * plain Toughness it always did.
+ */
+export function computeToughness(character: CharacterRecord, ap = 0): number {
   const vigor = dieSides(character, 'vigor');
+  const armor = character.armor?.rating ?? 0;
+  const effectiveArmor = Math.max(0, armor - Math.max(0, ap));
+  return 2 + Math.floor(vigor / 2) + effectiveArmor;
+}
+
+export function computeSavageWorldsDerivedValues(character: CharacterRecord): SavageWorldsDerivedValues {
   const strength = dieSides(character, 'strength');
   const fighting = character.skills?.['fighting']?.value ?? 0;
-  const armor = character.armor?.rating ?? 0;
   return {
-    // Mandatory DerivedValues keys are unused by Savage Worlds (E14 would drop
-    // them); kept at neutral values so the shared type is satisfied.
+    // E14: DerivedValues mandates hpMax/wpMax/movement/damageBonus/aglDamageBonus,
+    // none of which Savage Worlds uses. Held at neutral values to satisfy the
+    // shared type. SAFE ONLY BECAUSE: (a) SWADE declares no resource with id
+    // 'hp'/'wp', so PrintableSheet.maxFor never reads hpMax/wpMax, and (b) these
+    // keys are absent from `derivedFields`, so no dashboard/print tile surfaces
+    // them. A system reusing this adapter must preserve both invariants, or these
+    // zeros will print as real values. `movement` is a dummy — Pace is the real
+    // SWADE stat and nothing reads `movement`.
     hpMax: 0,
     wpMax: 0,
     movement: 6,
@@ -38,8 +56,11 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
     aglDamageBonus: '+0',
     encumbranceLimit: strength * 5,
     pace: 6,
+    // Parry = 2 + ½ Fighting die. Fighting reads `.value ?? 0` (an unskilled
+    // Fighting is effectively 0 → Parry 2), not dieSides(); the `>= 4` guard keeps
+    // any stray sub-d4 value from contributing a half-step.
     parry: 2 + (fighting >= 4 ? Math.floor(fighting / 2) : 0),
-    toughness: 2 + Math.floor(vigor / 2) + armor,
+    toughness: computeToughness(character),
   };
 }
 
@@ -51,8 +72,12 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
  */
 export function savageTraitPenalty(character: CharacterRecord): number {
   let mod = 0;
-  mod -= character.resources?.['wounds']?.current ?? 0;
-  mod -= character.resources?.['fatigue']?.current ?? 0;
+  // SWADE caps the wound penalty at −3 (a 4th wound is Incapacitation, not −4)
+  // and Fatigue at −2 (a 3rd level is Incapacitation). The damage-track model
+  // already bounds these, but clamp here so a hand-edited/imported over-max
+  // value can't produce a runaway penalty.
+  mod -= Math.min(character.resources?.['wounds']?.current ?? 0, 3);
+  mod -= Math.min(character.resources?.['fatigue']?.current ?? 0, 2);
   if (character.conditions?.['distracted']) mod -= 2;
   if (character.conditions?.['entangled']) mod -= 2;
   return mod;
@@ -166,10 +191,12 @@ export const savageWorldsEngine: SystemEngine = {
     { id: 'condition', label: 'condition' },
     { id: 'note', label: 'note' },
   ],
-  // Damage total vs Toughness (2 + ½ Vigor + Armor): under = nothing; at/over =
-  // Shaken, or +1 Wound if already Shaken; +1 Wound per 4 over Toughness. E3.
-  resolveDamage: (character, { total }) => {
-    const toughness = computeSavageWorldsDerivedValues(character).toughness;
+  // Damage total vs Toughness (2 + ½ Vigor + Armor, less any armor-piercing):
+  // under = nothing; at/over = Shaken, or +1 Wound if already Shaken; +1 Wound
+  // per 4 over Toughness. `raises` is intentionally unused — SWADE attack raises
+  // add to the damage roll (`total`) upstream, not to the wound count here. E3.
+  resolveDamage: (character, { total, ap = 0 }) => {
+    const toughness = computeToughness(character, ap);
     const levels: Record<string, number> = {};
     if (total < toughness) return { levels, setsConditions: [], noEffect: true };
     const extraWounds = Math.floor((total - toughness) / 4);

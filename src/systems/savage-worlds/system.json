@@ -1,6 +1,6 @@
 {
   "id": "savage-worlds",
-  "version": 1,
+  "version": 2,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
   "resolution": "trait-die-vs-tn",
@@ -130,7 +130,7 @@
     {
       "id": "prone",
       "name": "Prone",
-      "description": "−2 to attack while prone; −2 to attackers in melee, ranged attackers at −2. Stand to clear.",
+      "description": "−2 to your attacks. Melee attackers get +2 to hit you; ranged attackers are at −2. Stand (costs movement) to clear.",
       "duration": "until-cleared"
     },
     {

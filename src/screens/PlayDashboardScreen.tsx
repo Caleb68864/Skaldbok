@@ -89,7 +89,10 @@ export default function PlayDashboardScreen() {
               <div
                 key={index}
                 className="grid gap-[var(--space-xs)] items-start md:gap-[var(--space-sm)] min-[640px]:[grid-template-columns:var(--tpl-cols)]"
-                style={{ '--tpl-cols': region.columns } as CSSProperties}
+                // Default to one equal column per cell when a template omits
+                // `columns`, so a missing value degrades to an even grid rather
+                // than collapsing the whole row to a single column.
+                style={{ '--tpl-cols': region.columns ?? `repeat(${region.cells.length}, minmax(0, 1fr))` } as CSSProperties}
               >
                 {region.cells.map((cell, cellIndex) => (
                   <div key={cellIndex} className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)]">

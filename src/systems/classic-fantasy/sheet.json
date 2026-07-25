@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "play": {
     "layout": "three-column",
     "regions": [
@@ -29,12 +29,8 @@
       [
         "identity",
         "attributes",
-        "characteristics",
         "resources",
         "derived",
-        "finances",
-        "careers",
-        "augments",
         "rest",
         "storyBank"
       ]

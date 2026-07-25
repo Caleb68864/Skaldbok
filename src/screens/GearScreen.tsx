@@ -25,11 +25,7 @@ import * as characterRepository from '../storage/repositories/characterRepositor
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
 
-/**
- * Drops a trailing plural `s` so a denomination label reads naturally in a
- * one-unit aria-label ("Credits" → "Gain 1 credit"). Labels that are already
- * singular ("Gold") are returned unchanged.
- */
+/** Rounds `value` to an integer and clamps it to `[min, max]`; non-finite → min. */
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, Math.round(value)));

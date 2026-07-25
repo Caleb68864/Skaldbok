@@ -17,6 +17,19 @@ describe('explodingChance', () => {
     // d4 vs 8: roll 4 (1/4) then reach 4 on the reroll (1/4) => 1/16
     expect(approx(explodingChance(4, 8), (1 / 4) * (1 / 4))).toBe(true);
   });
+
+  it('recurses through multiple explosions', () => {
+    // d4 vs 13: 4 → 4 → 4 (each 1/4), then the reroll must reach 1 (certain) => (1/4)^3
+    expect(approx(explodingChance(4, 13), (1 / 4) ** 3)).toBe(true);
+  });
+
+  it('guards degenerate dice and trivially-met targets', () => {
+    expect(explodingChance(0, 4)).toBe(0);
+    expect(explodingChance(-2, 4)).toBe(0);
+    expect(explodingChance(NaN, 4)).toBe(0);
+    expect(explodingChance(6, 0)).toBe(1);
+    expect(explodingChance(6, -3)).toBe(1);
+  });
 });
 
 describe('traitChance', () => {
@@ -35,12 +48,26 @@ describe('traitChance', () => {
     // untrained d4-2 vs TN 4 behaves like d4 vs TN 6
     expect(traitChance(4, 4, { bonus: -2 })).toBeCloseTo(explodingChance(4, 6));
   });
+
+  it('caps at certainty for a large positive bonus', () => {
+    expect(traitChance(4, 4, { bonus: 10 })).toBe(1);
+  });
+
+  it('stays within [0, 1] for a Wild Card under a large negative penalty', () => {
+    const p = traitChance(4, 4, { wild: true, bonus: -12 });
+    expect(p).toBeGreaterThanOrEqual(0);
+    expect(p).toBeLessThanOrEqual(1);
+  });
 });
 
 describe('raiseChance', () => {
   it('is the chance of clearing TN + 4 per raise', () => {
     expect(raiseChance(8, 4, 0)).toBeCloseTo(traitChance(8, 4));
     expect(raiseChance(8, 4, 1)).toBeCloseTo(traitChance(8, 8));
+  });
+
+  it('clamps a negative raise count to a plain success', () => {
+    expect(raiseChance(8, 4, -1)).toBeCloseTo(raiseChance(8, 4, 0));
   });
 });
 

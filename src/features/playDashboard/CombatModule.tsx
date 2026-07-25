@@ -73,7 +73,7 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
                 className="self-start"
                 onClick={() => updateCharacter(prev => ({
                   weapons: prev.weapons.map(w => w.id === weapon.id ? { ...w, damaged: !w.damaged } : w),
-                  updatedAt: new Date().toISOString(),
+                  updatedAt: nowISO(),
                 }))}
               >
                 {weapon.damaged ? 'Repair' : 'Damage'}

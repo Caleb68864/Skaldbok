@@ -15,6 +15,10 @@ export function AbilityModule({ character, system, updateCharacter }: PlayModule
 
   if (abilities.length === 0) return null;
 
+  // Spend contract: when the engine declares no magic economy (engine.magic ===
+  // null) or the ability has no cost, "using" it is a bookkeeping note, not a
+  // resource spend — so non-caster systems get a harmless confirmation toast
+  // instead of an error.
   function spendWp(cost: number | undefined, label: string) {
     const pool = magic ? character.resources[magic.resourceId] : undefined;
     if (!cost || !magic || !pool) {

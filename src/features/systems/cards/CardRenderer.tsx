@@ -19,21 +19,37 @@ export interface CardRendererProps extends PlayModuleProps {
  * and renders the component with {@link PlayModuleProps} plus its declared props.
  *
  * @remarks
- * Renders nothing when the guard fails. An unknown `card` key also renders
- * nothing, logging a dev-only warning rather than throwing — a bad or
- * out-of-date template should degrade, not crash the sheet.
+ * Renders nothing when the guard fails. An unknown `card` key, an unrecognized
+ * guard, or a component that fails to expand (cycle, too-deep, missing `$prop`)
+ * all render nothing, logging a dev-only warning rather than throwing — a bad,
+ * out-of-date, or untrusted community template should degrade, not crash the
+ * sheet. Community components are resolved BEFORE built-in card keys, so a
+ * community definition intentionally shadows a same-named built-in; a loader
+ * that wants a key un-overridable must forbid the name there.
  */
 export function CardRenderer({ entry, componentRegistry = {}, character, system, updateCharacter }: CardRendererProps) {
   const engine = getEngine(system);
   const normalized = typeof entry === 'string' ? { card: entry } : entry;
 
-  if (normalized.when && !GUARDS[normalized.when](engine)) {
+  // Fail closed: a `when` that isn't a known guard is treated as "don't render"
+  // rather than throwing on `undefined(engine)`.
+  if (normalized.when && !GUARDS[normalized.when]?.(engine)) {
     return null;
   }
 
   const componentDef = componentRegistry[normalized.card];
   if (componentDef) {
-    const expanded = resolveComponent(componentDef, normalized.props ?? {}, componentRegistry);
+    let expanded: CardEntry[];
+    try {
+      expanded = resolveComponent(componentDef, normalized.props ?? {}, componentRegistry);
+    } catch (err) {
+      // Cyclic / too-deep / missing-$prop community template — degrade this
+      // subtree instead of throwing through render (which would white-screen it).
+      if (import.meta.env.DEV) {
+        console.warn(`CardRenderer: failed to expand component "${normalized.card}"`, err);
+      }
+      return null;
+    }
     return (
       <>
         {expanded.map((childEntry, index) => (

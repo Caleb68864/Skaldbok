@@ -13,6 +13,13 @@ function isMagicTrick(powerLevel: number, school: string): boolean {
   return powerLevel === 0 || school.toLowerCase().includes('trick');
 }
 
+/**
+ * Prepared-spell caster panel. The pool spent, its cost curve, and the trick
+ * cost all come from `engine.magic` (E11) — `resourceId` is not assumed to be
+ * `wp`, so a system spending a differently-named pool works with no code change.
+ * Hidden when the system has no magic economy or the character has no prepared
+ * spells.
+ */
 export function MagicModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { showToast } = useToast();
   const engine = getEngine(system);

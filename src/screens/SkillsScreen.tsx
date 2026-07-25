@@ -90,9 +90,10 @@ export default function SkillsScreen() {
   function handleSkillChange(skillId: string, value: CharacterSkill) {
     if (!character) return;
     // Snap to the die ladder (Savage Worlds) so a skill can't land on a d5/d7;
-    // otherwise clamp to the numeric range.
+    // otherwise clamp to the numeric range. The length check guards a malformed
+    // empty ladder, whose reduce seed would be `undefined` and corrupt the save.
     const ladder = engine.skill.ladder;
-    const snapped = ladder
+    const snapped = ladder && ladder.length > 0
       ? ladder.reduce((best, rung) => (Math.abs(rung - value.value) < Math.abs(best - value.value) ? rung : best), ladder[0])
       : clampSkillValue(value.value, skillRange);
     updateCharacter({ skills: { ...character.skills, [skillId]: { ...value, value: snapped } }, updatedAt: nowISO() });

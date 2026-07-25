@@ -58,9 +58,11 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
   return (
     <SectionPanel title={engine.labels.derivedPanel ?? 'Derived Stats'} collapsible defaultOpen>
       <div className="grid gap-1.5 [grid-template-columns:repeat(auto-fit,minmax(min(100%,7rem),1fr))]">
-        {stats.map(stat => (
+        {stats.map((stat, index) => (
+          // Key by index+label: a derived field's short label could collide with
+          // an attribute abbreviation, and duplicate keys mis-reconcile.
           <div
-            key={stat.label}
+            key={`${index}-${stat.label}`}
             className="flex items-center justify-between gap-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-xs)] py-1"
           >
             <p className="m-0 text-xs font-semibold text-[var(--color-text-muted)]">{stat.label}</p>

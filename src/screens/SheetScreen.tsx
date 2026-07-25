@@ -193,6 +193,8 @@ export default function SheetScreen() {
   };
 
   // Canonical head-to-toe fallback order; each system shows the subset it declares.
+  // Must list EVERY key in `panelAvailability` — a key that is available but
+  // omitted here silently vanishes whenever a system falls back (no sheet.json).
   const FALLBACK_PANEL_SEQUENCE = [
     'identity',
     'attributes',
@@ -202,6 +204,8 @@ export default function SheetScreen() {
     'finances',
     'careers',
     'augments',
+    'edges',
+    'hindrances',
     'rest',
     'storyBank',
   ];
@@ -210,12 +214,18 @@ export default function SheetScreen() {
   // themselves stay bespoke editors; only which appear and in what order is
   // template-driven. Availability still gates, so a stale key can't render a
   // panel the system lacks. Falls back to the canonical order with no template.
+  // Note: unlike the play surface (CardRenderer), a sheet entry's `when` guard is
+  // NOT honored here — sheet panels are gated by `panelAvailability` only.
   const templatePanelKeys = (template?.sheet?.regions ?? [])
     .flatMap(region => (Array.isArray(region) ? region : region.cells.flat()))
     .map(entry => (typeof entry === 'string' ? entry : entry.card));
   const SHEET_PANEL_SEQUENCE = templatePanelKeys.length > 0 ? templatePanelKeys : FALLBACK_PANEL_SEQUENCE;
   const DEFAULT_PANEL_ORDER = SHEET_PANEL_SEQUENCE.filter(key => panelAvailability[key]);
   const storedPanelOrder = settings.sheetPanelOrder ?? DEFAULT_PANEL_ORDER;
+  // Reconcile three inputs: (1) the persisted drag order, kept first so a user's
+  // arrangement survives; (2) availability — any persisted key no longer available
+  // is dropped; (3) newly-available panels (e.g. after a template/system change)
+  // appended in canonical order so they surface rather than disappear.
   const panelOrder = [
     ...storedPanelOrder.filter(key => DEFAULT_PANEL_ORDER.includes(key)),
     ...DEFAULT_PANEL_ORDER.filter(key => !storedPanelOrder.includes(key)),
@@ -228,9 +238,12 @@ export default function SheetScreen() {
       const attrDef = system?.attributes.find(attr => attr.id === id);
       const scale = attrDef?.scale;
       let next: number;
-      if (scale?.kind === 'die-ladder') {
+      if (scale?.kind === 'die-ladder' && scale.ladder.length > 0) {
         // Walk the die ladder (d4→d6→d8…) a rung at a time rather than by 1, so a
-        // Savage Worlds attribute never lands on a nonexistent d5/d7.
+        // Savage Worlds attribute never lands on a nonexistent d5/d7. A stored
+        // value that isn't a rung (migrated/hand-edited data) snaps to the far
+        // rung in the pressed direction rather than getting stuck. The length
+        // guard keeps a malformed empty ladder from writing `undefined`.
         const ladder = scale.ladder;
         const idx = ladder.indexOf(current);
         const targetIdx = idx === -1
