@@ -149,6 +149,18 @@ export const savageWorldsEngine: SystemEngine = {
     { id: 'condition', label: 'condition' },
     { id: 'note', label: 'note' },
   ],
+  // Damage total vs Toughness (2 + ½ Vigor + Armor): under = nothing; at/over =
+  // Shaken, or +1 Wound if already Shaken; +1 Wound per 4 over Toughness. E3.
+  resolveDamage: (character, { total }) => {
+    const toughness = computeSavageWorldsDerivedValues(character).toughness;
+    const levels: Record<string, number> = {};
+    if (total < toughness) return { levels, setsConditions: [], noEffect: true };
+    const extraWounds = Math.floor((total - toughness) / 4);
+    const alreadyShaken = !!character.conditions?.['shaken'];
+    const wounds = (alreadyShaken ? 1 : 0) + extraWounds;
+    if (wounds > 0) levels.wounds = wounds;
+    return { levels, setsConditions: ['shaken'] };
+  },
   primaryHealthResourceId: 'wounds',
   // Wounds is a 0–3 level counter; Fatigue a parallel 0–2 counter. A full Wounds
   // track incapacitates a Wild Card (Extras drop at 1 — handled by status rules

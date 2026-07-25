@@ -47,6 +47,33 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
   function handleTakeDamage() {
     const n = Number(dmgAmount);
     if (!Number.isFinite(n) || n <= 0) return;
+    // Level-track systems (Savage Worlds) convert a rolled damage total to Wounds
+    // via the engine's Toughness comparison, and set conditions (Shaken), rather
+    // than subtracting points. E3.
+    if (engine.resolveDamage && model!.kind === 'levels') {
+      const r = engine.resolveDamage(character, { total: n });
+      updateCharacter(prev => {
+        const resources = { ...prev.resources };
+        for (const [id, add] of Object.entries(r.levels)) {
+          const cur = resources[id]?.current ?? 0;
+          const max = resources[id]?.max ?? 99;
+          resources[id] = { ...resources[id], current: Math.min(cur + add, max) };
+        }
+        const conditions = { ...prev.conditions };
+        for (const c of r.setsConditions) conditions[c] = true;
+        return { resources, conditions, updatedAt: nowISO() };
+      });
+      const woundsAdded = Object.values(r.levels).reduce((a, b) => a + b, 0);
+      const parts: string[] = [];
+      if (r.noEffect) parts.push(`Damage ${n} — no effect (under Toughness).`);
+      else {
+        if (r.setsConditions.includes('shaken')) parts.push('Shaken');
+        if (woundsAdded > 0) parts.push(`+${woundsAdded} Wound${woundsAdded > 1 ? 's' : ''}`);
+      }
+      setMessage(parts.join(' · ') || 'No effect.');
+      setDmgAmount('');
+      return;
+    }
     const result = applyDamage(character, model!, n, overflow, primary);
     const landed = Object.entries(result.dealt).map(([id, v]) => `${v} to ${labelFor(id)}`).join(', ');
     const parts = [landed ? `Took ${landed}.` : 'No room — every track is full.'];
