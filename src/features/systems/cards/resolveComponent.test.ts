@@ -79,6 +79,18 @@ describe('resolveComponent', () => {
     ]);
   });
 
+  it("keeps a nested entry's own when guard instead of the reference guard", () => {
+    // A child entry that already carries its own guard must NOT be overwritten by
+    // the component-reference guard (`when: nestedEntry.when ?? normalized.when`).
+    const inner: ComponentDefinition = { name: 'Inner', body: [{ card: 'magic', when: 'hasMagic' }, 'plain'] };
+    const outer: ComponentDefinition = { name: 'Outer', body: [{ card: 'Inner', when: 'hasRest' }] };
+    const result = resolveComponent(outer, {}, { Inner: inner });
+    expect(result).toEqual([
+      { card: 'magic', when: 'hasMagic' }, // own guard preserved
+      { card: 'plain', when: 'hasRest' },  // unguarded child inherits the reference guard
+    ]);
+  });
+
   it('rejects a component that references itself directly', () => {
     const selfRef: ComponentDefinition = {
       name: 'SelfRef',

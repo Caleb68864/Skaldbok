@@ -32,7 +32,10 @@ export function MagicModule({ character, system, updateCharacter }: PlayModulePr
     .slice(0, 8);
 
   if (!magic || spells.length === 0) return null;
-  const pool = character.resources[magic.resourceId];
+  // Alias the narrowed model so its type survives into the castSpell closure
+  // (TS re-widens `magic` there, which is what forced the `!` assert).
+  const m = magic;
+  const pool = character.resources[m.resourceId];
 
   function castSpell(label: string, cost: number) {
     if (!pool || pool.current < cost) {
@@ -40,7 +43,7 @@ export function MagicModule({ character, system, updateCharacter }: PlayModulePr
       return;
     }
     updateCharacter(prev => ({
-      resources: { ...prev.resources, [magic!.resourceId]: { ...pool, current: clamp(pool.current - cost, 0, pool.max) } },
+      resources: { ...prev.resources, [m.resourceId]: { ...pool, current: clamp(pool.current - cost, 0, pool.max) } },
       updatedAt: nowISO(),
     }));
     showToast(`Cast ${label} for ${cost} ${res}.`, 'success');

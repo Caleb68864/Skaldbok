@@ -17,6 +17,7 @@ export function ConditionModule({ character, system, updateCharacter }: PlayModu
             <button
               key={condition.id}
               type="button"
+              aria-pressed={active}
               className={cn(
                 'min-h-[44px] w-full rounded-[var(--radius-lg)] border border-border px-1 py-1 text-sm transition-colors whitespace-nowrap',
                 active

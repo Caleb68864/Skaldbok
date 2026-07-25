@@ -19,17 +19,20 @@ export function BenniesModule({ character, system, updateCharacter }: PlayModule
     id => system?.resources.find(r => r.id === id)?.refresh === 'session',
   );
   if (!bennyId) return null;
-  const res = character.resources[bennyId];
+  // Alias the narrowed id into a const so its non-undefined type survives into the
+  // adjust closure, where TS would otherwise re-widen it (dropping the `!` asserts).
+  const id = bennyId;
+  const res = character.resources[id];
   if (!res) return null;
-  const def = system?.resources.find(r => r.id === bennyId);
+  const def = system?.resources.find(r => r.id === id);
 
   function adjust(delta: number, toMax = false) {
     updateCharacter(prev => {
-      const cur = prev.resources[bennyId!]?.current ?? 0;
-      const max = prev.resources[bennyId!]?.max ?? 0;
+      const cur = prev.resources[id]?.current ?? 0;
+      const max = prev.resources[id]?.max ?? 0;
       const next = toMax ? max : clamp(cur + delta, 0, max);
       return {
-        resources: { ...prev.resources, [bennyId!]: { ...prev.resources[bennyId!], current: next } },
+        resources: { ...prev.resources, [id]: { ...prev.resources[id], current: next } },
         updatedAt: nowISO(),
       };
     });

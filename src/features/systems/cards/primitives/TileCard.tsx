@@ -41,7 +41,10 @@ export function resolveDataPath(
     return engine.attributeIds.includes(id) ? character.attributes[id] : undefined;
   }
   if (namespace === 'res') {
-    return engine.resourceIds.includes(id) ? character.resources[id] : undefined;
+    // Return the scalar `current` (like `attr:`/`derived:` return scalars), not
+    // the whole { current, max } object — otherwise a tile renders "[object
+    // Object]" and a toggle bound to it is always truthy.
+    return engine.resourceIds.includes(id) ? character.resources[id]?.current : undefined;
   }
   if (namespace === 'derived') {
     const isDeclared = engine.derivedFields.some((field) => field.key === id);

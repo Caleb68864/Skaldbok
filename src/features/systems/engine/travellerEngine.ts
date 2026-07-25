@@ -155,7 +155,7 @@ export const travellerEngine: SystemEngine = {
     supportsBoonBane: true,
   },
   derivedStats: character => computeTravellerDerivedValues(character),
-  resourceIds: ['str', 'dex', 'end'],
+  resourceIds: TRAVELLER_DAMAGE_TRACK_IDS,
   panels: ['characteristics', 'skills', 'resources', 'finances', 'careers', 'augments', 'inventory', 'combat', 'notes'],
   currency: {
     mode: 'single',

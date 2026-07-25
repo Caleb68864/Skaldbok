@@ -2,18 +2,15 @@ import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
 import type { PlayModuleProps } from './types';
-import { useSessionLog } from '../session/useSessionLog';
-import { useToast } from '../../context/ToastContext';
 import { getEngine } from '../systems/engine';
 import { CurrencyAdjuster } from '../../components/fields/CurrencyAdjuster';
-import { remakeCurrency } from '../../utils/currency';
+import { useCoinAdjuster } from './useCoinAdjuster';
 
 export function CombatModule({ character, system, updateCharacter }: PlayModuleProps) {
-  const { logCoinChange } = useSessionLog();
-  const { showToast } = useToast();
   const equipped = character.weapons.filter(w => w.equipped).slice(0, 6);
   const engine = getEngine(system);
   const currency = engine.currency;
+  const adjustCoin = useCoinAdjuster(currency, character, updateCharacter);
   // Damage-track systems (Traveller) show the purse under Vitals via
   // CurrencyModule, so it is not repeated here. Pool systems (Dragonbane) keep
   // their coins in Ready Gear.
@@ -24,25 +21,6 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
   const weaponFields = system?.itemFields?.weapon ?? [];
   const denominations = currency.denominations;
   const amounts = currency.read(character);
-
-  /**
-   * Adjusts one denomination by `delta`, re-making change across the whole
-   * purse so the totals stay in their most compact form.
-   */
-  function adjustCoin(denominationId: string, delta: number) {
-    const denom = denominations.find(d => d.id === denominationId);
-    if (!denom) return;
-    // Resolve the change once, outside the state updater (see CurrencyModule for
-    // the why — a flag set inside `updateCharacter` isn't observable synchronously
-    // under batching). `null` means the spend would overdraw the purse.
-    const next = remakeCurrency(denominations, currency.read(character), denominationId, delta);
-    if (!next) {
-      showToast(`Not enough ${currency.label.toLowerCase()} to spend that.`, 'error');
-      return;
-    }
-    updateCharacter(prev => ({ ...currency.write(prev, next), updatedAt: nowISO() }));
-    logCoinChange(character.name, denominationId, delta, denom.abbr);
-  }
 
   return (
     <SectionPanel title={engine.labels.readyGearPanel ?? 'Ready Gear'} collapsible defaultOpen>

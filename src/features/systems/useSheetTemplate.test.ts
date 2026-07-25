@@ -38,6 +38,15 @@ describe('resolveSheetTemplate', () => {
     expect(result.cacheWrite).toBeNull();
   });
 
+  it('keeps the cache and writes nothing when versions are equal (no IndexedDB thrash)', () => {
+    // Same version, different content: the tie must keep the cached copy and NOT
+    // rewrite it, so a load doesn't churn IndexedDB every time.
+    const bundledSameVersion = { version: 1, sheet: { layout: 'default', regions: [['DifferentCard']] } };
+    const result = resolveSheetTemplate(bundledSameVersion, validV1);
+    expect(result.template).toEqual(validV1);
+    expect(result.cacheWrite).toBeNull();
+  });
+
   it('surfaces an error and returns a null template for an invalid bundled template', () => {
     const result = resolveSheetTemplate({ version: 'not-a-number' }, undefined);
     expect(result.template).toBeNull();

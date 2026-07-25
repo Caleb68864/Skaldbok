@@ -56,6 +56,10 @@ export function ToggleGridCard({ title, items, character, system }: ToggleGridCa
           return (
             <div
               key={index}
+              // State is otherwise conveyed by color only; expose on/off to
+              // assistive tech since the label text is identical in both states.
+              role="img"
+              aria-label={`${item.label}: ${resolved ? 'on' : 'off'}`}
               className={`rounded-[var(--radius-sm)] border px-[var(--space-xs)] py-[var(--space-2xs)] text-center text-[length:var(--font-size-sm)] ${
                 resolved ? INTENT_ACTIVE_CLASS[intent] : 'border-[var(--color-border)] text-[var(--color-text-muted)]'
               }`}

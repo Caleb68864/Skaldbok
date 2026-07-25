@@ -30,6 +30,9 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
   const [message, setMessage] = useState<string | null>(null);
 
   if (!model) return null;
+  // Alias the narrowed model so its type survives into the handler closures,
+  // where TS re-widens `model` to `... | null` (the reason for the old `!` asserts).
+  const track = model;
 
   const labelFor = (id: string) => system?.resources.find(r => r.id === id)?.name ?? id.toUpperCase();
 
@@ -50,7 +53,7 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
     // Level-track systems (Savage Worlds) convert a rolled damage total to Wounds
     // via the engine's Toughness comparison, and set conditions (Shaken), rather
     // than subtracting points. E3.
-    if (engine.resolveDamage && model!.kind === 'levels') {
+    if (engine.resolveDamage && track.kind === 'levels') {
       const r = engine.resolveDamage(character, { total: n });
       updateCharacter(prev => {
         const resources = { ...prev.resources };
@@ -60,7 +63,7 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
           // data): don't fabricate a maxless resource — skip it. Cap at the track's
           // own max, falling back to the model's level count, never a magic 99.
           if (!existing) continue;
-          const max = existing.max ?? model!.levels ?? add;
+          const max = existing.max ?? track.levels ?? add;
           resources[id] = { ...existing, current: Math.min((existing.current ?? 0) + add, max) };
         }
         const conditions = { ...prev.conditions };
@@ -78,12 +81,12 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
       setDmgAmount('');
       return;
     }
-    const result = applyDamage(character, model!, n, overflow, primary);
+    const result = applyDamage(character, track, n, overflow, primary);
     const landed = Object.entries(result.dealt).map(([id, v]) => `${v} to ${labelFor(id)}`).join(', ');
     const parts = [landed ? `Took ${landed}.` : 'No room — every track is full.'];
     if (result.unassigned > 0) parts.push(`${result.unassigned} unassigned.`);
-    if (result.status === 'dead') parts.push(model!.deadLabel);
-    else if (result.status === 'down') parts.push(model!.downLabel);
+    if (result.status === 'dead') parts.push(track.deadLabel);
+    else if (result.status === 'down') parts.push(track.downLabel);
     writeResources(result.resources);
     setMessage(parts.join(' '));
     setDmgAmount('');
@@ -170,7 +173,7 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
         </div>
 
         {message && (
-          <p className="m-0 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">{message}</p>
+          <p role="status" aria-live="polite" className="m-0 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">{message}</p>
         )}
       </div>
     </SectionPanel>
