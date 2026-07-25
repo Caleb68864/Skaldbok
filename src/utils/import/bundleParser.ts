@@ -11,6 +11,7 @@ import { campaignSchema } from '../../types/campaign';
 import { partySchema, partyMemberSchema } from '../../types/party';
 import { entityLinkSchema } from '../../types/entityLink';
 import { inventoryContainerSchema } from '../../types/inventoryContainer';
+import { migrateCharacter } from '../migrations';
 
 /**
  * A single per-entity validation warning produced during bundle parsing.
@@ -191,22 +192,27 @@ function validateContentsEntities(
     }
   }
 
-  // characters — no Zod schema exists (plain TypeScript interface);
-  // skip strict validation but ensure they have required fields
+  // characters — run the migration ladder then validate against the character
+  // schema (migrateCharacter), warning-and-skipping malformed/hostile records the
+  // same way every other entity type is validated. This is the untrusted-import
+  // path, so a corrupt character must never enter IndexedDB unchecked; migrating
+  // first also means an older-schema-version bundled record lands already upgraded
+  // rather than relying on the lazy read-path upgrade.
   if (contents.characters) {
-    validated.characters = contents.characters.filter((char, index) => {
-      const c = char as Record<string, unknown>;
-      if (!c.id || !c.name) {
+    const kept: Record<string, unknown>[] = [];
+    contents.characters.forEach((char, index) => {
+      try {
+        kept.push(migrateCharacter(char) as unknown as Record<string, unknown>);
+      } catch (err) {
         warnings.push({
           entityType: 'characters',
           entityIndex: index,
-          path: 'id|name',
-          message: 'Character record missing id or name field',
+          path: '',
+          message: err instanceof Error ? err.message : 'Character validation failed',
         });
-        return false;
       }
-      return true;
     });
+    validated.characters = kept;
   }
 
   // attachments — validated via bundleContentsSchema already (omit re-validation)
