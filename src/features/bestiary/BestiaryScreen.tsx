@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBestiary, type CategoryFilter } from './useBestiary';
 import { CreatureTemplateCard } from './CreatureTemplateCard';
@@ -49,6 +49,15 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
   const [showForm, setShowForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CreatureTemplate | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<CreatureTemplate | null>(null);
+
+  // Escape closes the stat-block modal (additive keyboard support for the
+  // hand-rolled overlay, which otherwise only closed on backdrop click).
+  useEffect(() => {
+    if (!viewingTemplate) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setViewingTemplate(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [viewingTemplate]);
 
   const handleCreate = async (data: Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>) => {
     await create(data);
@@ -143,18 +152,19 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
       {/* Stat block view (detail modal) */}
       {viewingTemplate && (
         <div
-          role="dialog"
-          aria-label="Creature stat block"
           onClick={() => setViewingTemplate(null)}
           className="fixed inset-0 bg-black/50 z-[300] flex items-end sm:items-center justify-center"
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="bestiary-statblock-title"
             onClick={(e) => e.stopPropagation()}
             className="bg-[var(--color-surface)] rounded-t-2xl sm:rounded-2xl w-full max-w-[480px] max-h-[85vh] overflow-y-auto px-4 pt-5 pb-6"
           >
             <div className="flex justify-between items-start mb-3">
               <div>
-                <h3 className="text-[var(--color-text)] m-0">{viewingTemplate.name}</h3>
+                <h3 id="bestiary-statblock-title" className="text-[var(--color-text)] m-0">{viewingTemplate.name}</h3>
                 <span className="text-xs text-[var(--color-text-muted)] capitalize">{viewingTemplate.category}</span>
                 {viewingTemplate.role && <span className="text-xs text-[var(--color-text-muted)]"> &middot; {viewingTemplate.role}</span>}
                 {viewingTemplate.affiliation && <span className="text-xs text-[var(--color-text-muted)]"> &middot; {viewingTemplate.affiliation}</span>}
@@ -287,6 +297,7 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
                 Delete
               </button>
               <button
+                autoFocus
                 onClick={() => setViewingTemplate(null)}
                 className="min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer"
               >

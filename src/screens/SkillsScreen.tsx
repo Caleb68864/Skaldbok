@@ -274,7 +274,9 @@ export default function SkillsScreen() {
 
                   return (
                     <div key={skill.id} className={cn(
-                      "flex items-center gap-[var(--space-sm)] py-[var(--space-xs)] border-b border-[var(--color-border)] min-h-[var(--touch-target-min)]",
+                      // flex-wrap so a long boon/bane probability string wraps the
+                      // controls to a second line on a phone instead of overflowing.
+                      "flex flex-wrap items-center gap-[var(--space-sm)] py-[var(--space-xs)] border-b border-[var(--color-border)] min-h-[var(--touch-target-min)]",
                       isDragonMarked && 'bg-amber-900/20 border-l-2 !border-l-amber-500',
                       isDemonMarked && 'bg-purple-900/20 border-l-2 !border-l-purple-500',
                       isTrained && !skillsEditable && 'bg-[var(--color-surface-raised)]/30',
@@ -304,7 +306,7 @@ export default function SkillsScreen() {
 
                       {/* Name + attribute tag */}
                       <span className={cn(
-                        "flex-1 text-[var(--color-text)] text-[length:var(--font-size-md)]",
+                        "flex-1 min-w-0 text-[var(--color-text)] text-[length:var(--font-size-md)]",
                         isTrained ? "font-semibold" : "font-normal"
                       )}>
                         {skill.name}

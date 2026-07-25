@@ -407,6 +407,20 @@ function ActiveSessionContent() {
     setNewEncounterType('combat');
   };
 
+  // Escape closes the Start-Encounter modal (additive keyboard support), but not
+  // mid-submit — the same guard the backdrop click already respects.
+  useEffect(() => {
+    if (!showStartEncounter) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !submittingEncounter) {
+        setShowStartEncounter(false);
+        resetStartEncounterForm();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showStartEncounter, submittingEncounter]);
+
   const handleStartEncounter = async () => {
     if (!newEncounterTitle.trim() || submittingEncounter) return;
     setSubmittingEncounter(true);
@@ -590,18 +604,19 @@ function ActiveSessionContent() {
       {/* Start encounter modal */}
       {showStartEncounter && (
         <div
-          role="dialog"
-          aria-label="Start encounter"
           onClick={() => {
             if (!submittingEncounter) setShowStartEncounter(false);
           }}
           className="fixed inset-0 bg-black/50 z-[300] flex items-end justify-center"
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="start-encounter-title"
             onClick={e => e.stopPropagation()}
             className="bg-[var(--color-surface)] rounded-t-2xl w-full max-w-[480px] px-4 pt-5 pb-6 max-h-[90vh] overflow-y-auto"
           >
-            <h3 className="text-[var(--color-text)] mb-3">Start Encounter</h3>
+            <h3 id="start-encounter-title" className="text-[var(--color-text)] mb-3">Start Encounter</h3>
 
             {/* Type */}
             <label className="block text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">

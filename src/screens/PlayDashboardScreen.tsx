@@ -95,7 +95,9 @@ export default function PlayDashboardScreen() {
                 style={{ '--tpl-cols': region.columns ?? `repeat(${region.cells.length}, minmax(0, 1fr))` } as CSSProperties}
               >
                 {region.cells.map((cell, cellIndex) => (
-                  <div key={cellIndex} className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)]">
+                  // min-w-0 lets a `1fr` grid track shrink below its content's
+                  // min-content width instead of forcing the row to overflow.
+                  <div key={cellIndex} className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)] min-w-0">
                     {cell.map((entry, entryIndex) => (
                       <CardRenderer key={entryIndex} entry={entry} {...moduleProps} />
                     ))}

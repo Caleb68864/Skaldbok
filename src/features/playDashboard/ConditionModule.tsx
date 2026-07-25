@@ -19,7 +19,7 @@ export function ConditionModule({ character, system, updateCharacter }: PlayModu
               type="button"
               aria-pressed={active}
               className={cn(
-                'min-h-[44px] w-full rounded-[var(--radius-lg)] border border-border px-1 py-1 text-sm transition-colors whitespace-nowrap',
+                'min-h-[44px] w-full rounded-[var(--radius-lg)] border border-border px-1 py-1 text-sm transition-colors',
                 active
                   ? 'bg-accent text-bg font-bold'
                   : 'bg-surface-alt text-text font-normal'
