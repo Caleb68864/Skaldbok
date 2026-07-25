@@ -7,6 +7,15 @@ import { useToast } from '../../context/ToastContext';
 import { getEngine } from '../systems/engine';
 import type { PlayModuleProps } from './types';
 
+interface CurrencyModuleProps extends PlayModuleProps {
+  /**
+   * Whether the purse renders {@link CurrencyAdjuster}'s fixed quick-step
+   * buttons. Defaults to `false` — the compact custom-amount-only layout the
+   * Play dashboard has always used — so a sheet template can opt back in.
+   */
+  quickButtons?: boolean;
+}
+
 /**
  * The money purse as a standalone play-dashboard panel, so it can sit under
  * Vitals in the left column rather than buried in Ready Gear.
@@ -16,7 +25,7 @@ import type { PlayModuleProps } from './types';
  * protection and denomination change-making run through the shared
  * {@link remakeCurrency}. Hidden for a system with no currency.
  */
-export function CurrencyModule({ character, system, updateCharacter }: PlayModuleProps) {
+export function CurrencyModule({ character, system, updateCharacter, quickButtons = false }: CurrencyModuleProps) {
   const { logCoinChange } = useSessionLog();
   const { showToast } = useToast();
   const engine = getEngine(system);
@@ -43,7 +52,7 @@ export function CurrencyModule({ character, system, updateCharacter }: PlayModul
 
   return (
     <SectionPanel title={currency.label} collapsible defaultOpen>
-      <CurrencyAdjuster denominations={denominations} amounts={currency.read(character)} onDelta={adjust} quickButtons={false} />
+      <CurrencyAdjuster denominations={denominations} amounts={currency.read(character)} onDelta={adjust} quickButtons={quickButtons} />
     </SectionPanel>
   );
 }
