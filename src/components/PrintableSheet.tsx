@@ -295,6 +295,13 @@ function Currency({ character, engine }: { character: CharacterRecord; engine: S
             <span className="sheet-currency-value">{amounts[denom.id] ?? 0}</span>
           </div>
         ))}
+        {/* Monthly cost of living (Traveller), shown only when the sheet records one. */}
+        {character.systemData?.livingCost ? (
+          <div className="sheet-currency-field">
+            <span className="sheet-currency-label">Cost of Living</span>
+            <span className="sheet-currency-value">{String(character.systemData.livingCost)}</span>
+          </div>
+        ) : null}
       </div>
     </div>
   );
