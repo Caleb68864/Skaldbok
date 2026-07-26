@@ -70,8 +70,17 @@ export const bundleEnvelopeSchema = z.object({
   exportedAt: z.string(),
   /** Optional name/identifier of who created the export. */
   exportedBy: z.string().optional(),
-  /** Game system identifier — always `'classic-fantasy'` for Skaldmark. */
-  system: z.literal('classic-fantasy'),
+  /**
+   * Game system identifier of the exported data (e.g. `'classic-fantasy'`,
+   * `'traveller'`, `'savage-worlds'`, or a user-authored system id).
+   *
+   * @remarks
+   * This was previously pinned to `z.literal('classic-fantasy')`, a leftover
+   * from the single-system era that silently rejected every Traveller or
+   * Savage Worlds character bundle at import. Systems are pluggable (see the
+   * system registry), so this is a free-form id, not a fixed literal.
+   */
+  system: z.string(),
   /** Optional SHA-256 hex digest of `JSON.stringify(contents)` for integrity verification. */
   contentHash: z.string().optional(),
   /** The actual entity data payload. */

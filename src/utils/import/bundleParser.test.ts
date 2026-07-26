@@ -44,6 +44,25 @@ describe('parseBundle — character validation', () => {
     expect(charWarning?.entityIndex).toBe(1);
   });
 
+  it('imports a non-Dragonbane bundle (system id is free-form, not a fixed literal)', () => {
+    // Regression: the envelope schema previously pinned `system` to
+    // `z.literal('classic-fantasy')`, which rejected every Traveller / Savage
+    // Worlds character bundle at import. It is a free-form system id now.
+    const travellerChar = { ...validChar, id: 'milo-1', name: 'Milo Aer', systemId: 'traveller' };
+    const json = JSON.stringify({
+      version: 1,
+      type: 'character',
+      exportedAt: '2026-01-01T00:00:00.000Z',
+      system: 'traveller',
+      contents: { characters: [travellerChar] },
+    });
+    const result = parseBundle(json);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.bundle.system).toBe('traveller');
+    expect(result.bundle.contents.characters?.[0].id).toBe('milo-1');
+  });
+
   it('imports a valid character with no warnings', () => {
     const result = parseBundle(bundleJson([validChar]));
     expect(result.success).toBe(true);

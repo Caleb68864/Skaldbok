@@ -13,7 +13,10 @@ export interface SerializeOptions {
  * @remarks
  * Converts attachment Blobs to base64 (if present), computes a SHA-256
  * content hash when the Web Crypto API is available, and wraps everything
- * in a version 1 envelope with `system: 'classic-fantasy'`.
+ * in a version 1 envelope. The envelope `system` is derived from the exported
+ * content (campaign system, else the first character's `systemId`), so a
+ * Traveller or Savage Worlds bundle carries its own system id rather than
+ * being mislabelled `classic-fantasy`.
  *
  * @param type - The export scope: character, session, or campaign.
  * @param contents - The collected (and optionally privacy-filtered) bundle contents.
@@ -41,13 +44,18 @@ export async function serializeBundle(
     );
   }
 
-  // Step 4: Build envelope
+  // Step 4: Build envelope. Derive the system id from the content so the bundle
+  // is labelled with the ruleset it actually contains, not a hardcoded default.
+  const system =
+    processedContents.campaign?.system ??
+    (processedContents.characters?.[0] as { systemId?: string } | undefined)?.systemId ??
+    'classic-fantasy';
   const envelope: BundleEnvelope = {
     version: 1,
     type,
     exportedAt: new Date().toISOString(),
     exportedBy: options.exportedBy,
-    system: 'classic-fantasy',
+    system,
     contentHash: contentHash ?? undefined,
     contents: processedContents,
   };
