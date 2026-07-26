@@ -11,6 +11,7 @@ import { useAutosave } from '../hooks/useAutosave';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 import { useFieldEditable, useIsEditMode } from '../utils/modeGuards';
 import { AttributeField } from '../components/fields/AttributeField';
+import { RepeatableRows, type RepeatableColumn } from '../components/fields/RepeatableRows';
 import { CharacterPortrait } from '../components/fields/CharacterPortrait';
 import { ConditionToggleGroup } from '../components/fields/ConditionToggleGroup';
 import { ResourceTracker } from '../components/fields/ResourceTracker';
@@ -67,6 +68,37 @@ function clamp(value: number, min: number, max: number): number {
  * @returns The character sheet UI, or a loading indicator, or `null` while
  *   redirecting.
  */
+/** Career-history rows on the Traveller sheet: one per term (Book columns). */
+const CAREER_COLUMNS: RepeatableColumn[] = [
+  { key: 'term', label: 'Term', flex: '0 0 56px' },
+  { key: 'career', label: 'Career', flex: '2 1 140px' },
+  { key: 'survival', label: 'Surv.', flex: '0 0 64px' },
+  { key: 'advancement', label: 'Adv.', flex: '0 0 64px' },
+  { key: 'rank', label: 'Rank', flex: '1 1 100px' },
+  { key: 'notes', label: 'Notes', flex: '3 1 100%' },
+];
+
+/** Post-creation skill training (Skill / Completed Weeks / Study Periods). */
+const TRAINING_COLUMNS: RepeatableColumn[] = [
+  { key: 'skill', label: 'Skill', flex: '2 1 140px' },
+  { key: 'weeks', label: 'Completed Weeks', flex: '1 1 110px' },
+  { key: 'studyPeriods', label: 'Study Periods', flex: '1 1 110px' },
+];
+
+/** Name/notes columns shared by the Allies/Contacts/Rivals/Enemies tables. */
+const CONNECTION_COLUMNS: RepeatableColumn[] = [
+  { key: 'name', label: 'Name', flex: '1 1 140px' },
+  { key: 'notes', label: 'Notes', flex: '2 1 160px' },
+];
+
+/** The four connection tables on the Traveller sheet. */
+const CONNECTION_GROUPS = [
+  { key: 'allies', label: 'Allies', add: 'Ally' },
+  { key: 'contacts', label: 'Contacts', add: 'Contact' },
+  { key: 'rivals', label: 'Rivals', add: 'Rival' },
+  { key: 'enemies', label: 'Enemies', add: 'Enemy' },
+];
+
 export default function SheetScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
@@ -299,6 +331,18 @@ export default function SheetScreen() {
   function setSysStr(key: string, value: string) {
     if (!character) return;
     updateCharacter({ systemData: { ...character.systemData, [key]: value }, updatedAt: nowISO() });
+  }
+
+  /** Reads a repeatable-row list (array of string records) out of the system bag. */
+  function sysRows(key: string): Record<string, string>[] {
+    const value = character?.systemData?.[key];
+    return Array.isArray(value) ? (value as Record<string, string>[]) : [];
+  }
+
+  /** Writes a repeatable-row list into the character's system-specific bag. */
+  function setSysRows(key: string, rows: Record<string, string>[]) {
+    if (!character) return;
+    updateCharacter({ systemData: { ...character.systemData, [key]: rows }, updatedAt: nowISO() });
   }
 
   function setDerivedOverride(key: string, value: number) {
@@ -680,15 +724,71 @@ export default function SheetScreen() {
     </SectionPanel>
   );
 
+  const creationSubHeading =
+    'm-0 mb-[var(--space-xs)] text-[length:var(--font-size-sm)] font-semibold uppercase tracking-wide text-[var(--color-accent)]';
   const careersPanel = (
-    <SectionPanel title="Careers / Background" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
-      <textarea
-        aria-label="Careers"
-        className={cn(inputClass(identityEditable), 'min-h-[120px]', identityEditable ? 'field--editable' : 'field--locked')}
-        value={sysStr('careers')}
-        disabled={!identityEditable}
-        onChange={e => setSysStr('careers', e.target.value)}
-      />
+    <SectionPanel title="Careers & Creation History" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
+      <div className="flex flex-col gap-[var(--space-lg)]">
+        {/* Career history — one row per term, mirroring the Book's careers table. */}
+        <div>
+          <h4 className={creationSubHeading}>Career History</h4>
+          <RepeatableRows
+            columns={CAREER_COLUMNS}
+            rows={sysRows('careerTerms')}
+            onChange={r => setSysRows('careerTerms', r)}
+            editable={identityEditable}
+            addLabel="Term"
+            emptyLabel="No career terms recorded."
+          />
+        </div>
+
+        {/* Post-creation skill training. */}
+        <div>
+          <h4 className={creationSubHeading}>Training</h4>
+          <RepeatableRows
+            columns={TRAINING_COLUMNS}
+            rows={sysRows('training')}
+            onChange={r => setSysRows('training', r)}
+            editable={identityEditable}
+            addLabel="Training"
+            emptyLabel="No training recorded."
+          />
+        </div>
+
+        {/* Connections: Allies / Contacts / Rivals / Enemies. */}
+        <div>
+          <h4 className={creationSubHeading}>Connections</h4>
+          <div className="flex flex-col gap-[var(--space-md)]">
+            {CONNECTION_GROUPS.map(group => (
+              <div key={group.key}>
+                <p className="m-0 mb-[var(--space-xs)] text-[length:0.7rem] uppercase tracking-wide text-[var(--color-text-muted)]">
+                  {group.label}
+                </p>
+                <RepeatableRows
+                  columns={CONNECTION_COLUMNS}
+                  rows={sysRows(group.key)}
+                  onChange={r => setSysRows(group.key, r)}
+                  editable={identityEditable}
+                  addLabel={group.add}
+                  emptyLabel={`No ${group.label.toLowerCase()} recorded.`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Freeform prose — carries any existing "Careers / Background" text. */}
+        <div>
+          <h4 className={creationSubHeading}>History &amp; Background</h4>
+          <textarea
+            aria-label="History and Background"
+            className={cn(inputClass(identityEditable), 'min-h-[120px]', identityEditable ? 'field--editable' : 'field--locked')}
+            value={sysStr('careers')}
+            disabled={!identityEditable}
+            onChange={e => setSysStr('careers', e.target.value)}
+          />
+        </div>
+      </div>
     </SectionPanel>
   );
 
