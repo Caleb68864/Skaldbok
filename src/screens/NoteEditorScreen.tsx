@@ -158,12 +158,15 @@ export default function NoteEditorScreen() {
         await updateNote(note.id, pending);
         pendingUpdatesRef.current = {};
       } catch (e) {
+        // Surface the failure — otherwise "Saving…" clears and the user believes
+        // the edit persisted. pendingUpdatesRef is kept, so the next edit retries.
         console.error('NoteEditorScreen: autosave failed', e);
+        showToast('Could not save note — your latest changes are not saved yet.', 'error');
       } finally {
         setSaving(false);
       }
     }, 800);
-  }, [note]);
+  }, [note, showToast]);
 
   // Keep noteRef in sync with note state so the flush closure (registered
   // once on mount) always operates on the latest note.
@@ -187,6 +190,7 @@ export default function NoteEditorScreen() {
           pendingUpdatesRef.current = {};
         } catch (e) {
           console.error('NoteEditorScreen: flush failed', e);
+          showToast('Could not save note before leaving — your latest changes are not saved.', 'error');
         }
       }
     };

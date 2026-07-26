@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+import { flushAll } from '../features/persistence/autosaveFlush';
 
 export interface UseUpdateAvailableOptions {
   /**
@@ -94,9 +95,21 @@ export function useUpdateAvailable(
   });
 
   const applyUpdate = useCallback(() => {
+    // Flush pending debounced autosaves BEFORE the reload, so an edit made
+    // within the 1s autosave window isn't lost when the new SW reloads the page.
+    // Every other destructive lifecycle path (clearCharacter, deleteCharacter,
+    // endSession) awaits flushAll() for exactly this reason; the update flow was
+    // the one that skipped it.
     // `true` = reload after new SW takes control. The plugin handles the
     // postMessage → controllerchange → location.reload() sequence.
-    void updateServiceWorker(true).catch((err) => {
+    void (async () => {
+      try {
+        await flushAll();
+      } catch (err) {
+        console.error('[pwa] autosave flush before update failed', err);
+      }
+      await updateServiceWorker(true);
+    })().catch((err) => {
       console.error('[pwa] failed to apply update', err);
     });
   }, [updateServiceWorker]);

@@ -8,6 +8,7 @@ import type { Encounter } from '../../types/encounter';
 import { db } from '../../storage/db/client';
 import * as metadataRepository from '../../storage/repositories/metadataRepository';
 import * as characterRepository from '../../storage/repositories/characterRepository';
+import * as campaignRepository from '../../storage/repositories/campaignRepository';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useAppState } from '../../context/AppStateContext';
 import { generateId } from '../../utils/ids';
@@ -277,9 +278,13 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     async function hydrate() {
       try {
         const persistedCampaignId = await metadataRepository.get(ACTIVE_CAMPAIGN_METADATA_KEY);
+        // Route through the repository (excludes soft-deleted + validates) rather
+        // than raw db.campaigns.get: a soft-deleted campaign keeps status:'active'
+        // (softDelete only stamps deletedAt), so a raw read would resurrect a
+        // deleted campaign as active and re-persist it to metadata on reload.
         const campaign = persistedCampaignId
-          ? await db.campaigns.get(persistedCampaignId)
-          : await db.campaigns.where('status').equals('active').first();
+          ? await campaignRepository.getCampaignById(persistedCampaignId)
+          : (await campaignRepository.getAllCampaigns()).find(c => c.status === 'active');
         if (!mounted) return;
 
         if (!campaign) {
@@ -481,7 +486,10 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
 
   const setActiveCampaign = useCallback(async (campaignId: string) => {
     try {
-      const campaign = await db.campaigns.get(campaignId);
+      // Via the repository so a stale id pointing at a soft-deleted campaign
+      // (e.g. deleted in another tab between list render and click) can't be
+      // activated and re-persisted.
+      const campaign = await campaignRepository.getCampaignById(campaignId);
       if (!campaign) {
         showToast('Campaign not found');
         return;

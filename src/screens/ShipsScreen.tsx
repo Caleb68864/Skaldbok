@@ -38,8 +38,12 @@ export default function ShipsScreen() {
   const reload = useCallback(async () => {
     if (!campaignId) return;
     setShips(await shipRepository.listByCampaign(campaignId));
-    setCharacters(await characterRepository.getAll());
-  }, [campaignId]);
+    // Characters are a global library; scope the owner options to this campaign's
+    // system so a Traveller ship can't be assigned a Dragonbane owner (and the
+    // list isn't cluttered with characters from unrelated campaigns).
+    const all = await characterRepository.getAll();
+    setCharacters(activeCampaign ? all.filter(c => c.systemId === activeCampaign.system) : all);
+  }, [campaignId, activeCampaign]);
 
   useEffect(() => {
     reload().catch(console.error);

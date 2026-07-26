@@ -81,6 +81,11 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
   const setCharacter = useCallback(async (id: string) => {
     const char = await characterRepository.getById(id);
     if (char) {
+      // Flush the outgoing character's pending autosave before switching, so a
+      // debounced edit can't fire against — or be dropped in favour of — the new
+      // character. Mirrors clearCharacter; matters now that campaign-switch
+      // reconciliation calls setCharacter in place while the sheet stays mounted.
+      await flushAll();
       setCharacterState(normalizeCharacter(char));
       await updateSettings({ activeCharacterId: id });
     }
