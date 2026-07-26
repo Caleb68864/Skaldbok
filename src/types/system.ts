@@ -200,4 +200,16 @@ export interface SystemDefinition {
     attributesPanel: string;
     encumbrance: string;
   }>;
+  /**
+   * Optional overrides for declarative, user-facing arrays. When present, each
+   * REPLACES the engine adapter's default wholesale (a system defines its own
+   * palette), letting a JSON-only system customise these without code. Ids are
+   * persisted on logged events / roll state, so keep them stable across renames.
+   * Shapes mirror the engine's `LogAction`/`OutcomeOption`/`RollModifierOption`/
+   * `TimeUnit`.
+   */
+  logActions?: Array<{ id: string; label: string }>;
+  outcomes?: Array<{ id: string; label: string; tone?: 'success' | 'failure' | 'critical' | 'fumble' }>;
+  rollModifiers?: Array<{ id: string; label: string }>;
+  timeUnits?: Array<{ id: string; label: string; abbrev: string }>;
 }

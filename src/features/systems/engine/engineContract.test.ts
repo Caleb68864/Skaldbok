@@ -2,6 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { BUNDLED_SYSTEMS } from '../../../systems/registry';
 import { getEngine } from './index';
 
+describe('getEngine declarative-array overrides', () => {
+  // +1000 keeps the memo cache key distinct from the real bundled system.
+  const base = BUNDLED_SYSTEMS[0];
+
+  it('replaces logActions from system.json wholesale, keeps others', () => {
+    const engine = getEngine({ ...base, version: base.version + 1000, logActions: [{ id: 'zap', label: 'Zap' }] });
+    expect(engine.logActions).toEqual([{ id: 'zap', label: 'Zap' }]);
+    // An un-overridden array still comes from the adapter default.
+    expect(engine.outcomes).toEqual(getEngine(base).outcomes);
+  });
+});
+
 /**
  * Referential-integrity contract every SystemEngine adapter must satisfy.
  *

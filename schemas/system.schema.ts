@@ -136,6 +136,16 @@ export const systemDefinitionSchema = z.object({
     quickReferencePanel: z.string().optional(),
     storyBankPanel: z.string().optional(),
   }).optional().describe('Overrides for panel/screen titles; abilitiesScreen null hides that tab'),
+  // Declarative display arrays; when present each REPLACES the engine adapter
+  // default wholesale (see getEngine). Ids are persisted, so keep them stable.
+  logActions: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).optional(),
+  outcomes: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    tone: z.enum(['success', 'failure', 'critical', 'fumble']).optional(),
+  })).optional(),
+  rollModifiers: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).optional(),
+  timeUnits: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), abbrev: z.string().min(1) })).optional(),
 }).superRefine((def, ctx) => {
   // Cross-reference integrity: without these, a typo'd id (e.g. a skill linked
   // to a non-existent attribute) passes validation and then silently misbehaves
