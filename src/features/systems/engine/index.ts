@@ -46,7 +46,7 @@ const engineCache = new Map<string, SystemEngine>();
  */
 export function getEngine(system: SystemDefinition | undefined | null): SystemEngine {
   const base = baseEngineFor(system);
-  if (!system || (!system.terms && !system.labels)) return base;
+  if (!system) return base;
 
   const key = `${system.id}@${system.version}`;
   const cached = engineCache.get(key);
@@ -54,6 +54,14 @@ export function getEngine(system: SystemDefinition | undefined | null): SystemEn
 
   const merged: SystemEngine = {
     ...base,
+    // Derive attributeIds from the definition so adding/renaming a characteristic
+    // in system.json fully wires it (DM badge, characteristic grid, modifier
+    // targets) without also editing the adapter's hardcoded array.
+    // engineContract.test.ts pins engine.attributeIds === system.attributes ids
+    // in order for every bundled system. resourceIds is deliberately NOT derived:
+    // an adapter may expose a subset (Dragonbane omits the deathRolls/
+    // deathSuccesses death-track counters that its system.json still declares).
+    attributeIds: system.attributes.map(a => a.id),
     terms: { ...base.terms, ...system.terms },
     labels: { ...base.labels, ...system.labels },
   };

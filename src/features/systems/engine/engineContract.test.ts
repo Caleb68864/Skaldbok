@@ -18,8 +18,6 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
   (_name, system) => {
     const engine = getEngine(system);
     const resourceIds = new Set(engine.resourceIds);
-    const sysAttrIds = new Set(system.attributes.map(a => a.id));
-    const sysResIds = new Set(system.resources.map(r => r.id));
 
     it('primaryHealthResourceId is null or names a real resource', () => {
       if (engine.primaryHealthResourceId !== null) {
@@ -43,11 +41,17 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
       if (engine.magic) expect(resourceIds.has(engine.magic.resourceId)).toBe(true);
     });
 
-    it('attributeIds match the system definition (no drift)', () => {
-      expect(new Set(engine.attributeIds)).toEqual(sysAttrIds);
+    it('attributeIds match the system definition in order (no drift)', () => {
+      expect(engine.attributeIds).toEqual(system.attributes.map(a => a.id));
     });
 
     it('every resourceId exists in the system definition', () => {
+      // resourceIds is intentionally a SUBSET, not an exact match: Dragonbane's
+      // system.json also declares deathRolls/deathSuccesses (death-track
+      // counters surfaced via the DeathModel, not as normal resources), so the
+      // adapter deliberately omits them. Only the subset relationship is a bug
+      // if violated (an engine naming a resource the definition doesn't have).
+      const sysResIds = new Set(system.resources.map(r => r.id));
       for (const id of engine.resourceIds) expect(sysResIds.has(id)).toBe(true);
     });
 
