@@ -72,8 +72,16 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
   }
   const initiativeDM = characteristicDMs['dex'] ?? 0;
 
+  // hpMax/wpMax/movement/damageBonus/aglDamageBonus are Dragonbane-shaped fields
+  // the base DerivedValues type still mandates. Traveller has none of them — it
+  // surfaces its real stats (characteristicDMs, initiativeDM, encumbranceLimit)
+  // separately — so these are inert placeholders. They MUST stay neutral (0/'+0'),
+  // NOT a "meaningful" value: hpMax was previously END, a landmine that
+  // PrintableSheet.maxFor would print as max HP for any system cloned from this
+  // one that declares an `hp` resource. Traveller has no `hp` resource, so 0 here
+  // is never read; keeping it honest protects future clones.
   return {
-    hpMax: character.attributes?.['end'] ?? 0,
+    hpMax: 0,
     wpMax: 0,
     movement: 0,
     damageBonus: '+0',
