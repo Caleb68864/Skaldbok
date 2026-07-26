@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 8,
+  "version": 9,
   "name": "traveller",
   "displayName": "Traveller",
   "resolution": "2d6-plus",
@@ -135,6 +135,12 @@
           "linkedAttributeId": "dex"
         },
         {
+          "id": "gunner",
+          "name": "Gunner",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
           "id": "tactics",
           "name": "Tactics (Military)",
           "baseChance": 0,
@@ -185,6 +191,18 @@
         {
           "id": "pilot",
           "name": "Pilot (Spacecraft)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "pilotSmallCraft",
+          "name": "Pilot (Small Craft)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "flyer",
+          "name": "Flyer (Grav)",
           "baseChance": 0,
           "linkedAttributeId": "dex"
         },
