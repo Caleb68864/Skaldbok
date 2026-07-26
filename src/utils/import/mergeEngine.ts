@@ -173,7 +173,15 @@ async function mergeEntity(
     return;
   }
 
-  if (bundleUpdatedAt > localUpdatedAt) {
+  // Compare as parsed timestamps, not raw strings: a hand-edited/community
+  // bundle may carry a differently-formatted timestamp than the local ISO-Z
+  // one, and a lexicographic compare would then pick the wrong winner (overwrite
+  // a newer local row, or fail to apply a newer import). An unparseable bundle
+  // timestamp yields NaN, so the comparison is false and the local row is kept.
+  const bundleTime = Date.parse(bundleUpdatedAt);
+  const localTime = Date.parse(localUpdatedAt);
+
+  if (bundleTime > localTime) {
     // Bundle is newer — update local
     const toUpdate = entityType === 'attachments' ? restoreAttachmentBlob(reparented) : reparented;
     if (!toUpdate) {
