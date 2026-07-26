@@ -9,7 +9,7 @@ import { Button } from '../components/primitives/Button';
 import { Modal } from '../components/primitives/Modal';
 import { db } from '../storage/db/client';
 import * as characterRepository from '../storage/repositories/characterRepository';
-import type { ThemeName } from '../theme/themes';
+import { type ThemeName, THEME_LIST, THEME_DISPLAY_NAMES } from '../theme/themes';
 import { DEFAULT_BOTTOM_NAV_TABS } from '../features/settings/useAppSettings';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { useSystemEngine } from '../features/systems/engine';
@@ -36,15 +36,25 @@ const TRAILING_BOTTOM_NAV_TABS: { id: string; label: string }[] = [
   { id: 'profile', label: 'Profile' },
 ];
 
-const THEMES: { value: ThemeName; label: string; description: string }[] = [
-  { value: 'dark', label: 'Dark', description: 'Deep grays with golden accents' },
-  { value: 'parchment', label: 'Parchment', description: 'Warm fantasy-inspired tones' },
-  { value: 'light', label: 'Light', description: 'Clean whites and light grays' },
-  { value: 'starfarers-cockpit', label: "Starfarer's Cockpit", description: 'Brushed steel & chrome, hard machined edges, HUD lettering' },
-  { value: 'deep-space', label: 'Deep Space', description: 'Space-black and navy with amber + cyan accents' },
-  { value: 'databank', label: 'Databank', description: 'Cool slate/white with electric blue accents' },
-  { value: 'neon-sprawl', label: 'Neon Sprawl', description: 'Cyberpunk near-black with magenta + neon-cyan accents' },
-];
+/** Rich per-theme descriptions; labels come from THEME_DISPLAY_NAMES. */
+const THEME_DESCRIPTIONS: Partial<Record<ThemeName, string>> = {
+  dark: 'Deep grays with golden accents',
+  parchment: 'Warm fantasy-inspired tones',
+  light: 'Clean whites and light grays',
+  'starfarers-cockpit': "Brushed steel & chrome, hard machined edges, HUD lettering",
+  'deep-space': 'Space-black and navy with amber + cyan accents',
+  databank: 'Cool slate/white with electric blue accents',
+  'neon-sprawl': 'Cyberpunk near-black with magenta + neon-cyan accents',
+};
+
+// Derived from THEME_LIST (the source of truth) rather than a hand-maintained
+// literal, so a theme added to the type/list can never again be silently
+// unreachable in the picker (notebook-paper was missing before).
+const THEMES: { value: ThemeName; label: string; description: string }[] = THEME_LIST.map(value => ({
+  value,
+  label: THEME_DISPLAY_NAMES[value],
+  description: THEME_DESCRIPTIONS[value] ?? '',
+}));
 
 /**
  * App settings screen: theme, bottom-nav tab selection, PWA install, and the

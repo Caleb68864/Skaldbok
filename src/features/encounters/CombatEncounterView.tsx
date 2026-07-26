@@ -244,7 +244,8 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
         name: template.name,
         type: 'monster',
         instanceState: { currentHp: template.stats.hp },
-        sortOrder: (enc.participants?.length ?? 0) + 1,
+        // max(existing)+1, not length+1, so it stays unique after a mid-list removal.
+        sortOrder: Math.max(0, ...(enc.participants ?? []).map(p => p.sortOrder)) + 1,
       };
       await db.encounters.update(encounter.id, {
         participants: [...(enc.participants ?? []), newParticipant],
@@ -317,7 +318,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
           Participants ({participants.length})
         </h4>
         <div className="flex flex-col gap-1.5">
-          {participants
+          {[...participants]
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((p) => {
               const linkedCreatureId = participantTemplateMap[p.id];

@@ -148,7 +148,10 @@ export function useEncounter(
           name: template.name,
           type: participantType,
           instanceState: hp !== undefined ? { currentHp: hp } : {},
-          sortOrder: (enc.participants?.length ?? 0) + 1,
+          // max(existing sortOrder) + 1, not length + 1: after a mid-list removal
+          // length can collide with an existing sortOrder (add P1,P2,P3; remove
+          // P2; the next add would reuse 3), leaving a non-unique ordering key.
+          sortOrder: Math.max(0, ...(enc.participants ?? []).map(p => p.sortOrder)) + 1,
         };
 
         const updatedParticipants = [...(enc.participants ?? []), newParticipant];

@@ -61,14 +61,22 @@ export default function PrintableSheetScreen() {
   const override = (key: keyof PrintDerivedValues): number | null =>
     character.derivedOverrides?.[key] ?? null;
 
-  const derived: PrintDerivedValues = {
+  // Spread the FULL engine-derived map first so any print-surfaced field the
+  // engine declares survives (Savage Worlds' Pace/Parry/Toughness, Traveller's
+  // Initiative DM) — previously these were silently dropped because this struct
+  // only carried the six Dragonbane keys. The override-adjusted known keys are
+  // overlaid on top. DerivedStatsRow only renders fields the engine declares
+  // with a print surface, so spreading inert dummies (hpMax/wpMax on SWADE) is
+  // harmless.
+  const derived = {
+    ...(engineDerived as unknown as Record<string, string | number | undefined>),
     damageBonus: String(override('damageBonus') ?? engineDerived.damageBonus),
     aglDamageBonus: String(override('aglDamageBonus') ?? engineDerived.aglDamageBonus),
     movement: Number(override('movement') ?? engineDerived.movement),
     encumbranceLimit: Number(override('encumbranceLimit') ?? engineDerived.encumbranceLimit),
     hpMax: Number(override('hpMax') ?? engineDerived.hpMax),
     wpMax: Number(override('wpMax') ?? engineDerived.wpMax),
-  };
+  } as unknown as PrintDerivedValues;
 
   return (
     <>

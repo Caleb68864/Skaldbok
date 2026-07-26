@@ -54,7 +54,9 @@ export async function addPartyCharactersToEncounter(
         name: character.name,
         type: 'pc',
         instanceState: {},
-        sortOrder: updatedParticipants.length + 1,
+        // max(existing)+1, not length+1 — recomputed each iteration (it includes
+        // the just-pushed ones) so keys stay unique even after prior removals.
+        sortOrder: Math.max(0, ...updatedParticipants.map(p => p.sortOrder)) + 1,
       };
 
       updatedParticipants.push(newParticipant);
