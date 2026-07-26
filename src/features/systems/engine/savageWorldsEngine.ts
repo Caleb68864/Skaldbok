@@ -6,6 +6,14 @@ import type { SystemEngine } from './types';
 
 export const SAVAGE_WORLDS_ATTRIBUTE_IDS = ['agility', 'smarts', 'spirit', 'strength', 'vigor'];
 
+/**
+ * The unskilled trait die (d4) — Savage Worlds' skill floor. Named so the die
+ * ladder's min, the default value, and the "is this skill trained?" threshold
+ * all derive from ONE number: a clone that raises the floor edits it once
+ * instead of five scattered `4` literals that would otherwise drift.
+ */
+const SAVAGE_UNSKILLED_DIE = 4;
+
 /** A trait die's sides for a character, defaulting to d4 when unset. */
 function dieSides(character: CharacterRecord, id: string): number {
   return character.attributes?.[id] ?? 4;
@@ -121,17 +129,17 @@ export const savageWorldsEngine: SystemEngine = {
   skill: {
     valueLabel: 'Die',
     // Die sides, walked along the ladder rather than every integer.
-    range: { min: 4, max: 12 },
-    ladder: [4, 6, 8, 10, 12],
+    range: { min: SAVAGE_UNSKILLED_DIE, max: 12 },
+    ladder: [SAVAGE_UNSKILLED_DIE, 6, 8, 10, 12],
     advancementMax: 12,
-    defaultValue: 4,
+    defaultValue: SAVAGE_UNSKILLED_DIE,
     display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character) : 0),
     supportsMarks: false,
     // A skill "counts" once the character has trained it (bought a die above the
     // unskilled d4 baseline).
-    isRelevant: skill => !!skill && (skill.trained || skill.value > 4),
+    isRelevant: skill => !!skill && (skill.trained || skill.value > SAVAGE_UNSKILLED_DIE),
     // The die is authored directly; unset skills sit at the unskilled d4.
-    computeValue: () => 4,
+    computeValue: () => SAVAGE_UNSKILLED_DIE,
     trainedAffectsValue: false,
     supportsBoonBane: false,
   },
