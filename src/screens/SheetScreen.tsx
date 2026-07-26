@@ -18,6 +18,7 @@ import { ResourceTracker } from '../components/fields/ResourceTracker';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { DerivedFieldDisplay } from '../components/fields/DerivedFieldDisplay';
 import { getEffectiveValue } from '../utils/derivedValues';
+import { damageStatus } from '../utils/damageTrack';
 import { BuffChipBar } from '../components/panels/BuffChipBar';
 import { AddModifierDrawer } from '../components/panels/AddModifierDrawer';
 import type { TempModifier } from '../types/character';
@@ -25,6 +26,8 @@ import { GameIcon } from '../components/primitives/GameIcon';
 import { Modal } from '../components/primitives/Modal';
 import { useToast } from '../context/ToastContext';
 import * as characterRepository from '../storage/repositories/characterRepository';
+import * as shipRepository from '../storage/repositories/shipRepository';
+import type { Ship } from '../types/ship';
 import { nowISO } from '../utils/dates';
 import { generateId } from '../utils/ids';
 import { cn } from '../lib/utils';
@@ -173,6 +176,27 @@ export default function SheetScreen() {
     conditionToClear: string;
   } | null>(null);
 
+  // Ships this character owns (campaign-scoped rows, but queried by owner so the
+  // sheet stays campaign-agnostic). Drives the read-only Ship summary panel,
+  // which deep-links to /ships for editing. Empty for characters with no ship.
+  const [ownedShips, setOwnedShips] = useState<Ship[]>([]);
+  useEffect(() => {
+    if (!character?.id) {
+      setOwnedShips([]);
+      return;
+    }
+    let alive = true;
+    shipRepository
+      .listByOwner(character.id)
+      .then(ships => {
+        if (alive) setOwnedShips(ships);
+      })
+      .catch(console.error);
+    return () => {
+      alive = false;
+    };
+  }, [character?.id]);
+
   // Temp modifier state
   const [addModifierOpen, setAddModifierOpen] = useState(false);
   const [expiryCheck, setExpiryCheck] = useState<{
@@ -225,6 +249,8 @@ export default function SheetScreen() {
     finances: engine.panels.includes('finances'),
     careers: engine.panels.includes('careers'),
     augments: engine.panels.includes('augments'),
+    // Shown only when the character actually owns a ship, regardless of system.
+    ships: ownedShips.length > 0,
     edges: engine.panels.includes('edges'),
     hindrances: engine.panels.includes('hindrances'),
     rest: engine.rest !== null,
@@ -243,6 +269,7 @@ export default function SheetScreen() {
     'finances',
     'careers',
     'augments',
+    'ships',
     'edges',
     'hindrances',
     'rest',
@@ -620,9 +647,23 @@ export default function SheetScreen() {
     </>
   );
 
+  // Aggregate down/dead status for a cascading damage track (Traveller): the
+  // per-track steppers below show each characteristic's damage, but not the
+  // combined "two tracks depleted = unconscious, three = dead" state. Mirrors
+  // the Play Dashboard's Damage & Heal banner so the status is visible on the
+  // sheet itself, not only when playing from the dashboard.
+  const trackStatus = engine.damageTrack ? damageStatus(character, engine.damageTrack) : 'ok';
   const resourcesPanel = (
     <SectionPanel title={engine.labels.resourcesPanel} icon={<GameIcon name="health-potion" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-md)]">
+        {engine.damageTrack && trackStatus !== 'ok' && (
+          <p
+            role="status"
+            className="m-0 text-center text-[length:var(--font-size-sm)] font-bold text-[var(--color-danger)]"
+          >
+            {trackStatus === 'dead' ? engine.damageTrack.deadLabel : engine.damageTrack.downLabel}
+          </p>
+        )}
         {engine.resourceIds.map(resId => {
           const res = character.resources[resId];
           if (!res) return null;
@@ -834,6 +875,40 @@ export default function SheetScreen() {
       </div>
     </SectionPanel>
   );
+
+  // Read-only summary of the ships this character owns. Editing lives on /ships
+  // (ships are campaign-scoped entities, not character fields); this panel is a
+  // convenience pointer so the sheet references the vessel without duplicating
+  // it. Hidden entirely when the character owns no ship.
+  const shipsPanel =
+    ownedShips.length > 0 ? (
+      <SectionPanel title="Ships" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
+        <div className="flex flex-col gap-[var(--space-md)]">
+          {ownedShips.map(ship => (
+            <button
+              key={ship.id}
+              type="button"
+              onClick={() => navigate('/ships')}
+              className="flex flex-col items-start gap-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] p-[var(--space-md)] text-left cursor-pointer hover:bg-[var(--color-surface)]"
+            >
+              <span className="font-semibold text-[var(--color-text)]">
+                {ship.name}
+                {ship.shipClass ? (
+                  <span className="font-normal text-[var(--color-text-muted)]"> · {ship.shipClass}</span>
+                ) : null}
+              </span>
+              <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
+                Hull {ship.hullCurrent}/{ship.hullMax} · Cargo {ship.cargoCurrent}/{ship.cargoMax}t · Fuel{' '}
+                {ship.fuelCurrent}/{ship.fuelMax}
+              </span>
+              <span className="text-[length:0.7rem] uppercase tracking-wide text-[var(--color-primary)]">
+                Open in Ships →
+              </span>
+            </button>
+          ))}
+        </div>
+      </SectionPanel>
+    ) : null;
 
   const augmentsPanel = (
     <SectionPanel title="Augments / Species" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
@@ -1084,6 +1159,7 @@ export default function SheetScreen() {
     finances: financesPanel,
     careers: careersPanel,
     augments: augmentsPanel,
+    ships: shipsPanel,
     edges: edgesPanel,
     hindrances: hindrancesPanel,
     rest: restPanel,

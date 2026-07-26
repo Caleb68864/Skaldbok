@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "play": {
     "layout": "two-column",
     "regions": [
@@ -38,6 +38,7 @@
         "finances",
         "careers",
         "augments",
+        "ships",
         "rest",
         "storyBank"
       ]
