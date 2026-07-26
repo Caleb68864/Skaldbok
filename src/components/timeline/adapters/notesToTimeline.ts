@@ -51,6 +51,12 @@ function buildTrack(kind: string, catalog: typeof DEFAULT_TIMELINE_TRACK_CATALOG
     order: entry.order ?? 99,
     visible: entry.visible ?? true,
     collapsible: entry.collapsible,
+    // Carry the nesting parent so child note-type lanes group under their
+    // parent row. Deliberately NOT carrying `collapsed` yet: enabling
+    // collapse-by-default risks hiding note lanes if the expand affordance
+    // misbehaves, so nesting ships first (expanded, nothing hidden) and
+    // collapsed-default can be turned on once verified in the running app.
+    parentTrackId: entry.parentTrackId,
     description: entry.description,
     colorToken: entry.colorToken,
   };
@@ -96,12 +102,21 @@ export function buildTimelineFromNotesAdapter(
   const tracksByKind = new Map<string, TimelineTrack>();
   const items: TimelineItem[] = [];
 
-  const ensureTrack = (kind: string) => {
-    if (!tracksByKind.has(kind)) {
-      tracksByKind.set(kind, buildTrack(kind, catalog));
-    }
+  const ensureTrack = (kind: string): TimelineTrack => {
+    const existing = tracksByKind.get(kind);
+    if (existing) return existing;
 
-    return tracksByKind.get(kind)!;
+    const track = buildTrack(kind, catalog);
+    tracksByKind.set(kind, track);
+    // A child lane (e.g. `rumor`) nests under a parent grouping row it points at
+    // via `parentTrackId` (`track-<parentKind>`). That parent has no items of
+    // its own, so ensure it exists here — otherwise the nesting walk finds no
+    // parent and the children render as flat top-level lanes.
+    if (track.parentTrackId) {
+      const parentKind = track.parentTrackId.replace(/^track-/, '');
+      if (parentKind !== kind) ensureTrack(parentKind);
+    }
+    return track;
   };
 
   input.sessions?.filter(isActiveRecord).forEach((session) => {
