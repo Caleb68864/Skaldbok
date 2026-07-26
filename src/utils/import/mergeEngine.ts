@@ -84,31 +84,78 @@ export async function mergeBundle(
   options: MergeOptions
 ): Promise<MergeReport> {
   const report: MergeReport = { inserted: 0, updated: 0, skipped: 0, errors: [] };
+  // Encounters whose participant creature-links to verify AFTER the transaction
+  // commits — done outside the tx so no repository read runs inside it.
+  const encountersToCheck: Record<string, unknown>[] = [];
 
   try {
-    for (const entityType of PROCESSING_ORDER) {
-      if (!options.selectedEntityTypes.has(entityType)) continue;
+    // One transaction over every table the merge writes: a catastrophic mid-loop
+    // failure (quota exceeded, tab closed, DB error) now rolls the WHOLE import
+    // back instead of leaving entities without their relationship edges. Bad
+    // individual entities (e.g. an unrestorable attachment) are still collected
+    // as per-entity errors and skipped so one bad row doesn't abort the import;
+    // only DB-fatal errors are re-thrown to trigger the rollback.
+    await db.transaction(
+      'rw',
+      [
+        db.campaigns, db.sessions, db.parties, db.partyMembers, db.characters,
+        db.creatureTemplates, db.encounters, db.inventoryContainers, db.notes,
+        db.entityLinks, db.attachments,
+      ],
+      async () => {
+        for (const entityType of PROCESSING_ORDER) {
+          if (!options.selectedEntityTypes.has(entityType)) continue;
 
-      const entities = getEntities(bundle.contents, entityType);
-      if (!entities || entities.length === 0) continue;
+          const entities = getEntities(bundle.contents, entityType);
+          if (!entities || entities.length === 0) continue;
 
-      for (const entity of entities) {
-        try {
-          await mergeEntity(entity, entityType, options, bundle.contents, report);
-        } catch (err) {
-          report.errors.push({
-            entityType,
-            entityId: (entity as Record<string, unknown>).id as string ?? 'unknown',
-            message: String(err),
-          });
+          for (const entity of entities) {
+            try {
+              await mergeEntity(entity, entityType, options, bundle.contents, report, encountersToCheck);
+            } catch (err) {
+              if (isFatalMergeError(err)) throw err; // abort + roll back the whole import
+              report.errors.push({
+                entityType,
+                entityId: (entity as Record<string, unknown>).id as string ?? 'unknown',
+                message: String(err),
+              });
+            }
+          }
         }
       }
-    }
+    );
   } catch (err) {
-    report.errors.push({ entityType: 'unknown', entityId: 'unknown', message: String(err) });
+    // The transaction aborted and rolled back — nothing was committed, so the
+    // running insert/update tallies are void.
+    report.inserted = 0;
+    report.updated = 0;
+    report.errors.push({ entityType: 'unknown', entityId: 'unknown', message: `Import rolled back: ${String(err)}` });
+    return report;
+  }
+
+  // Post-commit, non-transactional: warn about participants whose linked
+  // creature template didn't come through.
+  for (const enc of encountersToCheck) {
+    await warnUnresolvableCreatureLinks(enc);
   }
 
   return report;
+}
+
+/**
+ * Whether a thrown error is a DB-fatal failure that should roll the whole import
+ * back (vs a per-entity data error that's logged and skipped). Quota/closed/
+ * aborted DB conditions are fatal; a malformed single row (e.g. bad base64 in an
+ * attachment → InvalidCharacterError) is not.
+ */
+function isFatalMergeError(err: unknown): boolean {
+  const name = (err as { name?: string } | null)?.name ?? '';
+  return (
+    name === 'QuotaExceededError' ||
+    name === 'AbortError' ||
+    name === 'DatabaseClosedError' ||
+    name === 'DexieError'
+  );
 }
 
 /**
@@ -119,7 +166,8 @@ async function mergeEntity(
   entityType: keyof BundleContents,
   options: MergeOptions,
   bundleContents: BundleContents,
-  report: MergeReport
+  report: MergeReport,
+  encountersToCheck: Record<string, unknown>[]
 ): Promise<void> {
   const id = entity.id as string;
   if (!id) {
@@ -157,9 +205,10 @@ async function mergeEntity(
     report.inserted++;
     console.info(`[merge] insert ${entityType} ${id}`);
 
-    // Check for unresolvable linkedCreatureId on encounter participants
+    // Defer the participant creature-link check until after the transaction
+    // commits (it reads a repository, which must not run inside the tx).
     if (entityType === 'encounters') {
-      await warnUnresolvableCreatureLinks(reparented);
+      encountersToCheck.push(reparented);
     }
     return;
   }
