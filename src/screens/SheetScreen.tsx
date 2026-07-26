@@ -334,8 +334,11 @@ export default function SheetScreen() {
       const max = prev.resources[id]?.max ?? 0;
       return { resources: { ...prev.resources, [id]: { ...prev.resources[id], current: clamp(current + delta, 0, max) } }, updatedAt: nowISO() };
     });
-    // Auto-log HP and WP changes to active session (debounced)
-    if (id === 'hp' || id === 'wp') {
+    // Auto-log resource changes to the active session (debounced). Gate on the
+    // engine's own resource ids, not the Dragonbane 'hp'/'wp' literals, so a
+    // Traveller END or Savage Worlds Wounds change is logged too. logHPChange
+    // already takes the resource id, so it was built to be system-agnostic.
+    if (engine.resourceIds.includes(id)) {
       logHPChange(character.name, oldCurrent, oldCurrent + delta, maxVal, id);
     }
   }

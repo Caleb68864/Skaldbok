@@ -64,12 +64,24 @@ resolve by the legacy precedence order so old data keeps working.
 
 1. Add `src/systems/<id>/system.json` + `index.ts`, and register it in
    `src/systems/registry.ts` (this drives the character-creation picker).
-2. Add an engine adapter under `src/features/systems/engine/` and wire it into
-   `getEngine`.
-3. **Bump the definition's `version` whenever you edit a bundled `system.json`.**
-   Stored definitions are cached in IndexedDB; `useSystemDefinition` only
-   refreshes when the bundled `version` is higher. Forget this and your change
-   is invisible to anyone who has already run the app.
+2. Add an engine adapter under `src/features/systems/engine/` and add a
+   `system.id === '<id>'` branch to `baseEngineFor` in `engine/index.ts` — the
+   one sanctioned place for a systemId branch (the "no `systemId ===`" rule
+   applies everywhere *else*). The `registry.ts` list and this branch are two
+   hand-maintained lists that must stay in lockstep.
+3. **Bump the `version` whenever you edit a bundled `system.json` — AND bump
+   `sheet.json`'s *separate* `version` whenever you edit that file.** Both are
+   cached in IndexedDB behind independent version gates (`useSystemDefinition`
+   for `system.json`, `useSheetTemplate` for `sheet.json`), and each only
+   refreshes when its bundled `version` is *strictly higher* than the cached
+   copy. Consequences of forgetting:
+   - The change is invisible to anyone who already ran the app — **including you
+     locally**, because the IndexedDB cache survives HMR/reload. To see your own
+     edit without a bump, clear IndexedDB.
+   - Editing skills/attributes/labels → bump `system.json`. Editing the sheet
+     layout/panel order/tiles → bump `sheet.json`. Edit both, bump one → half
+     your change ships. The two counters are unrelated and nothing cross-checks
+     them. (The `sheet.json` gate is the most-forgotten one.)
 
 ### Character schema migrations
 
