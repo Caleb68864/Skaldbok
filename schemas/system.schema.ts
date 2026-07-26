@@ -117,6 +117,49 @@ export const systemDefinitionSchema = z.object({
     attributesPanel: z.string().optional(),
     encumbrance: z.string().optional(),
   }).optional().describe('Overrides for panel/screen titles; abilitiesScreen null hides that tab'),
+}).superRefine((def, ctx) => {
+  // Cross-reference integrity: without these, a typo'd id (e.g. a skill linked
+  // to a non-existent attribute) passes validation and then silently misbehaves
+  // at runtime (DM resolves to 0, attribute map collision), which is the worst
+  // failure mode for a hand-edited or community-authored system.json.
+  const attrIds = def.attributes.map(a => a.id);
+  const resIds = def.resources.map(r => r.id);
+  const skillIds = def.skillCategories.flatMap(c => c.skills.map(s => s.id));
+  const attrSet = new Set(attrIds);
+
+  const flagDupes = (ids: string[], kind: string) => {
+    const seen = new Set<string>();
+    for (const id of ids) {
+      if (seen.has(id)) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Duplicate ${kind} id "${id}"` });
+      seen.add(id);
+    }
+  };
+  flagDupes(attrIds, 'attribute');
+  flagDupes(resIds, 'resource');
+  flagDupes(skillIds, 'skill');
+
+  for (const r of def.resources) {
+    if (r.derivedFrom && !attrSet.has(r.derivedFrom)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Resource "${r.id}" derivedFrom unknown attribute "${r.derivedFrom}"` });
+    }
+  }
+  for (const c of def.conditions) {
+    if (c.linkedAttributeId && !attrSet.has(c.linkedAttributeId)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Condition "${c.id}" linked to unknown attribute "${c.linkedAttributeId}"` });
+    }
+  }
+  for (const cat of def.skillCategories) {
+    for (const s of cat.skills) {
+      if (s.linkedAttributeId && !attrSet.has(s.linkedAttributeId)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Skill "${s.id}" linked to unknown attribute "${s.linkedAttributeId}"` });
+      }
+    }
+  }
+  for (const a of def.attributes) {
+    if (a.min > a.max) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Attribute "${a.id}" has min > max` });
+    }
+  }
 });
 
 export type SystemDefinitionSchema = z.infer<typeof systemDefinitionSchema>;
