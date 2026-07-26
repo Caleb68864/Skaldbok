@@ -4,6 +4,7 @@ import { nowISO } from '../../utils/dates';
 import { getNoteById } from '../../storage/repositories/noteRepository';
 import * as noteRepository from '../../storage/repositories/noteRepository';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
+import { useSystemEngine } from '../systems/engine';
 import { Drawer } from '../../components/primitives/Drawer';
 import { AbilityPicker } from './AbilityPicker';
 import { SpellPicker } from './SpellPicker';
@@ -56,6 +57,15 @@ const DEFAULT_LABELS: Record<EventType, string> = {
 
 export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
   const { character: activeCharacter } = useActiveCharacter();
+  const engine = useSystemEngine();
+  // Event-type label from the active system's vocabulary, not a Dragonbane
+  // literal — so a Traveller "spell" event reads "Psionics", an "ability" reads
+  // "Talent", etc. Falls back to the built-in default for any id the system's
+  // logActions palette doesn't define. (engine is memo-stable per system.)
+  const labelForType = useCallback((type: EventType): string => {
+    const raw = engine.logActions.find(a => a.id === type)?.label ?? DEFAULT_LABELS[type];
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
+  }, [engine]);
   const [typeData, setTypeData] = useState<CombatTypeData>({
     rounds: [{ roundNumber: 1, events: [] }],
     participants: [],
@@ -80,7 +90,7 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
   // Update label when event type changes
   useEffect(() => {
     if (eventForm.type) {
-      setEventForm(prev => ({ ...prev, label: DEFAULT_LABELS[prev.type!] }));
+      setEventForm(prev => ({ ...prev, label: labelForType(prev.type!) }));
     }
   // Only run when type changes, not on every eventForm change
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -278,7 +288,7 @@ export function CombatTimeline({ combatNoteId, onClose }: CombatTimelineProps) {
             onClick={() => handleEventTypeClick(type)}
             className="min-h-11 px-3 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-full text-[var(--color-text)] cursor-pointer text-[13px] font-semibold shrink-0"
           >
-            {type.charAt(0).toUpperCase() + type.slice(1)}
+            {labelForType(type)}
           </button>
         ))}
       </div>
