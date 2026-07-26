@@ -146,8 +146,12 @@ async function mergeEntity(
   const existing = await db.table(tableName).get(id) as Record<string, unknown> | undefined;
 
   if (!existing) {
-    // For attachments: restore base64 data back to Blob before inserting
+    // For attachments: restore base64 data back to Blob before inserting.
     const toInsert = entityType === 'attachments' ? restoreAttachmentBlob(reparented) : reparented;
+    if (!toInsert) {
+      report.errors.push({ entityType, entityId: id, message: 'Attachment has no restorable base64 data; skipped' });
+      return;
+    }
     // Insert new entity — use put() to preserve original ID
     await db.table(tableName).put(toInsert);
     report.inserted++;
@@ -172,6 +176,10 @@ async function mergeEntity(
   if (bundleUpdatedAt > localUpdatedAt) {
     // Bundle is newer — update local
     const toUpdate = entityType === 'attachments' ? restoreAttachmentBlob(reparented) : reparented;
+    if (!toUpdate) {
+      report.errors.push({ entityType, entityId: id, message: 'Attachment has no restorable base64 data; skipped' });
+      return;
+    }
     await db.table(tableName).put(toUpdate);
     report.updated++;
     console.info(`[merge] update ${entityType} ${id}`);
@@ -228,24 +236,24 @@ function getEntities(
 }
 
 /**
- * Converts a bundle attachment (with base64 data field) back to a storage
- * attachment (with Blob field) for insertion into IndexedDB.
+ * Converts a bundle attachment (base64 `data` field) back to a storage
+ * attachment (`blob` field) for insertion into IndexedDB. Returns `null` when
+ * the row carries no usable base64 payload — storing it verbatim would persist a
+ * blob-less attachment the app can't render, so the caller skips + reports it.
  */
-function restoreAttachmentBlob(entity: Record<string, unknown>): Record<string, unknown> {
+function restoreAttachmentBlob(entity: Record<string, unknown>): Record<string, unknown> | null {
   const data = entity.data as string | undefined;
   const encoding = entity.encoding as string | undefined;
-  if (data && encoding === 'base64') {
-    const binary = atob(data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-    const mimeType = (entity.mimeType as string) ?? 'application/octet-stream';
-    const blob = new Blob([bytes], { type: mimeType });
-    const { data: _data, encoding: _enc, ...rest } = entity;
-    return { ...rest, blob };
+  if (!data || encoding !== 'base64') return null;
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
-  return entity;
+  const mimeType = (entity.mimeType as string) ?? 'application/octet-stream';
+  const blob = new Blob([bytes], { type: mimeType });
+  const { data: _data, encoding: _enc, ...rest } = entity;
+  return { ...rest, blob };
 }
 
 /**
