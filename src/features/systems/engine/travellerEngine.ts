@@ -6,7 +6,7 @@ import {
   threeD6KeepTwoProbability,
 } from '../../../systems/traveller/travellerMath';
 import { attrKey, resKey } from '../../../utils/statKeys';
-import type { SystemEngine } from './types';
+import type { SystemEngine, SkillDisplayContext } from './types';
 
 export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'];
 
@@ -117,6 +117,24 @@ export function formatSkillDisplay(
 }
 
 /**
+ * The linked-characteristic DM and unskilled flag for one skill roll — the
+ * single computation both `skill.display` and `probability.chance` need.
+ * Extracted so the two surfaces cannot drift again (they disagreed once:
+ * display reported 26% while chance reported 42% for the same untrained skill).
+ * Untrained = the trained flag is explicitly false at level 0; a level implies
+ * trained, and an undefined flag is treated as trained.
+ */
+function travellerRollContext(
+  value: number,
+  context: SkillDisplayContext | undefined,
+): { dm: number; unskilled: boolean } {
+  const linkedId = context?.linkedAttributeId;
+  const dm = linkedId ? characteristicToDM(effectiveCharacteristic(context.character, linkedId)) : 0;
+  const unskilled = context?.trained === false && value === 0;
+  return { dm, unskilled };
+}
+
+/**
  * The Traveller ruleset, expressed as a {@link SystemEngine}.
  *
  * @remarks
@@ -143,13 +161,7 @@ export const travellerEngine: SystemEngine = {
     advancementMax: 6,
     defaultValue: 0,
     display: (value, context) => {
-      const linkedId = context?.linkedAttributeId;
-      const dm = linkedId
-        ? characteristicToDM(effectiveCharacteristic(context.character, linkedId))
-        : 0;
-      // Untrained = no skill (trained explicitly false, level 0); anything with a
-      // level is trained. Undefined trained flag is treated as trained.
-      const unskilled = context?.trained === false && value === 0;
+      const { dm, unskilled } = travellerRollContext(value, context);
       return formatSkillDisplay(value, dm, context?.boonBane ?? 'none', unskilled);
     },
     supportsMarks: false,
@@ -257,15 +269,10 @@ export const travellerEngine: SystemEngine = {
   probability: {
     // Skill level + linked-characteristic DM vs the default 8+ target.
     chance: (value, state, context) => {
-      const linkedId = context?.linkedAttributeId;
-      const dm = linkedId
-        ? characteristicToDM(effectiveCharacteristic(context.character, linkedId))
-        : 0;
-      // Fold in the −3 unskilled penalty on the same terms as skill.display /
-      // formatSkillDisplay, so the two engine surfaces report the same odds for
-      // an untrained skill instead of disagreeing (display said 26%, chance 42%).
-      const unskilledDM = context?.trained === false && value === 0 ? -3 : 0;
-      const modifier = value + dm + unskilledDM;
+      // Same DM + unskilled derivation as skill.display, via the shared helper,
+      // so the two surfaces can't report different odds for the same roll.
+      const { dm, unskilled } = travellerRollContext(value, context);
+      const modifier = value + dm + (unskilled ? -3 : 0);
       if (state === 'boon') return threeD6KeepTwoProbability(8, modifier, 'best');
       if (state === 'bane') return threeD6KeepTwoProbability(8, modifier, 'worst');
       return twoD6SuccessProbability(8, modifier);
