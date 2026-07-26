@@ -127,8 +127,14 @@ async function mergeEntity(
     return;
   }
 
-  // Apply re-parenting
-  const reparented = applyReparenting(entity, options.targetCampaignId, bundleContents);
+  // Apply re-parenting, then force the row LIVE. Exports ship live data only
+  // (soft-deleted rows are skipped), so any deletedAt/softDeletedBy on an
+  // imported row is spurious — a hand-edited or hostile bundle carrying a
+  // tombstone must not overwrite a live local row (it would vanish from the UI)
+  // nor import as an invisible tombstone that still claims the id.
+  const reparented = { ...applyReparenting(entity, options.targetCampaignId, bundleContents) } as Record<string, unknown>;
+  delete reparented.deletedAt;
+  delete reparented.softDeletedBy;
 
   // Look up existing entity in IndexedDB
   const tableName = TABLE_NAMES[entityType];
