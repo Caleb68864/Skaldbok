@@ -4,6 +4,7 @@ import type { Note } from '../../types/note';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
+import * as entityLinkRepository from './entityLinkRepository';
 
 // Lazy import to avoid circular dependency — linkSyncEngine imports noteRepository
 let _syncModule: typeof import('../../features/kb/linkSyncEngine') | null = null;
@@ -247,13 +248,24 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
 /** Restores a soft-deleted note. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
-    const row = await db.notes.get(id);
-    if (!row) return;
-    if (!(row as Note).deletedAt) return;
-    await db.notes.update(id, {
-      deletedAt: undefined,
-      softDeletedBy: undefined,
-      updatedAt: nowISO(),
+    // Rehydrate the note and its cascaded edges atomically. The delete path
+    // (useNoteActions) soft-deletes the note's `contains` edges under the same
+    // txId expressly so restore can bring them back — without this, a restored
+    // note reappears orphaned from its session/encounter. Mirrors
+    // encounterRepository.restore / creatureTemplateRepository.restore.
+    await db.transaction('rw', [db.notes, db.entityLinks], async () => {
+      const row = await db.notes.get(id);
+      if (!row) return;
+      if (!(row as Note).deletedAt) return;
+      const txId = (row as Note).softDeletedBy;
+      await db.notes.update(id, {
+        deletedAt: undefined,
+        softDeletedBy: undefined,
+        updatedAt: nowISO(),
+      });
+      if (txId) {
+        await entityLinkRepository.restoreLinksForTxId(txId);
+      }
     });
   } catch (e) {
     throw new Error(`noteRepository.restore failed: ${e}`);

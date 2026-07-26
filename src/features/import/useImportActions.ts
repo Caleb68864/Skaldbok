@@ -102,7 +102,7 @@ export function useImportActions() {
     if (result.success) {
       // Async hash verification + conflict detection in parallel
       const [hashOk, detectedConflicts] = await Promise.all([
-        verifyContentHash(result.bundle),
+        verifyContentHash(result.bundle, json),
         computeConflicts(result.bundle),
       ]);
       setContentHashMismatch(!hashOk);

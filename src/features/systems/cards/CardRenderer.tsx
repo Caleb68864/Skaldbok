@@ -101,7 +101,12 @@ export function CardRenderer({ entry, componentRegistry = {}, character, system,
     // Key by card so a position that swaps to a different card gets a fresh
     // boundary instead of latching a prior card's failure.
     <CardErrorBoundary key={normalized.card} cardKey={normalized.card}>
-      <Component character={character} system={system} updateCharacter={updateCharacter} {...(normalized.props ?? {})} />
+      {/* Template props spread FIRST so the fixed runtime props always win — a
+          malformed or community-authored template cannot override
+          character/system/updateCharacter (overriding updateCharacter with a
+          non-function would throw inside an event handler, which React error
+          boundaries do not catch). */}
+      <Component {...(normalized.props ?? {})} character={character} system={system} updateCharacter={updateCharacter} />
     </CardErrorBoundary>
   );
 }

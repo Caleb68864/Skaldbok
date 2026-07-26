@@ -41,4 +41,25 @@ describe('remakeCurrency', () => {
   it('returns null for an unknown denomination', () => {
     expect(remakeCurrency(credits, { credits: 10 }, 'gold', 5)).toBeNull();
   });
+
+  it('decomposes correctly regardless of denomination declaration order', () => {
+    // Same coins listed low-value-first (as a community system.json might). The
+    // greedy decomposition must still produce the compact form, not collapse
+    // everything into the smallest coin.
+    const unsorted: CurrencyDenomination[] = [
+      { id: 'copper', label: 'Copper', abbr: 'c', value: 1 },
+      { id: 'gold', label: 'Gold', abbr: 'g', value: 100 },
+      { id: 'silver', label: 'Silver', abbr: 's', value: 10 },
+    ];
+    expect(remakeCurrency(unsorted, { gold: 2, silver: 3, copper: 5 }, 'copper', 0)).toEqual({
+      gold: 2,
+      silver: 3,
+      copper: 5,
+    });
+  });
+
+  it('rejects a non-finite result instead of writing NaN across the purse', () => {
+    expect(remakeCurrency(credits, { credits: 10 }, 'credits', NaN)).toBeNull();
+    expect(remakeCurrency(coins, { gold: NaN, silver: 0, copper: 0 }, 'copper', 1)).toBeNull();
+  });
 });

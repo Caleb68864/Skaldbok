@@ -261,7 +261,11 @@ export const travellerEngine: SystemEngine = {
       const dm = linkedId
         ? characteristicToDM(effectiveCharacteristic(context.character, linkedId))
         : 0;
-      const modifier = value + dm;
+      // Fold in the −3 unskilled penalty on the same terms as skill.display /
+      // formatSkillDisplay, so the two engine surfaces report the same odds for
+      // an untrained skill instead of disagreeing (display said 26%, chance 42%).
+      const unskilledDM = context?.trained === false && value === 0 ? -3 : 0;
+      const modifier = value + dm + unskilledDM;
       if (state === 'boon') return threeD6KeepTwoProbability(8, modifier, 'best');
       if (state === 'bane') return threeD6KeepTwoProbability(8, modifier, 'worst');
       return twoD6SuccessProbability(8, modifier);

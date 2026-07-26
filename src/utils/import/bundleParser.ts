@@ -128,7 +128,9 @@ function handleLegacySkaldbok(obj: Record<string, unknown>): ParsedBundleResult 
     version: 1,
     type: 'character',
     exportedAt: new Date().toISOString(),
-    system: 'classic-fantasy',
+    // Derive from the record's own systemId, not a hardcoded default — a bare
+    // Traveller/Savage Worlds character export must not be mislabelled Dragonbane.
+    system: typeof obj.systemId === 'string' ? obj.systemId : 'classic-fantasy',
     contents: {
       characters: [obj],
     },
@@ -237,14 +239,33 @@ function migratePreV1Bundle(obj: Record<string, unknown>): Record<string, unknow
  * Web Crypto is unavailable.
  *
  * @param bundle - The parsed bundle envelope to verify.
+ * @param rawJson - The original file text. When given, the hash is computed over
+ *   the raw file `contents` rather than `bundle.contents`. This matters: by the
+ *   time this runs, {@link parseBundle} has replaced `bundle.contents` with a
+ *   Zod-reparsed + migrated clone (default-injected fields like `note.scope`,
+ *   reordered keys), which never matches the exporter's hash — the serializer
+ *   hashes the raw contents. Verifying against the transformed object made every
+ *   pristine bundle report a false "integrity check failed". Falls back to
+ *   `bundle.contents` when `rawJson` is absent or unparseable.
  * @returns `true` if the hash matches or cannot be verified; `false` on mismatch.
  */
-export async function verifyContentHash(bundle: BundleEnvelope): Promise<boolean> {
+export async function verifyContentHash(bundle: BundleEnvelope, rawJson?: string): Promise<boolean> {
   if (!bundle.contentHash) return true;
   try {
     const crypto = globalThis.crypto;
     if (!crypto?.subtle) return true;
-    const contentsJson = JSON.stringify(bundle.contents);
+    let contentsForHash: unknown = bundle.contents;
+    if (rawJson) {
+      try {
+        const parsed = JSON.parse(rawJson) as { contents?: unknown };
+        if (parsed && typeof parsed === 'object' && 'contents' in parsed) {
+          contentsForHash = parsed.contents;
+        }
+      } catch {
+        // Unparseable raw text — fall back to the parsed contents below.
+      }
+    }
+    const contentsJson = JSON.stringify(contentsForHash);
     const encoded = new TextEncoder().encode(contentsJson);
     const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
     const hashArray = Array.from(new Uint8Array(hashBuffer));

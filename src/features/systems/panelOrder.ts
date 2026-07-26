@@ -28,7 +28,9 @@ export function resolveSheetPanelOrder(
   panelAvailability: Record<string, boolean>,
   storedOrder: string[] | undefined,
 ): PanelOrderResult {
-  const sequence = templatePanelKeys.length > 0 ? templatePanelKeys : fallbackSequence;
+  // Dedupe: a template that lists the same panel key in two regions must not
+  // render the panel twice (and trigger React duplicate-key warnings).
+  const sequence = [...new Set(templatePanelKeys.length > 0 ? templatePanelKeys : fallbackSequence)];
   const orderedFromSequence = sequence.filter(key => panelAvailability[key]);
   const defaultOrder = orderedFromSequence.length > 0
     ? orderedFromSequence

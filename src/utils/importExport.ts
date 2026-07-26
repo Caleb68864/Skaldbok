@@ -125,6 +125,16 @@ export async function importCharacter(file: File): Promise<ImportResult> {
     return { success: false, error: 'Invalid JSON file. The file does not appear to be a valid Skaldbok export.' };
   }
 
+  // A campaign/session bundle envelope (has `contents`) isn't a bare character
+  // record — importCharacter expects the latter. Detect it and give a clear
+  // message instead of an opaque Zod error from migrateCharacter.
+  if (parsed && typeof parsed === 'object' && 'contents' in parsed && 'version' in parsed) {
+    return {
+      success: false,
+      error: 'This looks like a campaign/session bundle, not a single character. Import it from the campaign menu instead.',
+    };
+  }
+
   let character: CharacterRecord;
   try {
     character = migrateCharacter(parsed);

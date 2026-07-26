@@ -232,13 +232,22 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       const target = designated ?? party?.members[0]?.linkedCharacterId ?? null;
       const currentId = activeCharacterIdRef.current;
       try {
-        if (target) {
-          if (currentId !== target) await setCharacter(target);
+        // A party member's linkedCharacterId can dangle at a soft-deleted or
+        // absent character. Resolve it before trusting it: setCharacter() is a
+        // no-op for a missing id, so pointing at a dead target would otherwise
+        // leave the previous (possibly foreign-system) character active and skip
+        // the clear path below.
+        const targetChar = target ? await characterRepository.getById(target) : null;
+        if (targetChar) {
+          if (currentId !== targetChar.id) await setCharacter(targetChar.id);
           return;
         }
+        // No valid character for this campaign: clear the active one if it now
+        // belongs to a different system or no longer exists, so the Characters
+        // tab doesn't keep showing a foreign/dangling character.
         if (currentId) {
           const cur = await characterRepository.getById(currentId);
-          if (cur && cur.systemId !== campaign.system) await clearCharacter();
+          if (!cur || cur.systemId !== campaign.system) await clearCharacter();
         }
       } catch (e) {
         console.error('reconcileActiveCharacter failed:', e);
