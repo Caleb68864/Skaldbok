@@ -314,14 +314,19 @@ export function PartyInventoryTab() {
       move >= item.quantity
         ? from.items.filter(i => i.id !== item.id)
         : from.items.map(i => (i.id === item.id ? { ...i, quantity: i.quantity - move } : i));
-    // Update destination — merge if an identically-named item already exists
-    // with matching flags so stacks combine naturally.
+    // Update destination — merge only into a TRULY identical item so stacks
+    // combine naturally. capacityBonus and description must match too: without
+    // them a magic backpack (capacityBonus 5) moved onto a mundane look-alike
+    // (0) would merge and silently lose its +5 carry capacity — a real data loss
+    // that also drops the owner's encumbrance limit.
     const mergeIdx = to.items.findIndex(
       i =>
         i.name === item.name &&
         i.weight === item.weight &&
         !!i.tiny === !!item.tiny &&
-        !!i.consumable === !!item.consumable,
+        !!i.consumable === !!item.consumable &&
+        (i.capacityBonus ?? 0) === (item.capacityBonus ?? 0) &&
+        (i.description ?? '') === (item.description ?? ''),
     );
     let toItems: InventoryItem[];
     if (mergeIdx >= 0) {
