@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 7,
+  "version": 8,
   "name": "traveller",
   "displayName": "Traveller",
   "resolution": "2d6-plus",
@@ -322,6 +322,11 @@
     "neon-sprawl"
   ],
   "identityFields": [
+    {
+      "id": "callsign",
+      "label": "Callsign",
+      "type": "text"
+    },
     {
       "id": "species",
       "label": "Species",

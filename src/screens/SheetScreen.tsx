@@ -91,6 +91,12 @@ const CONNECTION_COLUMNS: RepeatableColumn[] = [
   { key: 'notes', label: 'Notes', flex: '2 1 160px' },
 ];
 
+/** Decorations / awards earned in service (Award / Notes). */
+const DECORATION_COLUMNS: RepeatableColumn[] = [
+  { key: 'award', label: 'Award', flex: '1 1 160px' },
+  { key: 'notes', label: 'Notes', flex: '2 1 160px' },
+];
+
 /** The four connection tables on the Traveller sheet. */
 const CONNECTION_GROUPS = [
   { key: 'allies', label: 'Allies', add: 'Ally' },
@@ -672,6 +678,27 @@ export default function SheetScreen() {
     </SectionPanel>
   );
 
+  const creationSubHeading =
+    'm-0 mb-[var(--space-xs)] text-[length:var(--font-size-sm)] font-semibold uppercase tracking-wide text-[var(--color-accent)]';
+
+  // A single numeric finance line backed by systemData (Ship Shares, Debt, etc.).
+  // These sit alongside the currency denominations but are plain Traveller
+  // bookkeeping fields, not spendable currency, so they live in systemData.
+  const financeField = (key: string, label: string) => (
+    <div>
+      <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">{label}</label>
+      <input
+        type="number"
+        min={0}
+        aria-label={label}
+        className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
+        value={sysStr(key)}
+        disabled={!identityEditable}
+        onChange={e => setSysStr(key, e.target.value)}
+      />
+    </div>
+  );
+
   const financesPanel = (
     <SectionPanel title="Finances" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-md)]">
@@ -698,18 +725,24 @@ export default function SheetScreen() {
             />
           </div>
         ))}
+        {/* Assets held outside spendable cash. Ship Shares are the character's
+            documented stake in a starship (see the ship-entity model); Debt is
+            owed capital. Both mirror the Book's Finances block. */}
+        {financeField('shipShares', 'Ship Shares')}
+        {financeField('debt', 'Debt (Cr)')}
+
+        {/* Monthly / annual cash flow — the recurring lines from the Book's
+            Finances block. Cost of Living is the Book's "Living Costs". */}
         <div>
-          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Cost of Living (Cr / month)</label>
-          <input
-            type="number"
-            min={0}
-            aria-label="Cost of Living (Cr / month)"
-            className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
-            value={sysStr('livingCost')}
-            disabled={!identityEditable}
-            onChange={e => setSysStr('livingCost', e.target.value)}
-          />
+          <h4 className={creationSubHeading}>Cash Flow</h4>
+          <div className="flex flex-col gap-[var(--space-md)]">
+            {financeField('income', 'Income (Cr / month)')}
+            {financeField('livingCost', 'Cost of Living (Cr / month)')}
+            {financeField('annualPension', 'Annual Pension (Cr / year)')}
+            {financeField('shipPayments', 'Ship Payments (Cr / month)')}
+          </div>
         </div>
+
         <div>
           <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Finance Notes</label>
           <textarea
@@ -723,9 +756,6 @@ export default function SheetScreen() {
       </div>
     </SectionPanel>
   );
-
-  const creationSubHeading =
-    'm-0 mb-[var(--space-xs)] text-[length:var(--font-size-sm)] font-semibold uppercase tracking-wide text-[var(--color-accent)]';
   const careersPanel = (
     <SectionPanel title="Careers & Creation History" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-lg)]">
@@ -739,6 +769,19 @@ export default function SheetScreen() {
             editable={identityEditable}
             addLabel="Term"
             emptyLabel="No career terms recorded."
+          />
+        </div>
+
+        {/* Decorations / awards earned in service. */}
+        <div>
+          <h4 className={creationSubHeading}>Decorations &amp; Awards</h4>
+          <RepeatableRows
+            columns={DECORATION_COLUMNS}
+            rows={sysRows('decorations')}
+            onChange={r => setSysRows('decorations', r)}
+            editable={identityEditable}
+            addLabel="Award"
+            emptyLabel="No decorations recorded."
           />
         </div>
 

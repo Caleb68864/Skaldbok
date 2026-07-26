@@ -283,6 +283,15 @@ function Currency({ character, engine }: { character: CharacterRecord; engine: S
   // A lone denomination carries its unit in the label ("Credits (Cr)") since
   // there is no second box to give it context.
   const showAbbr = denominations.length === 1;
+  // Optional Traveller Finances lines, printed only when the sheet records one.
+  const financeLines: Array<[string, string]> = [
+    ['shipShares', 'Ship Shares'],
+    ['debt', 'Debt'],
+    ['income', 'Income'],
+    ['livingCost', 'Cost of Living'],
+    ['annualPension', 'Annual Pension'],
+    ['shipPayments', 'Ship Payments'],
+  ];
   return (
     <div className="sheet-currency">
       <div className="sheet-section-header">Currency</div>
@@ -295,13 +304,14 @@ function Currency({ character, engine }: { character: CharacterRecord; engine: S
             <span className="sheet-currency-value">{amounts[denom.id] ?? 0}</span>
           </div>
         ))}
-        {/* Monthly cost of living (Traveller), shown only when the sheet records one. */}
-        {character.systemData?.livingCost ? (
-          <div className="sheet-currency-field">
-            <span className="sheet-currency-label">Cost of Living</span>
-            <span className="sheet-currency-value">{String(character.systemData.livingCost)}</span>
-          </div>
-        ) : null}
+        {financeLines.map(([key, label]) =>
+          character.systemData?.[key] ? (
+            <div key={key} className="sheet-currency-field">
+              <span className="sheet-currency-label">{label}</span>
+              <span className="sheet-currency-value">{String(character.systemData[key])}</span>
+            </div>
+          ) : null,
+        )}
       </div>
     </div>
   );
