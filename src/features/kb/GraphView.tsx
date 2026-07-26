@@ -121,6 +121,10 @@ export function GraphView({ campaignId, centeredNodeId }: GraphViewProps) {
 
     return () => {
       mounted = false;
+      // Stop the d3 force simulation — otherwise it keeps ticking + rendering to
+      // a detached canvas for the ~seconds it takes alpha to decay if the user
+      // navigates away mid-settle (wasted CPU/battery on a tablet at the table).
+      simulationRef.current?.stop();
     };
   }, [campaignId, showTags, showAll, visibleTypes]);
 

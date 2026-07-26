@@ -120,13 +120,36 @@ export function fromHeroicAbility(ability: HeroicAbility): Ability {
   };
 }
 
+/** systemFields keys the typed Spell/HeroicAbility views round-trip explicitly. */
+const MANAGED_SPELL_SYSTEM_FIELDS = new Set([
+  'school', 'powerLevel', 'range', 'duration', 'rank', 'requirements', 'castingTime', 'powerScaling',
+]);
+const MANAGED_HEROIC_SYSTEM_FIELDS = new Set([
+  'requirement', 'requirementSkillId', 'requirementSkillLevel',
+]);
+
+/**
+ * Carries forward any systemFields the typed view does NOT enumerate, matched by
+ * ability id — otherwise a community/JSON-authored custom field (e.g. `damage`,
+ * `element`) would be silently dropped the first time the ability is edited and
+ * re-serialized through fromSpell/fromHeroicAbility. Managed keys still win.
+ */
+function preserveExtras(converted: Ability, original: Ability | undefined, managed: Set<string>): Ability {
+  const src = original?.systemFields;
+  if (!src) return converted;
+  const extras = Object.fromEntries(Object.entries(src).filter(([k]) => !managed.has(k)));
+  if (Object.keys(extras).length === 0) return converted;
+  return { ...converted, systemFields: { ...extras, ...(converted.systemFields ?? {}) } };
+}
+
 /**
  * Replaces just the spells within an abilities collection, leaving every other
  * ability type untouched.
  */
 export function withSpells(abilities: Ability[] | undefined, spells: Spell[]): Ability[] {
+  const byId = new Map((abilities ?? []).map(a => [a.id, a]));
   const others = (abilities ?? []).filter(a => a.type !== ABILITY_TYPE.spell);
-  return [...others, ...spells.map(fromSpell)];
+  return [...others, ...spells.map(s => preserveExtras(fromSpell(s), byId.get(s.id), MANAGED_SPELL_SYSTEM_FIELDS))];
 }
 
 /** Replaces just the heroic abilities, leaving every other ability type alone. */
@@ -134,6 +157,7 @@ export function withHeroicAbilities(
   abilities: Ability[] | undefined,
   heroic: HeroicAbility[],
 ): Ability[] {
+  const byId = new Map((abilities ?? []).map(a => [a.id, a]));
   const others = (abilities ?? []).filter(a => a.type !== ABILITY_TYPE.heroic);
-  return [...others, ...heroic.map(fromHeroicAbility)];
+  return [...others, ...heroic.map(h => preserveExtras(fromHeroicAbility(h), byId.get(h.id), MANAGED_HEROIC_SYSTEM_FIELDS))];
 }

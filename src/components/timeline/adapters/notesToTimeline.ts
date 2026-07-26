@@ -42,7 +42,11 @@ function buildTrack(kind: string, catalog: typeof DEFAULT_TIMELINE_TRACK_CATALOG
   const entry = catalog[kind] ?? catalog.generic;
   return {
     id: toTrackId(kind),
-    label: entry.label ?? humanizeKind(kind),
+    // Use the catalog label only for a kind that IS in the catalog; an unknown
+    // kind falls back to the generic entry for styling but must get a humanized
+    // label — otherwise every unknown type renders as a duplicate "Notes" lane
+    // (the generic entry's own label), indistinguishable from each other.
+    label: catalog[kind]?.label ?? humanizeKind(kind),
     kind,
     order: entry.order ?? 99,
     visible: entry.visible ?? true,

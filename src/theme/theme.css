@@ -86,6 +86,21 @@
    Theme Palettes
    ============================================================ */
 
+/* Alias tokens — components reference these seven names, but no theme ever
+   defined them, so `bg-[var(--color-surface-raised)]` etc. collapsed to
+   transparent/inherited in ALL themes (invisible secondary buttons, active
+   tabs, dividers). Defined once here against a live `[data-theme]` element so
+   each resolves to the active theme's real token via var() substitution. */
+[data-theme] {
+  --color-surface-raised: var(--color-surface-alt);
+  --color-primary: var(--color-accent);
+  --color-primary-text: #fff;
+  --color-on-accent: #fff;
+  --color-text-inverse: #fff;
+  --color-text-secondary: var(--color-text-muted);
+  --color-divider: var(--color-border);
+}
+
 /* Dark theme — "Torchlight in the Barrow" */
 [data-theme="dark"] {
   --color-bg: #121613;
