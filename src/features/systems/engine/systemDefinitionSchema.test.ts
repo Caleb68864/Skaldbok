@@ -43,4 +43,17 @@ describe('systemDefinitionSchema', () => {
   it('rejects an attribute whose min exceeds max', () => {
     expect(broken((d: any) => { d.attributes[0].min = 999; d.attributes[0].max = 0; })).toBe(false);
   });
+
+  it('preserves the full label surface, not just the four core keys', () => {
+    // Before the schema was widened these keys were silently stripped by Zod,
+    // so a system.json override never reached the engine merge.
+    const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));
+    def.labels = { ...(def.labels ?? {}), participantHealth: 'Vitality', storyBankPanel: 'Legends' };
+    const result = systemDefinitionSchema.safeParse(def);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.labels?.participantHealth).toBe('Vitality');
+      expect(result.data.labels?.storyBankPanel).toBe('Legends');
+    }
+  });
 });

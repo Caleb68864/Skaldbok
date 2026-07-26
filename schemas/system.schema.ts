@@ -111,11 +111,30 @@ export const systemDefinitionSchema = z.object({
     healthResource: z.string().optional(),
     roleFallback: z.string().optional(),
   }).optional().describe('Overrides for system vocabulary; omitted keys use engine defaults'),
+  // Mirrors the full SystemLabels surface (engine/types.ts) so EVERY label can
+  // be renamed from system.json, not just these first four — Zod strips
+  // unlisted keys, so a previously-missing key (participantHealth, memento,
+  // the dashboard-card titles, …) was silently dropped before reaching the
+  // engine merge, quietly breaking the "renaming vocabulary needs no code" promise.
   labels: z.object({
     abilitiesScreen: z.string().nullable().optional(),
     resourcesPanel: z.string().optional(),
     attributesPanel: z.string().optional(),
     encumbrance: z.string().optional(),
+    participantHealth: z.string().optional(),
+    conditionExamples: z.string().optional(),
+    encounterTagExamples: z.string().optional(),
+    locationExample: z.string().optional(),
+    armorFeatures: z.string().optional(),
+    memento: z.string().nullable().optional(),
+    tinyItems: z.string().nullable().optional(),
+    vitalsPanel: z.string().optional(),
+    derivedPanel: z.string().optional(),
+    conditionsPanel: z.string().optional(),
+    readyGearPanel: z.string().optional(),
+    damageHealPanel: z.string().optional(),
+    quickReferencePanel: z.string().optional(),
+    storyBankPanel: z.string().optional(),
   }).optional().describe('Overrides for panel/screen titles; abilitiesScreen null hides that tab'),
 }).superRefine((def, ctx) => {
   // Cross-reference integrity: without these, a typo'd id (e.g. a skill linked
