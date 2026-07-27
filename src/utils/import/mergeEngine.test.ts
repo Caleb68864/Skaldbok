@@ -110,4 +110,39 @@ describe('mergeBundle', () => {
     expect(report.inserted).toBe(0);
     expect(await db.characters.get('c5')).toBeUndefined();
   });
+
+  it('imports an entityLink whose endpoints are present', async () => {
+    await mergeBundle(
+      makeBundle({
+        sessions: [{ id: 's1', updatedAt: '2026-01-02T00:00:00.000Z' }],
+        notes: [{ id: 'n1', title: 'N', updatedAt: '2026-01-02T00:00:00.000Z' }],
+        entityLinks: [{ id: 'l1', fromEntityType: 'session', fromEntityId: 's1', toEntityType: 'note', toEntityId: 'n1', relationshipType: 'contains', updatedAt: '2026-01-02T00:00:00.000Z' }],
+      }),
+      opts,
+    );
+    expect(await db.entityLinks.get('l1')).toBeTruthy();
+  });
+
+  it('skips a dangling entityLink whose endpoint entity is missing, and reports it', async () => {
+    const report = await mergeBundle(
+      makeBundle({
+        notes: [{ id: 'n1', title: 'N', updatedAt: '2026-01-02T00:00:00.000Z' }],
+        // fromEntityId points at a session that isn't in the bundle and isn't local.
+        entityLinks: [{ id: 'l2', fromEntityType: 'session', fromEntityId: 'MISSING', toEntityType: 'note', toEntityId: 'n1', relationshipType: 'contains', updatedAt: '2026-01-02T00:00:00.000Z' }],
+      }),
+      opts,
+    );
+    expect(await db.entityLinks.get('l2')).toBeUndefined();
+    expect(report.errors.some(e => e.message.includes('dangling'))).toBe(true);
+  });
+
+  it('does not reject an edge whose endpoint type is not table-backed (encounterParticipant)', async () => {
+    await mergeBundle(
+      makeBundle({
+        entityLinks: [{ id: 'l3', fromEntityType: 'encounterParticipant', fromEntityId: 'p1', toEntityType: 'encounterParticipant', toEntityId: 'p2', relationshipType: 'represents', updatedAt: '2026-01-02T00:00:00.000Z' }],
+      }),
+      opts,
+    );
+    expect(await db.entityLinks.get('l3')).toBeTruthy();
+  });
 });

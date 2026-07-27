@@ -67,6 +67,51 @@ const TABLE_NAMES: Record<string, string> = {
 };
 
 /**
+ * Maps an entityLink endpoint TYPE (the free-string `fromEntityType`/
+ * `toEntityType`) to the Dexie table that backs it, for existence checks.
+ *
+ * @remarks
+ * `encounterParticipant` is intentionally absent: participants live inside an
+ * encounter's embedded `participants` array, not a table of their own, so a
+ * `represents` edge's participant endpoint can't be verified this way and is
+ * left unchecked (it lives and dies with its encounter row anyway).
+ */
+const LINK_ENDPOINT_TABLES: Record<string, string> = {
+  campaign: 'campaigns',
+  session: 'sessions',
+  party: 'parties',
+  partyMember: 'partyMembers',
+  character: 'characters',
+  creature: 'creatureTemplates',
+  encounter: 'encounters',
+  note: 'notes',
+  inventoryContainer: 'inventoryContainers',
+};
+
+/**
+ * Returns a description of the first table-backed endpoint an entityLink points
+ * at that does NOT exist (in the DB, including rows imported earlier in this
+ * same transaction), or `null` when both resolvable endpoints are present.
+ * Unmappable endpoint types (encounterParticipant) are skipped, not rejected.
+ */
+async function danglingLinkEndpoint(link: Record<string, unknown>): Promise<string | null> {
+  const endpoints: Array<[idKey: string, typeKey: string]> = [
+    ['fromEntityId', 'fromEntityType'],
+    ['toEntityId', 'toEntityType'],
+  ];
+  for (const [idKey, typeKey] of endpoints) {
+    const type = link[typeKey] as string | undefined;
+    const entityId = link[idKey] as string | undefined;
+    if (!type || !entityId) continue;
+    const table = LINK_ENDPOINT_TABLES[type];
+    if (!table) continue; // unverifiable endpoint type — don't reject on it
+    const exists = await db.table(table).get(entityId);
+    if (!exists) return `${type} "${entityId}"`;
+  }
+  return null;
+}
+
+/**
  * Merges parsed bundle contents into local IndexedDB.
  *
  * @remarks
@@ -183,6 +228,20 @@ async function mergeEntity(
   const reparented = { ...applyReparenting(entity, options.targetCampaignId, bundleContents) } as Record<string, unknown>;
   delete reparented.deletedAt;
   delete reparented.softDeletedBy;
+
+  // Skip an entityLink whose endpoints didn't make it into the DB — importing it
+  // would create a dangling edge. This catches both the "user deselected the
+  // note/character type but kept entityLinks" case and the "an endpoint entity
+  // was stripped as schema-invalid" case. entityLinks are processed last, so
+  // valid endpoints (imported earlier in this transaction, or already local)
+  // are visible to the lookup.
+  if (entityType === 'entityLinks') {
+    const missing = await danglingLinkEndpoint(reparented);
+    if (missing) {
+      report.errors.push({ entityType, entityId: id, message: `Edge references missing ${missing}; skipped to avoid a dangling link` });
+      return;
+    }
+  }
 
   // Look up existing entity in IndexedDB
   const tableName = TABLE_NAMES[entityType];
