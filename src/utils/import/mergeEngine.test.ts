@@ -145,4 +145,38 @@ describe('mergeBundle', () => {
     );
     expect(await db.entityLinks.get('l3')).toBeTruthy();
   });
+
+  it('does not overwrite an unrelated local row on an id collision (different createdAt)', async () => {
+    await db.characters.put({ id: 'c1', name: 'Real', createdAt: '2020-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' } as never);
+    // Same id, DIFFERENT entity (created at a different time), with a newer
+    // updatedAt that would otherwise win the dedup.
+    const report = await mergeBundle(
+      makeBundle({ characters: [{ id: 'c1', name: 'Impostor', createdAt: '2023-05-05T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z' }] }),
+      opts,
+    );
+    expect(((await db.characters.get('c1')) as unknown as Record<string, unknown>).name).toBe('Real');
+    expect(report.updated).toBe(0);
+    expect(report.errors.some(e => e.message.includes('different local'))).toBe(true);
+  });
+
+  it('still applies a legitimate rename (same createdAt, newer updatedAt)', async () => {
+    await db.characters.put({ id: 'c1', name: 'Old', createdAt: '2020-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' } as never);
+    const report = await mergeBundle(
+      makeBundle({ characters: [{ id: 'c1', name: 'Renamed', createdAt: '2020-01-01T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z' }] }),
+      opts,
+    );
+    expect(((await db.characters.get('c1')) as unknown as Record<string, unknown>).name).toBe('Renamed');
+    expect(report.updated).toBe(1);
+  });
+
+  it('reports (not silently skips) a same-id conflict when a timestamp is missing', async () => {
+    await db.characters.put({ id: 'c1', name: 'Real', createdAt: '2020-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' } as never);
+    // Same entity (same createdAt) but the bundle row has no updatedAt to compare.
+    const report = await mergeBundle(
+      makeBundle({ characters: [{ id: 'c1', name: 'Real', createdAt: '2020-01-01T00:00:00.000Z' }] }),
+      opts,
+    );
+    expect(((await db.characters.get('c1')) as unknown as Record<string, unknown>).name).toBe('Real');
+    expect(report.errors.some(e => e.message.includes('Could not compare timestamps'))).toBe(true);
+  });
 });

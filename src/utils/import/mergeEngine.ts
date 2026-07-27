@@ -272,12 +272,37 @@ async function mergeEntity(
     return;
   }
 
+  // Id-collision guard: the same id already exists locally. Distinguish a newer
+  // version of the SAME entity from an id COLLISION (a hand-edited/community
+  // bundle reusing an id that locally belongs to something else) by createdAt —
+  // it's immutable, so a rename/edit keeps it while two genuinely-different
+  // entities were created at different times. Same-id + different-createdAt =
+  // collision → keep the local row and report it rather than overwrite unrelated
+  // data. (A rename keeps createdAt, so legitimate updates are unaffected.)
+  const bundleCreated = reparented.createdAt as string | undefined;
+  const localCreated = existing.createdAt as string | undefined;
+  if (bundleCreated !== undefined && localCreated !== undefined && bundleCreated !== localCreated) {
+    report.errors.push({
+      entityType,
+      entityId: id,
+      message: `Id "${id}" already belongs to a different local ${String(entityType)} (created ${localCreated}, bundle's created ${bundleCreated}); kept local to avoid overwriting unrelated data`,
+    });
+    return;
+  }
+
   // Dedup rules based on updatedAt
   const bundleUpdatedAt = entity.updatedAt as string | undefined;
   const localUpdatedAt = existing.updatedAt as string | undefined;
 
   if (!bundleUpdatedAt || !localUpdatedAt) {
-    report.skipped++;
+    // Can't compare — surface it instead of silently dropping the entity, since
+    // a would-be-newer import that happens to lack updatedAt otherwise vanishes
+    // with only an aggregate "skipped" count.
+    report.errors.push({
+      entityType,
+      entityId: id,
+      message: `Could not compare timestamps for ${String(entityType)} "${id}" (missing updatedAt); kept the local copy`,
+    });
     return;
   }
 
