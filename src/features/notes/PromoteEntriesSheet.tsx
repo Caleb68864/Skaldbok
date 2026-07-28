@@ -21,9 +21,10 @@ import type { Note, NoteType } from '../../types/note';
 import { cn } from '../../lib/utils';
 
 /**
- * Selectable note types when promoting to a *new* note. Mirrors
- * `SELECTABLE_NOTE_TYPES` in `QuickNoteAction.tsx` — system-only types
- * (`npc`, `combat`, `skill-check`) are excluded here too.
+ * Selectable note types when promoting to a *new* note. System-only types
+ * (`npc`, `combat`, `skill-check`) are excluded — they are assigned by the
+ * flows that create them, not chosen by hand. `log` is excluded too: promoting
+ * a log entry back into a log entry is not a thing.
  */
 const SELECTABLE_NOTE_TYPES: { value: NoteType; label: string }[] = [
   { value: 'generic', label: 'Note' },
@@ -45,6 +46,15 @@ export interface PromoteEntriesSheetProps {
   onClose: () => void;
   /** Called after a promote/tag action completes successfully. */
   onDone?: () => void;
+  /**
+   * Which mode the sheet opens in. Defaults to `'new'`.
+   *
+   * @remarks
+   * Lets the selection bar offer Tag as its own action without making the user
+   * open the sheet and then switch modes — the mode buttons stay visible, so
+   * this is a starting point rather than a restriction.
+   */
+  initialMode?: PromoteMode;
 }
 
 /** Concatenates entry bodies in `createdAt` order, retaining each entry's timestamp. */
@@ -110,8 +120,8 @@ async function tagEntries(entries: Note[], tags: string[]): Promise<void> {
  * promote them into a new typed note, append them onto an existing note, or
  * simply tag them — the source entries are never deleted.
  */
-export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone }: PromoteEntriesSheetProps) {
-  const [mode, setMode] = useState<PromoteMode>('new');
+export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone, initialMode = 'new' }: PromoteEntriesSheetProps) {
+  const [mode, setMode] = useState<PromoteMode>(initialMode);
   const [saving, setSaving] = useState(false);
 
   // --- New note mode state ---

@@ -69,6 +69,8 @@ export function SessionLogSelection({
   const sessionRefresh = useSessionRefreshSafe();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sheetOpen, setSheetOpen] = useState(false);
+  /** Which mode the promote sheet opens in — Promote and Tag are both entry points to it. */
+  const [sheetMode, setSheetMode] = useState<'new' | 'tag'>('new');
   const [promotedTargets, setPromotedTargets] = useState<Record<string, string>>({});
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reviewSuggestions, setReviewSuggestions] = useState<LinkScanSuggestion[]>([]);
@@ -193,10 +195,17 @@ export function SessionLogSelection({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setSheetOpen(true)}
+              onClick={() => { setSheetMode('new'); setSheetOpen(true); }}
               className="min-h-9 rounded bg-[var(--color-accent)] px-3 text-xs font-semibold text-[var(--color-on-accent,#fff)]"
             >
               Promote
+            </button>
+            <button
+              type="button"
+              onClick={() => { setSheetMode('tag'); setSheetOpen(true); }}
+              className="min-h-9 rounded border border-[var(--color-border)] px-3 text-xs"
+            >
+              Tag
             </button>
             {onDeleteEntries && (
               <button
@@ -222,6 +231,7 @@ export function SessionLogSelection({
         <PromoteEntriesSheet
           entries={selectedEntries}
           campaignId={campaignId}
+          initialMode={sheetMode}
           onClose={() => setSheetOpen(false)}
           onDone={handlePromoted}
         />

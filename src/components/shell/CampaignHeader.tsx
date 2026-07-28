@@ -20,6 +20,7 @@ import {
   Sheet,
   SheetTrigger,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetBody,
@@ -143,6 +144,12 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
               <SheetTitle>Menu</SheetTitle>
             </div>
             <SheetCloseButton />
+            {/* Radix warns when a Dialog has no description; the menu is a list
+                of links that needs no visible blurb, so this is screen-reader
+                only rather than an invented subtitle. */}
+            <SheetDescription className="sr-only">
+              Campaign, mode, navigation and data export actions
+            </SheetDescription>
           </SheetHeader>
           <SheetBody className="flex flex-col gap-0 p-0">
             {/* Mode toggle */}
