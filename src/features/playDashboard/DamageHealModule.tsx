@@ -4,6 +4,7 @@ import { nowISO } from '../../utils/dates';
 import type { PlayModuleProps } from './types';
 import { getEngine } from '../systems/engine';
 import { applyDamage, damageStatus } from '../../utils/damageTrack';
+import { useSessionLog } from '../session/useSessionLog';
 
 /**
  * The single place damage and healing are applied for a system with a cascading
@@ -28,6 +29,21 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
   const [healAmount, setHealAmount] = useState('');
   const [healTarget, setHealTarget] = useState(model?.order[0] ?? tracks[0] ?? '');
   const [message, setMessage] = useState<string | null>(null);
+  const { logToSession, hasActiveSession } = useSessionLog();
+
+  /**
+   * Mirrors the on-screen outcome into the session log.
+   *
+   * @remarks
+   * For a damage-track system this panel is the *only* surface that applies
+   * damage — Vitals renders a read-only readout — so without this a whole fight
+   * leaves no record. Not debounced: each application is one deliberate button
+   * press, unlike the sheet's ± steppers.
+   */
+  function logOutcome(text: string) {
+    if (!hasActiveSession) return;
+    void logToSession(`${character.name}: ${text}`);
+  }
 
   if (!model) return null;
   // Alias the narrowed model so its type survives into the handler closures,
@@ -77,7 +93,9 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
         if (r.setsConditions.includes('shaken')) parts.push('Shaken');
         if (woundsAdded > 0) parts.push(`+${woundsAdded} Wound${woundsAdded > 1 ? 's' : ''}`);
       }
-      setMessage(parts.join(' · ') || 'No effect.');
+      const levelsOutcome = parts.join(' · ') || 'No effect.';
+      setMessage(levelsOutcome);
+      logOutcome(`Damage ${n} — ${levelsOutcome}`);
       setDmgAmount('');
       return;
     }
@@ -88,7 +106,9 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
     if (result.status === 'dead') parts.push(track.deadLabel);
     else if (result.status === 'down') parts.push(track.downLabel);
     writeResources(result.resources);
-    setMessage(parts.join(' '));
+    const outcome = parts.join(' ');
+    setMessage(outcome);
+    logOutcome(outcome);
     setDmgAmount('');
   }
 
@@ -98,13 +118,18 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
     const current = character.resources?.[healTarget]?.current ?? 0;
     const healed = Math.min(n, current);
     writeResources({ [healTarget]: current - healed });
-    setMessage(healed > 0 ? `Healed ${healed} ${labelFor(healTarget)}.` : `${labelFor(healTarget)} already clear.`);
+    const outcome = healed > 0
+      ? `Healed ${healed} ${labelFor(healTarget)}.`
+      : `${labelFor(healTarget)} already clear.`;
+    setMessage(outcome);
+    if (healed > 0) logOutcome(outcome);
     setHealAmount('');
   }
 
   function handleRecoverAll() {
     writeResources(Object.fromEntries(tracks.map(id => [id, 0])));
     setMessage('Full recovery — all damage cleared.');
+    logOutcome('Full recovery — all damage cleared.');
   }
 
   // Standing track status (no damage applied) — drives the down/dead banner below.

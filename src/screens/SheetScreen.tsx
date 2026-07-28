@@ -340,7 +340,12 @@ export default function SheetScreen() {
     // Traveller END or Savage Worlds Wounds change is logged too. logHPChange
     // already takes the resource id, so it was built to be system-agnostic.
     if (engine.resourceIds.includes(id)) {
-      logHPChange(character.name, oldCurrent, oldCurrent + delta, maxVal, id);
+      // `direction` says whether the stored number is what remains or what has
+      // been taken. Traveller's damage track accumulates, so a rising value is
+      // a wound; without this the log calls every hit "Healed".
+      const accumulates =
+        system?.resources.find(r => r.id === id)?.direction === 'accumulates';
+      logHPChange(character.name, oldCurrent, oldCurrent + delta, maxVal, id, accumulates);
     }
   }
 

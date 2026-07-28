@@ -103,6 +103,16 @@ interface ResourceBuffer {
   currentValue: number;
   /** Maximum capacity of the resource (used in log label). */
   maxValue: number;
+  /**
+   * Whether the tracked resource *accumulates* rather than depletes.
+   *
+   * @remarks
+   * A pool such as Dragonbane's HP counts down, so a rising value is healing.
+   * Traveller's damage track counts **up** — the stored number is damage taken —
+   * so the same rising value is a wound. Without this the log reports every
+   * Traveller hit as "Healed".
+   */
+  accumulates: boolean;
   /** Handle for the active debounce timer, or null when idle. */
   timer: ReturnType<typeof setTimeout> | null;
 }
@@ -136,7 +146,7 @@ interface ResourceBuffer {
 export function useSessionLog() {
   const { activeSession } = useCampaignContext();
   const coinBuffer = useRef<CoinBuffer>({ character: '', changes: {}, timer: null });
-  const resourceBuffer = useRef<ResourceBuffer>({ character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, timer: null });
+  const resourceBuffer = useRef<ResourceBuffer>({ character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, timer: null });
 
   /**
    * Core primitive — creates a note attached to the active session.
@@ -299,16 +309,24 @@ export function useSessionLog() {
   const flushResourceBuffer = useCallback(async () => {
     const buf = resourceBuffer.current;
     if (!buf.character || buf.startValue === buf.currentValue) {
-      resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, timer: null };
+      resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, timer: null };
       return;
     }
     const diff = buf.currentValue - buf.startValue;
     const resLabel = buf.resource.toUpperCase();
-    const label = diff > 0
-      ? `${buf.character}: Healed ${diff} ${resLabel} (${buf.currentValue}/${buf.maxValue})`
-      : `${buf.character}: Took ${Math.abs(diff)} damage (${buf.currentValue}/${buf.maxValue})`;
+    // A depleting pool going up is healing; an accumulating damage track going
+    // up is a wound. Reading the sign without the direction reported every
+    // Traveller hit as "Healed".
+    const healed = buf.accumulates ? diff < 0 : diff > 0;
+    const amount = Math.abs(diff);
+    const readout = buf.accumulates
+      ? `${buf.currentValue}/${buf.maxValue} ${resLabel} damage`
+      : `${buf.currentValue}/${buf.maxValue} ${resLabel}`;
+    const label = healed
+      ? `${buf.character}: Healed ${amount} ${resLabel} (${readout})`
+      : `${buf.character}: Took ${amount} ${resLabel} damage (${readout})`;
     await logToSession(label);
-    resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, timer: null };
+    resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, timer: null };
   }, [logToSession]);
 
   /**
@@ -332,6 +350,7 @@ export function useSessionLog() {
     newHP: number,
     maxHP: number,
     resourceId: string = 'hp',
+    accumulates: boolean = false,
   ) => {
     if (!activeSession) return;
     const diff = newHP - oldHP;
@@ -343,7 +362,7 @@ export function useSessionLog() {
     }
     // Initialize start value on first change in this batch
     if (!buf.character || buf.character !== characterName || buf.resource !== resourceId) {
-      resourceBuffer.current = { character: characterName, resource: resourceId, startValue: oldHP, currentValue: newHP, maxValue: maxHP, timer: null };
+      resourceBuffer.current = { character: characterName, resource: resourceId, startValue: oldHP, currentValue: newHP, maxValue: maxHP, accumulates, timer: null };
     } else {
       resourceBuffer.current.currentValue = newHP;
       resourceBuffer.current.maxValue = maxHP;

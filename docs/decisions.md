@@ -188,3 +188,29 @@
   two are closed unions with a cast hiding the mismatch. See
   `docs/plans/2026-07-28-traveller-hardening-findings.md` S1.
 - Commit: fix(traveller) — apply temp modifiers by namespaced stat key.
+
+## 2026-07-28 — The session log called every Traveller hit "Healed"
+- Symptom: `flushResourceBuffer` derived the verb from the sign of the delta
+  alone — `diff > 0 ? 'Healed' : 'Took … damage'`. That is right for a depleting
+  pool (Dragonbane HP counts down) and exactly backwards for an accumulating
+  damage track, where the stored number IS the damage taken. Tapping "+" three
+  times on Endurance Damage logged `Kira: Healed 3 END`. `system.json` has
+  declared `"direction": "accumulates"` on all three Traveller tracks the whole
+  time; nothing read it.
+- Fix: `logHPChange` takes an `accumulates` flag, the buffer carries it, and the
+  label branches on direction rather than raw sign. The readout now says
+  "3/8 END damage" for a track and "5/10 HP" for a pool, so the number is not
+  ambiguous either.
+- Second half of the same problem: `DamageHealModule` — the only surface that
+  applies damage for a damage-track system, since Vitals renders a read-only
+  readout — never imported `useSessionLog` at all. So the primary surface logged
+  nothing and the secondary one logged the opposite of the truth; between them
+  a fight left no usable record. It now logs each application, not debounced,
+  because each is one deliberate button press rather than a stepper tick.
+- Surfaces: `useSessionLog.ts`, `SheetScreen.tsx` (the caller reads `direction`
+  off the system definition), `DamageHealModule.tsx`.
+- Watch: `ResourceModule.tsx:36` still gates its own logging on the literal ids
+  `'hp'`/`'wp'`. Unreachable for Traveller and SWADE (both take the damage-track
+  branch first) but it bites the first pool-based non-Dragonbane system,
+  including any user-authored JSON system.
+- Commit: fix(session-log) — report accumulating damage tracks as damage.
