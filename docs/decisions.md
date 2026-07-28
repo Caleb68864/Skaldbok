@@ -245,3 +245,25 @@
   UNCONSCIOUS banner while `character.conditions.unconscious` stays false and no
   export or printout records it.
 - Commit: fix(traveller) — stop conditions double-penalising the damage track.
+
+## 2026-07-28 — "Recover All" was a one-tap irreversible wipe next to a dead zone
+- Symptom: `Recover All` sat immediately right of `Heal` in the identical
+  neutral button class. `Heal` is `disabled` whenever the amount field is empty
+  and the shared class carries `disabled:pointer-events-none`, so in the common
+  state Heal was a dead zone and the first *live* target to its right cleared
+  every damage track. No confirm, no undo — and the dashboard autosaves within
+  500ms, so recovering meant remembering three numbers.
+- Fix: moved it to its own row and made it two-step — the first press arms, the
+  second fires, with a Cancel beside it and a five-second auto-disarm so it
+  cannot be left hot. Armed state is styled with `--color-danger`; the resting
+  state is muted rather than matching Heal.
+- Rejected while here: **not** cascading damage through the remaining overflow
+  tracks. A wave-4 finding read the single-overflow sequence as an oversight —
+  a 20-point hit zeroes END and STR, strands 6, and reports 'down' rather than
+  'dead'. But `damageTrack.test.ts` encodes that as deliberate in three tests
+  and says so in a comment ("only one overflow target is chosen per hit"); the
+  remainder is surfaced as `unassigned` for the player to place. That is a
+  design choice consistent with this project's no-bundled-rules stance, not a
+  defect. Left alone.
+- Surfaces: `DamageHealModule.tsx`.
+- Commit: fix(traveller) — arm Recover All before it fires.

@@ -29,6 +29,7 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
   const [healAmount, setHealAmount] = useState('');
   const [healTarget, setHealTarget] = useState(model?.order[0] ?? tracks[0] ?? '');
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmRecover, setConfirmRecover] = useState(false);
   const { logToSession, hasActiveSession } = useSessionLog();
 
   /**
@@ -126,7 +127,22 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
     setHealAmount('');
   }
 
+  /**
+   * Clears every damage track. Two-step: the first press arms, the second
+   * fires.
+   *
+   * @remarks
+   * There is no undo anywhere in the app for this, and the dashboard autosaves
+   * within 500ms, so a mis-tap costs the player three remembered numbers. The
+   * arm state clears itself after five seconds so it cannot be left hot.
+   */
   function handleRecoverAll() {
+    if (!confirmRecover) {
+      setConfirmRecover(true);
+      window.setTimeout(() => setConfirmRecover(false), 5000);
+      return;
+    }
+    setConfirmRecover(false);
     writeResources(Object.fromEntries(tracks.map(id => [id, 0])));
     setMessage('Full recovery — all damage cleared.');
     logOutcome('Full recovery — all damage cleared.');
@@ -194,7 +210,35 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
             </label>
           )}
           <button type="button" onClick={handleHeal} disabled={!healAmount} className={btn}>Heal</button>
-          <button type="button" onClick={handleRecoverAll} className={btn}>Recover All</button>
+        </div>
+
+        {/* Recover All — on its own row, and armed before it fires. It used to
+            sit immediately right of Heal in identical styling, and Heal is
+            `disabled:pointer-events-none` whenever the amount field is empty,
+            so the common state left a dead zone with an irreversible full heal
+            as the first live target to its right. */}
+        <div className="flex flex-wrap items-center gap-[var(--space-xs)] border-t border-[var(--color-border)] pt-[var(--space-sm)]">
+          <button
+            type="button"
+            onClick={handleRecoverAll}
+            aria-label={confirmRecover ? 'Confirm full recovery' : 'Recover all damage'}
+            className={`${btn} ${
+              confirmRecover
+                ? 'border-[var(--color-danger)] text-[var(--color-danger)] font-bold'
+                : 'text-[var(--color-text-muted)]'
+            }`}
+          >
+            {confirmRecover ? 'Tap again to confirm' : 'Recover All'}
+          </button>
+          {confirmRecover && (
+            <button
+              type="button"
+              onClick={() => setConfirmRecover(false)}
+              className={btn}
+            >
+              Cancel
+            </button>
+          )}
         </div>
 
         {message && (
