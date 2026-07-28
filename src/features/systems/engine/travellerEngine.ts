@@ -1,5 +1,5 @@
 import type { CharacterRecord } from '../../../types/character';
-import type { DerivedValues } from '../../../utils/derivedValues';
+import { getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
 import {
   characteristicToDM,
   twoD6SuccessProbability,
@@ -30,9 +30,15 @@ export const TRAVELLER_DAMAGE_TRACK_IDS = ['str', 'dex', 'end'];
  * this function rather than from `attributes` directly, so the damage track
  * actually bites. Characteristics without a track (INT/EDU/SOC) have no
  * matching resource and so are returned unchanged.
+ *
+ * Temp modifiers are folded into the base through `getEffectiveValue` under the
+ * **namespaced** key, so `attr:str` (the characteristic) and `res:str` (damage
+ * taken to it) stay distinct targets — a buff aimed at the damage track must not
+ * move the score. Resolving the modified base here rather than at each call site
+ * is what keeps the sheet's score and its DM badge derived from one number.
  */
 export function effectiveCharacteristic(character: CharacterRecord, id: string): number {
-  const base = character.attributes?.[id] ?? 0;
+  const base = getEffectiveValue(attrKey(id), character).effective;
   const damage = character.resources?.[id]?.current ?? 0;
   return Math.max(0, base - damage);
 }

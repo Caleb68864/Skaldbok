@@ -153,3 +153,38 @@
   `module!Symbol | Symbol` form — check `typedoc --emit none` after writing
   docs, not just after changing code.
 - Commit: docs(notes,kb) — document the remaining undocumented exports.
+
+## 2026-07-28 — Temp modifiers were written namespaced and read bare
+- Symptom: every temporary modifier in the app was inert. Producers write
+  namespaced stat keys — `travellerEngine.ts:303/308` and the other two adapters
+  build targets with `attrKey`/`resKey` (`attr:str`), and `migrations.ts:87-93`
+  rewrites legacy bare keys the same way on every read — but the only two
+  production callers of `getEffectiveValue` (`SheetScreen.tsx:606` and `:697`)
+  passed a **bare** id, and `derivedValues.ts:248` matches with exact string
+  equality. `'attr:str' !== 'str'`, so nothing ever matched. Live and
+  user-facing on Dragonbane, which renders the modifier UI; a modifier saved
+  before namespacing worked and stopped the moment `upgradeCharacter` rewrote it.
+- Why it looked green: `statKeys.test.ts` calls `getEffectiveValue` correctly,
+  with `attrKey()`/`resKey()`. The resolver was tested; the call sites were not.
+  tsc cannot help — `StatKey` (`types/character.ts:264-268`) ends in `| string`.
+- Fix: pass `attrKey(id)` at both call sites, and resolve the modified base
+  inside `effectiveCharacteristic` so the Traveller score and its DM badge derive
+  from one number rather than two.
+- Landed together deliberately. Fixing the call sites alone would have made
+  things *worse* on Traveller: the score box would start showing a +1 buff while
+  the DM badge, computed from the raw attribute, still read the unbuffed rung.
+- Also in this pass: the Traveller characteristics panel now renders the
+  modifier-delta badge the Dragonbane panel already had, and shows the damaged
+  value explicitly. The box edits the *score* (base + modifiers) while the DM is
+  derived from that minus damage — with STR 8 and 5 damage the panel read "8"
+  next to "DM −1" and nothing explained the gap, so a player doing their own 2d6
+  math off the big number rolled a full DM wrong on every attack.
+- Surfaces: `travellerEngine.ts`, `SheetScreen.tsx` (both the Dragonbane
+  attributes panel and the Traveller characteristics panel).
+- Watch: this is one instance of a class — four producer/consumer key spaces
+  exist and nothing asserts a key one side emits is one the other resolves. The
+  other three are `derivedFields[].key` vs `derivedStats()`, `timeUnits[].id` vs
+  `TempModifier['duration']`, and `outcomes[].id` vs `OutcomeResult`; the last
+  two are closed unions with a cast hiding the mismatch. See
+  `docs/plans/2026-07-28-traveller-hardening-findings.md` S1.
+- Commit: fix(traveller) — apply temp modifiers by namespaced stat key.

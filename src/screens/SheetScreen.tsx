@@ -18,6 +18,7 @@ import { ResourceTracker } from '../components/fields/ResourceTracker';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { DerivedFieldDisplay } from '../components/fields/DerivedFieldDisplay';
 import { getEffectiveValue } from '../utils/derivedValues';
+import { attrKey } from '../utils/statKeys';
 import { damageStatus } from '../utils/damageTrack';
 import { BuffChipBar } from '../components/panels/BuffChipBar';
 import { AddModifierDrawer } from '../components/panels/AddModifierDrawer';
@@ -603,7 +604,10 @@ export default function SheetScreen() {
       <SectionPanel title={`${engine.labels.attributesPanel}${isPlayMode ? ' (locked in Play Mode)' : ''}`} icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
         <div className="flex flex-wrap gap-[var(--space-md)] justify-center">
           {system?.attributes.map(attr => {
-            const ev = getEffectiveValue(attr.id, character);
+            // Namespaced: modifiers are stored as `attr:<id>` (modifiableStats
+            // builds them with attrKey, and the v2→v3 migration rewrites legacy
+            // bare keys the same way). A bare id here matches nothing.
+            const ev = getEffectiveValue(attrKey(attr.id), character);
             const linked = system.conditions
               .filter(c => c.linkedAttributeId === attr.id)
               .map(def => ({ definition: def, active: !!character.conditions[def.id] }));
@@ -694,8 +698,14 @@ export default function SheetScreen() {
       <div className="flex flex-wrap gap-[var(--space-md)] justify-center">
         {engine.attributeIds.map(attrId => {
           const attr = system?.attributes.find(a => a.id === attrId);
-          const ev = getEffectiveValue(attrId, character);
+          // Namespaced — see the note on the attributes panel above. `attr:str`
+          // is the characteristic; `res:str` is damage taken to it.
+          const ev = getEffectiveValue(attrKey(attrId), character);
           const dm = engine.attributeBadge(attrId, character);
+          // The field edits the *score*, so it shows base + modifiers. The DM
+          // badge is derived from that minus damage, so without this the two
+          // silently disagree the moment the character is hurt.
+          const damage = character.resources?.[attrId]?.current ?? 0;
           return (
             <div key={attrId} className="flex flex-col items-center gap-[var(--space-xs)]">
               <AttributeField
@@ -706,7 +716,13 @@ export default function SheetScreen() {
                 max={attr?.max}
                 onChange={v => updateAttr(attrId, v)}
                 disabled={!attributesEditable}
+                modifierDelta={ev.isModified ? ev.modifiers.reduce((s, m) => s + m.delta, 0) : undefined}
               />
+              {damage > 0 && (
+                <span className="text-[length:var(--font-size-xs,10px)] font-bold text-[var(--color-danger)]">
+                  {Math.max(0, ev.effective - damage)} after {damage} damage
+                </span>
+              )}
               {dm !== null && (
                 <span
                   aria-label={`${attr?.abbreviation ?? attrId.toUpperCase()} DM`}

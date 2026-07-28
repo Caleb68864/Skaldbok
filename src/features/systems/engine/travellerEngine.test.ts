@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { effectiveCharacteristic, travellerEngine, computeTravellerDerivedValues } from './travellerEngine';
-import type { CharacterRecord } from '../../../types/character';
+import type { CharacterRecord, TempModifier } from '../../../types/character';
+
+/** A one-effect temp modifier targeting `stat`. */
+function modifier(stat: TempModifier['effects'][number]['stat'], delta: number): TempModifier {
+  return {
+    id: `mod-${stat}-${delta}`,
+    label: 'Test buff',
+    effects: [{ stat, delta }],
+    duration: 'scene',
+    createdAt: '2026-07-28T00:00:00.000Z',
+  };
+}
 
 /** A minimal Traveller character: all characteristics 7, an empty damage track. */
 function character(overrides: Partial<CharacterRecord> = {}): CharacterRecord {
@@ -46,6 +57,52 @@ describe('effectiveCharacteristic', () => {
       resources: { str: { current: 2, max: 12 } } as CharacterRecord['resources'],
     });
     expect(effectiveCharacteristic(c, 'str')).toBe(10);
+  });
+
+  it('folds in an active temp modifier on the characteristic', () => {
+    const buffed = character({ tempModifiers: [modifier('attr:dex', 2)] });
+    expect(effectiveCharacteristic(buffed, 'dex')).toBe(9);
+  });
+
+  it('composes a modifier with damage', () => {
+    // Battle Dress +1 STR while carrying 3 points of Strength damage.
+    const c = character({
+      resources: { str: { current: 3, max: 7 } } as CharacterRecord['resources'],
+      tempModifiers: [modifier('attr:str', 1)],
+    });
+    expect(effectiveCharacteristic(c, 'str')).toBe(5);
+  });
+
+  it('ignores a modifier aimed at the same-named resource', () => {
+    // res:dex is the damage track, not the characteristic. Distinct targets.
+    const c = character({ tempModifiers: [modifier('res:dex', 2)] });
+    expect(effectiveCharacteristic(c, 'dex')).toBe(7);
+  });
+
+  it('ignores an unnamespaced legacy key so it cannot hit twice', () => {
+    // resolveLegacy would resolve a bare 'dex' to the characteristic, but the
+    // migration namespaces stored keys on read, so nothing should still be bare.
+    const c = character({ tempModifiers: [modifier('dex' as TempModifier['effects'][number]['stat'], 2)] });
+    expect(effectiveCharacteristic(c, 'dex')).toBe(7);
+  });
+
+  it('does not let a negative modifier push a characteristic below zero', () => {
+    const c = character({ tempModifiers: [modifier('attr:soc', -99)] });
+    expect(effectiveCharacteristic(c, 'soc')).toBe(0);
+  });
+});
+
+describe('attributeBadge', () => {
+  it('reports the DM of the modified characteristic, not the base', () => {
+    // DEX 7 is DM +0; DEX 9 is DM +1. Before the stat-key fix the badge read +0
+    // because the modifier never matched the bare key the sheet passed in.
+    const buffed = character({ tempModifiers: [modifier('attr:dex', 2)] });
+    expect(travellerEngine.attributeBadge!('dex', buffed)).toBe('+1');
+  });
+
+  it('still returns null for a characteristic the record does not have', () => {
+    const c = character({ attributes: { str: 7 } as CharacterRecord['attributes'] });
+    expect(travellerEngine.attributeBadge!('psi', c)).toBeNull();
   });
 });
 
