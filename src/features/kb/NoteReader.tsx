@@ -17,6 +17,9 @@ import { WikiLink } from '../notes/wikilinkExtension';
 import { DescriptorMention } from '../notes/descriptorMentionExtension';
 import Mention from '@tiptap/extension-mention';
 import { getNoteById, createNote } from '../../storage/repositories/noteRepository';
+import * as noteRepository from '../../storage/repositories/noteRepository';
+import { useNoteActions } from '../notes/useNoteActions';
+import { useToast } from '../../context/ToastContext';
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
 import { useForwardLinks } from './KnowledgeBaseContext';
@@ -39,6 +42,42 @@ export function NoteReader({ noteId }: NoteReaderProps) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [notFound, setNotFound] = useState(false);
   const [peekNodeId, setPeekNodeId] = useState<string | null>(null);
+  const { deleteNote } = useNoteActions();
+  const { showToast } = useToast();
+
+  /**
+   * Soft-deletes the note and navigates back, offering an Undo.
+   *
+   * @remarks
+   * Routed through {@link useNoteActions.deleteNote} so the note's entity
+   * links and attachments cascade under one transaction id — deleting the
+   * note row alone would strand its edges. This is currently the only place
+   * in the app an ordinary note can be deleted; `NotesGrid` used to carry the
+   * action but is no longer mounted.
+   */
+  const handleDelete = useCallback(async () => {
+    if (!note) return;
+    const deletedId = note.id;
+    const title = note.title?.trim() || 'Note';
+    await deleteNote(deletedId);
+    navigate(-1);
+    showToast(`${title} deleted`, 'info', {
+      // Longer than the 3s default: this is the undo for a destructive action,
+      // and the default expires before someone who deleted the wrong note has
+      // finished registering that they did.
+      duration: 8000,
+      action: {
+        label: 'Undo',
+        onClick: async () => {
+          try {
+            await noteRepository.restore(deletedId);
+          } catch (e) {
+            showToast(e instanceof Error ? e.message : 'Failed to restore note', 'error');
+          }
+        },
+      },
+    });
+  }, [note, deleteNote, navigate, showToast]);
 
   // Load note data — nodeId might be a kb_nodes ID or a note ID
   useEffect(() => {
@@ -236,12 +275,20 @@ export function NoteReader({ noteId }: NoteReaderProps) {
         <h1 className="text-xl font-bold text-[var(--color-text)]">
           {note.title}
         </h1>
-        <button
-          onClick={() => navigate(`/note/${note.id}/edit`)}
-          className="px-4 py-2 min-h-[44px] bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-sm font-semibold cursor-pointer"
-        >
-          Edit
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => navigate(`/note/${note.id}/edit`)}
+            className="px-4 py-2 min-h-[44px] bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-sm font-semibold cursor-pointer"
+          >
+            Edit
+          </button>
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 min-h-[44px] bg-transparent border border-[var(--color-border)] rounded-lg text-sm font-semibold cursor-pointer text-[var(--color-state-danger,#dc2626)]"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {/* Type badge */}

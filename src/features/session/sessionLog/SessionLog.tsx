@@ -161,6 +161,9 @@ export function SessionLog() {
         toDelete.length === 1 ? 'Entry deleted' : `${toDelete.length} entries deleted`,
         'info',
         {
+          // Longer than the 3s default — see NoteReader: an undo nobody has
+          // time to reach is not an undo.
+          duration: 8000,
           action: {
             label: 'Undo',
             onClick: async () => {
