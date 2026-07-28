@@ -57,6 +57,7 @@ export function useKnowledgeBase(): KnowledgeBaseContextValue {
   return ctx;
 }
 
+/** Props for the Knowledge Base graph provider. */
 export interface KnowledgeBaseProviderProps {
   children: ReactNode;
   campaignId: string;

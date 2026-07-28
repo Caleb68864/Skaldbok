@@ -19,6 +19,16 @@ import { cn } from '../../../lib/utils';
 import type { Note } from '../../../types/note';
 import type { EntityLink } from '../../../types/entityLink';
 
+/**
+ * Props for {@link SessionLogSelection}.
+ *
+ * @remarks
+ * The owner keeps the data and the writes; this component owns only the
+ * selection. That split is why `entries` comes in already scoped to the
+ * session and every mutation leaves via a callback — it has no repository
+ * access of its own and deliberately takes no `sessionId`, which would be a
+ * second source of truth for scoping the caller has already done.
+ */
 export interface SessionLogSelectionProps {
   /** The active session's log entries, in the order they should be rendered. */
   entries: Note[];

@@ -131,3 +131,25 @@
   dead link, so prefer the qualified form across modules. `typedoc --emit none`
   now exits 0; keep it there so the next warning means something.
 - Commit: docs(typedoc) — take the API docs from 247 warnings to zero.
+
+## 2026-07-28 — Undocumented exports across notes, session log and KB
+- Symptom: 31 exported types and components in the notes / session-log / KB
+  areas had no doc comment at all. TypeDoc says nothing about this — an
+  undocumented export is not a warning, it just renders as a bare signature —
+  so it survived the warning cleanup in the entry above.
+- Fix: documented all 31, recording the reasoning that is invisible in the
+  signature rather than restating the types. The load-bearing ones:
+  `linkScanner` (resolved vs missing-record suggestions, why `key` must stay
+  stable because settings persist dismissals by it, and that
+  `fuzzyMaxDistance` is a cap rather than the threshold); `VaultBrowser` (reads
+  `kb_nodes` not `notes`, so a writer that skips the graph sync is invisible
+  there, and session mode intersects against live notes); `PromoteMode` (tag
+  mode writes no note and therefore no `promoted_into` link).
+- Surfaces: `src/features/notes/**`, `src/features/session/sessionLog/**`,
+  `src/features/kb/**`.
+- Watch: two of the newly-written links were themselves cross-module and
+  unqualified, so the doc build went from 0 warnings back to 2 until they were
+  fixed. Adding a `{@link}` to a symbol the file does not import needs the
+  `module!Symbol | Symbol` form — check `typedoc --emit none` after writing
+  docs, not just after changing code.
+- Commit: docs(notes,kb) — document the remaining undocumented exports.

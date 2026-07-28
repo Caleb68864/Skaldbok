@@ -31,10 +31,20 @@ import type { Attachment } from '../../types/attachment';
 import type { KBNode } from '../../storage/db/client';
 import { buildNoteRecord, persistCanonicalNoteLinks } from '../notes/noteCreationService';
 
+/** Props for {@link NoteReader}. */
 export interface NoteReaderProps {
   noteId: string;
 }
 
+/**
+ * Read-only view of a single note: rendered body, attachments, backlinks and
+ * forward links, plus Edit and Delete.
+ *
+ * @remarks
+ * `noteId` may be either a `kb_nodes` id or a raw note id; the loader tries
+ * the graph first and falls back to a direct note lookup, which is what lets
+ * both `/kb/note-<id>` links and bare note ids resolve here.
+ */
 export function NoteReader({ noteId }: NoteReaderProps) {
   const navigate = useNavigate();
   const [note, setNote] = useState<Note | null>(null);

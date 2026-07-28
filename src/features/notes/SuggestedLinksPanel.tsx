@@ -13,6 +13,14 @@ import { docToText } from './textToDoc.js';
 import * as settingsRepository from '../../storage/repositories/settingsRepository.js';
 import type { AppSettings } from '../../types/settings.js';
 
+/**
+ * Minimal structural view of a ProseMirror node.
+ *
+ * @remarks
+ * Deliberately not Tiptap's own node type: this file only needs to walk
+ * `content` and read `text`, and depending on Tiptap's internal types here
+ * would couple link approval to an editor upgrade.
+ */
 export type ProseMirrorNode = {
   type: string;
   text?: string;
@@ -160,6 +168,7 @@ export async function persistDismissedSuggestion(
   await settingsRepository.save(updated as AppSettings);
 }
 
+/** Props for {@link SuggestedLinksPanel}. */
 export interface SuggestedLinksPanelProps {
   /** Suggestions produced by {@link features/notes/linkScanner!scanForLinks | scanForLinks}, already filtered against dismissals by the caller. */
   suggestions: LinkScanSuggestion[];

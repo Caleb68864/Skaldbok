@@ -21,13 +21,36 @@ import { useKBSearch } from './useKBSearch';
 import { VaultCard } from './VaultCard';
 import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 
+/** Props for {@link VaultBrowser}. */
 export interface VaultBrowserProps {
+  /** Campaign whose KB nodes are listed. Shared (cross-campaign) nodes are always included. */
   campaignId: string;
+  /**
+   * Restrict the list to notes belonging to one session.
+   *
+   * @remarks
+   * Setting this switches the component into session mode, where it
+   * intersects KB nodes with the session's *live* notes. That intersection is
+   * what keeps soft-deleted notes out of the session panel, so a node left
+   * behind by a delete cannot leak here — unlike the campaign-wide list.
+   */
   sessionId?: string;
+  /** Pre-select one of the category tabs (`character`, `location`, `item`, `note`). */
   typeFilter?: string;
+  /** Render the condensed variant used inside the session screen rather than the full `/kb` view. */
   compact?: boolean;
+  /** Search text, when the caller wants to own it. Leave unset to use the internal input. */
   searchQuery?: string;
+  /** Called as the user types, when `searchQuery` is controlled. */
   onSearchQueryChange?: (query: string) => void;
+  /**
+   * Bump to force a re-query.
+   *
+   * @remarks
+   * The node list is loaded in an effect keyed on this value, so writes made
+   * elsewhere (promoting log entries, deleting a note) are invisible until the
+   * writer increments it — see `SessionRefreshContext`.
+   */
   refreshToken?: number;
 }
 
@@ -39,6 +62,20 @@ const CATEGORY_TABS = [
   { value: 'note', label: 'Notes' },
 ] as const;
 
+/**
+ * Browsable list of Knowledge Base nodes for a campaign, with category tabs,
+ * debounced search, tag filtering and infinite scroll.
+ *
+ * @remarks
+ * Reads `kb_nodes`, not `notes` — so anything absent from the graph is absent
+ * here regardless of whether the underlying note exists. Writers that create
+ * or delete notes must sync the graph (the note repository does this) and bump
+ * {@link VaultBrowserProps.refreshToken}, or their change will not appear.
+ *
+ * Two modes: session mode ({@link VaultBrowserProps.sessionId} set) shows one
+ * session's notes and intersects against live notes; campaign mode lists every
+ * node in the campaign plus shared nodes.
+ */
 export function VaultBrowser({
   campaignId,
   sessionId,

@@ -3,6 +3,14 @@ import type { Note } from '../../types/note';
 import { extractDescriptors } from '../../utils/notes/extractDescriptors';
 import { cn } from '../../lib/utils';
 
+/**
+ * Props for {@link NoteItem}.
+ *
+ * @remarks
+ * Every action is a callback taking the note id rather than the note — the row
+ * is presentational and owns no repository access, so the list that renders it
+ * stays the single writer.
+ */
 export interface NoteItemProps {
   note: Note;
   onPin: (id: string) => void;
@@ -12,6 +20,14 @@ export interface NoteItemProps {
   onDelete: (id: string) => void;
 }
 
+/**
+ * One note in a list: title, descriptor chips, and a revealed action row.
+ *
+ * @remarks
+ * Descriptors are derived from the body on each render via
+ * `extractDescriptors` rather than stored, so a `#tag` typed into the body
+ * shows up here without a separate write.
+ */
 export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: NoteItemProps) {
   const [showActions, setShowActions] = useState(false);
   const descriptors = extractDescriptors(note.body);

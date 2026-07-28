@@ -16,6 +16,7 @@ const TYPE_COLORS: Record<string, string> = {
   unresolved: 'bg-red-500/10 text-red-500',
 };
 
+/** Props for {@link VaultCard}. */
 export interface VaultCardProps {
   node: KBNode;
   linkCount: number;
@@ -42,6 +43,15 @@ function formatRelativeTime(iso: string): string {
   }
 }
 
+/**
+ * One row in {@link features/kb/VaultBrowser!VaultBrowser | VaultBrowser}: a KB node's title, type badge, tags, link
+ * count and relative last-updated time.
+ *
+ * @remarks
+ * Purely presentational — `linkCount` is computed by the browser rather than
+ * queried here, so a long list issues one batch of edge lookups instead of one
+ * per row.
+ */
 export function VaultCard({ node, linkCount, tags, onClick }: VaultCardProps) {
   const typeColor = TYPE_COLORS[node.type] ?? TYPE_COLORS.note;
 

@@ -10,6 +10,7 @@ import { db } from '../../storage/db/client';
 import { getNoteById } from '../../storage/repositories/noteRepository';
 import type { KBNode } from '../../storage/db/client';
 
+/** Props for {@link PeekCard}. */
 export interface PeekCardProps {
   nodeId: string;
   onClose: () => void;
@@ -34,6 +35,15 @@ function extractTextSnippet(body: unknown, maxLen: number = 100): string {
   return text.length > maxLen ? text.slice(0, maxLen) + '...' : text;
 }
 
+/**
+ * Small preview popover for a KB node: its title, type and a short body
+ * snippet, with the option to open it fully.
+ *
+ * @remarks
+ * Exists so following a wikilink does not have to mean losing your place —
+ * the peek resolves the node and the first ~100 characters of its body without
+ * navigating away.
+ */
 export function PeekCard({ nodeId, onClose, onOpen }: PeekCardProps) {
   const [node, setNode] = useState<KBNode | null>(null);
   const [snippet, setSnippet] = useState('');

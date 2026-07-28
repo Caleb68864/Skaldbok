@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useKBSearch } from './useKBSearch';
 import type { KBNode } from '../../storage/db/client';
 
+/** Props for {@link CommandPalette}. */
 export interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,6 +30,14 @@ const TYPE_COLORS: Record<string, string> = {
   unresolved: 'bg-red-500/10 text-red-500',
 };
 
+/**
+ * Full-screen search overlay for jumping to any Knowledge Base node.
+ *
+ * @remarks
+ * Rendered through a portal so it escapes any transformed or clipped ancestor,
+ * and it searches as you type via `useKBSearch`. Selecting a result navigates
+ * to that node and closes the palette.
+ */
 export function CommandPalette({ isOpen, onClose, campaignId }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);

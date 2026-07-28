@@ -35,8 +35,18 @@ const SELECTABLE_NOTE_TYPES: { value: NoteType; label: string }[] = [
   { value: 'recap', label: 'Recap' },
 ];
 
+/**
+ * What promoting a selection should do.
+ *
+ * @remarks
+ * - `new` creates a fresh typed note from the selection.
+ * - `existing` appends the selection onto a note that already exists.
+ * - `tag` applies tags to the entries in place and creates no note at all,
+ *   so no `promoted_into` link is written either.
+ */
 export type PromoteMode = 'new' | 'existing' | 'tag';
 
+/** Props for {@link PromoteEntriesSheet}. */
 export interface PromoteEntriesSheetProps {
   /** The selected session-log entries (`type: 'log'` notes) to promote. */
   entries: Note[];

@@ -13,11 +13,21 @@ import { useBacklinks } from './KnowledgeBaseContext';
 import { db } from '../../storage/db/client';
 import type { KBNode } from '../../storage/db/client';
 
+/** Props for {@link BacklinksPanel}. */
 export interface BacklinksPanelProps {
   nodeId: string;
   onPeek?: (nodeId: string) => void;
 }
 
+/**
+ * Lists the KB nodes that link *to* `nodeId` — the "what mentions this?" panel.
+ *
+ * @remarks
+ * Backlink edges are read from the graph context, then each edge's `fromId` is
+ * resolved to a node for display. Nodes that no longer exist are skipped rather
+ * than rendered as dead rows, so a stale edge degrades to a missing entry
+ * instead of a crash.
+ */
 export function BacklinksPanel({ nodeId, onPeek }: BacklinksPanelProps) {
   const backlinks = useBacklinks(nodeId);
   const [sourceNodes, setSourceNodes] = useState<KBNode[]>([]);

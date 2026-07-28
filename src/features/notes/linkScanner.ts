@@ -10,32 +10,66 @@
  * candidates, subject to the same minimum-length guard.
  */
 
+/** The kinds of campaign entity a scanned name can resolve to. */
 export type LinkScanEntityType = 'character' | 'creature' | 'note';
 
+/**
+ * One searchable name in the scan dictionary, paired with the entity it means.
+ *
+ * @remarks
+ * Names are matched case-insensitively on whole words. A single entity can
+ * appear more than once if it is known by several names; each alias is its own
+ * entry rather than a list, so the matcher never has to unpack a nested shape.
+ */
 export interface LinkScanDictionaryEntry {
   /** Display name to match against note text. */
   name: string;
   /** The entity this name resolves to. */
   entityId: string;
+  /** Which table `entityId` refers to. */
   entityType: LinkScanEntityType;
 }
 
+/** A party member as the dictionary builder needs it: the linked character and its name. */
 export interface PartyMemberDictionaryInput {
+  /** Id of the linked `CharacterRecord`. Members with no linked character are filtered out by the caller. */
   characterId: string;
+  /** The character's display name, used as the match target. */
   characterName: string;
 }
 
+/** A bestiary creature as the dictionary builder needs it. */
 export interface CreatureTemplateDictionaryInput {
+  /** Id of the creature template. */
   id: string;
+  /** The creature's name, used as the match target. */
   name: string;
+  /** Bestiary category. Carried for callers that group suggestions; not used for matching. */
   category: string;
 }
 
+/** An existing note as the dictionary builder needs it — its title is the match target. */
 export interface NoteDictionaryInput {
+  /** Id of the note. */
   id: string;
+  /** The note's title. Untitled notes (log entries) are excluded by the caller. */
   title: string;
 }
 
+/**
+ * One proposed link between a span of note text and a campaign entity.
+ *
+ * @remarks
+ * Two distinct shapes share this type. A *resolved* suggestion has a `target`
+ * and offers to wrap the span in `[[…]]`. A *missing-record* suggestion has
+ * `target: null` and `isMissingRecord: true` — the scanner saw a capitalised
+ * name repeated in the text with nothing in the dictionary to match, so the
+ * offer is to create the record instead of link to it.
+ *
+ * `key` is what the dismissal list in settings stores, so it must stay stable
+ * across scans of the same text; changing how it is derived orphans every
+ * suggestion a user has already dismissed.
+ */
 export interface LinkScanSuggestion {
   /** The exact substring matched in the source text. */
   matchedText: string;
@@ -158,12 +192,31 @@ function fuzzyThresholdFor(name: string, cap: number): number | null {
   return Math.min(base, cap);
 }
 
+/** Inputs to {@link scanForLinks}. */
 export interface ScanForLinksOptions {
+  /**
+   * The text to scan.
+   *
+   * @remarks
+   * Pass the raw body text. Callers that render entries with a timestamp
+   * prefix must strip it first — otherwise fragments like "PM" become
+   * missing-record candidates.
+   */
   text: string;
+  /** Names to match against, from {@link buildLinkScanDictionary}. */
   dictionary: LinkScanDictionaryEntry[];
-  /** Keys (see LinkScanSuggestion.key) that the user has already dismissed. */
+  /** Keys (see {@link LinkScanSuggestion.key}) the user has already dismissed. */
   dismissed?: string[];
-  /** Max edit distance for fuzzy matching. Defaults to 2. */
+  /**
+   * Upper bound on fuzzy edit distance. Defaults to 2.
+   *
+   * @remarks
+   * This is a *cap*, not the threshold. The effective distance is scaled per
+   * name by `fuzzyThresholdFor`: names under 3 characters never fuzzy-match at
+   * all, 3-4 character names allow 1, and longer names allow up to this cap.
+   * Lowering it tightens matching globally; it cannot loosen the short-name
+   * guard.
+   */
   fuzzyMaxDistance?: number;
 }
 

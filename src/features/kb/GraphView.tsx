@@ -29,11 +29,21 @@ import {
 import { getEdgesByCampaign } from '../../storage/repositories/kbEdgeRepository';
 import type { KBNode } from '../../storage/db/client';
 
+/** Props for {@link GraphView}. */
 export interface GraphViewProps {
   campaignId: string;
   centeredNodeId?: string;
 }
 
+/**
+ * Force-directed canvas rendering of the campaign's Knowledge Base graph.
+ *
+ * @remarks
+ * Drawn to a `<canvas>` with a d3 force simulation rather than SVG, because a
+ * campaign's graph reaches node counts where per-node DOM elements stop being
+ * affordable on a tablet. Pan/zoom state lives in refs so gestures do not
+ * re-render React on every frame.
+ */
 export function GraphView({ campaignId, centeredNodeId }: GraphViewProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const navigate = useNavigate();

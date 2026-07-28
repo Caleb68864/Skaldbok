@@ -8,6 +8,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 
+/** Props for {@link WikiLinkList}, supplied by the Tiptap suggestion plugin. */
 export interface WikiLinkListProps {
   items: Array<{ id: string; label: string }>;
   command: (item: { id: string; label: string }) => void;
