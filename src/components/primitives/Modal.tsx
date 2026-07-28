@@ -10,7 +10,7 @@ import {
 } from "../ui/dialog";
 
 /** Props for {@link Modal}. `actions` render in the footer; omit them for a body-only dialog. */
-interface ModalProps {
+export interface ModalProps {
   open: boolean;
   onClose: () => void;
   title: string;

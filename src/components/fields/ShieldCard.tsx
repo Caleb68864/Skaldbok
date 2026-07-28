@@ -1,7 +1,7 @@
 import type { Weapon } from '../../types/character';
 
 /** Props for {@link ShieldCard}. Mark-damaged / repair actions only appear in play mode and only when the shield tracks durability. */
-interface ShieldCardProps {
+export interface ShieldCardProps {
   shield: Weapon;
   isPlayMode: boolean;
   onMarkDamaged: (id: string) => void;

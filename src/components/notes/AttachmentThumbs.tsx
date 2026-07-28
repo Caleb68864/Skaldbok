@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { cn } from '../../lib/utils';
 
 /** A single thumbnail entry. `objectUrl` is a blob/object URL the caller owns and revokes. */
-interface AttachmentThumb {
+export interface AttachmentThumb {
   id: string;
   objectUrl: string;
   caption?: string;
 }
 
 /** Props for {@link AttachmentThumbs}. */
-interface AttachmentThumbsProps {
+export interface AttachmentThumbsProps {
   attachments: AttachmentThumb[];
   onDelete: (id: string) => void;
   onCaptionChange: (id: string, caption: string) => void;

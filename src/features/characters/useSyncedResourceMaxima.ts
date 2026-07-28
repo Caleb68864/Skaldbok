@@ -4,7 +4,7 @@ import type { SystemDefinition } from '../../types/system';
 import { syncDerivedResourceMaxima } from '../../utils/resourceMaxima';
 import { nowISO } from '../../utils/dates';
 
-type UpdateCharacter = (partialOrFn: (prev: CharacterRecord) => Partial<CharacterRecord>) => void;
+export type UpdateCharacter = (partialOrFn: (prev: CharacterRecord) => Partial<CharacterRecord>) => void;
 
 /**
  * Keeps resource maxima in step with the attributes they are derived from.

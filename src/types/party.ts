@@ -36,7 +36,7 @@ export const partySchema = z.object({
  * Zod schema for runtime validation of party member records read from IndexedDB.
  *
  * @remarks
- * A party member links a seat in the party to either a {@link CharacterRecord}
+ * A party member links a seat in the party to either a {@link types/character!CharacterRecord | CharacterRecord}
  * (via `linkedCharacterId`) or a named NPC/placeholder (via `name`).
  * `isActivePlayer` distinguishes PC slots from guest or inactive seats.
  *
@@ -51,7 +51,7 @@ export const partyMemberSchema = z.object({
   id: z.string(),
   /** ID of the {@link Party} this member belongs to. */
   partyId: z.string(),
-  /** ID of the {@link CharacterRecord} linked to this slot, if any. */
+  /** ID of the {@link types/character!CharacterRecord | CharacterRecord} linked to this slot, if any. */
   linkedCharacterId: z.string().optional(),
   /** Display name override for the member (used when no character is linked). */
   name: z.string().optional(),

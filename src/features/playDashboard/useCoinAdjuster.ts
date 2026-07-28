@@ -7,8 +7,8 @@ import type { CurrencyModel } from '../systems/engine/types';
 import type { PlayModuleProps } from './types';
 
 /**
- * The one coin-adjust handler, shared by the standalone {@link CurrencyModule}
- * and the Ready Gear purse in {@link CombatModule}.
+ * The one coin-adjust handler, shared by the standalone {@link features/playDashboard/CurrencyModule!CurrencyModule | CurrencyModule}
+ * and the Ready Gear purse in {@link features/playDashboard/CombatModule!CombatModule | CombatModule}.
  *
  * @remarks
  * Re-makes change across the whole purse via {@link remakeCurrency}, blocks an

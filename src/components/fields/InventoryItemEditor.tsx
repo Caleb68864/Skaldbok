@@ -5,7 +5,7 @@ import { Button } from '../primitives/Button';
 import { generateId } from '../../utils/ids';
 
 /** Props for {@link InventoryItemEditor}. A `null` `item` means "create new"; a non-null one pre-fills the form for editing. */
-interface InventoryItemEditorProps {
+export interface InventoryItemEditorProps {
   open: boolean;
   onClose: () => void;
   item: InventoryItem | null;

@@ -10,7 +10,7 @@ import { db } from '../../storage/db/client';
 import { getNoteById } from '../../storage/repositories/noteRepository';
 import type { KBNode } from '../../storage/db/client';
 
-interface PeekCardProps {
+export interface PeekCardProps {
   nodeId: string;
   onClose: () => void;
   onOpen: () => void;

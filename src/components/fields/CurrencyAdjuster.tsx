@@ -7,7 +7,7 @@ import type { CurrencyDenomination } from '../../features/systems/engine/types';
  */
 const DEFAULT_QUICK_STEPS = [5, 10];
 
-interface CurrencyAdjusterProps {
+export interface CurrencyAdjusterProps {
   denominations: CurrencyDenomination[];
   /** Current amounts keyed by denomination id, as read from the engine. */
   amounts: Record<string, number>;

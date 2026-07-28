@@ -79,7 +79,7 @@ export interface KBEdge {
  * indexes. Repositories are the only code that touches these tables; UI and hooks
  * go through repositories, never the tables directly.
  */
-class SkaldbokDatabase extends Dexie {
+export class SkaldbokDatabase extends Dexie {
   characters!: Table<CharacterRecord, string>;
   systems!: Table<SystemDefinition, string>;
   appSettings!: Table<AppSettings, string>;

@@ -14,7 +14,7 @@ import type { TimelineItem, TimelineTrack } from './types';
 import { formatTimelineDate, normalizeDateInput } from './utils/date';
 
 /** Props for {@link TimelineDetailsPanel}. `onNavigateToSource` enables a "go to source" action; `renderItemDetails` overrides the default body. */
-interface TimelineDetailsPanelProps {
+export interface TimelineDetailsPanelProps {
   item: TimelineItem | null;
   track?: TimelineTrack;
   open: boolean;

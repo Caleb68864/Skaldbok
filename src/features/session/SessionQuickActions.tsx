@@ -166,7 +166,7 @@ function formatModTags(mods: Record<string, boolean>, options: RollModifierOptio
 
 // ── Main Component ──────────────────────────────────────────────
 
-interface SessionQuickActionsProps {
+export interface SessionQuickActionsProps {
   onLogComplete?: () => void;
   preferredAttachTo?: AttachToValue;
   contextLabel?: string | null;

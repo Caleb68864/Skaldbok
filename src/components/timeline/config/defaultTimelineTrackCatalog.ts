@@ -13,7 +13,7 @@ export type TimelineTrackCatalogEntry = Pick<
  * @remarks
  * This is the out-of-the-box grouping the "configuration over hardcoding" rule calls
  * for: which kinds cluster into which lane lives here, not inside
- * {@link buildTimelineFromNotesAdapter}, so it can be overridden per call (and later
+ * {@link components/timeline/adapters/notesToTimeline!buildTimelineFromNotesAdapter | buildTimelineFromNotesAdapter}, so it can be overridden per call (and later
  * surfaced as a user preference). Kinds with no entry fall back to `generic`.
  */
 export const DEFAULT_TIMELINE_TRACK_CATALOG: Record<string, TimelineTrackCatalogEntry> = {

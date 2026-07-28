@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 /** Props for {@link Chip}: `active` toggles the filled/selected styling. */
-interface ChipProps {
+export interface ChipProps {
   label: string;
   active?: boolean;
   onClick?: () => void;

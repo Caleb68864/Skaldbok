@@ -19,7 +19,7 @@ import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import { addPartyCharactersToEncounter } from './addPartyCharactersToEncounter';
 
-interface CombatEncounterViewProps {
+export interface CombatEncounterViewProps {
   encounter: Encounter;
   onClose: () => void;
 }

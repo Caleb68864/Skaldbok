@@ -1,7 +1,7 @@
 import type { ReferenceSection } from '../../types/reference';
 
 /** Props for {@link ReferenceSectionRenderer} and its per-type sub-renderers. */
-interface ReferenceSectionRendererProps {
+export interface ReferenceSectionRendererProps {
   section: ReferenceSection;
 }
 
@@ -9,7 +9,7 @@ interface ReferenceSectionRendererProps {
  * Renders one reference section by dispatching on its `type`.
  *
  * @remarks
- * Acts as the switch over {@link ReferenceSectionType} (`table`, `key_value_list`,
+ * Acts as the switch over {@link types/reference!ReferenceSectionType | ReferenceSectionType} (`table`, `key_value_list`,
  * `rules_text`), delegating to a dedicated sub-renderer for each. An unknown type
  * renders `null` so a forward-compatible bundle never crashes the screen.
  */

@@ -3,13 +3,13 @@ import { Toaster } from '../components/ui/toaster';
 import type { ToastAction, ToastItem, ToastVariant } from '../components/ui/toaster';
 
 /** Optional toast behaviour: auto-dismiss delay and an optional action button. */
-interface ShowToastOptions {
+export interface ShowToastOptions {
   duration?: number;
   action?: ToastAction;
 }
 
 /** Imperative toast API exposed to the tree. */
-interface ToastContextValue {
+export interface ToastContextValue {
   /**
    * Shows a transient toast.
    *

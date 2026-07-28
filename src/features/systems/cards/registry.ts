@@ -41,7 +41,7 @@ export type CardKey =
  * primitive keys resolve to the generic components in `./primitives`.
  *
  * @remarks
- * Every entry accepts at least {@link PlayModuleProps} — smart cards ignore
+ * Every entry accepts at least {@link features/playDashboard/types!PlayModuleProps | PlayModuleProps} — smart cards ignore
  * any extra `props` a template supplies, while primitives read their
  * declarative shape out of `props`.
  */

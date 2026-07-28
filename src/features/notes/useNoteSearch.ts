@@ -49,7 +49,7 @@ function noteToDoc(note: Note): IndexedDoc {
  *
  * @remarks
  * The index is a module-level singleton, so it survives component remounts but not a
- * page reload — {@link rebuildIndex} must be called after load to repopulate it.
+ * page reload — `rebuildIndex` must be called after load to repopulate it.
  * Title/tags/descriptors are boosted over body text and matching is fuzzy + prefix so
  * partial and slightly misspelled queries still hit. `add`/`update` guard against
  * duplicate ids by removing first, keeping the index consistent as notes change.

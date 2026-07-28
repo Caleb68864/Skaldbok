@@ -21,7 +21,7 @@ import { useKBSearch } from './useKBSearch';
 import { VaultCard } from './VaultCard';
 import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 
-interface VaultBrowserProps {
+export interface VaultBrowserProps {
   campaignId: string;
   sessionId?: string;
   typeFilter?: string;

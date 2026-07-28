@@ -21,7 +21,7 @@ const PLAY_MODE_EDITABLE_PREFIXES = [
   'helmet.equipped',
 ];
 
-/** Whether a dotted field path is one of the {@link PLAY_MODE_EDITABLE_PREFIXES} allowed during play. */
+/** Whether a dotted field path is one of the `PLAY_MODE_EDITABLE_PREFIXES` allowed during play. */
 export function isFieldEditableInPlayMode(fieldPath: string): boolean {
   return PLAY_MODE_EDITABLE_PREFIXES.some(prefix => {
     if (prefix.endsWith('.')) {

@@ -1,5 +1,5 @@
 /**
- * Review UI for {@link scanForLinks} output: lists each suggested entity
+ * Review UI for {@link features/notes/linkScanner!scanForLinks | scanForLinks} output: lists each suggested entity
  * link with its match confidence, lets the user approve (turning the
  * matched span into a `wikiLink` node in the note body) or dismiss
  * (persisting the dismissal so the same suggestion does not reappear on
@@ -13,7 +13,7 @@ import { docToText } from './textToDoc.js';
 import * as settingsRepository from '../../storage/repositories/settingsRepository.js';
 import type { AppSettings } from '../../types/settings.js';
 
-type ProseMirrorNode = {
+export type ProseMirrorNode = {
   type: string;
   text?: string;
   attrs?: Record<string, unknown>;
@@ -66,7 +66,7 @@ function escapeRegex(text: string): string {
 /**
  * Replaces the first whole-word occurrence of `suggestion.matchedText` in
  * `bodyText` with a `wikiLink` node carrying the target's id and label.
- * Returns a ProseMirror-shaped doc, mirroring {@link textToDoc}'s output.
+ * Returns a ProseMirror-shaped doc, mirroring {@link features/notes/textToDoc!textToDoc | textToDoc}'s output.
  */
 export function applySuggestionToBody(
   bodyText: string,
@@ -161,7 +161,7 @@ export async function persistDismissedSuggestion(
 }
 
 export interface SuggestedLinksPanelProps {
-  /** Suggestions produced by {@link scanForLinks}, already filtered against dismissals by the caller. */
+  /** Suggestions produced by {@link features/notes/linkScanner!scanForLinks | scanForLinks}, already filtered against dismissals by the caller. */
   suggestions: LinkScanSuggestion[];
   /** Current plain-text body the suggestions were scanned from. */
   body: string;

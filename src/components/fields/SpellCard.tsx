@@ -3,14 +3,14 @@ import { Card } from '../primitives/Card';
 import { Button } from '../primitives/Button';
 
 /** Props for {@link SpellCard}. Edit/delete controls appear only in `isEditMode`. */
-interface SpellCardProps {
+export interface SpellCardProps {
   spell: Spell;
   onEdit: () => void;
   onDelete: () => void;
   isEditMode: boolean;
 }
 
-/** Read-oriented card for one spell: name, school, WP cost / range / duration, and summary. See {@link MagicSpellCard} for the interactive play variant. */
+/** Read-oriented card for one spell: name, school, WP cost / range / duration, and summary. See {@link components/fields/MagicSpellCard!MagicSpellCard | MagicSpellCard} for the interactive play variant. */
 export function SpellCard({ spell, onEdit, onDelete, isEditMode }: SpellCardProps) {
   return (
     <Card>

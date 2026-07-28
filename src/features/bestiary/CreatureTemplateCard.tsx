@@ -1,7 +1,7 @@
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { cn } from '../../lib/utils';
 
-interface CreatureTemplateCardProps {
+export interface CreatureTemplateCardProps {
   template: CreatureTemplate;
   onClick: () => void;
 }

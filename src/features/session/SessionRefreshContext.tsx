@@ -7,10 +7,10 @@ import type { ReactNode } from 'react';
  *
  * @remarks
  * Prior to this context, quick-log callbacks (Quick Note, NPC, encounter
- * logger, etc.) bumped local-state refresh tokens on {@link SessionScreen}.
+ * logger, etc.) bumped local-state refresh tokens on {@link screens/SessionScreen!SessionScreen | SessionScreen}.
  * That worked when the quick-log panel lived on the session screen, but broke
- * the moment the same actions were triggered from {@link GlobalFAB} — the FAB
- * lives in {@link ShellLayout} and has no way to poke SessionScreen's local
+ * the moment the same actions were triggered from {@link components/shell/GlobalFAB!GlobalFAB | GlobalFAB} — the FAB
+ * lives in {@link components/shell/ShellLayout!ShellLayout | ShellLayout} and has no way to poke SessionScreen's local
  * state. Session notes and the timeline appeared stale until a manual reload.
  *
  * This context sits between the FAB (publisher) and session-scoped views
@@ -19,7 +19,7 @@ import type { ReactNode } from 'react';
  * {@link SessionRefreshContextValue.bumpTimeline}; consumers watch the
  * matching numeric token and re-query when it changes.
  */
-interface SessionRefreshContextValue {
+export interface SessionRefreshContextValue {
   timelineRefreshToken: number;
   sessionNotesRefreshToken: number;
   bumpTimeline: () => void;

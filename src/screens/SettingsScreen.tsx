@@ -61,10 +61,10 @@ const THEMES: { value: ThemeName; label: string; description: string }[] = THEME
  * destructive "clear all data" flow.
  *
  * @remarks
- * The bottom-nav choices are assembled from {@link STATIC_BOTTOM_NAV_TABS} plus an
- * engine-driven abilities/magic row plus {@link TRAILING_BOTTOM_NAV_TABS}, so the tab
+ * The bottom-nav choices are assembled from `STATIC_BOTTOM_NAV_TABS` plus an
+ * engine-driven abilities/magic row plus `TRAILING_BOTTOM_NAV_TABS`, so the tab
  * set adapts to the active ruleset. "Clear all data" is a deliberately staged,
- * type-to-confirm flow ({@link clearStep}) because it wipes IndexedDB irreversibly.
+ * type-to-confirm flow (`clearStep`) because it wipes IndexedDB irreversibly.
  */
 export default function SettingsScreen() {
   const { theme, setTheme } = useTheme();

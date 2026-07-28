@@ -30,7 +30,7 @@ const scaleOptions: Array<{ value: TimelineScaleUnit; label: string }> = [
 ];
 
 /** Props for {@link TimelineToolbar}: current filter/scale state, the available filter options, visible counts, and the control callbacks. */
-interface TimelineToolbarProps {
+export interface TimelineToolbarProps {
   title?: string;
   tracks: TimelineTrack[];
   availableFilters: TimelineAvailableFilters;
@@ -73,7 +73,7 @@ function renderToggleLabel(label: string, active: boolean) {
  * Search updates are wrapped in `startTransition` so typing stays responsive while
  * the (potentially large) filtered layout recomputes at a lower priority. The toolbar
  * is stateless — it reflects the filter state passed in and reports every change
- * through callbacks, leaving ownership to {@link TimelineRoot}/{@link useTimelineState}.
+ * through callbacks, leaving ownership to {@link components/timeline/TimelineRoot!TimelineRoot | TimelineRoot}/{@link components/timeline/hooks/useTimelineState!useTimelineState | useTimelineState}.
  */
 export function TimelineToolbar({
   title = 'Timeline Explorer',

@@ -32,7 +32,7 @@ const DEFAULT_SETTINGS: AppSettings = {
  * Writes are composed off a synchronously-updated ref, not the `settings` state,
  * so two `updateSettings` calls in the same tick both build on the latest value
  * instead of the second silently reverting the first. Stored settings are merged
- * over {@link DEFAULT_SETTINGS} on load so a record written by an older build
+ * over `DEFAULT_SETTINGS` on load so a record written by an older build
  * gains any new fields.
  */
 export function useAppSettings() {

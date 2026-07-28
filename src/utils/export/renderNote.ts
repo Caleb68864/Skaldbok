@@ -22,7 +22,7 @@ function yamlValue(val: unknown): string {
  * @remarks
  * The Markdown export targets a personal knowledge base, so entity links become a
  * `related` front-matter list, mentions in the body are rewritten to `[[wiki
- * links]]` (see {@link resolveWikiLinks}), and attachments are appended as
+ * links]]` (see {@link utils/export/resolveWikiLinks!resolveWikiLinks | resolveWikiLinks}), and attachments are appended as
  * embeds. `allNotes` is the title lookup that lets a mention resolve to a
  * human-readable link target rather than a raw id.
  *

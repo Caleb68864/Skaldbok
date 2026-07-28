@@ -13,7 +13,7 @@ import { useBacklinks } from './KnowledgeBaseContext';
 import { db } from '../../storage/db/client';
 import type { KBNode } from '../../storage/db/client';
 
-interface BacklinksPanelProps {
+export interface BacklinksPanelProps {
   nodeId: string;
   onPeek?: (nodeId: string) => void;
 }

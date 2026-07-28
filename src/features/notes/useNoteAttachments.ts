@@ -5,7 +5,7 @@ import * as attachmentRepository from '../../storage/repositories/attachmentRepo
 import type { Attachment } from '../../types/attachment';
 
 /** An attachment record paired with a live object URL for rendering its blob. */
-type AttachmentWithUrl = Attachment & { objectUrl: string };
+export type AttachmentWithUrl = Attachment & { objectUrl: string };
 
 /**
  * Loads and mutates the image attachments for a note, managing blob object-URL

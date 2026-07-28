@@ -1,5 +1,5 @@
 /** Props for {@link TimelineNowMarker}: the horizontal position of "now" as a percentage of the timeline width. */
-interface TimelineNowMarkerProps {
+export interface TimelineNowMarkerProps {
   leftPercent: number;
 }
 

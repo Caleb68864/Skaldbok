@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { cn } from '../../lib/utils';
 
 /** Props for {@link AttachButton}: `onFileSelected` receives the chosen image file. */
-interface AttachButtonProps {
+export interface AttachButtonProps {
   onFileSelected: (file: File) => void;
   disabled?: boolean;
 }

@@ -29,7 +29,7 @@ import {
 import { getEdgesByCampaign } from '../../storage/repositories/kbEdgeRepository';
 import type { KBNode } from '../../storage/db/client';
 
-interface GraphViewProps {
+export interface GraphViewProps {
   campaignId: string;
   centeredNodeId?: string;
 }

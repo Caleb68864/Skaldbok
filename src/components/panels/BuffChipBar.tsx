@@ -4,7 +4,7 @@ import type { TempModifier } from '../../types/character';
 import { useSystemEngine } from '../../features/systems/engine';
 
 /** Props for {@link BuffChipBar}. `onAdd` opens the modifier form; the rest mutate the active list. */
-interface BuffChipBarProps {
+export interface BuffChipBarProps {
   modifiers: TempModifier[];
   onRemove: (id: string) => void;
   onClearAll: () => void;

@@ -2,7 +2,7 @@ import type { InventoryItem } from '../../types/character';
 import { Button } from '../primitives/Button';
 
 /** Props for {@link InventoryList}. `onQuantityChange` enables inline +/- steppers, shown only for consumable items. */
-interface InventoryListProps {
+export interface InventoryListProps {
   items: InventoryItem[];
   onEdit: (item: InventoryItem) => void;
   onDelete: (id: string) => void;

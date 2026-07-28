@@ -1,6 +1,6 @@
 import { useSessionEncounterContext } from './SessionEncounterContext';
 
-interface SessionBarProps {
+export interface SessionBarProps {
   /** Called when the user clicks the active encounter chip (opens EncounterScreen). */
   onActiveEncounterClick?: (encounterId: string) => void;
 }

@@ -21,7 +21,7 @@ function resolveTrackColor(colorToken?: string): string | undefined {
 }
 
 /** Props for {@link TimelineTrackRow}: the track's computed layout, shared selection/hover state, interaction callbacks, and parent/child nesting flags. */
-interface TimelineTrackRowProps {
+export interface TimelineTrackRowProps {
   layout: TimelineTrackLayout;
   labelColumnWidth: number;
   timelineWidth: number;
@@ -58,7 +58,7 @@ interface TimelineTrackRowProps {
  *
  * @remarks
  * Each item's lane placement comes pre-computed in `layout` (see
- * {@link useTimelineLayout}); the row just positions and styles them. Reuses the
+ * {@link components/timeline/hooks/useTimelineLayout!useTimelineLayout | useTimelineLayout}); the row just positions and styles them. Reuses the
  * shared {@link TimelineGrid} so lane gridlines align with the header axis, and
  * overlays the {@link TimelineNowMarker} when a position is supplied.
  */

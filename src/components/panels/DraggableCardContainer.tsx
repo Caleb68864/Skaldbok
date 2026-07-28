@@ -80,7 +80,7 @@ function reorder<T>(arr: T[], from: number, to: number): T[] {
  *
  * @remarks
  * Ordering is driven by `cardOrder`; unknown panels (newly added, not yet in the
- * saved order) fall to the end via {@link sortPanels} rather than disappearing. A
+ * saved order) fall to the end via `sortPanels` rather than disappearing. A
  * completed drag emits the new key order through `onOrderChange` — the container
  * itself never persists. Uses Pointer Events so touch and mouse share one code path.
  */

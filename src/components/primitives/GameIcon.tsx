@@ -51,7 +51,7 @@ export const ICON_PATHS: Record<string, string> = {
 export type IconName = keyof typeof ICON_PATHS;
 
 /** Props for {@link GameIcon}. `name` must be a key of {@link ICON_PATHS}; an unknown name renders nothing. */
-interface GameIconProps {
+export interface GameIconProps {
   name: string;
   size?: number;
   color?: string;

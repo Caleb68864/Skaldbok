@@ -3,7 +3,7 @@ import type { TimelineMarkerLayout, TimelineTick, TimelineTrackLayout } from './
 import { TimelineTrackRow } from './TimelineTrackRow';
 
 /** Props for {@link TimelineTrackList}: the per-track layouts and the shared selection state / interaction callbacks passed to each row. */
-interface TimelineTrackListProps {
+export interface TimelineTrackListProps {
   trackLayouts: TimelineTrackLayout[];
   labelColumnWidth: number;
   timelineWidth: number;

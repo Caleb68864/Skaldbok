@@ -7,7 +7,7 @@ import type { SystemDefinition } from '../types/system';
  *
  * @remarks
  * The classic-fantasy engine's `derivedStats` returns this shape; other systems
- * extend it (see {@link TravellerDerivedValues}). Damage bonuses are strings
+ * extend it (see {@link features/systems/engine/travellerEngine!TravellerDerivedValues | TravellerDerivedValues}). Damage bonuses are strings
  * because they are dice expressions (`+D6`), not numbers.
  */
 export interface DerivedValues {

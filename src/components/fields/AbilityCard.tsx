@@ -3,7 +3,7 @@ import { Card } from '../primitives/Card';
 import { Button } from '../primitives/Button';
 
 /** Props for {@link AbilityCard}. Edit/delete controls appear only in `isEditMode`. */
-interface AbilityCardProps {
+export interface AbilityCardProps {
   ability: HeroicAbility;
   onEdit: () => void;
   onDelete: () => void;

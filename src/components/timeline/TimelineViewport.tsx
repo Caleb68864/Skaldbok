@@ -4,7 +4,7 @@ import { TimelineHeaderAxis } from './TimelineHeaderAxis';
 import { TimelineTrackList } from './TimelineTrackList';
 
 /** Props for {@link TimelineViewport}: the fully-computed layout plus selection state and the item/track interaction callbacks, threaded down to the header and rows. */
-interface TimelineViewportProps {
+export interface TimelineViewportProps {
   labelColumnWidth: number;
   timelineWidth: number;
   ticks: TimelineTick[];

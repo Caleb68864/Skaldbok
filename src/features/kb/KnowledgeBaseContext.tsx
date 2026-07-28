@@ -23,7 +23,7 @@ import {
 } from '../../storage/repositories/kbNodeRepository';
 
 /**
- * Shape of the value provided by {@link KnowledgeBaseContext}.
+ * Shape of the value provided by `KnowledgeBaseContext`.
  */
 export interface KnowledgeBaseContextValue {
   /** The campaign ID this provider is scoped to. */
@@ -57,7 +57,7 @@ export function useKnowledgeBase(): KnowledgeBaseContextValue {
   return ctx;
 }
 
-interface KnowledgeBaseProviderProps {
+export interface KnowledgeBaseProviderProps {
   children: ReactNode;
   campaignId: string;
 }

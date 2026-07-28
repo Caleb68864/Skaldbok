@@ -4,7 +4,7 @@ import { SectionPanel } from '../primitives/SectionPanel';
 import { SkillRow } from './SkillRow';
 
 /** Props for {@link SkillList}. `filter='relevant'` hides untrained, zero-value skills (and empty categories). */
-interface SkillListProps {
+export interface SkillListProps {
   categories: SkillCategory[];
   characterSkills: Record<string, CharacterSkill>;
   onSkillChange: (skillId: string, value: CharacterSkill) => void;

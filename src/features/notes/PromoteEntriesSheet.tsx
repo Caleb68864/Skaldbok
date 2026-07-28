@@ -35,7 +35,7 @@ const SELECTABLE_NOTE_TYPES: { value: NoteType; label: string }[] = [
   { value: 'recap', label: 'Recap' },
 ];
 
-type PromoteMode = 'new' | 'existing' | 'tag';
+export type PromoteMode = 'new' | 'existing' | 'tag';
 
 export interface PromoteEntriesSheetProps {
   /** The selected session-log entries (`type: 'log'` notes) to promote. */

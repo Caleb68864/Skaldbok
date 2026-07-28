@@ -7,7 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
 import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../../systems/registry';
 
-interface CampaignCreateModalProps {
+export interface CampaignCreateModalProps {
   onClose: () => void;
 }
 

@@ -14,7 +14,7 @@ import type { CharacterRecord, CharacterSkill } from '../../types/character';
 const NO_CHARACTER = { attributes: {} } as CharacterRecord;
 
 /** Props for {@link EndOfSessionModal}. */
-interface Props {
+export interface Props {
   open: boolean;
   onClose: () => void;
 }
@@ -39,7 +39,7 @@ const btnBaseClass = "min-h-11 min-w-11 px-[var(--space-md)] rounded-[var(--radi
  * sense where that model exists. The ceiling used here is the *advancement* max, not
  * the sheet's input clamp — Dragonbane lets 20 be typed on the sheet but stops
  * advancement at 18. Marked skills are rolled one at a time; each roll's outcome is
- * captured as a {@link RollResult} and applied via {@link updateCharacter}. State is
+ * captured as a `RollResult` and applied via `updateCharacter`. State is
  * reset every time the modal reopens.
  */
 export function EndOfSessionModal({ open, onClose }: Props) {

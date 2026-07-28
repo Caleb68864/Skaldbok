@@ -98,7 +98,7 @@ const classicFantasyRests: RestDefinition[] = [
  * `utils/derivedValues`, `utils/restActions` and `utils/boonBane` rather than
  * restating the rules inline — that is what keeps Dragonbane behaviour provably
  * identical to before the engine abstraction existed. `damageTrack` is `null`
- * (HP is a single pool) and death is handled by the {@link DeathModel} instead.
+ * (HP is a single pool) and death is handled by the {@link features/systems/engine/types!DeathModel | DeathModel} instead.
  */
 export const classicFantasyEngine: SystemEngine = {
   resolution: 'd20-roll-under',

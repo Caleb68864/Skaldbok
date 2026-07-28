@@ -1,5 +1,5 @@
 /** Props for {@link ResourceTracker}. `onCurrentChange`/`onMaxChange` receive a ±1 delta; omitting `onMaxChange` (or `maxEditable=false`) renders max as read-only. */
-interface ResourceTrackerProps {
+export interface ResourceTrackerProps {
   resourceId: string;
   label: string;
   current: number;

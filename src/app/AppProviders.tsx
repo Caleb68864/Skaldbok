@@ -6,7 +6,7 @@ import { ActiveCharacterProvider } from '../context/ActiveCharacterContext';
 import { ToastProvider } from '../context/ToastContext';
 import { CampaignProvider } from '../features/campaign/CampaignContext';
 
-interface AppProvidersProps {
+export interface AppProvidersProps {
   children: ReactNode;
 }
 

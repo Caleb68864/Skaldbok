@@ -18,7 +18,7 @@ type NpcCategory = 'monster' | 'npc' | 'animal';
 /**
  * Minimal NPC / monster capture form for the Quick Log palette.
  *
- * Wraps {@link useSessionLog.logNpcCapture} so each save creates both a
+ * Wraps `logNpcCapture` (returned by {@link features/session/useSessionLog!useSessionLog | useSessionLog}) so each save creates both a
  * bestiary creature template and a note referencing it. Supports the
  * {@link AttachToControl} per-entry attach-to-encounter override and fires a
  * success toast after a successful write.

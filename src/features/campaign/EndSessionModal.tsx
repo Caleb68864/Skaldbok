@@ -1,4 +1,4 @@
-interface EndSessionModalProps {
+export interface EndSessionModalProps {
   sessionTitle: string;
   hasActiveEncounter?: boolean;
   busy?: boolean;

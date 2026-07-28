@@ -38,7 +38,7 @@ function resolveTokenColor(colorToken?: string): string | undefined {
 }
 
 /** Props for {@link TimelineItemBar}: the bar's layout/state plus an optional `renderContent` override for custom bar bodies. */
-interface TimelineItemBarProps {
+export interface TimelineItemBarProps {
   layout: TimelineItemLayout;
   trackLabel: string;
   selected: boolean;
@@ -52,7 +52,7 @@ interface TimelineItemBarProps {
  * Span (start→end) timeline event rendered as a horizontal bar with a tooltip.
  *
  * @remarks
- * The counterpart to {@link TimelineItemMarker}, which handles instantaneous events.
+ * The counterpart to {@link components/timeline/TimelineItemMarker!TimelineItemMarker | TimelineItemMarker}, which handles instantaneous events.
  * Keyboard operable (Enter/Space select) and shows a link glyph for items with a
  * `sourceId`. Callers may override the bar body via `renderContent`.
  */

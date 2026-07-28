@@ -352,8 +352,8 @@ function createDescriptorRenderer() {
  * Plain `<textarea>` shown as a last-resort fallback when the Tiptap editor
  * fails to initialise within the 2-second timeout.
  *
- * @param onChange - Called with the raw string value on every input event.
- * @param placeholder - Placeholder text for the textarea.
+ * @param props - `onChange` receives the raw string value on every input
+ *   event; `placeholder` overrides the default hint text.
  */
 function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) => void; placeholder?: string }) {
   return (
@@ -386,7 +386,7 @@ function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) =
  * ### Resilience
  * If Tiptap fails to initialise within 2 seconds (e.g., in environments where
  * the ProseMirror DOM view cannot attach), the component falls back to a plain
- * `<textarea>` via {@link TextareaFallback}. While loading, a styled
+ * `<textarea>` via `TextareaFallback`. While loading, a styled
  * placeholder box is shown instead.
  *
  * ### Suggestion popup lifecycle
@@ -396,12 +396,11 @@ function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) =
  * to give the Tiptap suggestion closure access to its latest value without
  * re-creating the editor.
  *
- * @param initialContent - ProseMirror JSON document to pre-populate the editor.
- * @param onChange - Called with the full ProseMirror JSON on every edit.
- * @param campaignId - Active campaign ID for suggestion data loading.
- * @param placeholder - Hint text shown in empty / loading states.
- * @param showToolbar - Whether to render the formatting toolbar. Defaults to `false`.
- * @param minHeight - CSS min-height for the editable area. Defaults to `"120px"`.
+ * Individual props are documented on {@link TiptapNoteEditorProps}. They are
+ * not repeated as `@param` tags here: the component takes a single
+ * destructured props object, so per-field tags have no parameter to bind to.
+ *
+ * @param props - See {@link TiptapNoteEditorProps}.
  *
  * @example
  * <TiptapNoteEditor

@@ -5,7 +5,7 @@ import type { CharacterRecord } from '../../types/character';
 import { toSpells } from '../../utils/abilities';
 import { cn } from '../../lib/utils';
 
-interface SpellPickerProps {
+export interface SpellPickerProps {
   onSelect: (spellName: string, characterName: string) => void;
   onClose: () => void;
 }

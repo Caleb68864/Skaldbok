@@ -35,7 +35,7 @@ const STATIC_CHARACTER_TABS: CharacterTab[] = [
  * Horizontal sub-navigation bar for the character section using Radix Tabs.
  *
  * @remarks
- * Rendered by {@link ShellLayout} only when the current route starts with
+ * Rendered by {@link components/shell/ShellLayout!ShellLayout | ShellLayout} only when the current route starts with
  * `/character`. Always shows Play, Sheet, Skills, and Gear; the
  * abilities/magic tab is appended only when the active system's engine
  * supplies a label for it (`engine.labels.abilitiesScreen`). Systems that set

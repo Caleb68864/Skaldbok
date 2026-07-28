@@ -1,7 +1,7 @@
 import { cn } from '../../lib/utils';
 
 /** Props for {@link CombatResourcePanel}. `colorVar` is the normal-state color; `lowThreshold` sets when the value turns warning-colored. */
-interface CombatResourcePanelProps {
+export interface CombatResourcePanelProps {
   label: string;
   current: number;
   max: number;

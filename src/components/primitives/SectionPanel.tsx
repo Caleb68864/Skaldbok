@@ -4,7 +4,7 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 /** Props for {@link SectionPanel}. `collapsible` enables the header toggle; `defaultOpen` sets the initial state. */
-interface SectionPanelProps {
+export interface SectionPanelProps {
   title: string;
   subtitle?: string;
   icon?: ReactNode;

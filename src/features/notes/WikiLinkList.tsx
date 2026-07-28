@@ -8,7 +8,7 @@
 
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 
-interface WikiLinkListProps {
+export interface WikiLinkListProps {
   items: Array<{ id: string; label: string }>;
   command: (item: { id: string; label: string }) => void;
 }

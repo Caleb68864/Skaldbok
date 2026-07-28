@@ -26,11 +26,11 @@ import type { EntityLink } from '../../types/entityLink';
  * Errors are caught internally; the caller never needs to handle rejections.
  *
  * @returns An object containing five export helpers:
- * - {@link exportNote} — share a single note as Markdown (or ZIP if it has attachments)
- * - {@link exportSessionMarkdown} — share a session's index Markdown file
- * - {@link exportSessionBundle} — share all session notes + attachments as a ZIP
- * - {@link exportAllNotes} — share every campaign note as a ZIP
- * - {@link copyNoteAsMarkdown} — copy a single note's Markdown to the clipboard
+ * - `exportNote` — share a single note as Markdown (or ZIP if it has attachments)
+ * - `exportSessionMarkdown` — share a session's index Markdown file
+ * - `exportSessionBundle` — share all session notes + attachments as a ZIP
+ * - `exportAllNotes` — share every campaign note as a ZIP
+ * - `copyNoteAsMarkdown` — copy a single note's Markdown to the clipboard
  *
  * @example
  * ```tsx

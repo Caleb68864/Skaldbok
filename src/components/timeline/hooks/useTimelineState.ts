@@ -12,7 +12,7 @@ import type {
 import { normalizeVisibleRange, resolveTimelineBounds } from '../utils/date';
 
 /** Inputs to {@link useTimelineState}: the data plus the controlled/uncontrolled hooks for filter, selection, and view state. */
-interface UseTimelineStateArgs {
+export interface UseTimelineStateArgs {
   tracks: TimelineTrack[];
   items: TimelineItem[];
   markers: TimelineMarker[];
@@ -135,8 +135,8 @@ function buildInitialViewState(
  * @remarks
  * Each of the three state slices is independently controllable: pass the value plus
  * its `on*Change` to drive it from outside, or omit them to let the hook manage it
- * (see {@link useControllableState}). Exposes the toggles/setters the toolbar and
- * viewport call. Layout geometry is computed separately by {@link useTimelineLayout}.
+ * (see `useControllableState`). Exposes the toggles/setters the toolbar and
+ * viewport call. Layout geometry is computed separately by {@link components/timeline/hooks/useTimelineLayout!useTimelineLayout | useTimelineLayout}.
  */
 export function useTimelineState({
   tracks,

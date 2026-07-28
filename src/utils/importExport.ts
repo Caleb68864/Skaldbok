@@ -103,7 +103,7 @@ export interface ImportResult {
  * @remarks
  * The full untrusted-input path: parse JSON, run the migration ladder with
  * validation ({@link migrateCharacter}), strip HTML from every string field
- * (including the open `metadata`/`systemData` bags via {@link sanitizeDeep}),
+ * (including the open `metadata`/`systemData` bags via `sanitizeDeep`),
  * re-key on id collision so an import never overwrites an existing character, and
  * stamp fresh timestamps. Every failure mode returns a populated
  * {@link ImportResult} rather than throwing, so the caller can surface a specific

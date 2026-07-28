@@ -1,7 +1,7 @@
 import type { Encounter } from '../../types/encounter';
 import { cn } from '../../lib/utils';
 
-interface EncounterListItemProps {
+export interface EncounterListItemProps {
   encounter: Encounter;
   onClick: () => void;
 }

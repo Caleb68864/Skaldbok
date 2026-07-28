@@ -19,7 +19,7 @@ import type { Session } from '../../types/session';
 import type { Party, PartyMember } from '../../types/party';
 
 /**
- * Props for the internal {@link StaleSessionModal} dialog.
+ * Props for the internal `StaleSessionModal` dialog.
  */
 interface StaleSessionModalProps {
   /** Title of the stale session shown in the dialog body. */
@@ -84,7 +84,7 @@ export interface ActivePartyWithMembers extends Party {
 }
 
 /**
- * Shape of the value provided by {@link CampaignContext} / consumed by
+ * Shape of the value provided by `CampaignContext` / consumed by
  * {@link useCampaignContext}.
  */
 export interface CampaignContextValue {
@@ -195,9 +195,9 @@ async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyW
  * Place this near the root of the application (inside `ToastProvider`). On mount
  * it hydrates from IndexedDB, picking up the most recently active campaign and
  * any running session. When the restored session is older than 24 hours a
- * {@link StaleSessionModal} is rendered asking the GM whether to end or continue it.
+ * `StaleSessionModal` is rendered asking the GM whether to end or continue it.
  *
- * @param props.children - React subtree that will have access to campaign context.
+ * @param props - `children` is the React subtree that gains access to campaign context.
  *
  * @example
  * ```tsx

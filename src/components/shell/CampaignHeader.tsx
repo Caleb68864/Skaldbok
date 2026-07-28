@@ -33,7 +33,7 @@ import { AppLogo } from '../primitives/AppLogo';
 // ── Campaign Header ─────────────────────────────────────────────
 
 /** Props for {@link CampaignHeader}: callbacks the shell wires to open the create-campaign modal and party drawer. */
-interface CampaignHeaderProps {
+export interface CampaignHeaderProps {
   onCreateCampaign?: () => void;
   onManageParty?: () => void;
 }

@@ -27,7 +27,7 @@ export interface PrintDerivedValues {
 }
 
 /** Props for {@link PrintableSheet}. `colorMode` selects the color vs black-and-white print stylesheet. */
-interface PrintableSheetProps {
+export interface PrintableSheetProps {
   character: CharacterRecord;
   system: SystemDefinition | null;
   derived: PrintDerivedValues;
@@ -788,7 +788,7 @@ function ResourceTrackers({
  * varies by ruleset is resolved through the passed-in {@link SystemEngine} and
  * `system` definition rather than any Dragonbane-specific logic, so a different
  * system prints its own fields, currency, and stats. Interactivity and data loading
- * live in {@link PrintableSheetScreen}; this component only renders.
+ * live in `PrintScreen` (the `/print` route); this component only renders.
  */
 export default function PrintableSheet({
   character,

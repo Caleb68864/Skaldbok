@@ -2,9 +2,9 @@ import { useState } from 'react';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { cn } from '../../lib/utils';
 
-type FormData = Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>;
+export type FormData = Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>;
 
-interface CreatureTemplateFormProps {
+export interface CreatureTemplateFormProps {
   /** Pre-populated data when editing an existing template. */
   initial?: CreatureTemplate;
   campaignId: string;

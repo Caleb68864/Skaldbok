@@ -16,7 +16,7 @@ const NAV_TABS = [
 ] as const;
 
 /**
- * Persistent bottom navigation bar rendered by {@link ShellLayout} on every
+ * Persistent bottom navigation bar rendered by {@link components/shell/ShellLayout!ShellLayout | ShellLayout} on every
  * route.
  *
  * @remarks

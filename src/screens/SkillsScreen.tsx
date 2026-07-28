@@ -35,7 +35,7 @@ function clampSkillValue(value: number, range: { min: number; max: number }): nu
  * The screen provides the following interactive controls:
  *
  * - **Filter chips** — toggle between "Relevant" (per the active system engine's
- *   {@link SkillEngineConfig.isRelevant} predicate) and "All" skills.
+ *   {@link features/systems/engine/types!SkillEngineConfig.isRelevant | SkillEngineConfig.isRelevant} predicate) and "All" skills.
  * - **Global Boon/Bane selector** — sets a campaign-wide modifier applied to
  *   every skill's probability calculation.
  * - **Per-skill boon/bane override** — cycles through inherit → boon → bane → inherit

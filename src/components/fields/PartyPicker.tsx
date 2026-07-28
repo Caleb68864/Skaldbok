@@ -20,6 +20,21 @@ export interface ResolvedMember {
   character: CharacterRecord | null;
 }
 
+/** Props for {@link PartyPicker}. */
+export interface PartyPickerProps {
+  /** The full list of resolved party members to display, in render order. */
+  members: ResolvedMember[];
+  /** Ids of the members currently selected. */
+  selected: string[];
+  /** Called with the updated id array whenever the selection changes. */
+  onSelect: (ids: string[]) => void;
+  /**
+   * When `false`, tapping a chip replaces the whole selection with that one
+   * member and the "Party" shortcut chip is hidden. Defaults to `true`.
+   */
+  multiSelect?: boolean;
+}
+
 /**
  * A sticky horizontal chip-row that lets the user pick which party member(s)
  * an action applies to.
@@ -29,13 +44,11 @@ export interface ResolvedMember {
  * Duplicate member names are automatically disambiguated by appending a
  * numeric rank suffix (e.g., "Raven (1)", "Raven (2)").
  *
- * @param members - The full list of resolved party members to display.
- * @param selected - Array of member `id`s that are currently selected.
- *   Pass `['__party__']`-equivalent behaviour by ensuring all ids are present.
- * @param onSelect - Callback invoked with the updated id array whenever the
- *   selection changes.
- * @param multiSelect - When `false`, clicking a chip replaces the entire
- *   selection with just that member. Defaults to `true`.
+ * Individual props are documented on {@link PartyPickerProps}. They are not
+ * repeated as `@param` tags here: the component takes a single destructured
+ * props object, so per-field tags have no parameter to bind to.
+ *
+ * @param props - See {@link PartyPickerProps}.
  *
  * @example
  * <PartyPicker
@@ -49,12 +62,7 @@ export function PartyPicker({
   selected,
   onSelect,
   multiSelect,
-}: {
-  members: ResolvedMember[];
-  selected: string[];
-  onSelect: (ids: string[]) => void;
-  multiSelect?: boolean;
-}) {
+}: PartyPickerProps) {
   const isMulti = multiSelect !== false; // default true
 
   /**

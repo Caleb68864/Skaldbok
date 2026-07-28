@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { cn } from '../../lib/utils';
 
 /** Props for {@link DerivedFieldDisplay}. `override` is `null` when the computed value is in effect. */
-interface DerivedFieldDisplayProps {
+export interface DerivedFieldDisplayProps {
   label: string;
   computedValue: number | string;
   override: number | null;

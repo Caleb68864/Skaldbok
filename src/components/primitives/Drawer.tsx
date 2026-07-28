@@ -10,7 +10,7 @@ import {
 } from "../ui/sheet";
 
 /** Props for {@link Drawer}. `onClose` fires whenever the underlying sheet requests dismissal. */
-interface DrawerProps {
+export interface DrawerProps {
   open: boolean;
   onClose: () => void;
   title: string;

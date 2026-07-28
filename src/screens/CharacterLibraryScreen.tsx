@@ -23,7 +23,7 @@ import { updateCampaign } from '../storage/repositories/campaignRepository';
  *
  * @remarks
  * Creating a character defaults its ruleset to the active campaign's system (see
- * {@link campaignSystemId}) and, when a campaign is active, adds it to that
+ * `campaignSystemId`) and, when a campaign is active, adds it to that
  * campaign's party so encounters pick it up automatically — party failures are
  * swallowed so a party hiccup never reads as "character creation failed". Deletes
  * route through {@link useCharacterActions} (soft delete); the list reloads from the

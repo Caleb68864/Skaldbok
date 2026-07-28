@@ -3,7 +3,7 @@ import { cn } from '../../lib/utils';
 import { useToast } from '../../context/ToastContext';
 
 /** Props for {@link CharacterPortrait}. `onPortraitChange` receives a compressed JPEG data URI, not the raw file. */
-interface CharacterPortraitProps {
+export interface CharacterPortraitProps {
   portraitUri?: string;
   characterName: string;
   isEditMode: boolean;
@@ -59,8 +59,8 @@ async function compressImage(file: File): Promise<string> {
  * Character portrait thumbnail with an edit-mode upload flow.
  *
  * @remarks
- * Uploads run through {@link compressImage}, which iteratively drops JPEG quality then
- * dimensions until the result fits under {@link MAX_SIZE_BYTES} — the image is stored
+ * Uploads run through `compressImage`, which iteratively drops JPEG quality then
+ * dimensions until the result fits under `MAX_SIZE_BYTES` — the image is stored
  * inline on the character record as a data URI, so keeping it small matters for
  * IndexedDB size. Falls back to the character's initial when no portrait is set.
  */

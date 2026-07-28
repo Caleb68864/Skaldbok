@@ -4,7 +4,7 @@ import { getEngine } from '../systems/engine';
 import { useCoinAdjuster } from './useCoinAdjuster';
 import type { PlayModuleProps } from './types';
 
-interface CurrencyModuleProps extends PlayModuleProps {
+export interface CurrencyModuleProps extends PlayModuleProps {
   /**
    * Whether the purse renders {@link CurrencyAdjuster}'s fixed quick-step
    * buttons. Defaults to `false` — the compact custom-amount-only layout the

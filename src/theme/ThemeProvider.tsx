@@ -4,14 +4,14 @@ import { DEFAULT_THEME, THEME_LIST, THEME_STORAGE_KEY } from './themes';
 import type { ThemeName } from './themes';
 import './theme.css';
 
-interface ThemeContextValue {
+export interface ThemeContextValue {
   theme: ThemeName;
   setTheme: (t: ThemeName) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-interface ThemeProviderProps {
+export interface ThemeProviderProps {
   children: ReactNode;
 }
 

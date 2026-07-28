@@ -108,7 +108,7 @@ export function formatSavageSkill(value: number, penalty = 0, wild = true): stri
  * @remarks
  * Traits (attributes and skills) are **die codes**, shown via `attributeReadout`
  * `'dice'` mode and `skill.display`; success maths comes from
- * {@link ../../../systems/savage-worlds/savageMath}. Wounds and Fatigue are
+ * `systems/savage-worlds/savageMath`. Wounds and Fatigue are
  * accumulating level tracks (`damageTrack.kind: 'levels'`); Bennies refresh per
  * session. `rest`/`death`/`advancement` are `null` — SWADE recovery is trait
  * rolls and its dying rules are status-plus-table, not a fixed procedure.

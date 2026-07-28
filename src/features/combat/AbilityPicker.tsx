@@ -1,7 +1,7 @@
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { toHeroicAbilities } from '../../utils/abilities';
 
-interface AbilityPickerProps {
+export interface AbilityPickerProps {
   onSelect: (abilityName: string) => void;
   onClose: () => void;
 }

@@ -23,7 +23,7 @@ const PREDEFINED_TAGS = [...MOOD_TAGS, ...SCENE_TAGS, ...META_TAGS, ...TYPE_TAGS
 /**
  * Props for the {@link TagPicker} component.
  */
-interface TagPickerProps {
+export interface TagPickerProps {
   /** Array of tag strings that are currently selected/active. */
   selected: string[];
   /**
@@ -61,12 +61,11 @@ interface TagPickerProps {
  * Submission is possible via the **+** button or by pressing **Enter** while
  * the input is focused.
  *
- * @param selected - Tags that are currently active (highlighted).
- * @param onToggle - Called with a tag string whenever a chip or the add button
- *   is activated.
- * @param customTags - Extra tags from campaign storage shown after the
- *   predefined chips. Defaults to `[]`.
- * @param onCreateTag - Optional persistence callback for genuinely new tags.
+ * Individual props are documented on {@link TagPickerProps}. They are not
+ * repeated as `@param` tags here: the component takes a single destructured
+ * props object, so per-field tags have no parameter to bind to.
+ *
+ * @param props - See {@link TagPickerProps}.
  *
  * @example
  * const [tags, setTags] = useState<string[]>([]);

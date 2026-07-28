@@ -56,8 +56,8 @@ async function compressImage(file: File): Promise<string> {
  *
  * @remarks
  * Uploaded portraits are downscaled and re-encoded to a JPEG data URI by
- * {@link compressImage} so the image lives inline on the character record and stays
- * under {@link MAX_SIZE_BYTES} — there is no separate asset store. Fields are only
+ * `compressImage` so the image lives inline on the character record and stays
+ * under `MAX_SIZE_BYTES` — there is no separate asset store. Fields are only
  * editable in edit mode ({@link useIsEditMode}); edits autosave on a 1s debounce.
  */
 export default function ProfileScreen() {

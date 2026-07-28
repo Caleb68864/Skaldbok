@@ -40,7 +40,7 @@ export function resolveAttach(value: AttachToValue): string | null | undefined {
  * the Sub-Spec 8 "per-entry reset" requirement.
  *
  * The control prefers the session-encounter context supplied by
- * {@link SessionEncounterProvider}; when mounted outside the provider (e.g. in
+ * {@link features/session/SessionEncounterContext!SessionEncounterProvider | SessionEncounterProvider}; when mounted outside the provider (e.g. in
  * shell-level drawers) it falls back to `useCampaignContext().activeSession`
  * and reads the active encounter directly from the repository.
  */

@@ -19,7 +19,7 @@ export const cardGuardSchema = z.enum([
   'hasStoryBank',
 ]);
 
-const cardEntryObjectSchema = z.object({
+export const cardEntryObjectSchema = z.object({
   card: z.string().min(1).describe('Card component name to render'),
   props: z.record(z.string(), z.unknown()).optional().describe('Props passed to the card'),
   when: cardGuardSchema.optional().describe('Guard gating whether this card renders'),

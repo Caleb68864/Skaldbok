@@ -6,10 +6,10 @@ import { flushAll } from '../features/persistence/autosaveFlush';
 import type { CharacterRecord } from '../types/character';
 import { normalizeCharacter } from '../utils/characterNormalization';
 
-type CharacterUpdater = Partial<CharacterRecord> | ((prev: CharacterRecord) => Partial<CharacterRecord>);
+export type CharacterUpdater = Partial<CharacterRecord> | ((prev: CharacterRecord) => Partial<CharacterRecord>);
 
 /** The active character and the operations for switching, editing, and clearing it. */
-interface ActiveCharacterContextValue {
+export interface ActiveCharacterContextValue {
   /** The character currently open on the sheet, or `null` when none is selected. */
   character: CharacterRecord | null;
   /** Selects a character by id and persists the choice to settings. */
@@ -23,7 +23,7 @@ interface ActiveCharacterContextValue {
 
 const ActiveCharacterContext = createContext<ActiveCharacterContextValue | null>(null);
 
-interface ActiveCharacterProviderProps {
+export interface ActiveCharacterProviderProps {
   children: ReactNode;
 }
 
@@ -33,7 +33,7 @@ interface ActiveCharacterProviderProps {
  * @remarks
  * The active character id lives in persisted settings, so the character reloads
  * on app restart and survives navigation. Edits are held in memory here and
- * written by the autosave layer; {@link clearCharacter} flushes that autosave
+ * written by the autosave layer; `clearCharacter` flushes that autosave
  * before clearing so a debounced save cannot fire afterwards and resurrect the
  * data. A character deleted out from under the provider self-heals by clearing
  * the stale `activeCharacterId`.

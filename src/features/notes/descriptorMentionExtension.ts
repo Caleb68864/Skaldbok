@@ -2,12 +2,19 @@ import Mention from '@tiptap/extension-mention';
 import { PluginKey } from '@tiptap/pm/state';
 
 /**
- * TipTap extension for inline #descriptor chips.
- * Extends Mention with a separate name and '#' trigger character,
- * so both @mention and #descriptor work simultaneously in the same editor.
+ * Plugin key for the inline `#descriptor` chip extension.
  *
- * The node stores: { type: 'descriptorMention', attrs: { id: label, label: label } }
- * (We use id === label since descriptors are free-form words, not entity references.)
+ * @remarks
+ * The extension below extends Tiptap's Mention with its own name and a `#`
+ * trigger character, so `@mention` and `#descriptor` coexist in one editor.
+ * A distinct plugin key is what keeps their suggestion popups independent.
+ *
+ * The node stores `{ type: 'descriptorMention', attrs: { id: label, label } }`
+ * — `id` equals `label` because descriptors are free-form words rather than
+ * references to an entity with its own id.
+ *
+ * Note the backticks: written bare, a leading `@mention` at the start of a
+ * line is parsed by TypeDoc as an unknown block tag.
  */
 export const DescriptorMentionPluginKey = new PluginKey('descriptorMention');
 

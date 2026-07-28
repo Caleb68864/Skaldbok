@@ -7,7 +7,7 @@ import { classicFantasySystem } from '../systems/classic-fantasy';
 import type { AppSettings, ModeName, BoonBaneState, SessionState } from '../types/settings';
 
 /** App-wide settings plus the in-memory, per-run session state (boon/bane selections). */
-interface AppStateContextValue {
+export interface AppStateContextValue {
   settings: AppSettings;
   updateSettings: (partial: Partial<AppSettings>) => Promise<void>;
   isLoading: boolean;
@@ -29,7 +29,7 @@ const INITIAL_SESSION_STATE: SessionState = {
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
 
-interface AppStateProviderProps {
+export interface AppStateProviderProps {
   children: ReactNode;
 }
 

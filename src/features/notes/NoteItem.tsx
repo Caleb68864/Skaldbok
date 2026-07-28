@@ -3,7 +3,7 @@ import type { Note } from '../../types/note';
 import { extractDescriptors } from '../../utils/notes/extractDescriptors';
 import { cn } from '../../lib/utils';
 
-interface NoteItemProps {
+export interface NoteItemProps {
   note: Note;
   onPin: (id: string) => void;
   onUnpin: (id: string) => void;

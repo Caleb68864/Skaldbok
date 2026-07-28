@@ -12,7 +12,7 @@ import {
 } from './sessionTimelineAdapter';
 import type { AttachToValue } from './quickActions/AttachToControl';
 
-interface SessionTimelinePanelProps {
+export interface SessionTimelinePanelProps {
   session: Session;
   encounters: Encounter[];
   activeEncounter: Encounter | null;

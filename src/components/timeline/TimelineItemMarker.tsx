@@ -18,7 +18,7 @@ function resolveTokenColor(colorToken?: string): string | undefined {
 }
 
 /** Props for {@link TimelineItemMarker}: the item's computed layout, its track label for the a11y name/tooltip, and selection/hover state + callbacks. */
-interface TimelineItemMarkerProps {
+export interface TimelineItemMarkerProps {
   layout: TimelineItemLayout;
   trackLabel: string;
   selected: boolean;
@@ -31,7 +31,7 @@ interface TimelineItemMarkerProps {
  * Point-in-time timeline event rendered as a diamond button with a hover/focus tooltip.
  *
  * @remarks
- * Used for instantaneous items (a {@link TimelineItemBar} covers spans instead). Fully
+ * Used for instantaneous items (a {@link components/timeline/TimelineItemBar!TimelineItemBar | TimelineItemBar} covers spans instead). Fully
  * keyboard operable — Enter/Space select — and shows a link glyph when the item has a
  * `sourceId`, signaling it traces back to an underlying entity.
  */

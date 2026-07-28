@@ -20,7 +20,7 @@ export interface ToastItem {
 }
 
 /** Props for {@link Toaster}: the live list of toasts to display. */
-interface ToasterProps {
+export interface ToasterProps {
   toasts: ToastItem[];
 }
 

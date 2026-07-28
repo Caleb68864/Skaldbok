@@ -16,7 +16,7 @@ export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'
  * @remarks
  * These ids intentionally collide with the resource ids of the same name —
  * `attr:str` is the characteristic, `res:str` is the damage taken to it. See
- * {@link statKey}.
+ * {@link utils/statKeys!statKey | statKey}.
  */
 export const TRAVELLER_DAMAGE_TRACK_IDS = ['str', 'dex', 'end'];
 
@@ -146,10 +146,10 @@ function travellerRollContext(
  * The Traveller ruleset, expressed as a {@link SystemEngine}.
  *
  * @remarks
- * Contrasts with {@link classicFantasyEngine} on almost every axis and is the
+ * Contrasts with {@link features/systems/engine/classicFantasyEngine!classicFantasyEngine | classicFantasyEngine} on almost every axis and is the
  * project's proof that ruleset-specific behaviour stays out of the screens:
  * 2d6-plus resolution instead of d20-roll-under, characteristic DMs instead of
- * flat scores, a cascading {@link DamageTrackModel} (END then a chosen physical
+ * flat scores, a cascading {@link features/systems/engine/types!DamageTrackModel | DamageTrackModel} (END then a chosen physical
  * characteristic) instead of a single HP pool, and `null` for the rest, death,
  * and advancement models because Traveller has no such fixed procedures — which
  * is how those panels get hidden.

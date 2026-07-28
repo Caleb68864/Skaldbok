@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils';
  * closes on outside click via a document `mousedown` listener that is only attached
  * while open. Fullscreen and wake-lock are best-effort browser features and hide
  * their controls where unsupported. Much of this role now lives in
- * {@link CampaignHeader}; this component predates the shell chrome.
+ * {@link components/shell/CampaignHeader!CampaignHeader | CampaignHeader}; this component predates the shell chrome.
  */
 export function TopBar() {
   const { settings, toggleMode } = useAppState();

@@ -12,7 +12,7 @@ import { flushAll } from '../persistence/autosaveFlush';
  *
  * @remarks
  * Delete flushes pending autosaves before removing the row so an in-flight save can't
- * resurrect the character after deletion — via {@link clearCharacter} when the target
+ * resurrect the character after deletion — via `clearCharacter` when the target
  * is active (which flushes internally) or an explicit {@link flushAll} otherwise — and
  * also cleans up any party-member rows that linked to the character. Create seeds a
  * blank character for the chosen system; duplicate deep-copies with a fresh id and a

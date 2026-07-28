@@ -4,7 +4,7 @@ import { Card } from '../primitives/Card';
 import { Button } from '../primitives/Button';
 
 /** Props for {@link WeaponCard}: the weapon plus the active system's field-visibility config. */
-interface WeaponCardProps {
+export interface WeaponCardProps {
   weapon: Weapon;
   onEquipToggle: () => void;
   onEdit: () => void;
@@ -66,7 +66,7 @@ function buildSummary(
  * edit/delete in edit mode.
  *
  * @remarks
- * The summary is built by {@link buildSummary} from only the fields the active system
+ * The summary is built by `buildSummary` from only the fields the active system
  * uses, so a non-Dragonbane weapon shows its own stats instead of blank Dragonbane
  * ones.
  */

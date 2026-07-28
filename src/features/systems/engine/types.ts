@@ -369,7 +369,7 @@ export interface RestOutcome {
  * A rest/recovery action a system offers.
  *
  * @remarks
- * `id` doubles as the {@link TempModifier} duration key, so a modifier lasting
+ * `id` doubles as the {@link types/character!TempModifier | TempModifier} duration key, so a modifier lasting
  * "until the next round rest" expires when the rest with `id: 'round'` runs.
  */
 export interface RestDefinition {

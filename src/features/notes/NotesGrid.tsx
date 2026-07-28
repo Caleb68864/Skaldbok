@@ -43,7 +43,7 @@ const TITLE_FALLBACK_LENGTH = 40;
 /**
  * Props for the {@link NotesGrid} component.
  */
-interface NotesGridProps {
+export interface NotesGridProps {
   /** ID of the campaign whose notes should be displayed. */
   campaignId: string;
   /** The currently active session id, if any — used as default session filter */

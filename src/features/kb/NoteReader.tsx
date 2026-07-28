@@ -31,7 +31,7 @@ import type { Attachment } from '../../types/attachment';
 import type { KBNode } from '../../storage/db/client';
 import { buildNoteRecord, persistCanonicalNoteLinks } from '../notes/noteCreationService';
 
-interface NoteReaderProps {
+export interface NoteReaderProps {
   noteId: string;
 }
 

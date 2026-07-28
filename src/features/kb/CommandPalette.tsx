@@ -13,7 +13,7 @@ import { useNavigate } from 'react-router-dom';
 import { useKBSearch } from './useKBSearch';
 import type { KBNode } from '../../storage/db/client';
 
-interface CommandPaletteProps {
+export interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   campaignId: string;

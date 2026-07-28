@@ -32,7 +32,9 @@ function buildDefaultLegend(items: TimelineRootProps['items'], tracks: TimelineR
  *
  * @remarks
  * A generic, data-source-agnostic component — screens feed it `tracks`/`items`
- * (Skaldbok maps notes in via {@link notesToTimeline}) and it owns rendering.
+ * (Skaldbok maps notes in via
+ * {@link components/timeline/adapters/notesToTimeline!notesToTimelineAdapter | notesToTimelineAdapter})
+ * and it owns rendering.
  * Filtering, selection, and scale can each be either uncontrolled (seeded by the
  * `initial*` props) or controlled (via the paired value + `on*Change` props). Layout
  * math lives in {@link useTimelineLayout}; interaction/derived state in

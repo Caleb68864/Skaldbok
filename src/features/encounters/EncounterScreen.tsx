@@ -19,7 +19,7 @@ import {
 } from '../../components/ui/dialog';
 import { cn } from '../../lib/utils';
 
-interface EncounterScreenProps {
+export interface EncounterScreenProps {
   encounterId: string;
   sessionId: string;
   campaignId: string;

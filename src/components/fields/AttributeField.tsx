@@ -2,13 +2,13 @@ import { cn } from '../../lib/utils';
 import type { ConditionDefinition } from '../../types/system';
 
 /** A condition tied to this attribute, plus whether it is currently active. */
-interface LinkedCondition {
+export interface LinkedCondition {
   definition: ConditionDefinition;
   active: boolean;
 }
 
 /** Props for {@link AttributeField}. `onChange` receives a step delta (±1), not an absolute value. */
-interface AttributeFieldProps {
+export interface AttributeFieldProps {
   attributeId: string;
   abbreviation: string;
   value: number;

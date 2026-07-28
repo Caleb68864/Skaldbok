@@ -1,7 +1,7 @@
 import { CalendarRange } from 'lucide-react';
 
 /** Props for {@link TimelineEmptyState}: optional overrides for the default heading/body copy. */
-interface TimelineEmptyStateProps {
+export interface TimelineEmptyStateProps {
   title?: string;
   description?: string;
 }

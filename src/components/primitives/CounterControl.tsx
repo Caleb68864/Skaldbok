@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 /** Props for {@link CounterControl}. `min`/`max` clamp the value; omit for unbounded. */
-interface CounterControlProps {
+export interface CounterControlProps {
   value: number;
   min?: number;
   max?: number;

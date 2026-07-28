@@ -88,11 +88,11 @@ function getEncounterRange(encounter: Encounter): { start: string; end?: string;
  * Maps campaign sessions, encounters, and notes into a {@link TimelineDataset}.
  *
  * @remarks
- * The Skaldbok-specific {@link TimelineAdapter} that feeds {@link TimelineRoot}. Tracks
+ * The Skaldbok-specific {@link TimelineAdapter} that feeds {@link components/timeline/TimelineRoot!TimelineRoot | TimelineRoot}. Tracks
  * are created lazily as kinds are encountered, so only kinds that actually have items
  * produce a lane. Each item keeps `sourceId`/`sourceType` (and `noteId` for notes) so
  * the details panel can navigate back to the underlying record. Soft-deleted rows are
- * filtered out via {@link isActiveRecord}.
+ * filtered out via `isActiveRecord`.
  */
 export function buildTimelineFromNotesAdapter(
   input: BuildTimelineFromNotesInput,

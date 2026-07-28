@@ -9,7 +9,7 @@ import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { Drawer } from '../primitives/Drawer';
 
 /** Props for {@link AddModifierDrawer}. `onSave` receives the assembled modifier minus its id/timestamp, which the caller mints. */
-interface AddModifierDrawerProps {
+export interface AddModifierDrawerProps {
   open: boolean;
   onClose: () => void;
   onSave: (modifier: Omit<TempModifier, 'id' | 'createdAt'>) => void;
@@ -31,8 +31,8 @@ const inputClasses = "min-h-[var(--touch-target-min)] px-[var(--space-sm)] text-
  * Drawer form for creating a temporary modifier (buff/debuff) on the active character.
  *
  * @remarks
- * Both the duration choices ({@link SystemEngine.timeUnits}) and the pickable stat
- * targets ({@link SystemEngine.modifiableStats}) come from the engine, so the form
+ * Both the duration choices ({@link features/systems/engine/types!SystemEngine.timeUnits | SystemEngine.timeUnits}) and the pickable stat
+ * targets ({@link features/systems/engine/types!SystemEngine.modifiableStats | SystemEngine.modifiableStats}) come from the engine, so the form
  * offers exactly the stats and time units the active ruleset supports. Target ids are
  * namespaced (`attr:str` vs `res:str`) so a system may name a resource after an
  * attribute without the two colliding, and stored modifiers stay valid across a

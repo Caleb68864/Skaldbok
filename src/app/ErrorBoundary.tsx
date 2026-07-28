@@ -1,11 +1,11 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Button } from '../components/primitives/Button';
 
-interface ErrorBoundaryProps {
+export interface ErrorBoundaryProps {
   children: ReactNode;
 }
 
-interface ErrorBoundaryState {
+export interface ErrorBoundaryState {
   error: Error | null;
 }
 

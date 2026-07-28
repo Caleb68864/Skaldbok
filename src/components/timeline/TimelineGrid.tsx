@@ -1,7 +1,7 @@
 import type { TimelineMarkerLayout, TimelineTick } from './types';
 
 /** Props for {@link TimelineGrid}: the tick lines and marker lines to draw. */
-interface TimelineGridProps {
+export interface TimelineGridProps {
   ticks: TimelineTick[];
   markers: TimelineMarkerLayout[];
 }

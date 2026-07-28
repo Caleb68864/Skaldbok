@@ -4,7 +4,7 @@ import type { CustomCard } from '../../types/character';
 // ── CustomNoteCard ────────────────────────────────────────────────────────────
 
 /** Props for {@link CustomNoteCard}. In edit mode the title/body become editable and a delete control appears. */
-interface CustomNoteCardProps {
+export interface CustomNoteCardProps {
   card: CustomCard;
   isEditMode: boolean;
   onUpdate: (card: CustomCard) => void;

@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
  * and so on).
  *
  * @remarks
- * The FAB is always mounted inside {@link ShellLayout} so it appears on every
+ * The FAB is always mounted inside {@link components/shell/ShellLayout!ShellLayout | ShellLayout} so it appears on every
  * route. Pressing the button when no session is active shows a toast instead
  * of opening the drawer.
  *

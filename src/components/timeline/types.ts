@@ -182,7 +182,11 @@ export interface TimelineDataset {
   markers?: TimelineMarker[];
 }
 
-/** Contract for turning some domain input into a {@link TimelineDataset} (see {@link notesToTimeline}). */
+/**
+ * Contract for turning some domain input into a {@link TimelineDataset} — see
+ * {@link components/timeline/adapters/notesToTimeline!notesToTimelineAdapter | notesToTimelineAdapter}
+ * for the notes implementation.
+ */
 export interface TimelineAdapter<TInput> {
   buildTimeline: (input: TInput) => TimelineDataset;
 }
@@ -194,7 +198,7 @@ export interface TimelineAvailableFilters {
   tags: string[];
 }
 
-/** Full prop surface of {@link TimelineRoot}: data, controlled/uncontrolled state hooks, render overrides, layout dimensions, and feature toggles. */
+/** Full prop surface of {@link components/timeline/TimelineRoot!TimelineRoot | TimelineRoot}: data, controlled/uncontrolled state hooks, render overrides, layout dimensions, and feature toggles. */
 export interface TimelineRootProps {
   tracks: TimelineTrack[];
   items: TimelineItem[];

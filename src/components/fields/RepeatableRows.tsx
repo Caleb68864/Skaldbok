@@ -10,7 +10,7 @@ export interface RepeatableColumn {
   type?: 'text' | 'number';
 }
 
-interface RepeatableRowsProps {
+export interface RepeatableRowsProps {
   columns: RepeatableColumn[];
   /** Rows of string values, keyed by column key. */
   rows: Record<string, string>[];

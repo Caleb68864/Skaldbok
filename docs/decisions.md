@@ -104,3 +104,30 @@
   app at all. When that surface returns, re-verify the ghost is gone.
 - Commit: fix(session-log) — stop long-press deleting entries; keep drafts and
   unclutter the timeline.
+
+## 2026-07-28 — TypeDoc emitted 247 warnings, hiding real doc breakage
+- Symptom: `npm run docs` produced 247 warnings. Because that was the steady
+  state, a newly-broken link was indistinguishable from the existing noise, and
+  documentation genuinely was missing from the generated site: every component
+  whose `*Props` interface was unexported rendered as an opaque
+  `__namedParameters` with no field list.
+- Fix: exported 104 types referenced by public signatures (mostly `*Props`);
+  qualified 46 cross-module `{@link}` targets as `module!Symbol | Symbol`;
+  delinked 30 references to module-private helpers that can never resolve.
+  Config: `excludeExternals` drops React's inherited `Component` members (25
+  warnings of pure noise) and the `src/theme/**` exclusion was narrowed, since
+  it was hiding `ThemeName`, which `AppSettings.theme` is typed by.
+- Wrong doc facts corrected on the way: `PartyPicker` had four `@param` tags
+  and inline props with no named interface; three components documented
+  destructured props as `@param` tags, which cannot bind to a single
+  destructured parameter; `PrintableSheet` referenced a non-existent
+  `PrintableSheetScreen`; the timeline linked to `notesToTimeline`, a file
+  rather than the `notesToTimelineAdapter` symbol; and
+  `descriptorMentionExtension` began a line with a bare `@mention`, parsed as
+  an unknown block tag.
+- Surfaces: 136 files, +244/-221 — small mechanical edits, no logic touched.
+- Watch: a bare `{@link Foo}` only resolves when `Foo` is in the referencing
+  file's scope. Linking a type the file does not import silently produces a
+  dead link, so prefer the qualified form across modules. `typedoc --emit none`
+  now exits 0; keep it there so the next warning means something.
+- Commit: docs(typedoc) — take the API docs from 247 warnings to zero.

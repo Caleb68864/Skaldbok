@@ -36,7 +36,7 @@ import { registerFlush } from '../features/persistence/autosaveFlush';
  *   system-generated types (`'skill-check'`, `'recap'`).
  * - **Body** — rich-text editor powered by {@link TiptapNoteEditor}.
  * - **Tags** — tag picker using campaign-scoped custom tags via
- *   {@link TagPicker}; new tags are persisted to {@link AppSettings.customTags}.
+ *   {@link TagPicker}; new tags are persisted to {@link types/settings!AppSettings.customTags | AppSettings.customTags}.
  *
  * **Error handling:**
  * - If the note ID is not found, a toast is shown and the user is navigated

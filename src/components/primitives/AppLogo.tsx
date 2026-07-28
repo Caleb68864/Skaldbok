@@ -1,7 +1,7 @@
 import { cn } from '../../lib/utils';
 
 /** Props for {@link AppLogo}. `size` selects one of the preset square dimensions. */
-interface AppLogoProps {
+export interface AppLogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 }

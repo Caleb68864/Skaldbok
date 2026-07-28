@@ -24,15 +24,15 @@ async function getSyncModule() {
 }
 
 /**
- * Shape of data required when creating a new note via {@link useNoteActions.createNote}.
+ * Shape of data required when creating a new note via `createNote` (returned by {@link useNoteActions}).
  * Omits fields that are auto-populated by the repository (`id`, `createdAt`,
  * `updatedAt`, `schemaVersion`) and those injected from context (`campaignId`,
  * `sessionId`).
  */
-type CreateNoteData = Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'campaignId' | 'sessionId' | 'scope'> & { scope?: Note['scope'] };
+export type CreateNoteData = Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'campaignId' | 'sessionId' | 'scope'> & { scope?: Note['scope'] };
 
 /**
- * Options accepted by {@link useNoteActions.createNote} that control the
+ * Options accepted by `createNote` (returned by {@link useNoteActions}) that control the
  * automatic encounter-attach behavior.
  *
  * - `undefined` (or omitted) — auto-attach to the currently-active encounter,

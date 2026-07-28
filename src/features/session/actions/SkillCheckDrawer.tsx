@@ -106,7 +106,7 @@ export interface SkillCheckDrawerProps {
  * member is selected and has a linked character record with skills), followed by
  * the full list of core and weapon skills.
  *
- * **Step 2 — result entry**: shows the selected skill name, {@link RollModifiers}
+ * **Step 2 — result entry**: shows the selected skill name, `RollModifiers`
  * toggles (Boon / Bane / Pushed), and four outcome buttons (Success, Failure,
  * Dragon, Demon). Tapping an outcome creates a `skill-check` note and fires
  * `onLogged`.

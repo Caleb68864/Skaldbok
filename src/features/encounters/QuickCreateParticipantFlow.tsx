@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 
-interface QuickCreateParticipantFlowProps {
+export interface QuickCreateParticipantFlowProps {
   onSubmit: (name: string, stats: { hp?: number; armor?: number; movement?: number }) => Promise<void>;
   onCancel: () => void;
 }

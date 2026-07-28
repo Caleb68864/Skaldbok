@@ -2,7 +2,7 @@ import { cn } from '../../lib/utils';
 import type { ConditionDefinition } from '../../types/system';
 
 /** Props for {@link QuickConditionPanel}. `attributes` supplies the abbreviation shown under each condition's linked attribute. */
-interface QuickConditionPanelProps {
+export interface QuickConditionPanelProps {
   conditions: Record<string, boolean>;
   definitions: ConditionDefinition[];
   attributes: { id: string; abbreviation: string }[];
@@ -13,7 +13,7 @@ interface QuickConditionPanelProps {
  * Large-target grid of condition toggles tuned for at-the-table play.
  *
  * @remarks
- * A play-optimized alternative to {@link ConditionToggleGroup}: bigger tap targets
+ * A play-optimized alternative to {@link components/fields/ConditionToggleGroup!ConditionToggleGroup | ConditionToggleGroup}: bigger tap targets
  * and each button labels the attribute the condition affects, so a player can toggle
  * "Exhausted (STR)" without cross-referencing the rules.
  */

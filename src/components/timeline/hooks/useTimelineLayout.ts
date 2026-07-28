@@ -27,7 +27,7 @@ import { computeTrackLanesForOverlap } from '../utils/lanes';
 import { getAxisTicks, getItemPixelPosition } from '../utils/layout';
 
 /** Inputs to {@link useTimelineLayout}: the raw data, current filter/view state, "now", and the pixel geometry knobs. */
-interface UseTimelineLayoutArgs {
+export interface UseTimelineLayoutArgs {
   tracks: TimelineTrack[];
   items: TimelineItem[];
   markers: TimelineMarker[];
@@ -53,7 +53,7 @@ interface UseTimelineLayoutArgs {
  * aggregated items land on the correct visible row.
  *
  * @returns The computed scale, ticks, per-track/marker/now layouts, timeline width,
- *   and visible counts consumed by {@link TimelineRoot}.
+ *   and visible counts consumed by {@link components/timeline/TimelineRoot!TimelineRoot | TimelineRoot}.
  */
 export function useTimelineLayout({
   tracks,

@@ -3,7 +3,7 @@ import type { SkillDefinition } from '../../types/system';
 import type { CharacterSkill } from '../../types/character';
 
 /** Props for {@link SkillRow}. `characterSkill` is undefined for a skill the character has never touched — it falls back to the definition's base chance. */
-interface SkillRowProps {
+export interface SkillRowProps {
   skillDef: SkillDefinition;
   characterSkill: CharacterSkill | undefined;
   onChange: (value: CharacterSkill) => void;

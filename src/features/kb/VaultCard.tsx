@@ -16,7 +16,7 @@ const TYPE_COLORS: Record<string, string> = {
   unresolved: 'bg-red-500/10 text-red-500',
 };
 
-interface VaultCardProps {
+export interface VaultCardProps {
   node: KBNode;
   linkCount: number;
   tags?: string[];

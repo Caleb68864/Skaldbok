@@ -23,7 +23,7 @@ async function getSyncModule() {
 }
 
 /**
- * Options accepted by {@link useSessionLog.logToSession} and the typed log
+ * Options accepted by `logToSession` (returned by {@link useSessionLog}) and the typed log
  * helpers that forward through it.
  *
  * @remarks
@@ -37,7 +37,7 @@ export interface LogToSessionOptions {
 }
 
 /**
- * Input shape for {@link useSessionLog.logNpcCapture}.
+ * Input shape for `logNpcCapture` (returned by {@link useSessionLog}).
  *
  * @remarks
  * Captures the minimal fields needed to stand up a new `CreatureTemplate`

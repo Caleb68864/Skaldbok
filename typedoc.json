@@ -7,11 +7,12 @@
   "readme": "none",
   "excludePrivate": true,
   "excludeInternal": true,
+  "excludeExternals": true,
+  "externalPattern": ["**/node_modules/**"],
   "exclude": [
     "src/**/*.test.*",
     "src/**/*.spec.*",
     "src/styles/**",
-    "src/theme/**",
     "src/main.tsx",
     "src/vite-env.d.ts"
   ],

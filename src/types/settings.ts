@@ -79,7 +79,7 @@ export interface AppSettings extends Versioned {
   showGlobalFAB?: boolean;
   /**
    * Per-campaign dismissed link-suggestion keys (see
-   * {@link import('../features/notes/linkScanner.js').LinkScanSuggestion.key}).
+   * the `key` field of {@link features/notes/linkScanner!LinkScanSuggestion | LinkScanSuggestion}).
    * Keyed by `campaignId`; value is an array of dismissed suggestion keys.
    *
    * @remarks

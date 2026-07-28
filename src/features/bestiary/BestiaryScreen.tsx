@@ -12,7 +12,7 @@ import { nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
 
-interface BestiaryScreenProps {
+export interface BestiaryScreenProps {
   campaignId: string;
   activeEncounterId?: string;
   onClose?: () => void;

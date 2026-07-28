@@ -11,7 +11,7 @@ import * as characterRepository from '../../storage/repositories/characterReposi
 import type { CharacterRecord } from '../../types/character';
 import { nowISO } from '../../utils/dates';
 
-interface ParticipantDrawerProps {
+export interface ParticipantDrawerProps {
   participant: EncounterParticipant;
   onUpdateState: (patch: Partial<EncounterParticipant['instanceState']>) => Promise<void>;
   onClose: () => void;

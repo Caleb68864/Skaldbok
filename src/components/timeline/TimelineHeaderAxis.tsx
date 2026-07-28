@@ -3,7 +3,7 @@ import { TimelineGrid } from './TimelineGrid';
 import type { TimelineMarkerLayout, TimelineScaleUnit, TimelineTick } from './types';
 
 /** Props for {@link TimelineHeaderAxis}: layout widths, the ticks/markers to label, and the active scale unit. */
-interface TimelineHeaderAxisProps {
+export interface TimelineHeaderAxisProps {
   labelColumnWidth: number;
   timelineWidth: number;
   ticks: TimelineTick[];

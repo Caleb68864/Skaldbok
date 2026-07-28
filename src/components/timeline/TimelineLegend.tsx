@@ -34,7 +34,7 @@ function resolveTokenColor(colorToken?: string): string | undefined {
 }
 
 /** Props for {@link TimelineLegend}: the legend entries to render. */
-interface TimelineLegendProps {
+export interface TimelineLegendProps {
   items: TimelineLegendItem[];
 }
 

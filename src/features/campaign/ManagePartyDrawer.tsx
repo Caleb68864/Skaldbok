@@ -11,7 +11,7 @@ import { cn } from '../../lib/utils';
 /**
  * Props for the {@link ManagePartyDrawer} component.
  */
-interface ManagePartyDrawerProps {
+export interface ManagePartyDrawerProps {
   /** Called when the drawer should be closed (backdrop tap or close button). */
   onClose: () => void;
 }

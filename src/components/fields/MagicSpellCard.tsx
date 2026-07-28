@@ -12,7 +12,7 @@ import { Card } from '../primitives/Card';
  * prepared spells are castable. `preparedCount`/`maxPrepared` gate the prepare
  * toggle, and `currentWP` gates casting so an unaffordable cast is disabled.
  */
-interface MagicSpellCardProps {
+export interface MagicSpellCardProps {
   spell: Spell;
   isTrick: boolean;
   isGrimoireView: boolean;
@@ -34,7 +34,7 @@ interface MagicSpellCardProps {
  * @remarks
  * WP cost scales with `powerLevel` (a trick is always 1 WP; otherwise `powerLevel * 2`).
  * Magic tricks render a simplified layout. This is the play-oriented counterpart to
- * {@link SpellCard}, which is a static summary.
+ * {@link components/fields/SpellCard!SpellCard | SpellCard}, which is a static summary.
  */
 export function MagicSpellCard({
   spell, isTrick, isGrimoireView, preparedCount, maxPrepared, currentWP, powerLevel,

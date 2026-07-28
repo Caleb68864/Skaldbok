@@ -6,7 +6,7 @@ import { Button } from '../primitives/Button';
 import { generateId } from '../../utils/ids';
 
 /** Props for {@link WeaponEditor}. A `null` `weapon` means "create new". */
-interface WeaponEditorProps {
+export interface WeaponEditorProps {
   open: boolean;
   onClose: () => void;
   weapon: Weapon | null;
