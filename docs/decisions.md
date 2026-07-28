@@ -214,3 +214,34 @@
   branch first) but it bites the first pool-based non-Dragonbane system,
   including any user-authored JSON system.
 - Commit: fix(session-log) — report accumulating damage tracks as damage.
+
+## 2026-07-28 — Traveller conditions imposed a Dragonbane bane on top of damage
+- Symptom: all three Traveller conditions declared `"linkedAttributeId": "end"`.
+  That field has one specific meaning — `conditionEffects.ts:22-24`, whose own
+  docstring says "(Dragonbane's condition model)", banes every skill linked to
+  the same attribute while the condition is active. Traveller's damage track
+  already reduces the characteristic, and therefore its DM, so the penalty was
+  counted twice: END 7 with 5 damage puts Survival at 17%; ticking "Wounded" —
+  which its own description, "Physical damage track is depleted", actively
+  invites — dropped it to 5%. Mongoose 2e has no rule imposing a Bane for being
+  wounded.
+- Fix: dropped `linkedAttributeId` from the three conditions and bumped
+  `system.json` to v10. Savage Worlds already declares its conditions without
+  the field, so this matches the established pattern for a system that does not
+  use the Dragonbane bane rule.
+- Nothing else regresses: the field's other six readers use it for display
+  grouping only (attribute-panel clustering, printable-sheet grouping,
+  abbreviation chips), and Traveller's conditions do not render on the Traveller
+  sheet at all — `characteristicsPanel` has no conditions block and the orphan
+  fallback lives inside `attributesPanel`, which Traveller never renders.
+- Watch: the principled fix is an engine field. Whether conditions bane linked
+  skills is a *rule that differs between rulesets*, so by the project's own
+  cardinal rule it belongs on the engine rather than being inferred from the
+  presence of a data field that means something else in another system. Left as
+  data for now because it is the smaller, safer change; a fourth system that
+  reuses `linkedAttributeId` for grouping will reintroduce this.
+- Also still open: nothing ever *writes* these flags. `applyDamage` returns a
+  status but no `setsConditions`, so a knocked-out Traveller shows the
+  UNCONSCIOUS banner while `character.conditions.unconscious` stays false and no
+  export or printout records it.
+- Commit: fix(traveller) — stop conditions double-penalising the damage track.

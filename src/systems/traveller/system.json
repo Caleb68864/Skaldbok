@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 9,
+  "version": 10,
   "name": "traveller",
   "displayName": "Traveller",
   "resolution": "2d6-plus",
@@ -57,19 +57,16 @@
     {
       "id": "wounded",
       "name": "Wounded",
-      "linkedAttributeId": "end",
       "description": "Physical damage track is depleted"
     },
     {
       "id": "fatigued",
       "name": "Fatigued",
-      "linkedAttributeId": "end",
       "description": "Affects END-based actions"
     },
     {
       "id": "unconscious",
       "name": "Unconscious",
-      "linkedAttributeId": "end",
       "description": "Character cannot act"
     }
   ],
