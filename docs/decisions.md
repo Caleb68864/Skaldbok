@@ -267,3 +267,29 @@
   defect. Left alone.
 - Surfaces: `DamageHealModule.tsx`.
 - Commit: fix(traveller) — arm Recover All before it fires.
+
+## 2026-07-28 — Traveller had no way to add a temporary modifier
+- Symptom: `BuffChipBar` and `AddModifierDrawer` were rendered inside the
+  `attributesPanel` fragment. Traveller's engine declares `'characteristics'`,
+  not `'attributes'`, so that fragment never renders for a Traveller character
+  and there was **no entry point anywhere in the app** to record "the stim gives
+  you +2 DEX for the scene". Meanwhile `modifiableStats` enumerates Traveller's
+  `attr:*` and `res:*` targets and the sheet resolves them — the plumbing ran
+  end to end with nothing attached to the front.
+- Compounding: the same fragment held the orphan-conditions block, so Traveller's
+  conditions were invisible on the sheet too. That mattered more after this
+  session's condition fix, which removed `linkedAttributeId` and therefore made
+  all three Traveller conditions orphans.
+- Fix: extracted `modifierAndConditionExtras` and rendered it from both the
+  attributes panel and the characteristics panel. One definition, two mount
+  points, no change to the panel map or `panelAvailability`.
+- Ordering note: this only became worth doing once temp modifiers actually
+  applied — before the stat-key fix earlier today, adding the UI would have
+  given Traveller a modifier drawer whose output did nothing.
+- Surfaces: `SheetScreen.tsx`.
+- Watch: `AddModifierDrawer` still defaults `duration` to the hardcoded
+  Dragonbane id `'stretch'`, which is not in every system's `timeUnits`. Traveller
+  happens to declare it; Savage Worlds does not, and stores an unexpirable
+  modifier as a result. See `docs/plans/2026-07-28-traveller-hardening-findings.md`
+  S1.
+- Commit: fix(traveller) — give the characteristics panel the modifier bar.

@@ -604,6 +604,45 @@ export default function SheetScreen() {
     </SectionPanel>
   );
 
+  /**
+   * The temp-modifier bar and any conditions not clustered under an attribute.
+   *
+   * @remarks
+   * Shared by the attributes panel (Dragonbane, Savage Worlds) and the
+   * characteristics panel (Traveller). It used to live inside the attributes
+   * fragment alone, which meant Traveller — whose engine declares
+   * `'characteristics'`, not `'attributes'` — had **no way to add a temporary
+   * modifier at all**, even though `modifiableStats` enumerates its targets and
+   * the sheet resolves them. Traveller's conditions were invisible for the same
+   * reason.
+   */
+  const modifierAndConditionExtras = (
+    <>
+      <BuffChipBar
+        modifiers={character.tempModifiers ?? []}
+        onRemove={handleRemoveModifier}
+        onClearAll={handleClearAllModifiers}
+        onAdd={() => setAddModifierOpen(true)}
+      />
+      {system && (() => {
+        const linkedAttrIds = new Set(system.attributes.map(a => a.id));
+        const orphanConditions = system.conditions.filter(
+          c => !c.linkedAttributeId || !linkedAttrIds.has(c.linkedAttributeId),
+        );
+        if (orphanConditions.length === 0) return null;
+        return (
+          <SectionPanel title={engine.labels.conditionsPanel ?? 'Conditions'} collapsible defaultOpen>
+            <ConditionToggleGroup
+              conditions={character.conditions}
+              definitions={orphanConditions}
+              onChange={updateCondition}
+            />
+          </SectionPanel>
+        );
+      })()}
+    </>
+  );
+
   const attributesPanel = (
     <>
       <SectionPanel title={`${engine.labels.attributesPanel}${isPlayMode ? ' (locked in Play Mode)' : ''}`} icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
@@ -635,27 +674,7 @@ export default function SheetScreen() {
           })}
         </div>
       </SectionPanel>
-      {/* Buff Chip Bar — active temp modifiers */}
-      <BuffChipBar
-        modifiers={character.tempModifiers ?? []}
-        onRemove={handleRemoveModifier}
-        onClearAll={handleClearAllModifiers}
-        onAdd={() => setAddModifierOpen(true)}
-      />
-      {system && (() => {
-        const linkedAttrIds = new Set(system.attributes.map(a => a.id));
-        const orphanConditions = system.conditions.filter(c => !c.linkedAttributeId || !linkedAttrIds.has(c.linkedAttributeId));
-        if (orphanConditions.length === 0) return null;
-        return (
-          <SectionPanel title={engine.labels.conditionsPanel ?? 'Conditions'} collapsible defaultOpen>
-            <ConditionToggleGroup
-              conditions={character.conditions}
-              definitions={orphanConditions}
-              onChange={updateCondition}
-            />
-          </SectionPanel>
-        );
-      })()}
+      {modifierAndConditionExtras}
     </>
   );
 
@@ -699,6 +718,7 @@ export default function SheetScreen() {
 
   // ---- Traveller panels ----
   const characteristicsPanel = (
+    <>
     <SectionPanel title={engine.labels.attributesPanel} icon={<GameIcon name="biceps" size={18} />} collapsible defaultOpen>
       <div className="flex flex-wrap gap-[var(--space-md)] justify-center">
         {engine.attributeIds.map(attrId => {
@@ -741,6 +761,8 @@ export default function SheetScreen() {
         })}
       </div>
     </SectionPanel>
+    {modifierAndConditionExtras}
+    </>
   );
 
   const creationSubHeading =
