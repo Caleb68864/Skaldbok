@@ -743,17 +743,20 @@ export default function SheetScreen() {
                 disabled={!attributesEditable}
                 modifierDelta={ev.isModified ? ev.modifiers.reduce((s, m) => s + m.delta, 0) : undefined}
               />
-              {damage > 0 && (
-                <span className="text-[length:var(--font-size-xs,10px)] font-bold text-[var(--color-danger)]">
-                  {Math.max(0, ev.effective - damage)} after {damage} damage
-                </span>
-              )}
               {dm !== null && (
                 <span
                   aria-label={`${attr?.abbreviation ?? attrId.toUpperCase()} DM`}
                   className="text-[length:var(--font-size-xs,10px)] font-bold text-[var(--color-primary)] px-[var(--space-sm)] py-0.5 rounded-[var(--radius-sm)] border border-[var(--color-border)]"
                 >
                   DM {dm}
+                </span>
+              )}
+              {/* Below the DM badge, not above it: the badge is the number the
+                  player acts on, so it stays on one line across the row rather
+                  than being pushed down only for the damaged characteristic. */}
+              {damage > 0 && (
+                <span className="text-[length:var(--font-size-xs,10px)] font-bold text-[var(--color-danger)]">
+                  {Math.max(0, ev.effective - damage)} after {damage} damage
                 </span>
               )}
             </div>
