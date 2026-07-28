@@ -77,3 +77,30 @@
 - Watch: any new write path that touches `db.notes` directly will reintroduce
   this. The repository is the only place that fires `syncNote`.
 - Commit: fix(notes) — sync promoted notes into the KB graph.
+
+## 2026-07-28 — Long-press both selected and deleted a log entry
+- Symptom: the entry row bound `onPointerDown` to a 500ms timer calling
+  `softDelete` directly — no confirm, no undo, no success toast. That is also
+  the gesture a touch device turns into `contextmenu`, which
+  `SessionLogSelection` uses to enter selection mode, so on a tablet a
+  long-press meant to select an entry deleted it. Proved with a held synthetic
+  pointerdown: 900ms stamped `deletedAt` and the row vanished silently.
+  SS-13 Step 1 explicitly asked for this collision to be resolved; both
+  bindings shipped anyway.
+- Fix: removed the row long-press delete. Delete moved into the selection
+  action bar behind an explicit tap, with an Undo toast. One delete action
+  shares one soft-delete txId so Undo restores exactly that set.
+- Also in this pass: the write pad draft is parked in localStorage per session
+  (it was `useState` only, and the sheet closes on an outside tap, so an
+  interrupted sentence was lost silently); `softDelete` now drops the note's
+  KB node and `restore` rebuilds it; log entries are excluded from the session
+  timeline, where their empty titles rendered as blank chips.
+- Surfaces: `SessionLog.tsx`, `SessionLogSelection.tsx`,
+  `sessionTimelineAdapter.ts`, `noteRepository.ts`.
+- Watch: the KB-node cleanup is currently **latent**, not live — the only
+  reachable note soft-delete is log entries, which have no KB node, because
+  `NotesGrid` (the one surface with a note delete button) is commented out of
+  `SessionScreen`. There is presently no way to delete an ordinary note in the
+  app at all. When that surface returns, re-verify the ghost is gone.
+- Commit: fix(session-log) — stop long-press deleting entries; keep drafts and
+  unclutter the timeline.

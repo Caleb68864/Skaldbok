@@ -3,17 +3,48 @@ import { WritePad } from '../../../components/notes/WritePad';
 import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useToast } from '../../../context/ToastContext';
 import * as noteRepository from '../../../storage/repositories/noteRepository';
+import { generateSoftDeleteTxId } from '../../../utils/softDelete';
 import { textToDoc, docToText } from '../../notes/textToDoc';
 import { SessionLogSelection } from './SessionLogSelection';
 import type { Note } from '../../../types/note';
 
-const LONG_PRESS_MS = 500;
+/** localStorage key holding the unsaved pad draft for one session. */
+function draftKey(sessionId: string): string {
+  return `skaldbok-log-draft-${sessionId}`;
+}
+
+/** The unsaved pad state parked in localStorage between mounts. */
+interface ParkedDraft {
+  text: string;
+  /** Id of the entry being edited, so a restored draft updates rather than duplicates. */
+  editingId: string | null;
+}
+
+/** Reads the parked draft for a session, tolerating absent or corrupt values. */
+function readParkedDraft(sessionId: string): ParkedDraft | null {
+  try {
+    const raw = localStorage.getItem(draftKey(sessionId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as ParkedDraft;
+    if (typeof parsed?.text !== 'string') return null;
+    return { text: parsed.text, editingId: parsed.editingId ?? null };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * In-session capture screen: chronological committed log entries with a
  * docked {@link WritePad}. Tap an entry to edit it in place; long-press to
- * soft-delete it. Selection, promotion, and the review sweep are handled by
+ * select. Selection, promotion, deletion and the review sweep are handled by
  * {@link SessionLogSelection}.
+ *
+ * @remarks
+ * Deletion deliberately does **not** live on a row long-press. It used to, and
+ * that gesture is also what a touch device fires to enter selection mode, so a
+ * long-press meant to select an entry silently soft-deleted it — with no
+ * confirmation and no undo. Delete now lives in the selection action bar,
+ * behind an explicit tap, and reports an Undo toast.
  */
 export function SessionLog() {
   const { activeCampaign, activeSession, startSession } = useCampaignContext();
@@ -22,7 +53,6 @@ export function SessionLog() {
   const [draft, setDraft] = useState('');
   const [padOpen, setPadOpen] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
@@ -37,6 +67,37 @@ export function SessionLog() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Rehydrate whatever was being typed when this component last unmounted.
+  // The pad lives inside a sheet that closes on an outside tap, so without
+  // this an interrupted sentence is lost with no warning — the worst possible
+  // failure for a capture surface used mid-session.
+  useEffect(() => {
+    if (!activeSession) return;
+    const parked = readParkedDraft(activeSession.id);
+    if (!parked) return;
+    setDraft(parked.text);
+    setEditingId(parked.editingId);
+    if (parked.text) setPadOpen(true);
+  }, [activeSession]);
+
+  // Park the draft on every keystroke. localStorage is the right store here:
+  // this is transient UI state, not a domain record, and writing it into
+  // IndexedDB would mean a schema version for something deliberately throwaway.
+  useEffect(() => {
+    if (!activeSession) return;
+    const key = draftKey(activeSession.id);
+    if (draft.trim() === '') {
+      localStorage.removeItem(key);
+      return;
+    }
+    try {
+      localStorage.setItem(key, JSON.stringify({ text: draft, editingId } satisfies ParkedDraft));
+    } catch {
+      // A full or unavailable quota must not break capture — the draft simply
+      // is not recoverable across a remount.
+    }
+  }, [draft, editingId, activeSession]);
 
   // Entries render oldest-first, so the newest is at the bottom and off-screen
   // once a session runs long. Scroll to it whenever the list grows — otherwise
@@ -76,27 +137,49 @@ export function SessionLog() {
     setPadOpen(true);
   }, []);
 
-  const startLongPress = useCallback((entry: Note) => {
-    longPressTimer.current = setTimeout(async () => {
-      try {
-        await noteRepository.softDelete(entry.id);
-        if (editingId === entry.id) {
-          setEditingId(null);
-          setDraft('');
-        }
-        await refresh();
-      } catch (e) {
-        showToast(e instanceof Error ? e.message : 'Failed to delete entry', 'error');
+  /**
+   * Soft-deletes the selected entries and offers an Undo.
+   *
+   * @remarks
+   * Every entry in one call shares a soft-delete transaction id, so Undo
+   * restores exactly the set that was removed — restoring them individually
+   * would resurrect any entry the user had deleted earlier and separately.
+   */
+  const handleDeleteEntries = useCallback(async (toDelete: Note[]) => {
+    if (toDelete.length === 0) return;
+    const txId = generateSoftDeleteTxId();
+    try {
+      for (const entry of toDelete) {
+        await noteRepository.softDelete(entry.id, txId);
       }
-    }, LONG_PRESS_MS);
-  }, [editingId, refresh, showToast]);
-
-  const cancelLongPress = useCallback(() => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
+      if (editingId && toDelete.some(e => e.id === editingId)) {
+        setEditingId(null);
+        setDraft('');
+      }
+      await refresh();
+      showToast(
+        toDelete.length === 1 ? 'Entry deleted' : `${toDelete.length} entries deleted`,
+        'info',
+        {
+          action: {
+            label: 'Undo',
+            onClick: async () => {
+              try {
+                for (const entry of toDelete) {
+                  await noteRepository.restore(entry.id);
+                }
+                await refresh();
+              } catch (e) {
+                showToast(e instanceof Error ? e.message : 'Failed to restore entries', 'error');
+              }
+            },
+          },
+        },
+      );
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to delete entry', 'error');
     }
-  }, []);
+  }, [editingId, refresh, showToast]);
 
   if (!activeSession) {
     return (
@@ -127,12 +210,9 @@ export function SessionLog() {
             campaignId={activeCampaign.id}
             onEditEntry={handleTapEntry}
             onPromoted={refresh}
+            onDeleteEntries={handleDeleteEntries}
             renderEntry={entry => (
-              <div
-                onPointerDown={() => startLongPress(entry)}
-                onPointerUp={cancelLongPress}
-                onPointerLeave={cancelLongPress}
-              >
+              <div>
                 <div className="text-xs text-[var(--color-text-muted,#666)]">
                   {new Date(entry.createdAt).toLocaleTimeString()}
                 </div>
@@ -143,9 +223,9 @@ export function SessionLog() {
         )}
       </div>
       {/* Docked, not fullscreen. A fullscreen pad would bury the entry list —
-          and the list is not decoration: tap-to-edit, long-press-delete and
-          selection all live there. Docked keeps capture one tap from the
-          session screen while leaving prior entries visible. */}
+          and the list is not decoration: tap-to-edit and selection both live
+          there. Docked keeps capture one tap from the session screen while
+          leaving prior entries visible. */}
       <WritePad
         value={draft}
         onChange={setDraft}

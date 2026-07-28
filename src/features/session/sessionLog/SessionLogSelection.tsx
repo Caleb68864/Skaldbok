@@ -28,6 +28,15 @@ export interface SessionLogSelectionProps {
   onEditEntry: (entry: Note) => void;
   /** Called after a promote action completes, so the caller can refresh its entry list. */
   onPromoted?: () => void;
+  /**
+   * Soft-deletes the selected entries. Omit to hide the Delete action.
+   *
+   * @remarks
+   * Deletion lives here rather than on a row gesture: a touch long-press is
+   * what enters selection mode, so binding delete to the same gesture made
+   * selecting an entry destroy it. The owner is expected to offer an Undo.
+   */
+  onDeleteEntries?: (entries: Note[]) => Promise<void> | void;
   /** Renders a single entry's row content; the wrapper adds selection affordances. */
   renderEntry: (entry: Note) => React.ReactNode;
 }
@@ -53,6 +62,7 @@ export function SessionLogSelection({
   campaignId,
   onEditEntry,
   onPromoted,
+  onDeleteEntries,
   renderEntry,
 }: SessionLogSelectionProps) {
   const { activeParty } = useCampaignContext();
@@ -102,6 +112,13 @@ export function SessionLogSelection({
   };
 
   const clearSelection = () => setSelectedIds(new Set());
+
+  const handleDelete = async () => {
+    if (!onDeleteEntries) return;
+    const doomed = selectedEntries;
+    clearSelection();
+    await onDeleteEntries(doomed);
+  };
 
   const handlePromoted = () => {
     clearSelection();
@@ -181,6 +198,15 @@ export function SessionLogSelection({
             >
               Promote
             </button>
+            {onDeleteEntries && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="min-h-9 rounded border border-[var(--color-border)] px-3 text-xs text-[var(--color-state-danger,#dc2626)]"
+              >
+                Delete
+              </button>
+            )}
             <button
               type="button"
               onClick={clearSelection}

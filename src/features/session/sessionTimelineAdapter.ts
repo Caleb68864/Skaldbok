@@ -101,7 +101,15 @@ export async function loadSessionTimelineSourceData(
   sessionId: string,
   encounters: Encounter[],
 ): Promise<SessionTimelineSourceData> {
-  const notes = (await getNotesBySession(sessionId)).filter((note) => note.status === 'active');
+  // Log entries are excluded, matching the Notes grid (SS-09) and KB (SS-10).
+  // They are notes with an empty title, and the timeline labels items by title,
+  // so every raw capture rendered as an unlabeled chip — a session's worth of
+  // them buried the promoted notes that the timeline exists to show. The log
+  // is read in the Session Log itself; the timeline shows what was promoted
+  // out of it.
+  const notes = (await getNotesBySession(sessionId)).filter(
+    (note) => note.status === 'active' && note.type !== 'log',
+  );
   const activeEncounters = encounters.filter((encounter) => !encounter.deletedAt);
 
   const containsLinksByEncounter = await Promise.all(

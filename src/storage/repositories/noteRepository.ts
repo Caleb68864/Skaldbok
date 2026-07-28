@@ -240,6 +240,12 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       softDeletedBy: finalTxId,
       updatedAt: now,
     });
+    // Drop the note's KB node. Only the hard-delete path used to do this, but
+    // every user-facing delete routes through here — so a deleted note kept its
+    // node and stayed listed in the Knowledge Base, where opening it produced a
+    // reader for a row the rest of the app treats as gone. The Session Notes
+    // panel was unaffected only because it intersects nodes with live notes.
+    getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
   } catch (e) {
     throw new Error(`noteRepository.softDelete failed: ${e}`);
   }
@@ -267,6 +273,9 @@ export async function restore(id: string): Promise<void> {
         await entityLinkRepository.restoreLinksForTxId(txId);
       }
     });
+    // Rebuild the KB node that softDelete removed, so a restored note is
+    // browsable again rather than surviving only in the notes table.
+    getSyncModule().then((m) => m.syncNote(id)).catch(() => {});
   } catch (e) {
     throw new Error(`noteRepository.restore failed: ${e}`);
   }
