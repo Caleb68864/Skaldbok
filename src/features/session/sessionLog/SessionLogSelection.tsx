@@ -14,6 +14,7 @@ import * as noteRepository from '../../../storage/repositories/noteRepository';
 import * as entityLinkRepository from '../../../storage/repositories/entityLinkRepository';
 import * as creatureTemplateRepository from '../../../storage/repositories/creatureTemplateRepository';
 import { useCampaignContext } from '../../campaign/CampaignContext';
+import { useSessionRefreshSafe } from '../SessionRefreshContext';
 import { cn } from '../../../lib/utils';
 import type { Note } from '../../../types/note';
 import type { EntityLink } from '../../../types/entityLink';
@@ -55,6 +56,7 @@ export function SessionLogSelection({
   renderEntry,
 }: SessionLogSelectionProps) {
   const { activeParty } = useCampaignContext();
+  const sessionRefresh = useSessionRefreshSafe();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sheetOpen, setSheetOpen] = useState(false);
   const [promotedTargets, setPromotedTargets] = useState<Record<string, string>>({});
@@ -105,6 +107,11 @@ export function SessionLogSelection({
     clearSelection();
     setSheetOpen(false);
     onPromoted?.();
+    // A promoted note is a new session note and a new timeline event, but both
+    // of those surfaces live outside this component and only re-query when
+    // their refresh token changes. Without this the note is written and synced
+    // correctly yet stays invisible until the next navigation.
+    sessionRefresh?.bumpAll();
   };
 
   const runReview = async () => {

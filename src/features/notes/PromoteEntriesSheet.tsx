@@ -7,9 +7,6 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { db } from '../../storage/db/client';
-import { generateId } from '../../utils/ids';
-import { nowISO } from '../../utils/dates';
 import { extractText } from '../../utils/prosemirror';
 import { formatLocalDateTime } from '../../utils/dates';
 import { textToDoc, docToText } from './textToDoc.js';
@@ -84,85 +81,28 @@ async function createNoteAndPromote(
   entries: Note[],
   data: { campaignId: string; sessionId?: string; title: string; type: NoteType; tags?: string[]; bodyText: string },
 ): Promise<string> {
-  const now = nowISO();
-  const noteId = generateId();
-  const body = textToDoc(data.bodyText);
-
-  await db.transaction('rw', [db.notes, db.entityLinks], async () => {
-    await db.notes.add({
-      id: noteId,
-      campaignId: data.campaignId,
-      sessionId: data.sessionId,
-      title: data.title,
-      body,
-      type: data.type,
-      typeData: {},
-      status: 'active',
-      pinned: false,
-      tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
-      schemaVersion: 1,
-      createdAt: now,
-      updatedAt: now,
-    } as Note);
-
-    for (const entry of entries) {
-      await db.entityLinks.add({
-        id: generateId(),
-        fromEntityId: entry.id,
-        fromEntityType: 'note',
-        toEntityId: noteId,
-        toEntityType: 'note',
-        relationshipType: 'promoted_into',
-        schemaVersion: 1,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
-  });
-
-  return noteId;
+  return noteRepository.promoteEntriesToNewNote(entries, {
+    campaignId: data.campaignId,
+    sessionId: data.sessionId,
+    title: data.title,
+    body: textToDoc(data.bodyText),
+    type: data.type,
+    typeData: {},
+    tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
+  } as Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'status' | 'pinned'>);
 }
 
 /** Appends the selection under a `---` divider on an existing note's body, leaving its title unchanged. */
 async function appendEntriesToExistingNote(entries: Note[], targetNoteId: string, appendedText: string): Promise<void> {
-  const now = nowISO();
-
-  await db.transaction('rw', [db.notes, db.entityLinks], async () => {
-    const existing = await db.notes.get(targetNoteId);
-    if (!existing) throw new Error(`PromoteEntriesSheet: target note ${targetNoteId} not found`);
-
-    const existingText = extractText((existing as Note).body);
-    const combinedText = existingText ? `${existingText}\n\n---\n\n${appendedText}` : appendedText;
-
-    await db.notes.update(targetNoteId, {
-      body: textToDoc(combinedText),
-      updatedAt: now,
-    });
-
-    for (const entry of entries) {
-      await db.entityLinks.add({
-        id: generateId(),
-        fromEntityId: entry.id,
-        fromEntityType: 'note',
-        toEntityId: targetNoteId,
-        toEntityType: 'note',
-        relationshipType: 'promoted_into',
-        schemaVersion: 1,
-        createdAt: now,
-        updatedAt: now,
-      });
-    }
+  await noteRepository.appendEntriesToNote(entries, targetNoteId, existingBody => {
+    const existingText = extractText(existingBody);
+    return textToDoc(existingText ? `${existingText}\n\n---\n\n${appendedText}` : appendedText);
   });
 }
 
 /** Applies tags to every selected entry without promoting (no `promoted_into` link created). */
 async function tagEntries(entries: Note[], tags: string[]): Promise<void> {
-  const now = nowISO();
-  for (const entry of entries) {
-    const existingTags = entry.tags ?? [];
-    const merged = Array.from(new Set([...existingTags, ...tags]));
-    await db.notes.update(entry.id, { tags: merged, updatedAt: now });
-  }
+  await noteRepository.addTagsToNotes(entries, tags);
 }
 
 /**

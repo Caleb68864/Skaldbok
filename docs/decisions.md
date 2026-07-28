@@ -61,3 +61,19 @@
   edits — pathspec discipline does not constrain stash. Isolate agents in
   worktrees or serialise them.
 - Commit: converge(pass-1) — close 11 spec gaps found by 4-way audit.
+
+## 2026-07-27 — Promoted notes never reached the KB graph
+- Symptom: promoting session-log entries created a correct, correctly-scoped
+  note that was invisible in the Session Notes panel and the Knowledge Base.
+  It only appeared after opening the Knowledge Base screen, whose mount runs
+  `bulkRebuildGraph`. Both surfaces read `kb_nodes`, and no node existed.
+- Fix: `PromoteEntriesSheet` wrote straight to Dexie, bypassing
+  `noteRepository` and so never firing `syncNote`. Moved the three operations
+  into the repository (`promoteEntriesToNewNote`, `appendEntriesToNote`,
+  `addTagsToNotes`) and awaited the sync — fire-and-forget let the caller's
+  refresh race it and re-query before the node existed.
+- Surfaces: Session Notes panel, Knowledge Base, backlinks, wikilink edges.
+  "Add to existing" was affected too — appends never re-synced.
+- Watch: any new write path that touches `db.notes` directly will reintroduce
+  this. The repository is the only place that fires `syncNote`.
+- Commit: fix(notes) — sync promoted notes into the KB graph.

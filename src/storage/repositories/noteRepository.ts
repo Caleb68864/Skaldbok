@@ -379,3 +379,134 @@ export async function updateLogEntry(id: string, body: unknown): Promise<Note> {
     throw new Error(`noteRepository.updateLogEntry failed: ${e}`);
   }
 }
+
+/**
+ * Creates a note from a selection of log entries and links every source entry
+ * to it with a `promoted_into` edge.
+ *
+ * @remarks
+ * The note and its lineage edges are written in a single transaction so a
+ * failure cannot leave a promoted note with no record of where it came from.
+ *
+ * The KB graph sync runs *after* the transaction commits, not inside it —
+ * `syncNote` opens its own transaction, and nesting it here would deadlock.
+ * Skipping this sync is what previously made promoted notes invisible in the
+ * Session Notes panel and the Knowledge Base until an unrelated full graph
+ * rebuild happened to run.
+ *
+ * Unlike {@link createNote}, the sync is **awaited**. Callers refresh the
+ * session-notes and timeline surfaces as soon as this resolves, and those
+ * surfaces read `kb_nodes`; leaving it fire-and-forget makes that refresh race
+ * the sync and re-query before the node exists. Errors are still swallowed —
+ * the note is committed by then, so a graph failure must not present as a
+ * failed promote.
+ *
+ * @param entries - The source log entries being promoted. Never modified or deleted.
+ * @param data    - Fields for the new note; `body` must already be a ProseMirror doc.
+ * @returns The id of the newly created note.
+ */
+export async function promoteEntriesToNewNote(
+  entries: Note[],
+  data: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'status' | 'pinned'>,
+): Promise<string> {
+  assertProseMirrorBody(data.body, 'promoteEntriesToNewNote');
+  const noteId = generateId();
+  try {
+    const now = nowISO();
+    await db.transaction('rw', [db.notes, db.entityLinks], async () => {
+      await db.notes.add({
+        ...data,
+        id: noteId,
+        status: 'active',
+        pinned: false,
+        schemaVersion: 1,
+        createdAt: now,
+        updatedAt: now,
+      } as Note);
+      await addPromotedIntoEdges(entries, noteId, now);
+    });
+  } catch (e) {
+    throw new Error(`noteRepository.promoteEntriesToNewNote failed: ${e}`);
+  }
+  await getSyncModule().then(m => m.syncNote(noteId)).catch(() => {});
+  return noteId;
+}
+
+/**
+ * Appends a selection of log entries onto an existing note and links every
+ * source entry to it with a `promoted_into` edge.
+ *
+ * @remarks
+ * `buildBody` receives the target note's current body and returns the combined
+ * body. It runs *inside* the transaction so the read-modify-write cannot
+ * interleave with a concurrent edit of the same note. It must be pure — the
+ * repository layer deliberately does not import the feature-layer
+ * `textToDoc`/`extractText` helpers the caller uses to build that body.
+ *
+ * @param entries      - The source log entries being appended. Never modified or deleted.
+ * @param targetNoteId - The note to append onto. Its title is left unchanged.
+ * @param buildBody    - Pure combiner from the existing body to the new body.
+ */
+export async function appendEntriesToNote(
+  entries: Note[],
+  targetNoteId: string,
+  buildBody: (existingBody: unknown) => unknown,
+): Promise<void> {
+  try {
+    const now = nowISO();
+    await db.transaction('rw', [db.notes, db.entityLinks], async () => {
+      const existing = await db.notes.get(targetNoteId);
+      if (!existing) {
+        throw new Error(`target note ${targetNoteId} not found`);
+      }
+      const body = buildBody((existing as Note).body);
+      assertProseMirrorBody(body, 'appendEntriesToNote');
+      await db.notes.update(targetNoteId, { body, updatedAt: now });
+      await addPromotedIntoEdges(entries, targetNoteId, now);
+    });
+  } catch (e) {
+    throw new Error(`noteRepository.appendEntriesToNote failed: ${e}`);
+  }
+  // Awaited for the same reason as promoteEntriesToNewNote — the caller
+  // refreshes KB-backed surfaces the moment this resolves.
+  await getSyncModule().then(m => m.syncNote(targetNoteId)).catch(() => {});
+}
+
+/** Adds one `promoted_into` edge per source entry. Caller supplies the transaction. */
+async function addPromotedIntoEdges(entries: Note[], targetNoteId: string, now: string): Promise<void> {
+  for (const entry of entries) {
+    await db.entityLinks.add({
+      id: generateId(),
+      fromEntityId: entry.id,
+      fromEntityType: 'note',
+      toEntityId: targetNoteId,
+      toEntityType: 'note',
+      relationshipType: 'promoted_into',
+      schemaVersion: 1,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+}
+
+/**
+ * Merges `tags` into every supplied note, leaving all other fields untouched.
+ *
+ * @remarks
+ * Routed through {@link updateNote} so each note re-syncs into the KB graph.
+ * For `type: 'log'` entries `syncNote` is a no-op by design, but tagging is
+ * offered on ordinary notes too and those do need the sync.
+ *
+ * @param notes - The notes to tag.
+ * @param tags  - Tags to merge in; existing tags are preserved and de-duplicated.
+ */
+export async function addTagsToNotes(notes: Note[], tags: string[]): Promise<void> {
+  try {
+    for (const note of notes) {
+      const merged = Array.from(new Set([...(note.tags ?? []), ...tags]));
+      await updateNote(note.id, { tags: merged });
+    }
+  } catch (e) {
+    throw new Error(`noteRepository.addTagsToNotes failed: ${e}`);
+  }
+}
