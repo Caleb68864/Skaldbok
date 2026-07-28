@@ -1,19 +1,64 @@
 /**
- * The four outcomes applicable to skill checks, spell casts, and
- * heroic ability uses.
+ * The stored id of a roll outcome.
+ *
+ * @remarks
+ * Deliberately `string`, not a union. Outcome ids are **engine data** —
+ * `engine.outcomes` supplies them and they differ per ruleset: Dragonbane has
+ * `dragon`/`demon`, Traveller has `exceptional-success`/`exceptional-failure`,
+ * Savage Worlds has `raise`/`critical-failure`. A closed union here was a
+ * consumer-side vocabulary pretending to be authoritative, and the one place
+ * the compiler could have objected was suppressed by an `as OutcomeResult`
+ * cast at the call site.
+ *
+ * The id is the stable persisted key; display strings come from the engine's
+ * `label`. Never derive one from the other.
  */
-export type OutcomeResult = 'success' | 'failure' | 'dragon' | 'demon';
+export type OutcomeResult = string;
 
 /** Kept as a back-compat alias so older imports keep compiling. */
 export type SkillCheckResult = OutcomeResult;
 
 /**
- * Modifier flags that can be applied to a d20 roll.
+ * Which roll modifiers were active, keyed by the engine's modifier id.
+ *
+ * @remarks
+ * Also engine data: Dragonbane has boon/bane/pushed, Traveller drops pushed,
+ * Savage Worlds has gang-up/cover/wild-attack. Absent means inactive, so a
+ * partial object is valid.
  */
-export interface OutcomeMods {
-  boon: boolean;
-  bane: boolean;
-  pushed: boolean;
+export type OutcomeMods = Record<string, boolean>;
+
+/** An engine-supplied id/label pair, as `outcomes` and `rollModifiers` provide. */
+export interface LabelledId {
+  id: string;
+  label: string;
+}
+
+/** Label sources for rendering a stored outcome back into human words. */
+export interface OutcomeVocabulary {
+  outcomes?: LabelledId[];
+  rollModifiers?: LabelledId[];
+}
+
+/**
+ * Best-effort display label for an id the supplied vocabulary does not contain.
+ *
+ * @remarks
+ * Reached when a row was logged under a system that has since been edited, or
+ * when a caller has no engine to hand. `exceptional-success` reads as
+ * "Exceptional Success" rather than leaking the machine id into the timeline.
+ */
+function humanise(id: string): string {
+  return id
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/** Resolves an id to its label, falling back to {@link humanise}. */
+function labelFor(id: string, vocabulary: LabelledId[] | undefined): string {
+  return vocabulary?.find(entry => entry.id === id)?.label ?? humanise(id);
 }
 
 /** Back-compat alias. */
@@ -48,26 +93,39 @@ export interface SkillCheckTypeData {
 /**
  * Formats active modifiers as a parenthetical tag, e.g. ` (Boon, Pushed)`.
  */
-export function formatModTags(mods: OutcomeMods): string {
-  const tags: string[] = [];
-  if (mods.boon) tags.push('Boon');
-  if (mods.bane) tags.push('Bane');
-  if (mods.pushed) tags.push('Pushed');
+export function formatModTags(mods: OutcomeMods, rollModifiers?: LabelledId[]): string {
+  // Order by the engine's vocabulary when we have one, so the tag reads the
+  // same way every time regardless of which chip the user tapped first. With no
+  // vocabulary, fall back to insertion order.
+  const activeIds = Object.keys(mods).filter(id => mods[id]);
+  const ordered = rollModifiers
+    ? [
+        ...rollModifiers.filter(m => activeIds.includes(m.id)).map(m => m.id),
+        ...activeIds.filter(id => !rollModifiers.some(m => m.id === id)),
+      ]
+    : activeIds;
+  const tags = ordered.map(id => labelFor(id, rollModifiers));
   return tags.length > 0 ? ` (${tags.join(', ')})` : '';
 }
 
 /**
  * Rebuilds the canonical title: `"{actor}: {subject}{mods?} — {result}"`.
  */
-export function formatOutcomeTitle(data: {
-  actor: string;
-  subject: string;
-  result: OutcomeResult;
-  mods?: OutcomeMods;
-}): string {
-  const modTag = data.mods ? formatModTags(data.mods) : '';
+export function formatOutcomeTitle(
+  data: {
+    actor: string;
+    subject: string;
+    result: OutcomeResult;
+    mods?: OutcomeMods;
+  },
+  vocabulary?: OutcomeVocabulary,
+): string {
+  const modTag = data.mods ? formatModTags(data.mods, vocabulary?.rollModifiers) : '';
   const who = data.actor || 'Unknown';
-  return `${who}: ${data.subject}${modTag} — ${data.result}`;
+  // The stored value is the id; the timeline shows the label. Printing the id
+  // read acceptably only because Dragonbane's happen to be English words —
+  // Traveller's rendered as "— exceptional-success".
+  return `${who}: ${data.subject}${modTag} — ${labelFor(data.result, vocabulary?.outcomes)}`;
 }
 
 /** Back-compat alias. */

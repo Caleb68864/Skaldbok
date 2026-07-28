@@ -179,15 +179,13 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
     try {
       const actor = activePC.name;
       const subject = step.subject;
-      // `OutcomeMods` is the stored shape and still names its three flags
-      // explicitly; any additional engine modifier ids ride along untouched.
-      const storedMods: OutcomeMods = {
-        ...mods,
-        boon: mods.boon ?? false,
-        bane: mods.bane ?? false,
-        pushed: mods.pushed ?? false,
-      };
-      const title = formatOutcomeTitle({ actor, subject, result, mods: storedMods });
+      // Stored as-is now that `OutcomeMods` is keyed by engine modifier id
+      // rather than naming Dragonbane's three flags. Absent means inactive.
+      const storedMods: OutcomeMods = { ...mods };
+      const title = formatOutcomeTitle(
+        { actor, subject, result, mods: storedMods },
+        { outcomes: engine.outcomes, rollModifiers: engine.rollModifiers },
+      );
       const type =
         step.subjectKind === 'skill'
           ? 'skill-check'
@@ -482,9 +480,7 @@ export function QuickLogPCTray({ onLogged, onClose }: QuickLogPCTrayProps) {
               <button
                 key={outcome.id}
                 type="button"
-                // Outcome ids are the stored vocabulary; `OutcomeResult` still
-                // names the four classic-fantasy ones as a literal union.
-                onClick={() => logOutcome(outcome.id as OutcomeResult)}
+                onClick={() => logOutcome(outcome.id)}
                 disabled={saving}
                 className={cn(
                   'min-h-11 px-4 border-none rounded-lg cursor-pointer text-sm font-semibold disabled:opacity-60',

@@ -5,6 +5,8 @@ import { updateNote, softDelete as softDeleteNote } from '../../../storage/repos
 import { useToast } from '../../../context/ToastContext';
 import { cn } from '../../../lib/utils';
 import type { Note } from '../../../types/note';
+import { useSystemEngineFor } from '../../systems/engine';
+import { useCampaignContext } from '../../campaign/CampaignContext';
 import {
   formatOutcomeTitle,
   readOutcomeTypeData,
@@ -12,7 +14,20 @@ import {
   type OutcomeResult,
 } from './formatSkillCheckTitle';
 
-const RESULTS: OutcomeResult[] = ['success', 'failure', 'dragon', 'demon'];
+/**
+ * Button styling for an outcome, keyed by the engine's `tone`.
+ *
+ * @remarks
+ * Tones rather than ids: this drawer used to hardcode Dragonbane's four
+ * outcomes and colour them by name, which left a Traveller
+ * `exceptional-success` with no button to select and no colour to wear.
+ */
+const TONE_STYLES: Record<string, string> = {
+  critical: 'bg-[var(--color-accent)] text-white border-transparent',
+  success: 'bg-[#27ae60] text-white border-transparent',
+  failure: 'bg-[var(--color-surface-raised)] text-[var(--color-text)] border-[var(--color-accent)]',
+  fumble: 'bg-[#c0392b] text-white border-transparent',
+};
 
 export interface SkillCheckEditDrawerProps {
   open: boolean;
@@ -42,10 +57,14 @@ function subjectLabel(noteType: string | undefined): string {
  */
 export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillCheckEditDrawerProps) {
   const { showToast } = useToast();
+  // Campaign-scoped: this edits a note belonging to the session, which belongs
+  // to the campaign, regardless of which character happens to be active.
+  const { activeCampaign } = useCampaignContext();
+  const engine = useSystemEngineFor(activeCampaign?.system);
   const [subject, setSubject] = useState('');
   const [actor, setActor] = useState('');
   const [result, setResult] = useState<OutcomeResult>('success');
-  const [mods, setMods] = useState<OutcomeMods>({ boon: false, bane: false, pushed: false });
+  const [mods, setMods] = useState<OutcomeMods>({});
 
   useEffect(() => {
     if (!open || !note) return;
@@ -53,7 +72,7 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
     setSubject(data.subject);
     setActor(data.actor);
     setResult(data.result);
-    setMods(data.mods ?? { boon: false, bane: false, pushed: false });
+    setMods(data.mods ?? {});
   }, [open, note]);
 
   if (!note) {
@@ -66,7 +85,10 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
 
   async function handleSave() {
     if (!note) return;
-    const title = formatOutcomeTitle({ actor, subject, result, mods });
+    const title = formatOutcomeTitle(
+      { actor, subject, result, mods },
+      { outcomes: engine.outcomes, rollModifiers: engine.rollModifiers },
+    );
     const nextTypeData = { subject, actor, result, mods };
     try {
       await updateNote(note.id, { title, typeData: nextTypeData });
@@ -93,15 +115,16 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
     }
   }
 
-  const modChip = (key: keyof OutcomeMods, label: string, activeColor: string) => (
+  const modChip = (id: string, label: string) => (
     <button
-      key={key}
+      key={id}
       type="button"
-      onClick={() => setMods(m => ({ ...m, [key]: !m[key] }))}
+      aria-pressed={!!mods[id]}
+      onClick={() => setMods(m => ({ ...m, [id]: !m[id] }))}
       className={cn(
         'min-h-11 px-3.5 rounded-full border-none cursor-pointer text-sm font-semibold shrink-0',
-        mods[key]
-          ? `bg-[${activeColor}] text-white`
+        mods[id]
+          ? 'bg-[var(--color-accent)] text-white'
           : 'bg-[var(--color-surface-raised)] text-[var(--color-text)]',
       )}
     >
@@ -141,9 +164,7 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
             Modifiers
           </div>
           <div className="flex gap-2 flex-wrap">
-            {modChip('boon', 'Boon', '#27ae60')}
-            {modChip('bane', 'Bane', '#c0392b')}
-            {modChip('pushed', 'Pushed', '#8e44ad')}
+            {engine.rollModifiers.map(m => modChip(m.id, m.label))}
           </div>
         </div>
 
@@ -152,25 +173,20 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
             Result
           </div>
           <div className="grid grid-cols-2 gap-2">
-            {RESULTS.map(r => (
+            {engine.outcomes.map(o => (
               <button
-                key={r}
+                key={o.id}
                 type="button"
-                onClick={() => setResult(r)}
+                aria-pressed={result === o.id}
+                onClick={() => setResult(o.id)}
                 className={cn(
                   'min-h-11 px-4 border rounded-lg cursor-pointer text-sm font-semibold',
-                  result === r
-                    ? r === 'dragon'
-                      ? 'bg-[var(--color-accent)] text-white border-transparent'
-                      : r === 'demon'
-                        ? 'bg-[#c0392b] text-white border-transparent'
-                        : r === 'success'
-                          ? 'bg-[#27ae60] text-white border-transparent'
-                          : 'bg-[var(--color-surface-raised)] text-[var(--color-text)] border-[var(--color-accent)]'
+                  result === o.id
+                    ? TONE_STYLES[o.tone ?? 'failure'] ?? TONE_STYLES.failure
                     : 'bg-transparent text-[var(--color-text)] border-[var(--color-border)]',
                 )}
               >
-                {r === 'dragon' ? 'Dragon (1)' : r === 'demon' ? 'Demon (20)' : r.charAt(0).toUpperCase() + r.slice(1)}
+                {o.label}
               </button>
             ))}
           </div>

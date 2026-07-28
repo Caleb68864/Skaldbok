@@ -355,3 +355,39 @@
   sheet, and all six current-value steppers are still live.
 - Surfaces: `SheetScreen.tsx`.
 - Commit: fix(sheet) — stop offering a stepper for a computed maximum.
+
+## 2026-07-28 — Outcome ids were engine data pretending to be a closed union
+- Symptom: `SkillCheckEditDrawer` never touched the engine. Its result grid was
+  the literal `['success','failure','dragon','demon']` and its chips were
+  Boon/Bane/**Pushed**. Opening a logged Traveller check showed four Dragonbane
+  buttons with **none selected** (an `exceptional-success` matches none of them)
+  and offered a modifier Traveller has no mechanic for. Editing a Traveller
+  check correctly was impossible.
+- Correction to the review that found this: it reported that pressing Save
+  silently downgraded the stored outcome to `'success'`. It does not — the
+  effect at `:50-57` restores `data.result` on open and `readOutcomeTypeData`
+  *casts* rather than validates (`(data.result as OutcomeResult) ?? 'success'`,
+  and `??` only fires on null/undefined), so a stored `exceptional-success`
+  survives open→save untouched. The value is corrupted only if the user taps a
+  result button. Severity was Critical on that report; it is Important.
+- Fix: `OutcomeResult` is now `string` and `OutcomeMods` is
+  `Record<string, boolean>`, and the drawer renders `engine.outcomes` and
+  `engine.rollModifiers`, colouring buttons by the outcome's `tone` rather than
+  by matching its id. This removes the `as OutcomeResult` cast at
+  `QuickLogPCTray` — which carried a comment acknowledging the mismatch — and
+  the hand-built three-flag `storedMods` object beside it.
+- Same cluster, also fixed: logged titles printed the machine id.
+  `formatOutcomeTitle` now resolves labels from an optional vocabulary, so the
+  timeline reads "— Exceptional Success" rather than "— exceptional-success".
+  It only looked acceptable because Dragonbane's ids happen to be English words.
+  Unknown ids fall back to a humanised form, so a row logged under a system that
+  has since been edited still reads.
+- Tests: `formatSkillCheckTitle.test.ts` is new — the module had none — and
+  covers label resolution, vocabulary ordering, the unknown-id fallback, legacy
+  field names, and that `readOutcomeTypeData` preserves an id outside the old
+  four.
+- Watch: this is the third of the four producer/consumer key spaces from S1.
+  The remaining one is `derivedFields[].key` vs what `derivedStats()` returns.
+- Surfaces: `formatSkillCheckTitle.ts`, `SkillCheckEditDrawer.tsx`,
+  `QuickLogPCTray.tsx`, `SessionQuickActions.tsx`.
+- Commit: fix(session) — drive logged outcomes from the engine's vocabulary.

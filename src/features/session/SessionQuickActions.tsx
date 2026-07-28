@@ -425,7 +425,7 @@ export function SessionQuickActions({
             {outcomeOptions.map(outcome => (
               <button
                 key={outcome.id}
-                onClick={() => logEvent('skill-check', `${selectedSkill}${formatModTags(rollMods, modifierOptions)} — ${outcome.id}`, {
+                onClick={() => logEvent('skill-check', `${selectedSkill}${formatModTags(rollMods, modifierOptions)} — ${outcome.label}`, {
                   skill: selectedSkill,
                   result: outcome.id,
                   character: selectedNames(),
@@ -497,7 +497,7 @@ export function SessionQuickActions({
             {outcomeOptions.map(outcome => (
               <button
                 key={outcome.id}
-                onClick={() => logEvent('generic', `Cast ${selectedSpell}${formatModTags(rollMods, modifierOptions)} — ${outcome.id}`, {})}
+                onClick={() => logEvent('generic', `Cast ${selectedSpell}${formatModTags(rollMods, modifierOptions)} — ${outcome.label}`, {})}
                 className={cn(resultChipClasses, outcomeToneClasses(outcome))}
               >
                 {outcome.label}
