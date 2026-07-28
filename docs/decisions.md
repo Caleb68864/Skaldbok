@@ -337,3 +337,21 @@
   by argument.
 - Surfaces: `SessionQuickActions.tsx`.
 - Commit: fix(session) — scope quick-action vocabulary to the campaign.
+
+## 2026-07-28 — Derived resource maxima offered a stepper that reverted itself
+- Symptom: in edit mode the sheet rendered max ± steppers for every resource,
+  including those declaring `derivedFrom`. `useSyncedResourceMaxima` rewrites
+  such a max back to its source attribute on the next render, so the number
+  flashed and snapped back and each tap burned an autosave. It converges, so it
+  is not a loop — it is worse than that: an offered control that does nothing,
+  which reads as a broken sheet.
+- Fix: `maxEditable={resourceMaxEditable && !def?.derivedFrom}`. A derived max
+  now renders as the read-only "/N" it actually is.
+- Affects Traveller (all three damage tracks) and Dragonbane (hp/wp) — both
+  declare `derivedFrom`, and both were already inert, so this removes a lie
+  rather than a capability. Resources without `derivedFrom` (Savage Worlds
+  Bennies) keep their steppers.
+- Verified in the running app: no `... max` steppers remain on the Traveller
+  sheet, and all six current-value steppers are still live.
+- Surfaces: `SheetScreen.tsx`.
+- Commit: fix(sheet) — stop offering a stepper for a computed maximum.

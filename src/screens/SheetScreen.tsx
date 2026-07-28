@@ -708,7 +708,12 @@ export default function SheetScreen() {
               max={res.max}
               onCurrentChange={v => updateResourceCurrent(resId, v)}
               onMaxChange={v => updateResourceMax(resId, v)}
-              maxEditable={resourceMaxEditable}
+              // A resource declaring `derivedFrom` has a *computed* max —
+              // `useSyncedResourceMaxima` rewrites it to the source attribute on
+              // the next render. Offering a stepper meant the number visibly
+              // snapped back and burned an autosave per tap, so it reads as a
+              // broken control rather than a derived one.
+              maxEditable={resourceMaxEditable && !def?.derivedFrom}
             />
           );
         })}
