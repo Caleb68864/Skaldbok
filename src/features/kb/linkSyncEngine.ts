@@ -59,6 +59,12 @@ export async function syncNote(noteId: string): Promise<void> {
       return;
     }
 
+    // Log entries are raw capture, not knowledge nodes — skip the KB graph
+    // entirely. `promoted_into` entity links already record lineage.
+    if (note.type === 'log') {
+      return;
+    }
+
     // Parse Tiptap JSON body
     let body: unknown;
     try {

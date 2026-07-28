@@ -132,6 +132,7 @@ free-string field — the valid values are listed in a comment at the top of
 | `introduced_in`   | `note` → `session`                      | The character/NPC represented by the note was first introduced in this session |
 | `happened_during` | `encounter` → `encounter`               | The source encounter occurred while the target was active (soft parent link) |
 | `represents`      | `encounterParticipant` → `creature` / `character` | The in-scene participant represents this bestiary creature or PC |
+| `promoted_into`   | `note (log)` → `note`                   | The log note was promoted into this target note     |
 
 When adding a new relationship type, update the table above **and** the comment
 inside `entityLinkRepository.ts`.

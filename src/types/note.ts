@@ -13,8 +13,9 @@ import { z } from 'zod';
  * - `'quote'`       — memorable quote from the session.
  * - `'skill-check'` — record of a skill roll outcome (system-generated).
  * - `'recap'`       — session recap summary (auto or manual).
+ * - `'log'`         — freeform session-log entry captured during play.
  */
-export const NOTE_TYPES = ['generic', 'npc', 'combat', 'location', 'loot', 'rumor', 'quote', 'skill-check', 'spell-cast', 'ability-use', 'recap'] as const;
+export const NOTE_TYPES = ['generic', 'npc', 'combat', 'location', 'loot', 'rumor', 'quote', 'skill-check', 'spell-cast', 'ability-use', 'recap', 'log'] as const;
 
 /**
  * Union of all valid note type strings derived from {@link NOTE_TYPES}.

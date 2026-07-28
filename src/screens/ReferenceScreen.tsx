@@ -13,6 +13,7 @@ import { Drawer } from '../components/primitives/Drawer';
 import { Modal } from '../components/primitives/Modal';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { ReferenceSectionRenderer } from '../components/fields/ReferenceSectionRenderer';
+import { useIsEditMode } from '../utils/modeGuards';
 
 type ActiveTab = 'reference' | 'notes';
 
@@ -88,9 +89,17 @@ export default function ReferenceScreen() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('reference');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Rules reference is build-time content, not at-the-table state: play mode
+  // reads it and nothing more, so a tap mid-session cannot reorder, rewrite or
+  // re-import the cheat sheet you are relying on.
+  const isEditMode = useIsEditMode();
+
   const [sections, setSections] = useState<ReferenceSection[]>([]);
   const [groups, setGroups] = useState<ReferenceGroup[]>([]);
-  const [reorderMode, setReorderMode] = useState(false);
+  const [reorderRequested, setReorderRequested] = useState(false);
+  // Derived rather than stored, so leaving edit mode with reorder still on
+  // cannot strand the screen in a draggable state.
+  const reorderMode = isEditMode && reorderRequested;
   const [draggingGroupId, setDraggingGroupId] = useState<string | null>(null);
   const [draggingSectionId, setDraggingSectionId] = useState<string | null>(null);
   const [sectionDrawerOpen, setSectionDrawerOpen] = useState(false);
@@ -356,12 +365,16 @@ export default function ReferenceScreen() {
               onChange={e => setSearchQuery(e.target.value)}
               className={cn(inputClasses, "flex-1 min-w-[220px]")}
             />
-            <Button variant="secondary" onClick={() => setReorderMode(prev => !prev)}>
-              {reorderMode ? 'Done Reordering' : 'Reorder'}
-            </Button>
-            <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Import JSON</Button>
-            <Button variant="secondary" onClick={openNewGroup}>Add Card</Button>
-            <Button variant="primary" onClick={openNewSection}>Add Section</Button>
+            {isEditMode && (
+              <>
+                <Button variant="secondary" onClick={() => setReorderRequested(prev => !prev)}>
+                  {reorderMode ? 'Done Reordering' : 'Reorder'}
+                </Button>
+                <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Import JSON</Button>
+                <Button variant="secondary" onClick={openNewGroup}>Add Card</Button>
+                <Button variant="primary" onClick={openNewSection}>Add Section</Button>
+              </>
+            )}
             <input
               ref={fileInputRef}
               type="file"
@@ -379,6 +392,14 @@ export default function ReferenceScreen() {
               <p className="text-[var(--color-text)]">
                 No game reference is bundled with this app. Import your own local JSON or add sections manually.
               </p>
+              {/* Mode defaults to play, and play mode hides every write control —
+                  without this the empty state asks for an import it gives no way
+                  to start. */}
+              {!isEditMode && (
+                <p className="mt-2 text-[length:var(--font-size-sm)] text-[var(--color-accent)]">
+                  Switch to <strong>edit mode</strong> in Settings to import or add reference sections. Play mode is read-only.
+                </p>
+              )}
               <p className="mt-2 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
                 Local archived reference exports live outside git under local-references on this machine.
               </p>
@@ -428,8 +449,8 @@ export default function ReferenceScreen() {
                     <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap">{categorySections.length}</span>
                   </div>
                   <div className="flex gap-2">
-                    {!group.id.startsWith('orphan-') && <Button size="sm" variant="secondary" onClick={() => openEditGroup(group)}>Edit Card</Button>}
-                    {!group.id.startsWith('orphan-') && <Button size="sm" variant="danger" onClick={() => setDeleteGroupTarget(group)}>Delete</Button>}
+                    {isEditMode && !group.id.startsWith('orphan-') && <Button size="sm" variant="secondary" onClick={() => openEditGroup(group)}>Edit Card</Button>}
+                    {isEditMode && !group.id.startsWith('orphan-') && <Button size="sm" variant="danger" onClick={() => setDeleteGroupTarget(group)}>Delete</Button>}
                   </div>
                 </div>
                 <div
@@ -472,15 +493,17 @@ export default function ReferenceScreen() {
                       onDragEnd={() => setDraggingSectionId(null)}
                     >
                       <SectionPanel title={section.title || '(Untitled)'} subtitle={section.pg ? `p. ${section.pg}` : undefined} collapsible defaultOpen>
-                        <div className="flex justify-between gap-3 mb-[var(--space-sm)]">
-                          {reorderMode ? (
-                            <span className="text-xs text-[var(--color-text-muted)]">Drag to reorder or move cards.</span>
-                          ) : <span />}
-                          <div className="flex gap-3">
-                            <Button size="sm" variant="secondary" onClick={() => openEditSection(section)}>Edit</Button>
-                            <Button size="sm" variant="danger" onClick={() => setDeleteSectionTarget(section)}>Delete</Button>
+                        {isEditMode && (
+                          <div className="flex justify-between gap-3 mb-[var(--space-sm)]">
+                            {reorderMode ? (
+                              <span className="text-xs text-[var(--color-text-muted)]">Drag to reorder or move cards.</span>
+                            ) : <span />}
+                            <div className="flex gap-3">
+                              <Button size="sm" variant="secondary" onClick={() => openEditSection(section)}>Edit</Button>
+                              <Button size="sm" variant="danger" onClick={() => setDeleteSectionTarget(section)}>Delete</Button>
+                            </div>
                           </div>
-                        </div>
+                        )}
                         <ReferenceSectionRenderer section={section} />
                       </SectionPanel>
                     </div>

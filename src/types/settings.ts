@@ -77,4 +77,15 @@ export interface AppSettings extends Versioned {
    * screen.
    */
   showGlobalFAB?: boolean;
+  /**
+   * Per-campaign dismissed link-suggestion keys (see
+   * {@link import('../features/notes/linkScanner.js').LinkScanSuggestion.key}).
+   * Keyed by `campaignId`; value is an array of dismissed suggestion keys.
+   *
+   * @remarks
+   * Older records may still carry this field as a flat `string[]` (dismissals
+   * were global before per-campaign scoping was added). Readers must handle
+   * that legacy shape defensively rather than assume the `Record` shape.
+   */
+  dismissedLinkSuggestions?: Record<string, string[]> | string[];
 }

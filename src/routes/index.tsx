@@ -17,6 +17,7 @@ import PrintableSheetScreen from '../screens/PrintableSheetScreen';
 import { BestiaryScreenRoute } from '../features/bestiary/BestiaryScreenRoute';
 import TrashScreen from '../screens/TrashScreen';
 import KnowledgeBaseScreen from '../screens/KnowledgeBaseScreen';
+import { SessionLog } from '../features/session/sessionLog/SessionLog';
 import type { RouteObject } from 'react-router-dom';
 
 /**
@@ -54,6 +55,7 @@ export const routes: RouteObject[] = [
     children: [
       { index: true, element: <Navigate to="/character/sheet" replace /> },
       { path: '/session', element: <SessionScreen /> },
+      { path: '/session/log', element: <SessionLog /> },
       { path: '/notes', element: <Navigate to="/session?view=notes" replace /> },
       { path: '/note/new', element: <NoteEditorScreen /> },
       { path: '/note/:id/edit', element: <NoteEditorScreen /> },

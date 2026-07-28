@@ -1,0 +1,180 @@
+{
+  "version": 1,
+  "spec_slug": "session-log-note-capture",
+  "contracts": [
+    {
+      "owner_sub_spec": 1,
+      "consumer_sub_specs": [
+        4,
+        7,
+        8,
+        9,
+        11
+      ],
+      "name": "textToDoc",
+      "kind": "function",
+      "signature": "textToDoc(text: string): unknown",
+      "file_path": "src/features/notes/textToDoc.ts",
+      "content_sha256": "pending-until-ss01-implemented"
+    },
+    {
+      "owner_sub_spec": 1,
+      "consumer_sub_specs": [
+        7,
+        8,
+        9,
+        11
+      ],
+      "name": "docToText",
+      "kind": "function",
+      "signature": "docToText(doc: unknown): string",
+      "file_path": "src/features/notes/textToDoc.ts",
+      "content_sha256": "pending-until-ss01-implemented"
+    },
+    {
+      "owner_sub_spec": 1,
+      "consumer_sub_specs": [
+        4,
+        9,
+        10,
+        11
+      ],
+      "name": "NOTE_TYPES",
+      "kind": "type",
+      "signature": "NOTE_TYPES tuple gains the literal 'log'",
+      "file_path": "src/types/note.ts",
+      "content_sha256": "pending-until-ss01-implemented"
+    },
+    {
+      "owner_sub_spec": 2,
+      "consumer_sub_specs": [
+        7,
+        13
+      ],
+      "name": "promoted_into",
+      "kind": "enum",
+      "signature": "entityLinks.relationshipType literal 'promoted_into' — note(log) -> note",
+      "file_path": "src/storage/repositories/entityLinkRepository.ts",
+      "content_sha256": "pending-until-ss02-implemented"
+    },
+    {
+      "owner_sub_spec": 3,
+      "consumer_sub_specs": [
+        8,
+        14
+      ],
+      "name": "WritePad",
+      "kind": "interface",
+      "signature": "WritePad(props: { open: boolean; value: string; onChange: (v: string) => void; onCommit: () => void | Promise<void>; onClose: () => void; placeholder?: string; commitLabel?: string }): JSX.Element | null",
+      "file_path": "src/components/notes/WritePad.tsx",
+      "content_sha256": "pending-until-ss03-implemented"
+    },
+    {
+      "owner_sub_spec": 4,
+      "consumer_sub_specs": [
+        8,
+        13
+      ],
+      "name": "listLogEntriesBySession",
+      "kind": "function",
+      "signature": "listLogEntriesBySession(sessionId: string): Promise<Note[]>",
+      "file_path": "src/storage/repositories/noteRepository.ts",
+      "content_sha256": "pending-until-ss04-implemented"
+    },
+    {
+      "owner_sub_spec": 4,
+      "consumer_sub_specs": [
+        8
+      ],
+      "name": "createLogEntry",
+      "kind": "function",
+      "signature": "createLogEntry(data: Omit<Note,'id'|'createdAt'|'updatedAt'|'schemaVersion'>): Promise<Note>",
+      "file_path": "src/storage/repositories/noteRepository.ts",
+      "content_sha256": "pending-until-ss04-implemented",
+      "deviation_accepted": "Built as data-object form to match the existing createNote(data) convention in noteRepository. The spec's positional (sessionId, campaignId, text) form was less idiomatic for this repository. Caller builds the body via textToDoc."
+    },
+    {
+      "owner_sub_spec": 4,
+      "consumer_sub_specs": [
+        8
+      ],
+      "name": "updateLogEntry",
+      "kind": "function",
+      "signature": "updateLogEntry(id: string, body: unknown): Promise<Note>",
+      "file_path": "src/storage/repositories/noteRepository.ts",
+      "content_sha256": "pending-until-ss04-implemented",
+      "deviation_accepted": "Takes a pre-built ProseMirror body rather than raw text, consistent with createLogEntry. Delegates to updateNote, which preserves createdAt by omission."
+    },
+    {
+      "owner_sub_spec": 5,
+      "consumer_sub_specs": [
+        6,
+        13
+      ],
+      "name": "scanForLinks",
+      "kind": "function",
+      "signature": "scanForLinks(entries, dictionary, dismissed): { suggestions, missingRecords }",
+      "file_path": "src/features/notes/linkScanner.ts",
+      "content_sha256": "pending-until-ss05-implemented"
+    },
+    {
+      "owner_sub_spec": 6,
+      "consumer_sub_specs": [
+        7,
+        13
+      ],
+      "name": "SuggestedLinksPanel",
+      "kind": "interface",
+      "signature": "SuggestedLinksPanel(props: { suggestions; missingRecords; onApprove; onDismiss; onApproveAll; onCreateRecord }): JSX.Element",
+      "file_path": "src/features/notes/SuggestedLinksPanel.tsx",
+      "content_sha256": "pending-until-ss06-implemented"
+    },
+    {
+      "owner_sub_spec": 6,
+      "consumer_sub_specs": [
+        7,
+        13
+      ],
+      "name": "applySuggestionToBody",
+      "kind": "function",
+      "signature": "applySuggestionToBody(bodyText: string, suggestion: LinkScanSuggestion): unknown",
+      "file_path": "src/features/notes/SuggestedLinksPanel.tsx",
+      "content_sha256": "pending-until-ss06-implemented",
+      "deviation_accepted": "Built text-in rather than doc-in. The promote pipeline is text-based until the final textToDoc, and this is the shape verified working end-to-end by the SS-12 Playwright run. Renaming to the doc-shaped contract would have risked regressing the one path proven in a browser."
+    },
+    {
+      "owner_sub_spec": 7,
+      "consumer_sub_specs": [
+        13
+      ],
+      "name": "PromoteEntriesSheet",
+      "kind": "interface",
+      "signature": "PromoteEntriesSheet(props: { entries: Note[]; open: boolean; onClose: () => void; onPromoted: (targetNoteId: string) => void }): JSX.Element | null",
+      "file_path": "src/features/notes/PromoteEntriesSheet.tsx",
+      "content_sha256": "pending-until-ss07-implemented"
+    },
+    {
+      "owner_sub_spec": 8,
+      "consumer_sub_specs": [
+        12,
+        13
+      ],
+      "name": "SessionLog",
+      "kind": "interface",
+      "signature": "SessionLog(): JSX.Element",
+      "file_path": "src/features/session/sessionLog/SessionLog.tsx",
+      "content_sha256": "pending-until-ss08-implemented"
+    },
+    {
+      "owner_sub_spec": 13,
+      "consumer_sub_specs": [
+        12
+      ],
+      "name": "SessionLogSelection",
+      "kind": "interface",
+      "signature": "SessionLogSelection(props: { entries: Note[]; sessionId: string; campaignId: string }): JSX.Element",
+      "file_path": "src/features/session/sessionLog/SessionLogSelection.tsx",
+      "content_sha256": "pending-until-ss13-implemented"
+    }
+  ]
+}

@@ -7,8 +7,8 @@ import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import { useSessionEncounterContextSafe } from './SessionEncounterContext';
 import { AttachToControl, resolveAttach, type AttachToValue } from './quickActions/AttachToControl';
-import { QuickNoteAction } from './quickActions/QuickNoteAction';
 import { QuickNpcAction } from './quickActions/QuickNpcAction';
+import { SessionLog } from './sessionLog/SessionLog';
 import { QuickLogPCTray } from './quickLog/QuickLogPCTray';
 import { getById as getCharacterById, save as saveCharacter } from '../../storage/repositories/characterRepository';
 import { useSystemEngine } from '../systems/engine';
@@ -1174,27 +1174,8 @@ export function SessionQuickActions({
 
   if (activeDrawer === 'note') {
     return (
-      <div className="flex flex-col gap-3">
-        <div>
-          <p className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-1">
-            Quick Log
-          </p>
-          <p className="text-sm font-semibold text-[var(--color-text)]">
-            New Timeline Entry
-          </p>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            Capture a session-level note without opening another sheet on top of Quick Log.
-          </p>
-        </div>
-        <QuickNoteAction
-          campaignId={activeCampaign?.id ?? null}
-          onClose={() => setActiveDrawer(null)}
-          onSaved={() => {
-            onLogComplete?.();
-            close();
-          }}
-          initialAttachTo={preferredAttachTo}
-        />
+      <div className="flex h-[70vh] flex-col gap-3">
+        <SessionLog />
       </div>
     );
   }

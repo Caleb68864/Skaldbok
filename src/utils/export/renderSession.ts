@@ -3,6 +3,7 @@ import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
 import { generateFilename } from './generateFilename';
 import { renderNoteToMarkdown } from './renderNote';
+import { docToText } from '../../features/notes/textToDoc';
 
 function yamlValue(val: unknown): string {
   if (val === null || val === undefined) return '""';
@@ -41,6 +42,27 @@ function deduplicateFilename(filename: string, existing: Set<string>): string {
  * @returns A map keyed by output filename; the session index is included
  * alongside each note file.
  */
+function formatEntryTime(createdAt: string): string {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return createdAt;
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+function renderSessionLogSection(logEntries: Note[]): string {
+  if (logEntries.length === 0) return '';
+  const sorted = [...logEntries].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
+  const entryLines = sorted.map(entry => {
+    const timestamp = formatEntryTime(entry.createdAt);
+    const text = docToText(entry.body);
+    return `**${timestamp}** — ${text}`;
+  });
+  return `\n\n## Session Log\n\n${entryLines.join('\n\n')}\n`;
+}
+
 export function renderSessionBundle(
   session: Session,
   linkedNotes: Note[],
@@ -49,9 +71,12 @@ export function renderSessionBundle(
   const files = new Map<string, string>();
   const usedFilenames = new Set<string>();
 
+  const logEntries = linkedNotes.filter(n => n.type === 'log');
+  const otherNotes = linkedNotes.filter(n => n.type !== 'log');
+
   // Build note filenames first
   const noteFilenameMap = new Map<string, string>();
-  for (const note of linkedNotes) {
+  for (const note of otherNotes) {
     const rawFilename = generateFilename(note);
     const uniqueFilename = deduplicateFilename(rawFilename, usedFilenames);
     usedFilenames.add(uniqueFilename);
@@ -78,18 +103,20 @@ export function renderSessionBundle(
     .map(([key, value]) => `${key}: ${yamlValue(value)}`);
   const frontMatter = `---\n${frontMatterLines.join('\n')}\n---`;
 
-  const noteListBody = linkedNotes.length > 0
-    ? `## Notes\n\n` + linkedNotes.map(n => `- [[${n.title}]]`).join('\n') + '\n'
+  const noteListBody = otherNotes.length > 0
+    ? `## Notes\n\n` + otherNotes.map(n => `- [[${n.title}]]`).join('\n') + '\n'
     : `## Notes\n\nNo notes in this session.\n`;
 
-  files.set(sessionFilename, frontMatter + '\n\n' + noteListBody);
+  const logSection = renderSessionLogSection(logEntries);
+
+  files.set(sessionFilename, frontMatter + '\n\n' + noteListBody + logSection);
 
   // Render each note
-  for (const note of linkedNotes) {
+  for (const note of otherNotes) {
     const noteLinks = entityLinks.filter(
       l => l.fromEntityId === note.id || l.toEntityId === note.id
     );
-    const noteMarkdown = renderNoteToMarkdown(note, noteLinks, linkedNotes);
+    const noteMarkdown = renderNoteToMarkdown(note, noteLinks, otherNotes);
     const filename = noteFilenameMap.get(note.id)!;
     files.set(filename, noteMarkdown);
   }

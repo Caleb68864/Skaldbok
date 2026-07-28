@@ -10,6 +10,7 @@ import { getSessionsByCampaign } from '../../storage/repositories/sessionReposit
 import type { Note, NoteType } from '../../types/note';
 import type { Session } from '../../types/session';
 import { cn } from '../../lib/utils';
+import { docToText } from './textToDoc';
 
 /**
  * Ordered list of note-type filter options rendered as pill chips above the grid.
@@ -25,7 +26,19 @@ const NOTE_TYPE_FILTERS: Array<{ value: NoteType | 'all'; label: string }> = [
   { value: 'quote', label: 'Quote' },
   { value: 'skill-check', label: 'Skill Check' },
   { value: 'recap', label: 'Recap' },
+  { value: 'log', label: 'Log' },
 ];
+
+/**
+ * Note types excluded from the pill-chip row and the "All" filter by default.
+ * Log entries are freeform session-log captures, not intentionally-authored
+ * notes, so they clutter the grid — but they must stay searchable
+ * (see {@link useNoteSearch}), and the "Show log entries" toggle reveals them.
+ */
+const HIDDEN_NOTE_TYPES: NoteType[] = ['log'];
+
+/** Number of leading characters of body text used as a title fallback for notes with no title (e.g. log entries). */
+const TITLE_FALLBACK_LENGTH = 40;
 
 /**
  * Props for the {@link NotesGrid} component.
@@ -74,7 +87,14 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [sortAsc, setSortAsc] = useState(false);
+  const [showHiddenTypes, setShowHiddenTypes] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Type filter chips visible right now: all filters, minus {@link HIDDEN_NOTE_TYPES} unless revealed. */
+  const visibleTypeFilters = useMemo(
+    () => NOTE_TYPE_FILTERS.filter(f => showHiddenTypes || f.value === 'all' || !HIDDEN_NOTE_TYPES.includes(f.value as NoteType)),
+    [showHiddenTypes],
+  );
 
   // Default session filter to active session when it changes
   useEffect(() => {
@@ -121,6 +141,10 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
   const filteredNotes = useMemo(() => {
     // Exclude archived combat notes from the active grid
     let result = notes.filter(n => !(n.type === 'combat' && n.status === 'archived'));
+    // Exclude hidden note types (e.g. log entries) unless the user opted in
+    if (!showHiddenTypes) {
+      result = result.filter(n => !HIDDEN_NOTE_TYPES.includes(n.type as NoteType));
+    }
     // Session filter
     if (sessionFilter !== 'all') {
       if (sessionFilter === 'none') {
@@ -145,7 +169,7 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
       return sortAsc ? cmp : -cmp;
     });
     return result;
-  }, [notes, typeFilter, sessionFilter, debouncedQuery, sortAsc]);
+  }, [notes, typeFilter, sessionFilter, debouncedQuery, sortAsc, showHiddenTypes]);
 
   /** Pins a note and refreshes the list. */
   const handlePin = async (id: string) => {
@@ -210,9 +234,23 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
         className="w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm mb-2.5 box-border"
       />
 
+      {/* Show/hide log entries toggle */}
+      <label className="flex items-center gap-2 mb-2 text-[var(--color-text-muted)] text-xs min-h-11 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={showHiddenTypes}
+          onChange={e => {
+            const next = e.target.checked;
+            setShowHiddenTypes(next);
+            if (!next && HIDDEN_NOTE_TYPES.includes(typeFilter as NoteType)) setTypeFilter('all');
+          }}
+        />
+        Show log entries
+      </label>
+
       {/* Type filter chips */}
       <div className="flex gap-2 flex-wrap mb-3">
-        {NOTE_TYPE_FILTERS.map(f => (
+        {visibleTypeFilters.map(f => (
           <button
             key={f.value}
             onClick={() => setTypeFilter(f.value)}
@@ -241,7 +279,11 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
             className="cursor-pointer"
           >
             <NoteItem
-              note={note}
+              // Log entries always carry title: '', so fall back to body text.
+              // docToText, not extractText: extractText has no wikiLink branch
+              // and silently drops the label, so an entry starting "[[Ostrand]]…"
+              // would render a title with the name missing.
+              note={note.title ? note : { ...note, title: docToText(note.body).trim().slice(0, TITLE_FALLBACK_LENGTH) || 'Untitled' }}
               onPin={handlePin}
               onUnpin={handleUnpin}
               onExport={id => { exportNote(id); }}

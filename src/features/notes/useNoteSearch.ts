@@ -25,7 +25,14 @@ const searchIndex = new MiniSearch<IndexedDoc>({
   },
 });
 
-/** Flattens a {@link Note} into an {@link IndexedDoc}: extracts plain text and descriptors from the ProseMirror body and joins tags. */
+/**
+ * Flattens a {@link Note} into an {@link IndexedDoc}: extracts plain text and descriptors from the ProseMirror body and joins tags.
+ *
+ * @remarks
+ * Every note type is indexed here, including `'log'` — `NotesGrid` hides log
+ * entries from the default grid view, but searching the raw session log is a
+ * primary value of keeping it, so it must never be filtered out of the index.
+ */
 function noteToDoc(note: Note): IndexedDoc {
   return {
     id: note.id,

@@ -280,3 +280,102 @@ export async function hardDelete(id: string): Promise<void> {
     throw new Error(`noteRepository.hardDelete failed: ${e}`);
   }
 }
+
+/**
+ * Retrieves all session-log entries (`type: 'log'`) for a given session,
+ * sorted chronologically by `createdAt` ascending, excluding soft-deleted rows.
+ *
+ * @param sessionId - The ID of the session whose log entries should be fetched.
+ * @returns An array of validated log-entry notes in chronological order.
+ * @throws {Error} If the Dexie query throws an unexpected error.
+ */
+export async function listLogEntriesBySession(sessionId: string): Promise<Note[]> {
+  try {
+    const records = await db.notes.where('sessionId').equals(sessionId).toArray();
+    const parsed = records
+      .map(record => {
+        const result = baseNoteSchema.safeParse(record);
+        if (!result.success) {
+          console.warn('noteRepository.listLogEntriesBySession: validation failed', result.error);
+          return undefined;
+        }
+        return result.data;
+      })
+      .filter((n): n is Note => n !== undefined)
+      .filter(n => n.type === 'log');
+    return excludeDeleted(parsed).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  } catch (e) {
+    throw new Error(`noteRepository.listLogEntriesBySession failed: ${e}`);
+  }
+}
+
+/**
+ * Creates a new session-log entry note.
+ *
+ * @remarks
+ * Fixes `type: 'log'`, `title: ''`, `status: 'active'`, `pinned: false` for
+ * every log entry — only `sessionId`, `campaignId`, `body`, and any other
+ * caller-supplied fields vary.
+ *
+ * @param data - Fields required to create a log entry, minus the fixed ones.
+ * @returns The newly created log-entry note.
+ */
+export async function createLogEntry(
+  data: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'type' | 'title' | 'status' | 'pinned'>
+): Promise<Note> {
+  assertProseMirrorBody(data.body, 'createLogEntry');
+  return createNote({
+    ...data,
+    type: 'log',
+    title: '',
+    status: 'active',
+    pinned: false,
+  });
+}
+
+/**
+ * Rejects a log-entry body that is not a ProseMirror document.
+ *
+ * @remarks
+ * `Note.body` is `z.unknown()`, so nothing in the type system stops a caller
+ * passing a raw string — and `resolveWikiLinks()` returns `''` for any
+ * non-object body, so such an entry would **silently export as empty**. The
+ * text would look fine in the app and vanish from the after-action report.
+ *
+ * Callers must convert with `textToDoc()` first. Failing loudly here turns a
+ * silent data-loss bug into an immediate, obvious one — and the capture UI
+ * already retains the draft text when a commit rejects, so the entry is not
+ * lost when this fires.
+ */
+function assertProseMirrorBody(body: unknown, method: string): void {
+  if (body === null || typeof body !== 'object') {
+    throw new Error(
+      `noteRepository.${method}: body must be a ProseMirror doc object, got ${typeof body}. ` +
+        `Convert with textToDoc() first — a raw string exports as empty.`,
+    );
+  }
+}
+
+/**
+ * Updates the body of an existing log entry.
+ *
+ * @remarks
+ * Preserves the original `createdAt` so the edited entry keeps its position
+ * in the chronological timeline; only `body` and `updatedAt` change.
+ *
+ * @param id   - The ID of the log entry to update.
+ * @param body - The new body content.
+ * @returns The updated log-entry note.
+ */
+export async function updateLogEntry(id: string, body: unknown): Promise<Note> {
+  assertProseMirrorBody(body, 'updateLogEntry');
+  try {
+    // Delegates to updateNote, which spreads only the fields passed and stamps
+    // updatedAt. Omitting createdAt is what preserves it — re-passing the old
+    // value would work too, but it is a pointless rewrite and would silently
+    // clobber the field if the read that produced it were ever stale.
+    return await updateNote(id, { body });
+  } catch (e) {
+    throw new Error(`noteRepository.updateLogEntry failed: ${e}`);
+  }
+}

@@ -7,7 +7,9 @@ import type { Ship } from '../types/ship';
 import type { CharacterRecord } from '../types/character';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { Button } from '../components/primitives/Button';
+import { WritePad } from '../components/notes/WritePad';
 import { useToast } from '../context/ToastContext';
+import { useIsEditMode } from '../utils/modeGuards';
 
 const inputClass =
   'w-full min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]';
@@ -28,6 +30,12 @@ const stepBtn =
 export default function ShipsScreen() {
   const { activeCampaign } = useCampaignContext();
   const { showToast } = useToast();
+  // Ships lock down in play mode: the vessel's build (name, drives, weapons,
+  // crew roster, upkeep) is not something a tap during a session should rewrite.
+  // Hull/fuel/cargo *current* stay live — they are the ship's HP, and locking
+  // them would make the screen useless exactly when it is wanted.
+  // Declared above the no-campaign early return: hooks cannot be conditional.
+  const isEditMode = useIsEditMode();
   const [ships, setShips] = useState<Ship[]>([]);
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -85,19 +93,21 @@ export default function ShipsScreen() {
         <span className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">{activeCampaign.name}</span>
       </div>
 
-      {/* Create */}
-      <div className="flex gap-[var(--space-sm)] flex-wrap">
-        <input
-          type="text"
-          value={newName}
-          onChange={e => setNewName(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
-          placeholder="New ship name…"
-          aria-label="New ship name"
-          className={inputClass + ' flex-1 min-w-[160px]'}
-        />
-        <Button variant="primary" onClick={handleCreate} disabled={!newName.trim()}>+ Add Ship</Button>
-      </div>
+      {/* Create — build-time only. A ship is not commissioned mid-session. */}
+      {isEditMode && (
+        <div className="flex gap-[var(--space-sm)] flex-wrap">
+          <input
+            type="text"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleCreate(); }}
+            placeholder="New ship name…"
+            aria-label="New ship name"
+            className={inputClass + ' flex-1 min-w-[160px]'}
+          />
+          <Button variant="primary" onClick={handleCreate} disabled={!newName.trim()}>+ Add Ship</Button>
+        </div>
+      )}
 
       {/* List */}
       {ships.length === 0 && (
@@ -124,14 +134,14 @@ export default function ShipsScreen() {
                   {characterName(ship.ownerCharacterId)} · Fuel {ship.fuelCurrent}/{ship.fuelMax} · Cargo {ship.cargoCurrent}/{ship.cargoMax}t · Hull {ship.hullCurrent}/{ship.hullMax}
                 </span>
               </button>
-              <Button size="sm" variant="danger" onClick={() => handleDelete(ship)}>Delete</Button>
+              {isEditMode && <Button size="sm" variant="danger" onClick={() => handleDelete(ship)}>Delete</Button>}
             </div>
           </div>
         ))}
       </div>
 
       {/* Editor */}
-      {selected && <ShipEditor key={selected.id} ship={selected} characters={characters} patch={patch} />}
+      {selected && <ShipEditor key={selected.id} ship={selected} characters={characters} patch={patch} editable={isEditMode} />}
     </div>
   );
 }
@@ -140,12 +150,17 @@ function ShipEditor({
   ship,
   characters,
   patch,
+  editable,
 }: {
   ship: Ship;
   characters: CharacterRecord[];
   patch: (changes: Partial<Ship>) => void;
+  /** False in play mode: the build is read-only, only the status counters move. */
+  editable: boolean;
 }) {
   const [newWeapon, setNewWeapon] = useState('');
+  const [notesPadOpen, setNotesPadOpen] = useState(false);
+  const [notesDraft, setNotesDraft] = useState(ship.notes);
 
   const num = (v: string) => (v === '' ? 0 : Math.max(0, Math.floor(Number(v) || 0)));
 
@@ -162,7 +177,7 @@ function ShipEditor({
           <button type="button" aria-label={`Increase ${label}`} className={stepBtn}
             onClick={() => patch({ [currentKey]: current + 1 } as Partial<Ship>)}>+</button>
           <label className="ml-2 text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">Max</label>
-          <input type="number" min={0} value={max} aria-label={`${label} max`} className={inputClass + ' w-20'}
+          <input type="number" min={0} value={max} aria-label={`${label} max`} disabled={!editable} className={inputClass + ' w-20'}
             onChange={e => {
               const m = num(e.target.value);
               patch({ [maxKey]: m, [currentKey]: Math.min(current, m) } as Partial<Ship>);
@@ -176,11 +191,11 @@ function ShipEditor({
     <div className="flex flex-col gap-[var(--space-md)]">
       <SectionPanel title="Ship Details" collapsible defaultOpen>
         <div className="grid gap-[var(--space-sm)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr))]">
-          <Field label="Name"><input className={inputClass} value={ship.name} aria-label="Ship name" onChange={e => patch({ name: e.target.value })} /></Field>
-          <Field label="Class / Type"><input className={inputClass} value={ship.shipClass} aria-label="Ship class" placeholder="e.g. Free Trader" onChange={e => patch({ shipClass: e.target.value })} /></Field>
-          <Field label="TL"><input type="number" className={inputClass} value={ship.tl ?? ''} aria-label="Ship TL" onChange={e => patch({ tl: e.target.value === '' ? undefined : num(e.target.value) })} /></Field>
+          <Field label="Name"><input className={inputClass} value={ship.name} aria-label="Ship name" disabled={!editable} onChange={e => patch({ name: e.target.value })} /></Field>
+          <Field label="Class / Type"><input className={inputClass} value={ship.shipClass} aria-label="Ship class" disabled={!editable} placeholder="e.g. Free Trader" onChange={e => patch({ shipClass: e.target.value })} /></Field>
+          <Field label="TL"><input type="number" className={inputClass} value={ship.tl ?? ''} aria-label="Ship TL" disabled={!editable} onChange={e => patch({ tl: e.target.value === '' ? undefined : num(e.target.value) })} /></Field>
           <Field label="Owner">
-            <select className={inputClass} value={ship.ownerCharacterId ?? ''} aria-label="Ship owner" onChange={e => patch({ ownerCharacterId: e.target.value || null })}>
+            <select className={inputClass} value={ship.ownerCharacterId ?? ''} aria-label="Ship owner" disabled={!editable} onChange={e => patch({ ownerCharacterId: e.target.value || null })}>
               <option value="">Shared (party)</option>
               {characters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -195,17 +210,17 @@ function ShipEditor({
           {counter('Cargo', 'cargoCurrent', 'cargoMax', 't')}
           <div className="flex items-center gap-[var(--space-sm)]">
             <span className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] min-w-[70px]">Armour</span>
-            <input type="number" min={0} className={inputClass + ' w-24'} value={ship.armor} aria-label="Armour" onChange={e => patch({ armor: num(e.target.value) })} />
+            <input type="number" min={0} className={inputClass + ' w-24'} value={ship.armor} aria-label="Armour" disabled={!editable} onChange={e => patch({ armor: num(e.target.value) })} />
           </div>
         </div>
       </SectionPanel>
 
       <SectionPanel title="Drives" collapsible defaultOpen>
         <div className="grid gap-[var(--space-sm)] [grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr))]">
-          <Field label="Jump"><input type="number" className={inputClass} value={ship.jump ?? ''} aria-label="Jump rating" onChange={e => patch({ jump: e.target.value === '' ? undefined : num(e.target.value) })} /></Field>
-          <Field label="Thrust"><input type="number" className={inputClass} value={ship.thrust ?? ''} aria-label="Thrust rating" onChange={e => patch({ thrust: e.target.value === '' ? undefined : num(e.target.value) })} /></Field>
-          <Field label="Power Plant"><input className={inputClass} value={ship.power} aria-label="Power plant" onChange={e => patch({ power: e.target.value })} /></Field>
-          <Field label="Monthly Upkeep (Cr)"><input type="number" className={inputClass} value={ship.upkeep ?? ''} aria-label="Monthly upkeep" onChange={e => patch({ upkeep: e.target.value === '' ? undefined : num(e.target.value) })} /></Field>
+          <Field label="Jump"><input type="number" className={inputClass} value={ship.jump ?? ''} aria-label="Jump rating" disabled={!editable} onChange={e => patch({ jump: e.target.value === '' ? undefined : num(e.target.value) })} /></Field>
+          <Field label="Thrust"><input type="number" className={inputClass} value={ship.thrust ?? ''} aria-label="Thrust rating" disabled={!editable} onChange={e => patch({ thrust: e.target.value === '' ? undefined : num(e.target.value) })} /></Field>
+          <Field label="Power Plant"><input className={inputClass} value={ship.power} aria-label="Power plant" disabled={!editable} onChange={e => patch({ power: e.target.value })} /></Field>
+          <Field label="Monthly Upkeep (Cr)"><input type="number" className={inputClass} value={ship.upkeep ?? ''} aria-label="Monthly upkeep" disabled={!editable} onChange={e => patch({ upkeep: e.target.value === '' ? undefined : num(e.target.value) })} /></Field>
         </div>
       </SectionPanel>
 
@@ -218,6 +233,7 @@ function ShipEditor({
                 className={inputClass + ' flex-1'}
                 value={slot.assignee}
                 aria-label={`${slot.role} assignee`}
+                disabled={!editable}
                 placeholder="—"
                 onChange={e => {
                   const crew = ship.crew.map((s, j) => (j === i ? { ...s, assignee: e.target.value } : s));
@@ -235,25 +251,62 @@ function ShipEditor({
           {ship.weapons.map((w, i) => (
             <div key={i} className="flex items-center justify-between gap-[var(--space-sm)]">
               <span className="text-[var(--color-text)]">{w}</span>
-              <Button size="sm" variant="secondary" onClick={() => patch({ weapons: ship.weapons.filter((_, j) => j !== i) })}>Remove</Button>
+              {editable && <Button size="sm" variant="secondary" onClick={() => patch({ weapons: ship.weapons.filter((_, j) => j !== i) })}>Remove</Button>}
             </div>
           ))}
-          <div className="flex gap-[var(--space-sm)]">
-            <input className={inputClass + ' flex-1'} value={newWeapon} aria-label="New weapon"
-              placeholder="e.g. Triple Turret (Beam Laser)"
-              onChange={e => setNewWeapon(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter' && newWeapon.trim()) { patch({ weapons: [...ship.weapons, newWeapon.trim()] }); setNewWeapon(''); } }} />
-            <Button size="sm" variant="secondary" disabled={!newWeapon.trim()}
-              onClick={() => { patch({ weapons: [...ship.weapons, newWeapon.trim()] }); setNewWeapon(''); }}>Add</Button>
-          </div>
+          {editable && (
+            <div className="flex gap-[var(--space-sm)]">
+              <input className={inputClass + ' flex-1'} value={newWeapon} aria-label="New weapon"
+                placeholder="e.g. Triple Turret (Beam Laser)"
+                onChange={e => setNewWeapon(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && newWeapon.trim()) { patch({ weapons: [...ship.weapons, newWeapon.trim()] }); setNewWeapon(''); } }} />
+              <Button size="sm" variant="secondary" disabled={!newWeapon.trim()}
+                onClick={() => { patch({ weapons: [...ship.weapons, newWeapon.trim()] }); setNewWeapon(''); }}>Add</Button>
+            </div>
+          )}
         </div>
       </SectionPanel>
 
       <SectionPanel title="Notes" collapsible defaultOpen>
-        <textarea className={inputClass + ' min-h-[100px]'} value={ship.notes} aria-label="Ship notes"
-          placeholder="Construction details, quirks, cargo manifest…"
-          onChange={e => patch({ notes: e.target.value })} />
+        <div className="flex flex-col gap-[var(--space-xs)]">
+          {editable && (
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => { setNotesDraft(ship.notes); setNotesPadOpen(true); }}
+              >
+                Expand
+              </Button>
+            </div>
+          )}
+          <textarea className={inputClass + ' min-h-[100px]'} value={ship.notes} aria-label="Ship notes" disabled={!editable}
+            placeholder="Construction details, quirks, cargo manifest…"
+            onChange={e => patch({ notes: e.target.value })} />
+        </div>
       </SectionPanel>
+
+      {editable && (
+        <WritePad
+          open={notesPadOpen}
+          value={notesDraft}
+          onChange={setNotesDraft}
+          onCommit={value => {
+            patch({ notes: value });
+            setNotesPadOpen(false);
+          }}
+          onClose={() => {
+            // Closing must not silently bin what was typed. The draft is
+            // local, so a bare close would discard it with no warning —
+            // unacceptable when the whole point of the pad is long-form
+            // handwriting. Persist on close; the field stays editable.
+            if (notesDraft !== ship.notes) patch({ notes: notesDraft });
+            setNotesPadOpen(false);
+          }}
+          placeholder="Construction details, quirks, cargo manifest…"
+          commitLabel="Done"
+        />
+      )}
     </div>
   );
 }

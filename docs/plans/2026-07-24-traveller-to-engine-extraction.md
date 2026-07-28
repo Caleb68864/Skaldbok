@@ -53,6 +53,14 @@ cross-listed in the hardening report.
 - **Falls out of this:** E4 (`showCoins`), and the whole "no-rest branch is the only
   place damage/heal renders" trap (a rest-having system with a damage track currently
   cannot show Take Damage & Heal at all).
+- **Refined by the spike** (`2026-07-24-json-card-templates-spike.md`): the region
+  list is not just an engine field — it is a **JSON `SheetTemplate`** consumed by a
+  **card registry + `CardRenderer`**. Split: *template = layout, engine = rules,
+  component = render*. The spike shows both Traveller and Dragonbane Play layouts
+  reduce to `regions` arrays over the existing 12 modules + 3 generic primitives,
+  with **no `custom` code escape hatch needed for parity** — the feasibility signal
+  for the JSON-template system. E1 is the prerequisite; the template/registry is its
+  endpoint.
 
 ---
 

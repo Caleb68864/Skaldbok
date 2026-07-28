@@ -8,7 +8,10 @@ import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 // entityType is a free-string field — no whitelist enforced.
 // Valid values include: 'note', 'character', 'session', 'campaign',
 // 'party', 'partyMember', 'encounter', 'encounterParticipant', 'creature'
-// Verified: 2026-04-10 (encounter-notes-folder-unification)
+//
+// relationshipType is likewise free-string. Valid values include: 'contains',
+// 'introduced_in', 'happened_during', 'represents', 'promoted_into'
+// Verified: 2026-07-27 (promoted_into relationship type)
 
 /**
  * Outgoing edges of one relationship type from an entity.
