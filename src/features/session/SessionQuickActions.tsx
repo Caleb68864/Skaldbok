@@ -11,7 +11,7 @@ import { QuickNpcAction } from './quickActions/QuickNpcAction';
 import { SessionLog } from './sessionLog/SessionLog';
 import { QuickLogPCTray } from './quickLog/QuickLogPCTray';
 import { getById as getCharacterById, save as saveCharacter } from '../../storage/repositories/characterRepository';
-import { useSystemEngine } from '../systems/engine';
+import { useSystemEngineFor } from '../systems/engine';
 import type { OutcomeOption, RollModifierOption } from '../systems/engine/types';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
@@ -186,7 +186,12 @@ export function SessionQuickActions({
   const { activeCampaign, activeParty, activeCharacterInCampaign } = useCampaignContext();
   const { showToast } = useToast();
   const sessionEncounterCtx = useSessionEncounterContextSafe();
-  const engine = useSystemEngine();
+  // Campaign-scoped, not character-scoped. This surface is mounted globally
+  // from GlobalFAB, so it is reachable with no active character at all — and
+  // `useSystemEngine` falls back to classic-fantasy in that case, which would
+  // render Dragonbane vocabulary and a Dragon/Demon outcome grid inside a
+  // Traveller session and log Dragonbane outcome ids into its notes.
+  const engine = useSystemEngineFor(activeCampaign?.system);
   const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
 
   /** Flat list of every skill the active system defines. */

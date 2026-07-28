@@ -314,3 +314,26 @@
   live damage (STR 7−2 → −1).
 - Surfaces: `travellerEngine.ts`, `travellerEngine.test.ts`.
 - Commit: fix(traveller) — state the target the displayed odds assume.
+
+## 2026-07-28 — Global quick-actions read the engine off the active character
+- Symptom: `SessionQuickActions` called `useSystemEngine()`, which resolves from
+  the *active character*. It is mounted globally from `GlobalFAB`, so it is
+  reachable with no active character at all — and `useSystemEngine` falls back
+  to `'classic-fantasy'` in that case. A Traveller session with no active
+  character rendered Dragonbane vocabulary, a Dragon (1) / Demon (20) outcome
+  grid, a Pushed chip Traveller has no mechanic for, and Rest/Death chips it
+  should not offer — then logged Dragonbane outcome ids into that session's
+  notes. Subtler and worse with a Dragonbane PC active from another campaign:
+  plausible-looking and still wrong.
+- Fix: `useSystemEngineFor(activeCampaign?.system)`, matching the peers that
+  already got it right (`SessionScreen`, `CombatEncounterView`,
+  `ParticipantDrawer`) and the contract stated in `engine/index.ts:88-95` —
+  session-layer screens are scoped to a campaign, not to whoever is active.
+- `CombatTimeline` was flagged alongside it and deliberately **left alone**. It
+  already consumes `useActiveCharacter` and drives `AbilityPicker`/`SpellPicker`
+  from that character's own abilities, so resolving its vocabulary from that
+  character's system is defensible; it is unusable without a character anyway.
+  Changing it would have been applying the finding by pattern-match rather than
+  by argument.
+- Surfaces: `SessionQuickActions.tsx`.
+- Commit: fix(session) — scope quick-action vocabulary to the campaign.
