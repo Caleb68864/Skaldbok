@@ -293,3 +293,24 @@
   modifier as a result. See `docs/plans/2026-07-28-traveller-hardening-findings.md`
   S1.
 - Commit: fix(traveller) — give the characteristics panel the modifier bar.
+
+## 2026-07-28 — Skill odds never said which target they assumed
+- Symptom: the skill row read "Level 2 · DM +1 · 83%" while the app's own Quick
+  Reference rendered all eight Traveller difficulty targets (Simple 2+ through
+  Impossible 16+) a scroll away. The percentage is always Average (8+), and
+  nothing said so, so at a Difficult (10+) call the honest figure is 42% and the
+  screen still shows 83%. For a player rolling physical dice and doing their own
+  arithmetic, that is the number they act on.
+- Fix: extracted `TRAVELLER_DEFAULT_TARGET` — the target was five bare `8`
+  literals across the two surfaces that compute odds — and appended it to the
+  display string: "… · 83% vs 8+".
+- Not fixed, deliberately: there is still no way to *select* a difficulty. That
+  is a UI change rather than a maths one — `twoD6SuccessProbability` and
+  `threeD6KeepTwoProbability` have taken `target` as a parameter all along.
+  Labelling the assumption is the honest half-step; a difficulty picker on the
+  skills screen is the follow-up.
+- Verified in the running app: rows read "Unskilled · DM +1 · -3 unskilled ·
+  17% vs 8+", and the DMs cross-check against a live buff (DEX 7+2 → +1) and
+  live damage (STR 7−2 → −1).
+- Surfaces: `travellerEngine.ts`, `travellerEngine.test.ts`.
+- Commit: fix(traveller) — state the target the displayed odds assume.

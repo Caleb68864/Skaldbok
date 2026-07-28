@@ -99,8 +99,25 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
 }
 
 /**
- * Formats a Traveller skill's level + linked-characteristic DM + 2d6-vs-8
- * success probability string.
+ * The Average-difficulty target every displayed probability assumes.
+ *
+ * @remarks
+ * Traveller sets a target per task — Simple 2+ through Impossible 16+, a table
+ * the app renders in its own Quick Reference. Nothing in the UI selects one, so
+ * every number here is Average. The constant exists so the two surfaces that
+ * compute odds cannot drift apart, and so the displayed string can *say* which
+ * target it assumed: an unqualified "83%" reads as the odds for whatever the GM
+ * just called, which at Difficult (10+) would be 42%.
+ *
+ * `twoD6SuccessProbability` and `threeD6KeepTwoProbability` already take the
+ * target as a parameter, so a difficulty selector is a UI change, not a maths
+ * one.
+ */
+export const TRAVELLER_DEFAULT_TARGET = 8;
+
+/**
+ * Formats a Traveller skill's level + linked-characteristic DM + 2d6 success
+ * probability against {@link TRAVELLER_DEFAULT_TARGET}.
  *
  * The DM is supplied by {@link travellerEngine}'s `skill.display`, which
  * resolves it from the {@link SkillDisplayContext} the shared skill screens
@@ -117,17 +134,18 @@ export function formatSkillDisplay(
   // honest chance, not its trained-at-0 baseline.
   const unskilledDM = unskilled ? -3 : 0;
   const effectiveModifier = value + characteristicDM + unskilledDM;
+  const target = TRAVELLER_DEFAULT_TARGET;
   const prob =
     boonBane === 'boon'
-      ? threeD6KeepTwoProbability(8, effectiveModifier, 'best')
+      ? threeD6KeepTwoProbability(target, effectiveModifier, 'best')
       : boonBane === 'bane'
-        ? threeD6KeepTwoProbability(8, effectiveModifier, 'worst')
-        : twoD6SuccessProbability(8, effectiveModifier);
+        ? threeD6KeepTwoProbability(target, effectiveModifier, 'worst')
+        : twoD6SuccessProbability(target, effectiveModifier);
   const dmLabel = characteristicDM !== 0 ? ` · DM ${formatDM(characteristicDM)}` : '';
   const unskilledLabel = unskilled ? ' · -3 unskilled' : '';
   const levelLabel = unskilled ? 'Unskilled' : `Level ${value}`;
   const stateLabel = boonBane === 'boon' ? ' (boon)' : boonBane === 'bane' ? ' (bane)' : '';
-  return `${levelLabel}${dmLabel}${unskilledLabel} · ${Math.round(prob * 100)}%${stateLabel}`;
+  return `${levelLabel}${dmLabel}${unskilledLabel} · ${Math.round(prob * 100)}% vs ${target}+${stateLabel}`;
 }
 
 /**
@@ -287,9 +305,9 @@ export const travellerEngine: SystemEngine = {
       // so the two surfaces can't report different odds for the same roll.
       const { dm, unskilled } = travellerRollContext(value, context);
       const modifier = value + dm + (unskilled ? -3 : 0);
-      if (state === 'boon') return threeD6KeepTwoProbability(8, modifier, 'best');
-      if (state === 'bane') return threeD6KeepTwoProbability(8, modifier, 'worst');
-      return twoD6SuccessProbability(8, modifier);
+      if (state === 'boon') return threeD6KeepTwoProbability(TRAVELLER_DEFAULT_TARGET, modifier, 'best');
+      if (state === 'bane') return threeD6KeepTwoProbability(TRAVELLER_DEFAULT_TARGET, modifier, 'worst');
+      return twoD6SuccessProbability(TRAVELLER_DEFAULT_TARGET, modifier);
     },
   },
   derivedFields: [

@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { effectiveCharacteristic, travellerEngine, computeTravellerDerivedValues } from './travellerEngine';
+import {
+  effectiveCharacteristic,
+  travellerEngine,
+  computeTravellerDerivedValues,
+  TRAVELLER_DEFAULT_TARGET,
+} from './travellerEngine';
 import type { CharacterRecord, TempModifier } from '../../../types/character';
 
 /** A one-effect temp modifier targeting `stat`. */
@@ -161,6 +166,15 @@ describe('damage feeds through to DMs', () => {
     const c = character();
     const display = travellerEngine.skill.display;
     expect(display(0, { character: c, linkedAttributeId: 'dex' })).toContain('Level 0');
+  });
+
+  it('states the target the odds assume', () => {
+    // The app shows eight difficulty targets in its own Quick Reference while
+    // the odds are always computed against Average (8+). Unlabelled, an 83%
+    // reads as "83% at whatever the GM just called".
+    const c = character();
+    const text = travellerEngine.skill.display(2, { character: c, linkedAttributeId: 'dex' });
+    expect(text).toContain(`vs ${TRAVELLER_DEFAULT_TARGET}+`);
   });
 });
 
