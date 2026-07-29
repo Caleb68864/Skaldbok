@@ -318,7 +318,7 @@ export interface DamageApplication {
 }
 
 /**
- * One entry in the encounter quick-log palette.
+ * One entry in the encounter log-action palette.
  *
  * @remarks
  * `id` is persisted on the logged event, so it must stay stable; only `label`
@@ -481,7 +481,7 @@ export interface SystemEngine {
   /** Panel/screen titles; see {@link SystemLabels}. */
   labels: SystemLabels;
   /**
-   * Quick-log actions offered during an encounter.
+   * Log actions offered during an encounter.
    *
    * @remarks
    * Dragonbane logs spells; Traveller has none and logs psionics instead. A

@@ -56,7 +56,11 @@ export const DEFAULT_TIMELINE_TRACK_CATALOG: Record<string, TimelineTrackCatalog
     visible: true,
     defaultHidden: true,
     collapsible: true,
-    colorToken: '--color-danger',
+    // Muted on purpose, and deliberately not `--color-danger` like the
+    // adjacent Encounters lane: raw capture is the understated background
+    // material the promoted notes are drawn out of, and two same-coloured
+    // top-level lanes next to each other read as one.
+    colorToken: '--color-text-muted',
   },
   npc: {
     label: 'NPCs',

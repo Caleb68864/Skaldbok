@@ -71,10 +71,10 @@ export interface AppSettings extends Versioned {
    */
   showCharacterMagic?: boolean;
   /**
-   * If `true` (default), the floating Quick Log button is shown in the app
+   * If `true` (default), the floating session-log button is shown in the app
    * shell. Set to `false` to hide it for a cleaner character-sheet-only
-   * experience; the Quick Log surface is still reachable from the session
-   * screen.
+   * experience; the log stays reachable from More → Session Log, so turning
+   * this off never strands the user.
    */
   showGlobalFAB?: boolean;
   /**

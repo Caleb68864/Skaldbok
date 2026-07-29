@@ -338,7 +338,7 @@ export function SessionTimelinePanel({
             Session Timeline
           </div>
           <p className="mt-1 text-sm text-text-muted">
-            Follow the session arc, encounters, and quick-log notes in one place.
+            Follow the session arc, encounters, and log entries in one place.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

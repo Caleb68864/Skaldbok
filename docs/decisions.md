@@ -457,3 +457,39 @@
   default holds — verify across a dataset swap.
 - Commit: converge(pass-3) — keep the Log lane hidden when a track leaves and
   returns.
+
+## 2026-07-29 — Deleting a UI surface leaves residue three layers deep
+- Symptom: five tidying scans over the branch that removed `SessionQuickActions`
+  found dead weight the deletion itself never touched: 22 unreferenced files, a
+  user-facing Settings panel still called "Quick Log Button" telling users to
+  "only log from the Session screen", and a dozen comments describing a surface
+  that no longer exists. `tsc -b` was green throughout — `noUnusedLocals` catches
+  an unused variable, not an unimported file or a lying comment.
+- Fix: deleted 22 orphan files; rewrote the Settings copy and the
+  `showGlobalFAB` doc to name the session log and its More-screen fallback;
+  re-anchored stale JSDoc in `ShellLayout`, `SessionRefreshContext`,
+  `TimelineRoot`, `useNoteActions` and the `pinnedAsStamp` fields; renamed the
+  engine's "quick-log palette" phrasing (that feature is live — only the name
+  collided); gave the Log lane its own `colorToken`, since it had been assigned
+  `--color-danger`, identical to the adjacent Encounters lane.
+- Surfaces: 22 deletions across `components/{fields,layout,modals,notes,panels,primitives}`,
+  `features/{combat,encounters,kb,notes,session}`, `types/noteValidators.ts`;
+  edits in `SettingsScreen.tsx`, `types/settings.ts`, `types/character.ts`,
+  `ShellLayout.tsx`, `GlobalFAB.tsx`, `SessionRefreshContext.tsx`,
+  `SessionScreen.tsx`, `SessionTimelinePanel.tsx`, `TimelineRoot.tsx`,
+  `useNoteActions.ts`, `defaultTimelineTrackCatalog.ts`, `engine/types.ts`,
+  `engine/index.ts`.
+- Watch: an automated "unused export" sweep is **not** trustworthy on its own —
+  it reported `DEFAULT_SESSION_TIMELINE_NOTE_TRACKS` as dead when
+  `resolveSessionTimelineTrackKind` uses it in the same file, and would have had
+  us delete a live map. Every deletion here was re-verified by grepping for
+  actual import specifiers first. Four candidates were deliberately **kept**:
+  `NotesGrid`/`NoteItem` (explicit rollback insurance, and the only note-delete
+  surface the app has), `notesToTimeline.ts` (spec forbids touching it),
+  `renderCampaignIndex.ts` (unreferenced, but that looks like an export-pipeline
+  gap rather than dead code) and `SpellCard.tsx` (a live TypeDoc `{@link}`
+  target). Also still open: `SuggestedLinksPanel`'s `onCreateNote` prop is never
+  supplied by any caller, so its "Create note" button is a permanent no-op —
+  that is a wiring bug, not dead code.
+- Commit: tidy — remove dead code and stale references to the deleted
+  quick-action surface.

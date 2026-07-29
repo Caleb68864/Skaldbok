@@ -179,7 +179,7 @@ export interface Ability {
   cost?: Record<string, number>;
   /** Readied for use, for systems with a preparation step. */
   prepared?: boolean;
-  /** Pinned into the Quick Log tray regardless of preparation. */
+  /** Surfaced regardless of preparation. Read by the Play Dashboard's magic list. */
   pinnedAsStamp?: boolean;
   /** Effect templates applied when the ability is used. */
   effects?: SpellEffect[];
@@ -223,9 +223,10 @@ export interface Spell {
   /** Short descriptions of what each power level does, indexed 0=PL1, 1=PL2, 2=PL3. */
   powerScaling?: [string, string, string];
   /**
-   * If `true`, this spell appears as a stamp in the Quick Log PC tray even
-   * when it is not currently `prepared`. Useful for rituals or utility spells
-   * the player casts often but doesn't want taking a prepared slot.
+   * If `true`, this spell shows in the Play Dashboard's magic list even when
+   * it is not currently `prepared` ({@link features/playDashboard/MagicModule!MagicModule | MagicModule}).
+   * Useful for rituals or utility spells the player casts often but doesn't
+   * want taking a prepared slot.
    */
   pinnedAsStamp?: boolean;
 }
@@ -253,9 +254,11 @@ export interface HeroicAbility {
   /** Minimum skill value required for {@link requirementSkillId}. */
   requirementSkillLevel?: number | null;
   /**
-   * If `true`, this heroic ability is pinned to the Quick Log PC tray.
-   * All heroic abilities appear in the tray by default, so this field is
-   * reserved for future use (e.g. a "hide from tray" inverse).
+   * Currently read by nothing. The PC tray this pinned an ability into was
+   * removed with the quick-action surface, and the Play Dashboard's magic
+   * list only consults `pinnedAsStamp` for spells. Kept because it is
+   * persisted on existing characters — dropping it needs a migration, not an
+   * edit — but treat it as inert until a surface claims it.
    */
   pinnedAsStamp?: boolean;
 }

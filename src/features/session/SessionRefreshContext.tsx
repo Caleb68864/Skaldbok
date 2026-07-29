@@ -2,19 +2,19 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import type { ReactNode } from 'react';
 
 /**
- * Shared refresh signal for session-scoped UI that needs to re-query after a
- * quick-log action fires from anywhere in the shell.
+ * Shared refresh signal for session-scoped UI that needs to re-query after
+ * something elsewhere in the shell mutates a session's notes or encounters.
  *
  * @remarks
- * Prior to this context, quick-log callbacks (Quick Note, NPC, encounter
- * logger, etc.) bumped local-state refresh tokens on {@link screens/SessionScreen!SessionScreen | SessionScreen}.
- * That worked when the quick-log panel lived on the session screen, but broke
- * the moment the same actions were triggered from {@link components/shell/GlobalFAB!GlobalFAB | GlobalFAB} — the FAB
- * lives in {@link components/shell/ShellLayout!ShellLayout | ShellLayout} and has no way to poke SessionScreen's local
- * state. Session notes and the timeline appeared stale until a manual reload.
+ * The problem this solves is that the writer and the reader often sit in
+ * different subtrees. Promoting log entries happens on `/session/log`, and
+ * combat writes happen inside an encounter view, but the surfaces that must
+ * react — the session timeline and the Session Notes panel — live on
+ * {@link screens/SessionScreen!SessionScreen | SessionScreen} and cannot see
+ * either one's local state. Before this context they stayed stale until a
+ * manual reload.
  *
- * This context sits between the FAB (publisher) and session-scoped views
- * (subscribers). Any component that mutates session notes/encounters calls
+ * Any component that mutates session notes/encounters calls
  * {@link SessionRefreshContextValue.bumpSessionNotes} and/or
  * {@link SessionRefreshContextValue.bumpTimeline}; consumers watch the
  * matching numeric token and re-query when it changes.
@@ -24,7 +24,7 @@ export interface SessionRefreshContextValue {
   sessionNotesRefreshToken: number;
   bumpTimeline: () => void;
   bumpSessionNotes: () => void;
-  /** Bump both tokens — the common case after a quick-log action. */
+  /** Bump both tokens — the common case after promoting or logging. */
   bumpAll: () => void;
 }
 

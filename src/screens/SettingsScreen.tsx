@@ -215,14 +215,14 @@ export default function SettingsScreen() {
         </div>
       </Card>
 
-      {/* Quick Log Button */}
+      {/* Session Log Button */}
       <Card>
-        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">Quick Log Button</h2>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">Session Log Button</h2>
         <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
-          Show the floating ⭐ Quick Log button in the corner. Hide it if you want a clean character sheet and only log from the Session screen.
+          Show the floating session-log button in the corner. Hide it if you want a clean character sheet — the log is still reachable from More → Session Log.
         </p>
         <div className="flex justify-between items-center px-[var(--space-md)] py-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] min-h-[var(--touch-target-min)]">
-          <span className="text-[var(--color-text)] font-[var(--weight-medium)]">Show Quick Log button</span>
+          <span className="text-[var(--color-text)] font-[var(--weight-medium)]">Show session log button</span>
           <button
             onClick={() => updateSettings({ showGlobalFAB: settings.showGlobalFAB === false }).catch(console.error)}
             aria-pressed={settings.showGlobalFAB !== false}

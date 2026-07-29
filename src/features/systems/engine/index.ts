@@ -66,7 +66,7 @@ export function getEngine(system: SystemDefinition | undefined | null): SystemEn
     labels: { ...base.labels, ...system.labels },
     // Declarative display arrays: when system.json provides one it REPLACES the
     // adapter default wholesale, so a JSON-only system can define its own
-    // quick-log palette / outcome labels / roll modifiers / time units without
+    // log-action palette / outcome labels / roll modifiers / time units without
     // code. Absent → the adapter default is kept.
     logActions: system.logActions ?? base.logActions,
     outcomes: system.outcomes ?? base.outcomes,

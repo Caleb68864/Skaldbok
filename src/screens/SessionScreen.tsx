@@ -565,8 +565,8 @@ function ActiveSessionContent() {
         </div>
       </div>
 
-      {/* Timeline first — it's the primary session view now that Quick Log
-          lives in the FAB star menu. */}
+      {/* Timeline first — capture lives on `/session/log`, so this screen is
+          the review surface and the timeline is its headline. */}
       <SessionTimelinePanel
         session={activeSession}
         encounters={encounters}

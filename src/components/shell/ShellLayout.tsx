@@ -24,8 +24,8 @@ import { SessionRefreshProvider } from '../../features/session/SessionRefreshCon
  *    the current path starts with `/character`.
  * 3. **`<main>`** — Flex-grow scrollable content area that hosts the `<Outlet>`.
  * 4. **BottomNav** — Persistent three-tab primary navigation.
- * 5. **GlobalFAB** — Floating action button hosting the full quick-log
- *    surface (notes, NPCs, skill checks, spells, abilities, shopping, etc.).
+ * 5. **GlobalFAB** — Floating action button that navigates to the full-screen
+ *    session log (`/session/log`); it hides itself while already there.
  * 6. **CampaignCreateModal** / **ManagePartyDrawer** — Conditionally mounted
  *    modals controlled by local boolean state.
  *

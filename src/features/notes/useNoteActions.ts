@@ -126,9 +126,9 @@ export function useNoteActions() {
 
       // Create / refresh the note's KB node so session-scoped views that
       // filter by KB sourceId (VaultBrowser / Session Notes panel) pick it up
-      // on their next refresh. Without this, Quick Log chip actions (skill
-      // checks, damage, conditions, etc.) persist the note but leave the
-      // notes grid stale until a manual rebuild.
+      // on their next refresh. Without this, a note created away from those
+      // views — auto-logged skill checks, HP changes, rests — persists but
+      // leaves them stale until a manual rebuild.
       try {
         const module = await getSyncModule();
         await module.syncNote(note.id);
