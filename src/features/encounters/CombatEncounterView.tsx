@@ -30,10 +30,10 @@ const actionBtnClass = 'min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] bo
  * Combat encounter view that reads/writes encounter entities directly.
  *
  * @remarks
- * This is a NEW component — it does NOT wrap or modify CombatTimeline.tsx.
- * CombatTimeline remains unchanged and is used for archived combat notes.
- * This view renders participant list with HP/conditions, round counter,
- * event timeline, and stat drawer on participant tap.
+ * Renders the participant list with HP/conditions, a round counter, the event
+ * timeline, and a stat drawer on participant tap. (This used to note that it
+ * did not wrap `CombatTimeline`; that component has since been deleted as
+ * unreferenced.)
  */
 export function CombatEncounterView({ encounter: initialEncounter, onClose }: CombatEncounterViewProps) {
   const { activeParty } = useCampaignContext();

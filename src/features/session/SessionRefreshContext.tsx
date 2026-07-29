@@ -14,16 +14,16 @@ import type { ReactNode } from 'react';
  * either one's local state. Before this context they stayed stale until a
  * manual reload.
  *
- * Any component that mutates session notes/encounters calls
- * {@link SessionRefreshContextValue.bumpSessionNotes} and/or
- * {@link SessionRefreshContextValue.bumpTimeline}; consumers watch the
- * matching numeric token and re-query when it changes.
+ * A component that mutates session notes or encounters calls
+ * {@link SessionRefreshContextValue.bumpAll} (promotion, combat writes) or
+ * {@link SessionRefreshContextValue.bumpTimeline} when only the timeline is
+ * affected; consumers watch the matching numeric token and re-query when it
+ * changes.
  */
 export interface SessionRefreshContextValue {
   timelineRefreshToken: number;
   sessionNotesRefreshToken: number;
   bumpTimeline: () => void;
-  bumpSessionNotes: () => void;
   /** Bump both tokens — the common case after promoting or logging. */
   bumpAll: () => void;
 }
@@ -51,7 +51,6 @@ export function SessionRefreshProvider({ children }: { children: ReactNode }) {
   const [sessionNotesRefreshToken, setSessionNotesToken] = useState(0);
 
   const bumpTimeline = useCallback(() => setTimelineToken((t) => t + 1), []);
-  const bumpSessionNotes = useCallback(() => setSessionNotesToken((t) => t + 1), []);
   const bumpAll = useCallback(() => {
     setTimelineToken((t) => t + 1);
     setSessionNotesToken((t) => t + 1);
@@ -62,16 +61,9 @@ export function SessionRefreshProvider({ children }: { children: ReactNode }) {
       timelineRefreshToken,
       sessionNotesRefreshToken,
       bumpTimeline,
-      bumpSessionNotes,
       bumpAll,
     }),
-    [
-      timelineRefreshToken,
-      sessionNotesRefreshToken,
-      bumpTimeline,
-      bumpSessionNotes,
-      bumpAll,
-    ],
+    [timelineRefreshToken, sessionNotesRefreshToken, bumpTimeline, bumpAll],
   );
 
   return (

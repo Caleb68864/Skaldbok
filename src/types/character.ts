@@ -179,7 +179,11 @@ export interface Ability {
   cost?: Record<string, number>;
   /** Readied for use, for systems with a preparation step. */
   prepared?: boolean;
-  /** Surfaced regardless of preparation. Read by the Play Dashboard's magic list. */
+  /**
+   * Surfaced regardless of preparation. Read by the Play Dashboard's magic
+   * list, but only for `type: 'spell'` rows — nothing consults it for
+   * heroic-typed abilities (see {@link HeroicAbility.pinnedAsStamp}).
+   */
   pinnedAsStamp?: boolean;
   /** Effect templates applied when the ability is used. */
   effects?: SpellEffect[];

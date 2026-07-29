@@ -493,3 +493,33 @@
   that is a wiring bug, not dead code.
 - Commit: tidy — remove dead code and stale references to the deleted
   quick-action surface.
+
+## 2026-07-29 — A tidy pass replaced stale comments with confidently wrong ones
+- Symptom: an audit pass told to verify **every factual claim** in the previous
+  commit's comments — by grepping, not reading — found two that were simply
+  false, both written during a sweep whose stated purpose was removing
+  inaccuracy. `useNoteActions` claimed its `syncNote` call existed for
+  "auto-logged skill checks, HP changes, rests"; that hook's `createNote` has
+  exactly one caller (`NoteEditorScreen`), and auto-logging never touches it —
+  `useSessionLog` writes via `noteRepository` and fires its own sync.
+  `SessionRefreshContext` claimed mutating components call `bumpSessionNotes`;
+  it had **zero** call sites anywhere.
+- Fix: both comments rewritten against the actual call graph. `bumpSessionNotes`
+  removed outright — dead API, not just a wrong doc; `sessionNotesRefreshToken`
+  is only ever advanced through `bumpAll`. Also qualified `Ability.pinnedAsStamp`
+  ("read by the magic list" is true only for `type: 'spell'` rows) and corrected
+  `GlobalFAB`'s opening line, which claimed it "appears on every route" three
+  lines above the two early returns that prove otherwise.
+- Surfaces: `useNoteActions.ts`, `SessionRefreshContext.tsx`, `character.ts`,
+  `GlobalFAB.tsx`, plus three JSDoc blocks still naming `CombatTimeline` and
+  `SessionBar` after those files were deleted.
+- Watch: a stale comment and a false comment fail the same way, and rewriting
+  prose feels safe enough that nobody re-checks it. If a comment asserts "X is
+  read by Y" or "callers do Z", grep it before committing. Also: the spec itself
+  was corrected here rather than the code — it prescribed `visible: false` for
+  the Log lane, which converge pass 1 proved makes the lane permanently
+  unreachable, and a Must-Not said "MUST NOT touch the system engine" when what
+  was meant was "MUST NOT change its behaviour". When implementation and spec
+  disagree, establish which one is wrong before editing either.
+- Commit: converge(pass-6-7) — correct false comments, drop dead
+  bumpSessionNotes, fix stale spec.

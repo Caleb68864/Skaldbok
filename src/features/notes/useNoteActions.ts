@@ -126,9 +126,11 @@ export function useNoteActions() {
 
       // Create / refresh the note's KB node so session-scoped views that
       // filter by KB sourceId (VaultBrowser / Session Notes panel) pick it up
-      // on their next refresh. Without this, a note created away from those
-      // views — auto-logged skill checks, HP changes, rests — persists but
-      // leaves them stale until a manual rebuild.
+      // on their next refresh. This hook's `createNote` is the manual
+      // note-editor path (`NoteEditorScreen`), which writes from outside those
+      // views — without the sync the note persists but they stay stale until a
+      // manual rebuild. Auto-logging does not come through here; `useSessionLog`
+      // writes via `noteRepository` and fires its own `syncNote`.
       try {
         const module = await getSyncModule();
         await module.syncNote(note.id);

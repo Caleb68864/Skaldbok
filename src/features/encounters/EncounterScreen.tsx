@@ -36,8 +36,8 @@ const actionBtnClass =
  *   3. Attached log (contains-edge notes with reassign)
  *   4. Relations (happened_during parent + children)
  *
- * Lifecycle (start / end) is driven through SessionEncounterContext so the
- * same hook instance that powers SessionBar stays in sync.
+ * Lifecycle (start / end) is driven through SessionEncounterContext so every
+ * consumer of that context stays in sync off one hook instance.
  */
 export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }: EncounterScreenProps) {
   const {

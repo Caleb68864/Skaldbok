@@ -4,8 +4,11 @@ import { useCampaignContext } from '../../features/campaign/CampaignContext';
 import { useAppState } from '../../context/AppStateContext';
 
 /**
- * Global Floating Action Button (FAB), always mounted inside
- * {@link components/shell/ShellLayout!ShellLayout | ShellLayout} so it appears on every route.
+ * Global Floating Action Button (FAB), mounted once in
+ * {@link components/shell/ShellLayout!ShellLayout | ShellLayout} so it is
+ * available from any route. It renders nothing in two cases: when the user has
+ * turned it off via `settings.showGlobalFAB`, and while already on
+ * `/session/log`.
  *
  * @remarks
  * Pressing the FAB navigates to the full-screen session log

@@ -155,8 +155,8 @@ export function SessionScreen() {
   }
 
   // When a session is active, wrap the session-scoped content in
-  // SessionEncounterProvider so SessionBar, the Start Encounter form, and the
-  // embedded EncounterScreen can all consume the same hook instance. When no
+  // SessionEncounterProvider so the Start Encounter form and the embedded
+  // EncounterScreen can consume the same hook instance. When no
   // session is active, render the fallback view without the provider (the
   // provider requires a sessionId).
   if (activeSession) {
