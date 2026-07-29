@@ -146,52 +146,101 @@ export function SessionLog() {
    * restores exactly the set that was removed — restoring them individually
    * would resurrect any entry the user had deleted earlier and separately.
    */
+  /**
+   * Restores a previously deleted batch.
+   *
+   * @remarks
+   * Every entry is attempted even if one fails. Abandoning the loop on the
+   * first error was the dangerous shape: `noteRepository.restore` reinstates
+   * links by the *transaction* id, so the first successful call already brings
+   * back the whole batch's edges — bailing after that left every entry's edges
+   * live while some of their notes stayed soft-deleted, which is exactly the
+   * dangling-reference state the delete cascade exists to avoid.
+   */
+  const undoDelete = useCallback(async (deleted: Note[]) => {
+    const failed: string[] = [];
+    for (const entry of deleted) {
+      try {
+        await noteRepository.restore(entry.id);
+      } catch {
+        failed.push(entry.id);
+      }
+    }
+    await refresh();
+    if (failed.length > 0) {
+      showToast(`Could not restore ${failed.length} of ${deleted.length} entries`, 'error');
+    }
+  }, [refresh, showToast]);
+
   const handleDeleteEntries = useCallback(async (toDelete: Note[]) => {
     if (toDelete.length === 0) return;
     const txId = generateSoftDeleteTxId();
-    try {
-      for (const entry of toDelete) {
-        // Cascade the entry's edges first, under the same txId — matching
-        // `useNoteActions.deleteNote`. A promoted entry carries a live
-        // `promoted_into` edge to a note that is still active; without this the
-        // edge outlives the entry, and an export bundle then ships an
-        // `entityLink` whose `fromEntityId` names a note the bundle excludes.
-        // Sharing the txId is also what lets Undo below restore the edges, via
-        // `restoreLinksForTxId`.
+    // Entries confirmed removed, so a mid-batch failure still has a way back.
+    // The loop is deliberately not wrapped in one Dexie transaction:
+    // `noteRepository.softDelete` does a dynamic `import()` for the KB-node
+    // cleanup, and a Dexie transaction does not survive a non-Dexie await — the
+    // scope would be silently lost rather than made atomic.
+    const deleted: Note[] = [];
+    let failure: unknown = null;
+
+    for (const entry of toDelete) {
+      try {
+        // Edges first, under the same txId — matching `useNoteActions.deleteNote`.
+        // A promoted entry carries a live `promoted_into` edge to a note that is
+        // still active; without this the edge outlives the entry, and an export
+        // bundle then ships an `entityLink` whose `fromEntityId` names a note the
+        // bundle excludes. Sharing the txId is also what lets Undo restore the
+        // edges, via `restoreLinksForTxId`.
+        //
+        // This order matters on failure too. Stopping between the two calls
+        // leaves a live note whose edges are soft-deleted — it loses its
+        // Promoted badge, which is visible and repairable. The reverse order
+        // would leave a deleted note with live edges pointing at it: a dangling
+        // reference that survives into an export bundle, which is the failure
+        // this cascade exists to prevent.
         await entityLinkRepository.deleteLinksForNote(entry.id, txId);
         await noteRepository.softDelete(entry.id, txId);
+        deleted.push(entry);
+      } catch (e) {
+        failure = e;
+        break;
       }
-      if (editingId && toDelete.some(e => e.id === editingId)) {
-        setEditingId(null);
-        setDraft('');
-      }
-      await refresh();
-      showToast(
-        toDelete.length === 1 ? 'Entry deleted' : `${toDelete.length} entries deleted`,
-        'info',
-        {
-          // Longer than the 3s default — see NoteReader: an undo nobody has
-          // time to reach is not an undo.
-          duration: 8000,
-          action: {
-            label: 'Undo',
-            onClick: async () => {
-              try {
-                for (const entry of toDelete) {
-                  await noteRepository.restore(entry.id);
-                }
-                await refresh();
-              } catch (e) {
-                showToast(e instanceof Error ? e.message : 'Failed to restore entries', 'error');
-              }
-            },
-          },
-        },
-      );
-    } catch (e) {
-      showToast(e instanceof Error ? e.message : 'Failed to delete entry', 'error');
     }
-  }, [editingId, refresh, showToast]);
+
+    if (editingId && deleted.some(e => e.id === editingId)) {
+      setEditingId(null);
+      setDraft('');
+    }
+    await refresh();
+
+    if (deleted.length === 0) {
+      showToast(failure instanceof Error ? failure.message : 'Failed to delete entry', 'error');
+      return;
+    }
+
+    if (failure) {
+      // Partial success. Report it honestly and still offer the way back for
+      // what did go — the old code threw away both the Undo and the refresh,
+      // leaving rows on screen that were already gone from Dexie.
+      showToast(
+        `Deleted ${deleted.length} of ${toDelete.length} entries; the rest failed.`,
+        'error',
+        { duration: 8000, action: { label: 'Undo', onClick: () => void undoDelete(deleted) } },
+      );
+      return;
+    }
+
+    showToast(
+      toDelete.length === 1 ? 'Entry deleted' : `${toDelete.length} entries deleted`,
+      'info',
+      {
+        // Longer than the 3s default — see NoteReader: an undo nobody has
+        // time to reach is not an undo.
+        duration: 8000,
+        action: { label: 'Undo', onClick: () => void undoDelete(deleted) },
+      },
+    );
+  }, [editingId, refresh, showToast, undoDelete]);
 
   if (!activeSession) {
     return (

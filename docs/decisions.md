@@ -501,7 +501,10 @@
   inaccuracy. `useNoteActions` claimed its `syncNote` call existed for
   "auto-logged skill checks, HP changes, rests"; that hook's `createNote` has
   exactly one caller (`NoteEditorScreen`), and auto-logging never touches it —
-  `useSessionLog` writes via `noteRepository` and fires its own sync.
+  `useSessionLog` writes `db.notes.add()` directly in its own Dexie transaction
+  and fires its own `syncNote`. (This line itself said "writes via
+  `noteRepository`" until converge pass 10 — the correction to a false comment
+  was recorded here in a form that was also false. Third revision.)
   `SessionRefreshContext` claimed mutating components call `bumpSessionNotes`;
   it had **zero** call sites anywhere.
 - Fix: both comments rewritten against the actual call graph. `bumpSessionNotes`
