@@ -3,7 +3,7 @@
 Consolidated, **status-verified** backlog. Supersedes the running count I quoted
 in conversation ("52 remaining findings"), which was never written to a file and
 was inflated — this is what actually exists, checked against the code on
-`2026/07/28-1026-caleb-fix-traveller-modifiers` at commit `4b09d11`.
+`2026/07/28-1026-caleb-fix-traveller-modifiers` at commit `f185ca2`.
 
 Sources merged: the 2026-07-26 three-wave multi-agent sweep, the 2026-07-28
 Traveller/engine wave (`docs/plans/2026-07-28-traveller-hardening-findings.md`),
@@ -28,25 +28,15 @@ re-checked today).
 | F6 | `onCreateNote` never supplied → "Create NPC note" a permanent no-op | `4b09d11` |
 | F7 | Review sweep offered Approve and silently discarded it | `4b09d11` |
 | F8 | Timeline Tracks/Filters menus unbounded → rows past the fold unreachable | `4b09d11` |
+| F9 | `ParticipantDrawer` hardcoded HP/Armor/Mv (was E1) | `a1ce0a8` |
+| F10 | `MagicScreen`/`MagicSpellCard` bypassed `engine.magic` — non-`wp` systems could never cast (was E2) | `f185ca2` |
+| F11 | `toSpells` projected `cost.wp` literally, so a `{ psi: 3 }` spell read as free | `f185ca2` |
 
 ---
 
 ## OPEN — engine-rule violations
 
-### E1. `ParticipantDrawer` hardcodes "HP" / "Armor" / "Mv"
-`src/features/encounters/ParticipantDrawer.tsx:170,174,209` render literal
-`HP` / `Armor` while **line 196 of the same component** uses
-`engine.labels.participantHealth` ("Current END" for Traveller). Self-inconsistent
-inside one drawer. Cosmetic but a direct breach of the no-hardcoded-vocabulary
-rule. Cheap.
-
-### E2. `MagicScreen` bypasses `engine.magic`
-`src/screens/MagicScreen.tsx:237` reads `character.resources['wp']` directly,
-plus `level*2`/trick=1 and a literal "WP" label. `MagicModule.tsx` is the
-correct engine-driven version. **Any system whose `magic.resourceId !== 'wp'`
-can never cast.** Migrate MagicScreen/MagicSpellCard to read `engine.magic`.
-
-### E3. `PLAY_MODE_EDITABLE_PREFIXES` is ~75% dead and Dragonbane-hardcoded
+### E1. `PLAY_MODE_EDITABLE_PREFIXES` is ~75% dead and Dragonbane-hardcoded
 `src/utils/modeGuards.ts`. Only `armor.equipped` / `helmet.equipped` are ever
 queried; `resources.hp.current`, `resources.wp.current`, `deathRolls.*`,
 `conditions.`, `weapons.` have no call site. It also hardcodes Dragonbane
@@ -195,6 +185,12 @@ interoperate — but they can drift.
 ### L6. `renderCampaignIndex.ts` unreferenced
 Reads as an export-pipeline gap rather than dead code. Investigate before
 deleting.
+
+### L7. Residual Dragonbane literals in the magic surface
+The spell edit drawer writes a literal `wpCost: 2` default
+(`MagicScreen.tsx`), and `SpellCard.tsx` prints the header `WP Cost:`. Both
+are display/default-only now that casting itself is engine-driven, but they
+are the last `wp` literals in that surface.
 
 ---
 
