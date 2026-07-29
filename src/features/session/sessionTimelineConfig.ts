@@ -13,6 +13,7 @@ import type { Note } from '@/types/note';
 export const DEFAULT_SESSION_TIMELINE_NOTE_TRACKS: Record<string, string> = {
   generic: 'generic',
   npc: 'npc',
+  log: 'log',
   combat: 'combat',
   location: 'location',
   loot: 'loot',

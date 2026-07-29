@@ -9,6 +9,18 @@ import type { Session } from '@/types/session';
 import { CalendarClock, Swords } from 'lucide-react';
 import { resolveSessionTimelineTrackKind, NOTE_CHILD_TRACK_KINDS } from './sessionTimelineConfig';
 import { sessionTimelineIcon } from './sessionTimelineIcons';
+import { docToText } from '@/features/notes/textToDoc';
+
+const LOG_LABEL_MAX_LENGTH = 60;
+
+/** Derives a timeline item label for a `type: 'log'` note from its body, truncated to 60 chars. */
+function deriveLogItemLabel(note: Note): string {
+  const text = docToText(note.body).trim().replace(/\s+/g, ' ');
+  if (!text) {
+    return '(empty entry)';
+  }
+  return text.length > LOG_LABEL_MAX_LENGTH ? `${text.slice(0, LOG_LABEL_MAX_LENGTH)}…` : text;
+}
 
 /**
  * Pre-resolved data the timeline builder needs, gathered from the repositories.
@@ -101,14 +113,8 @@ export async function loadSessionTimelineSourceData(
   sessionId: string,
   encounters: Encounter[],
 ): Promise<SessionTimelineSourceData> {
-  // Log entries are excluded, matching the Notes grid (SS-09) and KB (SS-10).
-  // They are notes with an empty title, and the timeline labels items by title,
-  // so every raw capture rendered as an unlabeled chip — a session's worth of
-  // them buried the promoted notes that the timeline exists to show. The log
-  // is read in the Session Log itself; the timeline shows what was promoted
-  // out of it.
   const notes = (await getNotesBySession(sessionId)).filter(
-    (note) => note.status === 'active' && note.type !== 'log',
+    (note) => note.status === 'active',
   );
   const activeEncounters = encounters.filter((encounter) => !encounter.deletedAt);
 
@@ -196,9 +202,14 @@ export function buildSessionTimelineDataset({
   for (const childKind of NOTE_CHILD_TRACK_KINDS) {
     tracks.push(buildTrack(childKind));
   }
-  // `npc` is a first-class top-level track — add only if notes of that kind exist.
+  // `npc` and `log` are first-class top-level tracks — add only if notes of
+  // that kind exist. `log` starts hidden (`visible: false` in the catalog);
+  // the track filter reveals it. Neither belongs in NOTE_CHILD_TRACK_KINDS.
   if (noteTrackKinds.has('npc')) {
     tracks.push(buildTrack('npc'));
+  }
+  if (noteTrackKinds.has('log')) {
+    tracks.push(buildTrack('log'));
   }
 
   items.push({
@@ -271,11 +282,12 @@ export function buildSessionTimelineDataset({
       const noteEncounterId = timelineData.noteEncounterMap[note.id];
       const noteEncounter = noteEncounterId ? encounterById.get(noteEncounterId) : undefined;
       const trackKind = resolveSessionTimelineTrackKind(note);
+      const title = note.type === 'log' ? deriveLogItemLabel(note) : note.title;
 
       items.push({
         id: `note-${note.id}`,
         trackId: `track-${trackKind}`,
-        title: note.title,
+        title,
         subtitle: noteEncounter ? `${humanizeLabel(note.type)} · ${noteEncounter.title}` : humanizeLabel(note.type),
         start: note.createdAt,
         type: 'milestone',

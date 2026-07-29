@@ -33,6 +33,19 @@ export const DEFAULT_TIMELINE_TRACK_CATALOG: Record<string, TimelineTrackCatalog
     collapsible: true,
     colorToken: '--color-danger',
   },
+  // Top-level, sibling of Encounters/NPCs — not nested under Notes, because a
+  // collapsed `notes` parent aggregates every descendant's items onto its row
+  // (`useTimelineLayout.ts`), which would bury promoted notes under the raw
+  // capture. Starts hidden via `visible: false`; the track filter reveals it
+  // (`collapsed` only hides children, and this is a leaf, so it'd be a no-op).
+  log: {
+    label: 'Log',
+    kind: 'log',
+    order: 1.5,
+    visible: false,
+    collapsible: true,
+    colorToken: '--color-danger',
+  },
   npc: {
     label: 'NPCs',
     kind: 'npc',
