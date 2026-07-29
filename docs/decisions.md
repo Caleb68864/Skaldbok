@@ -574,3 +574,46 @@
   automated run silently undoes the fix. Correcting only the prose is worse than
   useless: the gate still enforces the old behaviour.
 - Commit: converge(pass-8-9) — cascade log-entry edges, unstick the phase spec.
+
+## 2026-07-29 — "It can't be atomic" was wrong, and the whole defect chain hung off it
+- Symptom: three consecutive fixes to log-entry deletion each introduced a new
+  defect. The root was a comment asserting the loop could not be wrapped in a
+  Dexie transaction because `noteRepository.softDelete` awaits a dynamic
+  `import()`. It does not: `softDelete` opens no transaction and the KB cleanup
+  is fire-and-forget `.then()`. `restore` had been wrapping the identical
+  note+edges pair in `db.transaction` since long before. Atomicity was available
+  the entire time; believing otherwise forced a non-atomic loop, and every
+  subsequent defect — half-deleted state, an unreachable Undo, an unguarded
+  `refresh` that surfaced as an unhandled rejection — was downstream of it.
+- Fix: `noteRepository.softDeleteWithLinks` removes a note and its edges in one
+  transaction. Put in the repository, not the component, because CLAUDE.md
+  forbids UI touching Dexie tables — and because the two-call form has no safe
+  failure order: stopping after the links leaves a live note that has lost its
+  `promoted_into` provenance and **cannot** be repaired (`restore` no-ops on a
+  live note, so `restoreLinksForTxId` is unreachable), while stopping after the
+  note leaves a dangling edge that exports into a bundle excluding its target.
+- Surfaces: `noteRepository.ts`, `sessionLog/SessionLog.tsx`.
+- Watch: a wrong explanation is more expensive than no explanation. This one
+  read as authoritative, so four passes accepted it and built on it. When a
+  comment says "we can't do X because Y", verify Y — especially when a sibling
+  function in the same file already does X.
+
+## 2026-07-29 — Every spec correction this branch made was uncommitted
+- Symptom: an audit compared the commit messages against `git show --stat` and
+  found them describing files the commits did not contain. `docs/` is
+  gitignored; only 28 files under it are tracked, via force-add. The master
+  spec, all six phase specs, both red-team reports, the design doc and every
+  converge artifact were **untracked** — so eight passes of spec corrections,
+  including the phase-spec gate whose stale version would have reverted a fixed
+  bug, existed only in the working tree and would vanish on a fresh clone.
+- Fix: force-added the spec/plan/converge set for this work, matching the
+  existing precedent for the 2026-07-27 session-log docs.
+- Surfaces: `docs/specs/**`, `docs/plans/**`, `docs/converge/**`.
+- Watch: `git add -A` silently skips gitignored paths, and a commit message is
+  not evidence. If a commit claims to change a file, `git show --stat` should
+  list it — the discrepancy is invisible unless something checks. Note also that
+  a *tracked* file inside a gitignored directory keeps working normally, which
+  is exactly why the problem hid: `docs/decisions.md` committed on every pass
+  while everything beside it was dropped.
+- Commit: converge(pass-12) — make log-entry deletion atomic, correct a false
+  rationale.

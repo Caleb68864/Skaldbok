@@ -3,7 +3,6 @@ import { WritePad } from '../../../components/notes/WritePad';
 import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useToast } from '../../../context/ToastContext';
 import * as noteRepository from '../../../storage/repositories/noteRepository';
-import * as entityLinkRepository from '../../../storage/repositories/entityLinkRepository';
 import { generateSoftDeleteTxId } from '../../../utils/softDelete';
 import { textToDoc, docToText } from '../../notes/textToDoc';
 import { SessionLogSelection } from './SessionLogSelection';
@@ -162,11 +161,19 @@ export function SessionLog() {
     for (const entry of deleted) {
       try {
         await noteRepository.restore(entry.id);
-      } catch {
+      } catch (e) {
+        // Logged, not swallowed: `restore` wraps the note and its edges in one
+        // transaction, so an edge failure rolls the note back too. Without this
+        // the only trace of "Undo didn't work" is a count.
+        console.error('SessionLog.undoDelete failed for', entry.id, e);
         failed.push(entry.id);
       }
     }
-    await refresh();
+    try {
+      await refresh();
+    } catch (e) {
+      console.error('SessionLog.undoDelete refresh failed', e);
+    }
     if (failed.length > 0) {
       showToast(`Could not restore ${failed.length} of ${deleted.length} entries`, 'error');
     }
@@ -175,31 +182,20 @@ export function SessionLog() {
   const handleDeleteEntries = useCallback(async (toDelete: Note[]) => {
     if (toDelete.length === 0) return;
     const txId = generateSoftDeleteTxId();
-    // Entries confirmed removed, so a mid-batch failure still has a way back.
-    // The loop is deliberately not wrapped in one Dexie transaction:
-    // `noteRepository.softDelete` does a dynamic `import()` for the KB-node
-    // cleanup, and a Dexie transaction does not survive a non-Dexie await — the
-    // scope would be silently lost rather than made atomic.
+    // One shared txId across the batch, so Undo restores exactly this set.
+    // Each entry is removed atomically — note and edges together — by
+    // `softDeleteWithLinks`. A promoted entry carries a live `promoted_into`
+    // edge to a note that is still active, and either half-state is a defect:
+    // an orphaned edge exports into a bundle that excludes its target, and a
+    // live note with dead edges has silently lost its provenance with no way
+    // back. The batch is still a loop, so a mid-batch failure stops with
+    // earlier entries cleanly deleted and the rest untouched.
     const deleted: Note[] = [];
     let failure: unknown = null;
 
     for (const entry of toDelete) {
       try {
-        // Edges first, under the same txId — matching `useNoteActions.deleteNote`.
-        // A promoted entry carries a live `promoted_into` edge to a note that is
-        // still active; without this the edge outlives the entry, and an export
-        // bundle then ships an `entityLink` whose `fromEntityId` names a note the
-        // bundle excludes. Sharing the txId is also what lets Undo restore the
-        // edges, via `restoreLinksForTxId`.
-        //
-        // This order matters on failure too. Stopping between the two calls
-        // leaves a live note whose edges are soft-deleted — it loses its
-        // Promoted badge, which is visible and repairable. The reverse order
-        // would leave a deleted note with live edges pointing at it: a dangling
-        // reference that survives into an export bundle, which is the failure
-        // this cascade exists to prevent.
-        await entityLinkRepository.deleteLinksForNote(entry.id, txId);
-        await noteRepository.softDelete(entry.id, txId);
+        await noteRepository.softDeleteWithLinks(entry.id, txId);
         deleted.push(entry);
       } catch (e) {
         failure = e;
@@ -207,11 +203,21 @@ export function SessionLog() {
       }
     }
 
+    // Only entries that actually went. One that failed is still live and still
+    // editable, so discarding its draft would throw away work for a row that
+    // never left.
     if (editingId && deleted.some(e => e.id === editingId)) {
       setEditingId(null);
       setDraft('');
     }
-    await refresh();
+    try {
+      await refresh();
+    } catch (e) {
+      // Guarded: this is called from an onClick that discards the promise, so
+      // an unguarded throw here would surface as an unhandled rejection with no
+      // toast and no Undo — the exact failure this path exists to prevent.
+      console.error('SessionLog.handleDeleteEntries refresh failed', e);
+    }
 
     if (deleted.length === 0) {
       showToast(failure instanceof Error ? failure.message : 'Failed to delete entry', 'error');

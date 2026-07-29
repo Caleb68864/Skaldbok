@@ -131,16 +131,10 @@ export function useNoteActions() {
       // views — without the sync the note persists but they stay stale until a
       // manual rebuild.
       //
-      // Auto-logging does not come through here: `useSessionLog` writes
-      // `db.notes.add()` directly inside its own Dexie transaction (`:200`,
-      // `:577`) and calls `syncNote` itself afterwards (`:210`, `:594`).
-      //
-      // It is the only *runtime* write path that bypasses the repository. The
-      // other direct writes are Dexie version-upgrade hooks in `db/client.ts`
-      // and deliberately do not sync — a migration runs before the KB graph is
-      // meaningful and the graph is rebuilt afterwards. Any new runtime path
-      // that writes notes outside the repository has to fire `syncNote` by
-      // hand, the way `useSessionLog` does.
+      // Auto-logging does not come through here. `useSessionLog` writes notes
+      // straight to Dexie and calls `syncNote` itself afterwards — the rule it
+      // illustrates is that a write bypassing this repository has to sync by
+      // hand, or the KB-backed views go stale.
       try {
         const module = await getSyncModule();
         await module.syncNote(note.id);

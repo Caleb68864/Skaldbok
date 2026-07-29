@@ -203,17 +203,23 @@ export function buildSessionTimelineDataset({
   for (const childKind of NOTE_CHILD_TRACK_KINDS) {
     tracks.push(buildTrack(childKind));
   }
-  // `npc` and `log` are first-class top-level tracks — add only if notes of
-  // that kind exist. `log` starts switched off via `defaultHidden` in the
-  // catalog (deliberately **not** `visible: false`, which would make the lane
-  // permanently unreachable — see TimelineTrack.defaultHidden); the track
-  // filter reveals it. Neither belongs in NOTE_CHILD_TRACK_KINDS.
+  // `npc` and `log` are first-class top-level tracks; neither belongs in
+  // NOTE_CHILD_TRACK_KINDS.
+  //
+  // `npc` is added only when notes of that kind exist. `log` is emitted
+  // unconditionally, like the note child tracks above: it starts switched off
+  // via `defaultHidden`, and the *only* way to turn it on is the track filter,
+  // which lists tracks present in the dataset. Gating it on entries existing
+  // would mean a fresh session offers no hint the lane exists at all — the
+  // filter would gain a "Log" row only after the first entry, which is the
+  // moment it stops needing to be discovered.
+  //
+  // `defaultHidden`, deliberately not `visible: false`: that would make the
+  // lane permanently unreachable — see TimelineTrack.defaultHidden.
   if (noteTrackKinds.has('npc')) {
     tracks.push(buildTrack('npc'));
   }
-  if (noteTrackKinds.has('log')) {
-    tracks.push(buildTrack('log'));
-  }
+  tracks.push(buildTrack('log'));
 
   items.push({
     id: `session-${session.id}`,

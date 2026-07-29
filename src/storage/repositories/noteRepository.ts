@@ -251,6 +251,42 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
   }
 }
 
+/**
+ * Soft-deletes a note **and its edges** atomically under one transaction id.
+ *
+ * @remarks
+ * The two-call form — `deleteLinksForNote` then `softDelete` — is not atomic, and
+ * either failure order corrupts something: stopping after the links leaves a live
+ * note that has silently lost its `promoted_into` provenance and cannot be
+ * repaired (`restore` no-ops on a live note, so `restoreLinksForTxId` is
+ * unreachable); stopping after the note leaves a dangling edge that exports into
+ * a bundle whose `notes` array excludes the target.
+ *
+ * One transaction removes the choice. `deleteNoteNode` stays outside it, as
+ * fire-and-forget — mirroring {@link restore}, which has always wrapped the same
+ * pair this way.
+ */
+export async function softDeleteWithLinks(id: string, txId?: string): Promise<void> {
+  const finalTxId = txId ?? generateSoftDeleteTxId();
+  try {
+    await db.transaction('rw', [db.notes, db.entityLinks], async () => {
+      const row = await db.notes.get(id);
+      if (!row) return;
+      if ((row as Note).deletedAt) return;
+      const now = nowISO();
+      await db.notes.update(id, {
+        deletedAt: now,
+        softDeletedBy: finalTxId,
+        updatedAt: now,
+      });
+      await entityLinkRepository.deleteLinksForNote(id, finalTxId);
+    });
+    getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
+  } catch (e) {
+    throw new Error(`noteRepository.softDeleteWithLinks failed: ${e}`);
+  }
+}
+
 /** Restores a soft-deleted note. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
