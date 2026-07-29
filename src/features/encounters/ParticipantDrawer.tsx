@@ -167,15 +167,21 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
             <div className="grid grid-cols-3 gap-2 mb-2">
               <div className="bg-[var(--color-surface-raised)] rounded p-2 text-center">
                 <div className="text-[var(--color-text)] text-sm font-bold">{template.stats.hp}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px]">HP</div>
+                <div className="text-[var(--color-text-muted)] text-[10px]">
+                  {engine.labels.creatureHealth}
+                </div>
               </div>
               <div className="bg-[var(--color-surface-raised)] rounded p-2 text-center">
                 <div className="text-[var(--color-text)] text-sm font-bold">{template.stats.armor}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px]">Armor</div>
+                <div className="text-[var(--color-text-muted)] text-[10px]">
+                  {engine.labels.creatureArmor}
+                </div>
               </div>
               <div className="bg-[var(--color-surface-raised)] rounded p-2 text-center">
                 <div className="text-[var(--color-text)] text-sm font-bold">{template.stats.movement}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px]">Mv</div>
+                <div className="text-[var(--color-text-muted)] text-[10px]">
+                  {engine.labels.creatureMovement}
+                </div>
               </div>
             </div>
             {template.attacks.length > 0 && (
@@ -206,7 +212,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setCurrentHp(e.target.value)}
               onBlur={linkedCharacter ? handleLinkedHealthBlur : handleHpBlur}
               className={inputClass}
-              placeholder="HP"
+              placeholder={engine.labels.creatureHealth}
             />
           </div>
           <div>

@@ -808,3 +808,26 @@
   instability was the app repositioning an overflowing panel. Prefer suspecting
   the app when a locator is never *stable* rather than never *present*.
 - Commit: fix(notes) — wire the create-record action and bound the timeline menus.
+
+## 2026-07-29 — The participant drawer contradicted itself about health
+- Symptom: `ParticipantDrawer` rendered the literals `HP` / `Armor` / `Mv` on the
+  creature-template base-stat tiles while its own editable health field, five
+  lines below, already read `engine.labels.participantHealth` — "Current END"
+  under Traveller. One drawer, two vocabularies, disagreeing on screen.
+- Fix: added `creatureHealth` / `creatureArmor` / `creatureMovement` to
+  `SystemLabels` and to all three adapters (Dragonbane HP/Armor/Mv, Traveller
+  END/Armour/Mv, SWADE Wounds/Armor/Pace), and mirrored the three keys into
+  `schemas/system.schema.ts`. The stale `placeholder="HP"` on the health input
+  now uses the same label as its own visible heading.
+- Surfaces: features/systems/engine/types.ts, all three engine adapters,
+  schemas/system.schema.ts, features/encounters/ParticipantDrawer.tsx,
+  features/systems/engine/systemDefinitionSchema.test.ts.
+- Watch: the schema is a **hand-maintained mirror** of `SystemLabels` and Zod
+  strips unlisted keys, so a new label added only to `types.ts` is silently
+  dropped before the engine merge and can never be overridden from
+  `system.json`. The schema test now asserts the three new keys survive parsing,
+  which is the only thing that catches that class of omission. Note also that
+  only the labels are engine-driven: `creatureTemplate.stats` is still a fixed
+  `hp`/`armor`/`movement` triple, so a system with a different stat *shape* needs
+  a data-model change rather than another label.
+- Commit: fix(engine) — source the creature base-stat headings from the engine.

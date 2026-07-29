@@ -258,6 +258,9 @@ export const travellerEngine: SystemEngine = {
     encumbrance: 'Encumbrance',
     // Traveller has no hit points; END is the pool a hit actually depletes.
     participantHealth: 'Current END',
+    creatureHealth: 'END',
+    creatureArmor: 'Armour',
+    creatureMovement: 'Mv',
     conditionExamples: 'e.g. stunned, wounded',
     encounterTagExamples: 'e.g. boarding, starport, pirates',
     locationExample: 'e.g. Cargo Bay 3',

@@ -48,12 +48,26 @@ describe('systemDefinitionSchema', () => {
     // Before the schema was widened these keys were silently stripped by Zod,
     // so a system.json override never reached the engine merge.
     const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));
-    def.labels = { ...(def.labels ?? {}), participantHealth: 'Vitality', storyBankPanel: 'Legends' };
+    def.labels = {
+      ...(def.labels ?? {}),
+      participantHealth: 'Vitality',
+      storyBankPanel: 'Legends',
+      // The creature-template headings, added when ParticipantDrawer stopped
+      // hardcoding HP/Armor/Mv. Every new SystemLabels key has to be mirrored
+      // here or Zod drops it before the engine merge — that silent strip is
+      // exactly what this test exists to catch.
+      creatureHealth: 'Vigour',
+      creatureArmor: 'Plating',
+      creatureMovement: 'Stride',
+    };
     const result = systemDefinitionSchema.safeParse(def);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.labels?.participantHealth).toBe('Vitality');
       expect(result.data.labels?.storyBankPanel).toBe('Legends');
+      expect(result.data.labels?.creatureHealth).toBe('Vigour');
+      expect(result.data.labels?.creatureArmor).toBe('Plating');
+      expect(result.data.labels?.creatureMovement).toBe('Stride');
     }
   });
 });

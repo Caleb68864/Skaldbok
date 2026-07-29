@@ -227,6 +227,25 @@ export interface SystemLabels {
    * the encounter screen even though the field itself is system-neutral.
    */
   participantHealth: string;
+  /**
+   * Column headings for a creature template's base stats in the participant
+   * drawer — the read-only trio above the editable "Current State" block.
+   *
+   * @remarks
+   * These existed as the literals `HP` / `Armor` / `Mv` inside
+   * `ParticipantDrawer`, which made the drawer contradict itself: its editable
+   * health field already read {@link SystemLabels.participantHealth} ("Current
+   * END" under Traveller) while the base-stat tile directly above it said "HP".
+   *
+   * Only the *labels* are system-driven. `creatureTemplate.stats` is still a
+   * fixed `hp`/`armor`/`movement` triple, so a system with a genuinely different
+   * stat shape needs a data-model change, not another label.
+   */
+  creatureHealth: string;
+  /** Heading for a creature template's armour value. See {@link SystemLabels.creatureHealth}. */
+  creatureArmor: string;
+  /** Heading for a creature template's movement value. See {@link SystemLabels.creatureHealth}. */
+  creatureMovement: string;
   /** Placeholder listing example conditions, e.g. `poisoned, prone`. */
   conditionExamples: string;
   /** Placeholder listing example encounter tags, e.g. `ambush, forest, kobolds`. */
