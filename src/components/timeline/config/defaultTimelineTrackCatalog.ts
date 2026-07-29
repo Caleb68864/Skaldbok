@@ -5,7 +5,12 @@ export type TimelineTrackCatalogEntry = Pick<
   TimelineTrack,
   'label' | 'kind' | 'order' | 'visible'
 > &
-  Partial<Pick<TimelineTrack, 'collapsible' | 'collapsed' | 'colorToken' | 'description' | 'parentTrackId'>>;
+  Partial<
+    Pick<
+      TimelineTrack,
+      'collapsible' | 'collapsed' | 'colorToken' | 'description' | 'parentTrackId' | 'defaultHidden'
+    >
+  >;
 
 /**
  * Default mapping of note/entity kind → timeline track (label, order, color, nesting).
@@ -36,13 +41,20 @@ export const DEFAULT_TIMELINE_TRACK_CATALOG: Record<string, TimelineTrackCatalog
   // Top-level, sibling of Encounters/NPCs — not nested under Notes, because a
   // collapsed `notes` parent aggregates every descendant's items onto its row
   // (`useTimelineLayout.ts`), which would bury promoted notes under the raw
-  // capture. Starts hidden via `visible: false`; the track filter reveals it
-  // (`collapsed` only hides children, and this is a leaf, so it'd be a no-op).
+  // capture.
+  //
+  // `defaultHidden`, not `visible: false`: a session's worth of raw entries
+  // should not clutter the default view, but the lane must stay switchable.
+  // `visible: false` means "never render" here — `useTimelineLayout` drops the
+  // row and `toggleTrack` won't move it into `visibleTrackIds` — so it would
+  // make the lane permanently unreachable. `collapsed` is no use either: it
+  // only hides *children*, and this is a leaf.
   log: {
     label: 'Log',
     kind: 'log',
     order: 1.5,
-    visible: false,
+    visible: true,
+    defaultHidden: true,
     collapsible: true,
     colorToken: '--color-danger',
   },

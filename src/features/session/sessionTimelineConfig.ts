@@ -26,9 +26,13 @@ export const DEFAULT_SESSION_TIMELINE_NOTE_TRACKS: Record<string, string> = {
 };
 
 /**
- * Note-type track kinds that nest under the `notes` parent. `npc` stays at
- * the top level because it's a first-class campaign entity (per the default
- * catalog); everything else is a child of Notes.
+ * Note-type track kinds that nest under the `notes` parent.
+ *
+ * Two kinds stay top-level instead: `npc`, because it's a first-class campaign
+ * entity (per the default catalog), and `log`, because a collapsed parent
+ * aggregates its descendants' items onto its own row — nesting a session's
+ * worth of raw log entries under Notes would bury the promoted notes the
+ * timeline exists to surface. Everything else is a child of Notes.
  */
 export const NOTE_CHILD_TRACK_KINDS = [
   'generic',

@@ -81,7 +81,21 @@ export interface TimelineTrack {
   description?: string;
   kind: string;
   order: number;
+  /**
+   * Whether this track can render at all. `false` means "never show this
+   * track" — `useTimelineLayout` drops the row and `useTimelineState.toggleTrack`
+   * refuses to move it into `visibleTrackIds`. Do **not** use it to mean
+   * "off by default"; see {@link TimelineTrack.defaultHidden}.
+   */
   visible: boolean;
+  /**
+   * Start this track switched off, but leave it switchable. Consumers seed it
+   * into {@link TimelineFilterState.hiddenTrackIds} on first render; from then
+   * on `hiddenTrackIds` is the source of truth and the user can toggle it
+   * freely. This is the correct flag for a high-volume lane that should not
+   * clutter the default view — e.g. the session Log lane.
+   */
+  defaultHidden?: boolean;
   collapsible?: boolean;
   collapsed?: boolean;
   height?: number;

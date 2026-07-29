@@ -60,6 +60,7 @@ function buildTrack(kind: string): TimelineTrack {
     kind: catalogEntry.kind ?? kind,
     order: catalogEntry.order ?? 99,
     visible: catalogEntry.visible ?? true,
+    defaultHidden: catalogEntry.defaultHidden,
     collapsible: catalogEntry.collapsible,
     collapsed: catalogEntry.collapsed,
     colorToken: catalogEntry.colorToken,

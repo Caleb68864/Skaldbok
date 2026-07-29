@@ -186,7 +186,7 @@ export function SessionLog() {
 
   if (!activeSession) {
     return (
-      <div className="flex h-[calc(100%-140px)] flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="text-[var(--color-text-muted,#666)]">Start a session to begin logging</p>
         <button
           type="button"
@@ -200,14 +200,16 @@ export function SessionLog() {
   }
 
   return (
-    // `h-[calc(100%-140px)]` rather than `h-full`: `<main>` (ShellLayout) is an
-    // overflow-y-auto scroll container with pb-[140px]. A plain `h-full` child
-    // fills 100% of main's content box and the 140px padding is then tacked on
-    // *after* it, pushing total scroll height past main's viewport and making
-    // `<main>` itself scroll instead of the entry list below. Subtracting the
-    // 140px here keeps this screen's total height equal to main's visible
-    // area so the entry list's own overflow-y-auto is the only scroller.
-    <div className="flex h-[calc(100%-140px)] flex-col">
+    // `h-full`, not `h-[calc(100%-140px)]`. `<main>` (ShellLayout) is an
+    // overflow-y-auto scroll container with `pb-[140px]`, and under
+    // `box-sizing: border-box` that padding sits *inside* main's height — so
+    // main's content box is already `H - 140` and a `h-full` child measures
+    // exactly that. Scroll height then equals client height and `<main>` never
+    // scrolls; the entry list's own overflow-y-auto stays the only scroller.
+    // Subtracting the 140px again here would double-count it and waste ~140px
+    // of writing area, which on the capture screen is the thing we are trying
+    // hardest to preserve.
+    <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center border-b border-[var(--color-border,#ddd)] px-4 py-2">
         <h1 className="text-sm font-semibold">{activeSession.title}</h1>
       </div>

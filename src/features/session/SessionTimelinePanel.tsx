@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Layers3, NotebookText, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TimelineRoot } from '@/components/timeline';
@@ -141,9 +141,28 @@ export function SessionTimelinePanel({
     [encounters, nowValue, session, timelineData],
   );
 
+  /**
+   * Track ids already classified against their `defaultHidden` default. Seeded
+   * by the initializer below and extended as late-arriving tracks appear, so
+   * each lane takes its default exactly once and the user's toggle owns it
+   * from then on.
+   */
+  const classifiedTrackIdsRef = useRef<Set<string>>(
+    new Set(timelineDataset.tracks.map((track) => track.id)),
+  );
+
   const [timelineFilterState, setTimelineFilterState] = useState<TimelineFilterState>(() => ({
-    visibleTrackIds: timelineDataset.tracks.filter((track) => track.visible).map((track) => track.id),
-    hiddenTrackIds: timelineDataset.tracks.filter((track) => !track.visible).map((track) => track.id),
+    // `defaultHidden` tracks start switched off but stay switchable — from here
+    // on `hiddenTrackIds` is the source of truth, so the Tracks menu can turn
+    // them back on. (`visible: false` would instead make a track permanently
+    // unreachable; see TimelineTrack.defaultHidden.) The Log lane uses this so a
+    // session's worth of raw entries doesn't clutter the default view.
+    visibleTrackIds: timelineDataset.tracks
+      .filter((track) => track.visible && !track.defaultHidden)
+      .map((track) => track.id),
+    hiddenTrackIds: timelineDataset.tracks
+      .filter((track) => !track.visible || track.defaultHidden)
+      .map((track) => track.id),
     // Tracks flagged with `collapsed: true` in the dataset start collapsed.
     // The session adapter uses this for the Notes parent so users see the
     // compact aggregate by default and can drill in when they want per-type rows.
@@ -159,8 +178,27 @@ export function SessionTimelinePanel({
 
   useEffect(() => {
     setTimelineFilterState((currentState) => {
+      // Tracks arrive over time — notes load async, so a lane can join the
+      // dataset long after this state was seeded. A track is classified by its
+      // own defaults exactly once (`defaultHidden` starts it switched off);
+      // after that the user's toggle is the only thing that moves it.
+      //
+      // "Already classified" is tracked in a ref rather than derived from
+      // `currentState`, because the shared timeline hook prunes
+      // `hiddenTrackIds` against the current track list — deriving it from
+      // state made a lane that appeared late read as still-unclassified on one
+      // render and already-visible on the next, so the Log lane came up
+      // expanded instead of off.
+      const seen = classifiedTrackIdsRef.current;
       const nextVisibleTrackIds = timelineDataset.tracks
-        .filter((track) => track.visible && !currentState.hiddenTrackIds.includes(track.id))
+        .filter((track) => {
+          if (!track.visible) return false;
+          if (!seen.has(track.id)) {
+            seen.add(track.id);
+            return !track.defaultHidden;
+          }
+          return !currentState.hiddenTrackIds.includes(track.id);
+        })
         .map((track) => track.id);
       const nextHiddenTrackIds = timelineDataset.tracks
         .filter((track) => !nextVisibleTrackIds.includes(track.id))

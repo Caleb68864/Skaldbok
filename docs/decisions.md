@@ -391,3 +391,41 @@
 - Surfaces: `formatSkillCheckTitle.ts`, `SkillCheckEditDrawer.tsx`,
   `QuickLogPCTray.tsx`, `SessionQuickActions.tsx`.
 - Commit: fix(session) — drive logged outcomes from the engine's vocabulary.
+
+## 2026-07-29 — `visible: false` is not "off by default" on a timeline track
+- Symptom: the session timeline's new Log lane was listed in the Tracks menu as
+  Off and could never be switched on. Toggling it did nothing.
+- Fix: `visible` means "may this track render at all" — `useTimelineLayout`
+  drops `!track.visible` rows, and `useTimelineState.toggleTrack` recomputes
+  `visibleTrackIds` with the same gate, so un-hiding left the track in neither
+  list. Added an explicit `defaultHidden?: boolean` to `TimelineTrack` for
+  "start switched off but stay switchable"; `hiddenTrackIds` is authoritative
+  once a track has been classified. The catalog's `log` entry is now
+  `visible: true, defaultHidden: true`.
+- Surfaces: `components/timeline/types.ts`,
+  `components/timeline/config/defaultTimelineTrackCatalog.ts`,
+  `features/session/sessionTimelineAdapter.ts`,
+  `features/session/SessionTimelinePanel.tsx`.
+- Watch: a track must take its `defaultHidden` default exactly **once**.
+  `SessionTimelinePanel` tracks that in a `useRef` set, not from filter state —
+  tracks arrive asynchronously (notes load after mount), and the shared hook
+  prunes `hiddenTrackIds` against the current track list, so deriving
+  "already classified" from state raced and the lane came up expanded. Any new
+  consumer of `defaultHidden` needs the same once-only guarantee.
+- Commit: converge(pass-1) — make the Log lane reachable.
+
+## 2026-07-29 — A percentage-height child of `<main>` must not re-subtract its padding
+- Symptom: `/session/log` wasted ~140px of vertical space below the WritePad —
+  on the one screen where vertical space is the entire product.
+- Fix: `SessionLog`'s root used `h-[calc(100%-140px)]` to "account for"
+  `ShellLayout`'s `<main className="... pb-[140px]">`. Under `box-sizing:
+  border-box` that padding is already inside main's height, so main's content
+  box is `H - 140` and a `h-full` child measures exactly that — scroll height
+  equals client height and main never scrolls. The calc subtracted it twice.
+  Now `h-full`.
+- Surfaces: `features/session/sessionLog/SessionLog.tsx`.
+- Watch: the tempting mental model ("padding is added after the child") is
+  wrong for percentage heights under border-box. Verify with
+  `main.scrollHeight === main.clientHeight` in the running app rather than by
+  reasoning; measured 2464 === 2464 at 1600×2560.
+- Commit: converge(pass-1) — stop wasting 140px on the log route.
