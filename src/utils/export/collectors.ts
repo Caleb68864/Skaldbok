@@ -1,6 +1,7 @@
 import type { BundleContents } from '../../types/bundle';
 import type { CharacterRecord } from '../../types/character';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
+import { closeBundleReferences } from './referentialClosure';
 import type { Note } from '../../types/note';
 import type { Attachment } from '../../types/attachment';
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
@@ -74,15 +75,20 @@ export async function collectCharacterBundle(characterId: string): Promise<Colle
       await Promise.all([...noteIds].map((id) => getAttachmentsByNote(id)))
     ).flat();
 
-    return {
-      success: true,
-      contents: {
+    const assembled = {
         characters: [character as unknown as Record<string, unknown>],
         notes,
         entityLinks: allLinks,
         attachments: attachments.map(toBundleAttachment),
-      },
-    };
+      };
+    const closed = closeBundleReferences(assembled as unknown as BundleContents);
+    if (closed.droppedLinks > 0) {
+      console.warn(
+        `[collectors] dropped ${closed.droppedLinks} entity link(s) whose endpoints are not in the bundle; `
+        + `they would have been rejected on import. Missing: ${closed.missingEndpoints.join(', ')}`,
+      );
+    }
+    return { success: true, contents: closed.contents };
   } catch (err) {
     console.error('[collectors] collectCharacterBundle error', err);
     return { success: false, error: String(err) };
@@ -170,9 +176,7 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
     //    party's shared loot, pack animals, etc. along with it.
     const inventoryContainers = await listInventoryContainersByCampaign(session.campaignId);
 
-    return {
-      success: true,
-      contents: {
+    const assembled = {
         sessions: [session],
         notes,
         encounters,
@@ -183,8 +187,15 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
         entityLinks,
         attachments: attachments.map(toBundleAttachment),
         inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
-      },
-    };
+      };
+    const closed = closeBundleReferences(assembled as unknown as BundleContents);
+    if (closed.droppedLinks > 0) {
+      console.warn(
+        `[collectors] dropped ${closed.droppedLinks} entity link(s) whose endpoints are not in the bundle; `
+        + `they would have been rejected on import. Missing: ${closed.missingEndpoints.join(', ')}`,
+      );
+    }
+    return { success: true, contents: closed.contents };
   } catch (err) {
     console.error('[collectors] collectSessionBundle error', err);
     return { success: false, error: String(err) };
@@ -255,9 +266,7 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
     // 10. All inventory containers (party coffer, pack animals, hirelings).
     const inventoryContainers = await listInventoryContainersByCampaign(campaignId);
 
-    return {
-      success: true,
-      contents: {
+    const assembled = {
         campaign,
         sessions,
         notes,
@@ -269,8 +278,15 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
         entityLinks,
         attachments: attachments.map(toBundleAttachment),
         inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
-      },
-    };
+      };
+    const closed = closeBundleReferences(assembled as unknown as BundleContents);
+    if (closed.droppedLinks > 0) {
+      console.warn(
+        `[collectors] dropped ${closed.droppedLinks} entity link(s) whose endpoints are not in the bundle; `
+        + `they would have been rejected on import. Missing: ${closed.missingEndpoints.join(', ')}`,
+      );
+    }
+    return { success: true, contents: closed.contents };
   } catch (err) {
     console.error('[collectors] collectCampaignBundle error', err);
     return { success: false, error: String(err) };

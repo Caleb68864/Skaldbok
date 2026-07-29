@@ -129,7 +129,33 @@ export function SessionTimelinePanel({
     };
   }, [encounterSignature, encounters, refreshToken, session.id]);
 
-  const nowValue = session.endedAt ?? new Date().toISOString();
+  /**
+   * Coarse clock for the live-session "now" edge.
+   *
+   * @remarks
+   * `now` only decides where an open encounter segment ends and where the now
+   * marker sits, so it needs minute resolution. Computing it inline as
+   * `new Date().toISOString()` produced a new string on *every* render, and
+   * since it is a dependency of the dataset memo below, that memo never held:
+   * every render rebuilt every track, item and marker, re-derived ~100 log
+   * labels through `docToText`, and invalidated the layout memo underneath.
+   * The session screen re-renders at least once a minute from its own elapsed
+   * timer and once per keystroke while the timeline search box is in use.
+   *
+   * An ended session has a fixed end, so it needs no ticking at all.
+   */
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (session.endedAt) return;
+    const id = setInterval(() => setNowTick(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, [session.endedAt]);
+
+  const nowValue = useMemo(
+    () => session.endedAt ?? new Date(nowTick).toISOString(),
+    [session.endedAt, nowTick],
+  );
 
   const timelineDataset = useMemo(
     () => buildSessionTimelineDataset({

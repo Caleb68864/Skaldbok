@@ -61,3 +61,24 @@ export function applyPrivacyFilter(
     attachments: filteredAttachments,
   };
 }
+
+/**
+ * Drops notes explicitly marked `visibility: 'private'`.
+ *
+ * @remarks
+ * The Markdown / ZIP export paths do not build a `BundleContents`, so they
+ * cannot use {@link applyPrivacyFilter}. They had no filtering at all, which
+ * meant `exportAllNotes`, `exportSessionMarkdown` and `exportSessionBundle`
+ * rendered private notes verbatim into files whose whole purpose is sharing —
+ * while the JSON bundle paths beside them filtered correctly.
+ *
+ * Absent or `'public'` visibility is retained, matching `applyPrivacyFilter`:
+ * only an explicit `'private'` is excluded.
+ */
+export function excludePrivateNotes<T extends { visibility?: string }>(
+  notes: T[],
+  includePrivate = false,
+): T[] {
+  if (includePrivate) return notes;
+  return notes.filter((note) => note.visibility !== 'private');
+}

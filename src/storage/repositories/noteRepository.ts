@@ -504,6 +504,16 @@ export async function appendEntriesToNote(
       if (!existing) {
         throw new Error(`target note ${targetNoteId} not found`);
       }
+      // A soft-deleted target is not a valid append destination. The promote
+      // sheet snapshots the note list when it opens, so a note deleted in
+      // another tab (or by the review sweep) stays selectable — and appending
+      // to it wrote the user's text into a tombstone no surface reads, while
+      // `addPromotedIntoEdges` created *live* edges pointing at a deleted note.
+      // That is precisely the dangling-edge state `softDeleteWithLinks` exists
+      // to prevent, arrived at from the other direction.
+      if ((existing as Note).deletedAt) {
+        throw new Error(`target note ${targetNoteId} has been deleted`);
+      }
       const body = buildBody((existing as Note).body);
       assertProseMirrorBody(body, 'appendEntriesToNote');
       await db.notes.update(targetNoteId, { body, updatedAt: now });

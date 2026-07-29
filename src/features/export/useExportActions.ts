@@ -12,7 +12,7 @@ import { bundleToZip } from '../../utils/export/bundleToZip';
 import { shareFile, copyToClipboard } from '../../utils/export/delivery';
 import { generateFilename } from '../../utils/export/generateFilename';
 import { collectCharacterBundle, collectSessionBundle, collectCampaignBundle } from '../../utils/export/collectors';
-import { applyPrivacyFilter } from '../../utils/export/privacyFilter';
+import { applyPrivacyFilter, excludePrivateNotes } from '../../utils/export/privacyFilter';
 import { serializeBundle, deliverBundle } from '../../utils/export/bundleSerializer';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
@@ -121,13 +121,19 @@ export function useExportActions() {
         if (n) linkedNotes.push(n);
       }
 
+      // Shareable output: drop explicitly-private notes before rendering, and
+      // gather links only for what survives, so a private note leaves no trace
+      // in the front matter either. The JSON bundle paths already do this via
+      // applyPrivacyFilter; these Markdown paths had no filtering at all.
+      const shareableNotes = excludePrivateNotes(linkedNotes);
+
       const allEntityLinks: EntityLink[] = [];
-      for (const note of linkedNotes) {
+      for (const note of shareableNotes) {
         const noteLinks = await getLinksFrom(note.id, 'introduced_in');
         allEntityLinks.push(...noteLinks);
       }
 
-      const filesMap = renderSessionBundle(session, linkedNotes, allEntityLinks);
+      const filesMap = renderSessionBundle(session, shareableNotes, allEntityLinks);
       // Export just the session index
       const sessionFilename = generateFilename({ title: session.title, id: session.id });
       const sessionMarkdown = filesMap.get(sessionFilename) ?? filesMap.values().next().value ?? '';
@@ -173,13 +179,19 @@ export function useExportActions() {
         if (n) linkedNotes.push(n);
       }
 
+      // Shareable output: drop explicitly-private notes before rendering, and
+      // gather links only for what survives, so a private note leaves no trace
+      // in the front matter either. The JSON bundle paths already do this via
+      // applyPrivacyFilter; these Markdown paths had no filtering at all.
+      const shareableNotes = excludePrivateNotes(linkedNotes);
+
       const allEntityLinks: EntityLink[] = [];
-      for (const note of linkedNotes) {
+      for (const note of shareableNotes) {
         const noteLinks = await getLinksFrom(note.id, 'introduced_in');
         allEntityLinks.push(...noteLinks);
       }
 
-      const textFilesMap = renderSessionBundle(session, linkedNotes, allEntityLinks);
+      const textFilesMap = renderSessionBundle(session, shareableNotes, allEntityLinks);
       const filesMap = new Map<string, string | Blob>(textFilesMap);
       const sessionSlug = session.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
 
@@ -250,7 +262,10 @@ export function useExportActions() {
       return;
     }
     try {
-      const allNotes = await getNotesByCampaign(activeCampaign.id);
+      // Private notes are excluded: this writes a shareable ZIP, and the JSON
+       // bundle paths below already filter. Without this the two export routes
+       // disagreed about what "private" means.
+      const allNotes = excludePrivateNotes(await getNotesByCampaign(activeCampaign.id));
       if (allNotes.length === 0) {
         showToast('No notes to export');
         return;

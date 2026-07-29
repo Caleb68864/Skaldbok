@@ -666,3 +666,68 @@
   soft-deleted succeeds silently into a tombstone, and `textToDoc` round-tripping
   rewrites CRLF and collapses blank runs.
 - Commit: harden(notes) — stop losing drafts, and persist resolved wikilink ids.
+
+## 2026-07-29 — Imported notes were invisible, and exports shipped edges the importer destroyed
+- Symptom: two halves of the same round-trip were broken independently.
+  (1) `mergeBundle` writes straight to `db.notes` / `db.entityLinks` and never
+  fires `syncNote`, and `kb_nodes` is not part of a bundle — but the Session
+  Notes panel and the whole Knowledge Base read `kb_nodes`. An import therefore
+  landed every row correctly and showed the user **nothing** until some
+  unrelated action happened to rebuild the graph. (2) Collectors gather links as
+  "every edge touching a collected entity" while gathering *entities* by much
+  narrower rules — characters only via party membership, notes only within the
+  campaign, nothing for a soft-deleted or cross-campaign target. Every edge
+  reaching outside that set shipped in the bundle, and the importer's
+  `danglingLinkEndpoint` then rejected exactly those, so the relationship was
+  destroyed on round-trip and surfaced only as an error count.
+- Fix: `useImportActions` runs `bulkRebuildGraph` for the imported campaign
+  after a successful merge, non-fatally. New `closeBundleReferences` prunes
+  edges whose endpoints the bundle does not carry, and warns with what was
+  dropped — so the bundle is honest about what it contains and everything in it
+  imports cleanly. Its endpoint-type map deliberately mirrors the importer's
+  `LINK_ENDPOINT_TABLES`; if those drift, export and import stop agreeing again.
+- Surfaces: `features/import/useImportActions.ts`,
+  `utils/export/referentialClosure.ts` (new), `utils/export/collectors.ts`.
+- Watch: pruning makes the bundle self-consistent but still loses the edge. The
+  better long-term answer is closure by *inclusion* — pull the missing endpoint
+  into the bundle — which needs a decision about cross-campaign leakage first.
+
+## 2026-07-29 — Private notes leaked into every Markdown and ZIP export
+- Symptom: `applyPrivacyFilter` was wired into the three JSON bundle exports and
+  into **none** of the Markdown/ZIP paths. `exportAllNotes`,
+  `exportSessionMarkdown` and `exportSessionBundle` rendered
+  `visibility: 'private'` notes verbatim into files whose entire purpose is
+  sharing. Two export routes, sitting in the same hook, disagreed about what
+  "private" meant.
+- Fix: new `excludePrivateNotes` predicate (the Markdown paths never build a
+  `BundleContents`, so they cannot use `applyPrivacyFilter`). Applied to the
+  three bulk paths, and links are gathered only for surviving notes so a private
+  note leaves no trace in front matter either. Single-note export is untouched —
+  that is an explicit choice about one named note, not a bulk share.
+- Surfaces: `utils/export/privacyFilter.ts`, `features/export/useExportActions.ts`.
+- Watch: any new export path needs the filter wired in deliberately; there is no
+  chokepoint enforcing it, which is exactly how these three were missed.
+
+## 2026-07-29 — The timeline rebuilt itself on every render, and stacked every marker on one lane
+- Symptom: `nowValue` was computed inline as `session.endedAt ?? new
+  Date().toISOString()` and used as a dependency of the dataset memo, so for any
+  live session it was a new string every render and the memo never held. Every
+  render rebuilt every track, item and marker and re-derived ~100 log labels
+  through `docToText` — and the session screen re-renders at least once a minute
+  from its own elapsed timer, plus once per keystroke in the timeline search box.
+  Separately, `coerceItemToRange` gives points zero duration, so the free-lane
+  test `startMs >= laneEndTime` was trivially true and all 60-100 log markers
+  landed on lane 0, overlapping into unreachable diamonds.
+- Fix: `nowValue` is memoized against a 60-second tick (and no tick at all for
+  an ended session, which has a fixed end). Point items now get a
+  `minimumDurationMs` **collision footprint** for lane assignment only —
+  rendered position and width are unchanged. The lane sort tiebreak switched
+  from `id.localeCompare` to original array order, since ids are random uuids and
+  same-millisecond entries were rendering in an order that contradicted the log.
+- Surfaces: `features/session/SessionTimelinePanel.tsx`,
+  `components/timeline/utils/lanes.ts`.
+- Watch: `now` at render resolution is a memo-buster wherever it appears. Also
+  still open from the same audit: the viewport is seeded once at mount and only
+  self-heals because every commit unmounts `TimelineRoot`, which discards the
+  user's zoom and pan.
+- Commit: harden(notes) — fix the seven triaged findings.

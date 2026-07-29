@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import * as noteRepository from '../../storage/repositories/noteRepository';
-import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
 import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
 import { getActiveEncounterForSession } from '../../storage/repositories/encounterRepository';
 import type { Note } from '../../types/note';
@@ -182,9 +181,15 @@ export function useNoteActions() {
   const deleteNote = useCallback(async (id: string): Promise<void> => {
     try {
       const txId = generateSoftDeleteTxId();
-      await entityLinkRepository.deleteLinksForNote(id, txId);
+      // Attachments first: they are a separate table with no transactional
+      // relationship to the note, so doing them before the atomic pair means a
+      // failure here leaves the note fully intact rather than half-removed.
       await attachmentRepository.deleteAttachmentsByNote(id);
-      await noteRepository.softDelete(id, txId);
+      // Note and edges together, in one transaction. The previous form called
+      // `deleteLinksForNote` and `softDelete` separately, so a throw between
+      // them left a live note whose edges were soft-deleted — which `restore`
+      // cannot repair, because it no-ops on a note that was never deleted.
+      await noteRepository.softDeleteWithLinks(id, txId);
     } catch (e) {
       showToast('Failed to delete note');
       console.error('useNoteActions.deleteNote failed:', e);

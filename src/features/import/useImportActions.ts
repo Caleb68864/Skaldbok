@@ -129,6 +129,31 @@ export function useImportActions() {
     try {
       const report = await mergeBundle(parsedResult.bundle, effectiveOptions);
 
+      // Rebuild the KB graph for the imported campaign.
+      //
+      // `mergeBundle` writes straight to `db.notes` / `db.entityLinks` and never
+      // fires `syncNote`, and `kb_nodes` / `kb_edges` are not part of a bundle.
+      // Every surface that lists notes — the Session Notes panel and the whole
+      // Knowledge Base — reads `kb_nodes`, so an import used to land the rows
+      // correctly and show the user *nothing*: the notes were invisible until
+      // something unrelated happened to run a rebuild. That is the step where a
+      // promoted note's round trip was lost, even though its row and its
+      // `promoted_into` edges had both survived.
+      const rebuildCampaignId =
+        effectiveOptions.targetCampaignId ?? parsedResult.bundle.contents.campaign?.id;
+      if (rebuildCampaignId) {
+        try {
+          const { bulkRebuildGraph } = await import('../kb/linkSyncEngine');
+          await bulkRebuildGraph(rebuildCampaignId);
+        } catch (err) {
+          // Non-fatal: the data is committed and correct, only the graph is
+          // stale. Surfaced rather than swallowed so the user knows to reopen
+          // the Knowledge Base, which rebuilds on mount.
+          console.error('[useImportActions] KB rebuild after import failed', err);
+          showToast('Imported, but the knowledge graph could not be rebuilt. Open the Knowledge Base to refresh it.');
+        }
+      }
+
       if (report.errors.length > 0) {
         showToast(
           `Import completed with ${report.errors.length} error(s). ` +
