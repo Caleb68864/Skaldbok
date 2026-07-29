@@ -186,7 +186,7 @@ export function SessionLog() {
 
   if (!activeSession) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+      <div className="flex h-[calc(100%-140px)] flex-col items-center justify-center gap-4 p-6 text-center">
         <p className="text-[var(--color-text-muted,#666)]">Start a session to begin logging</p>
         <button
           type="button"
@@ -200,7 +200,17 @@ export function SessionLog() {
   }
 
   return (
-    <div className="flex h-full flex-col">
+    // `h-[calc(100%-140px)]` rather than `h-full`: `<main>` (ShellLayout) is an
+    // overflow-y-auto scroll container with pb-[140px]. A plain `h-full` child
+    // fills 100% of main's content box and the 140px padding is then tacked on
+    // *after* it, pushing total scroll height past main's viewport and making
+    // `<main>` itself scroll instead of the entry list below. Subtracting the
+    // 140px here keeps this screen's total height equal to main's visible
+    // area so the entry list's own overflow-y-auto is the only scroller.
+    <div className="flex h-[calc(100%-140px)] flex-col">
+      <div className="flex shrink-0 items-center border-b border-[var(--color-border,#ddd)] px-4 py-2">
+        <h1 className="text-sm font-semibold">{activeSession.title}</h1>
+      </div>
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-2">
         {entries.length === 0 && (
           <p className="py-8 text-center text-sm text-[var(--color-text-muted,#666)]">
