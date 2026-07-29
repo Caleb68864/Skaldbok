@@ -320,7 +320,7 @@ function ActiveSessionContent() {
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
   const [timelineSearchText, setTimelineSearchText] = useState('');
-  const { timelineRefreshToken, sessionNotesRefreshToken, bumpTimeline, openQuickLog } =
+  const { timelineRefreshToken, sessionNotesRefreshToken, bumpTimeline } =
     useSessionRefresh();
 
   const { encounters, refresh: refreshEncounters } = useEncounterList(activeSession?.id ?? null);
@@ -581,7 +581,7 @@ function ActiveSessionContent() {
         onOpenNote={(noteId) => openNote(noteId)}
         searchText={timelineSearchText}
         onSearchTextChange={setTimelineSearchText}
-        onAddToTimeline={() => openQuickLog('note')}
+        onAddToTimeline={() => navigate('/session/log')}
         refreshToken={timelineRefreshToken}
       />
 

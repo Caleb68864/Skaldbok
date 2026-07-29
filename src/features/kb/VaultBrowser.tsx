@@ -19,7 +19,6 @@ import { getEdgesFromNode, getEdgesToNode } from '../../storage/repositories/kbE
 import { getNotesBySession } from '../../storage/repositories/noteRepository';
 import { useKBSearch } from './useKBSearch';
 import { VaultCard } from './VaultCard';
-import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 
 /** Props for {@link VaultBrowser}. */
 export interface VaultBrowserProps {
@@ -86,7 +85,6 @@ export function VaultBrowser({
   refreshToken = 0,
 }: VaultBrowserProps) {
   const navigate = useNavigate();
-  const sessionRefresh = useSessionRefreshSafe();
   const [activeTab, setActiveTab] = useState<string>(typeFilter ?? 'all');
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -346,15 +344,15 @@ export function VaultBrowser({
                 No session notes yet
               </p>
               <p className="mb-1 text-sm text-[var(--color-text-muted)]">
-                Use Quick Log for fast captures during play, encounter logs for scene-specific details, and session notes for recap, clues, and cleanup.
+                Write into the session log during play, then promote the entries that matter into notes.
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={() => sessionRefresh?.openQuickLog('note')}
+                  onClick={() => navigate('/session/log')}
                   className="min-h-11 min-w-11 px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-sm font-semibold cursor-pointer"
                 >
-                  Quick Log Note
+                  Open Session Log
                 </button>
                 <button
                   type="button"
