@@ -10,7 +10,6 @@ import {
   loadSessionTimelineSourceData,
   type SessionTimelineSourceData,
 } from './sessionTimelineAdapter';
-import type { AttachToValue } from './quickActions/AttachToControl';
 
 export interface SessionTimelinePanelProps {
   session: Session;
@@ -22,7 +21,6 @@ export interface SessionTimelinePanelProps {
   onOpenNote: (noteId: string) => void;
   searchText?: string;
   onSearchTextChange?: (searchText: string) => void;
-  onSelectionContextChange?: (context: { attachTo: AttachToValue; label: string | null }) => void;
   onAddToTimeline?: () => void;
   refreshToken?: number;
 }
@@ -79,7 +77,6 @@ export function SessionTimelinePanel({
   onOpenNote,
   searchText = '',
   onSearchTextChange,
-  onSelectionContextChange,
   onAddToTimeline,
   refreshToken = 0,
 }: SessionTimelinePanelProps) {
@@ -212,50 +209,6 @@ export function SessionTimelinePanel({
     onSearchTextChange?.(nextState.searchText);
   }, [onSearchTextChange]);
 
-  const handleTimelineItemSelect = useCallback((item: TimelineItem) => {
-    if (!onSelectionContextChange) {
-      return;
-    }
-
-    if (item.sourceType === 'encounter' && item.sourceId) {
-      onSelectionContextChange({ attachTo: item.sourceId, label: item.title });
-      return;
-    }
-
-    if (item.sourceType === 'session') {
-      onSelectionContextChange({ attachTo: null, label: session.title });
-      return;
-    }
-
-    const encounterId = typeof item.metadata?.encounterId === 'string'
-      ? item.metadata.encounterId
-      : null;
-
-    onSelectionContextChange({
-      attachTo: encounterId,
-      label: encounterId ? `${item.title} (${item.metadata?.encounterTitle ?? 'Encounter'})` : session.title,
-    });
-  }, [onSelectionContextChange, session.title]);
-
-  const handleTimelineTrackSelect = useCallback((track: TimelineTrack) => {
-    if (!onSelectionContextChange) {
-      return;
-    }
-
-    if (track.kind === 'encounter') {
-      onSelectionContextChange({
-        attachTo: activeEncounter?.id ?? 'auto',
-        label: activeEncounter?.title ?? 'active encounter',
-      });
-      return;
-    }
-
-    onSelectionContextChange({
-      attachTo: null,
-      label: track.label,
-    });
-  }, [activeEncounter?.id, activeEncounter?.title, onSelectionContextChange]);
-
   const renderItemDetails = useCallback((item: TimelineItem) => {
     if (item.sourceType === 'encounter' && item.sourceId) {
       const encounter = encounterById.get(item.sourceId);
@@ -367,8 +320,6 @@ export function SessionTimelinePanel({
           renderTrackLabel={renderTrackLabel}
           renderItemDetails={renderItemDetails}
           onNavigateToSource={handleNavigateToSource}
-          onItemSelect={handleTimelineItemSelect}
-          onTrackSelect={handleTimelineTrackSelect}
           onAddItem={onAddToTimeline}
           addItemLabel="Add to Timeline"
           emptyStateTitle="No timeline entries yet"
