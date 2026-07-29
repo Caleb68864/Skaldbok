@@ -22,6 +22,7 @@ export function MoreScreen() {
       </button>
 
       {[
+        { to: '/session/log', label: 'Session Log' },
         { to: '/settings', label: 'Settings' },
         { to: '/reference', label: 'Reference' },
         { to: '/library', label: 'Character Library' },
