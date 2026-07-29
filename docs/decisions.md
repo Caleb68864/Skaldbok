@@ -731,3 +731,27 @@
   self-heals because every commit unmounts `TimelineRoot`, which discards the
   user's zoom and pan.
 - Commit: harden(notes) — fix the seven triaged findings.
+
+## 2026-07-29 — E2E suite tested a deleted UI and reported 100% while crashing
+- Symptom: `tests/e2e_full_test.py` drove surfaces removed by the notes
+  overhaul — the Quick Note / Quick NPC drawers, the 14-chip
+  SessionQuickActions toolbar, the SessionLogOverlay FABs, PartyPicker, and a
+  "Start Combat" button that never existed under that name. Separately the
+  harness scored a crashed iteration as all-PASS: `results["exception"] =
+  str(e)` is truthy, and the `exception` key was excluded from the tally, so
+  the suite could report a 100% pass rate having barely run.
+- Fix: replaced the dead phases with `session_log` (FAB → /session/log, commit,
+  draft protection, escapable edit mode), `promote_flow` (right-click select,
+  click extend, and the load-bearing assertion that raw entries survive
+  promotion), and `timeline_log_lane` (hidden on load AND revealable). Rewrote
+  the encounter phase against the real flow: starting one surfaces "Open
+  Active Encounter", and the title plus End Encounter live inside the
+  encounter view, not on the session screen. Reporting now seeds phases to
+  `None`, distinguishes pass / fail / did-not-run, and exits non-zero when an
+  iteration crashes; the report file carries the same three-state tally.
+- Surfaces: tests/e2e_full_test.py, tests/test_report.txt.
+- Watch: a green suite is only meaningful alongside the "Did not run: 0" and
+  "Iterations that crashed: 0" lines — read those before trusting a pass rate.
+  One console warning is left visible rather than filtered: a Radix
+  `DialogContent` without `aria-describedby`, a real unfixed a11y gap.
+- Commit: test(e2e) — cover the log-and-promote flow and make the tally honest.

@@ -1,9 +1,12 @@
-Skaldmark E2E Test Report — 10 iterations
+Skaldmark E2E Test Report — 1 iterations
 ============================================================
 
-Total tests: 120
-Passes: 120
+Total tests: 13
+Passes: 13
 Failures: 0
+Did not run: 0
+Iterations that crashed: 0/1
 Pass rate: 100.0%
 
 Issues:
+  [console_errors] [warning] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. (iter 1)

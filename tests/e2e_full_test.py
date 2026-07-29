@@ -11,13 +11,19 @@ Skaldmark Dragonbane TTRPG companion web app.
 2. **Character creation** — creates 5 characters in the library, visits all sub-screens
 3. **Party management** — adds all characters to the campaign party
 4. **Session start** — begins a new game session
-5. **Notes testing** — creates Quick Note, Quick NPC, Quick Location, Link Note
-6. **Combat (10 rounds)** — starts combat, adds events per round, advances rounds, ends combat
-7. **Session Quick Actions** — tests skill check, spell cast, and other quick log chips
-8. **Session Log Overlay** — tests floating dice/spell/ability FABs on character screens
+5. **Session log capture** — FAB navigates to ``/session/log`` and hides there;
+   commits entries; asserts a pending draft survives a tap on an entry; asserts
+   edit mode is visible and escapable
+6. **Promote flow** — right-click to select, click to extend, promote into a
+   typed note, and assert the raw entries are preserved with Promoted badges
+7. **Timeline Log lane** — hidden on first render, listed in the Tracks menu,
+   and revealable from it
+8. **Encounter lifecycle** — opens the Start Encounter modal, starts a named
+   encounter, confirms it shows as active, and ends it
 9. **Character sub-screens** — navigates Sheet, Skills, Gear, Magic, Combat tabs
 10. **Other screens** — loads Settings and Reference screens
-11. **Notes verification** — confirms notes appear on the Notes screen
+11. **Notes verification** — confirms the promoted note is discoverable in the
+    Session Notes panel, which reads the KB graph rather than the notes table
 12. **Session end** — ends the session with confirmation modal
 
 **Usage:**
@@ -156,12 +162,33 @@ def screenshot(page: Page, name: str, iteration: int):
     except Exception:
         pass
 
+def dismiss_overlays(page: Page, attempts: int = 3):
+    """Close any open sheet, drawer or dialog.
+
+    A phase that leaves an overlay open makes every later phase fail on
+    "subtree intercepts pointer events" rather than on anything real, so the
+    reported failure points at the wrong place entirely.
+
+    :param page: Playwright page instance.
+    :param attempts: How many stacked overlays to try to unwind.
+    """
+    for _ in range(attempts):
+        try:
+            if page.locator('[role="dialog"][data-state="open"]').count() == 0:
+                return
+            page.keyboard.press("Escape")
+            wait_stable(page, 250)
+        except Exception:
+            return
+
+
 def nav_to(page: Page, path: str):
     """Navigate to a page path and wait for network idle + stabilization.
 
     :param page: Playwright page instance.
     :param path: URL path to navigate to (e.g., '/session', '/character/sheet').
     """
+    dismiss_overlays(page)
     page.goto(f"{BASE_URL}{path}")
     page.wait_for_load_state("networkidle")
     wait_stable(page)
@@ -250,7 +277,10 @@ def ensure_edit_mode(page: Page):
     menu_btn.first.click()
     wait_stable(page, 500)
     # If we see "PLAY MODE", we're currently in play mode - click to switch to edit
-    play_btn = page.get_by_text("PLAY MODE", exact=False)
+    # Target the <button>, not the <span> inside it: the mode toggle's label is a
+    # span, and clicking a span inside an open Radix sheet is intercepted by the
+    # sheet's own header, which timed the whole suite out at 30s.
+    play_btn = page.locator('button:has-text("PLAY MODE")')
     if play_btn.count() > 0:
         play_btn.first.click()
         wait_stable(page, 500)
@@ -273,7 +303,7 @@ def ensure_play_mode(page: Page):
     menu_btn.first.click()
     wait_stable(page, 500)
     # If we see "EDIT MODE", we're currently in edit mode - click to switch to play
-    edit_btn = page.get_by_text("EDIT MODE", exact=False)
+    edit_btn = page.locator('button:has-text("EDIT MODE")')
     if edit_btn.count() > 0:
         edit_btn.first.click()
         wait_stable(page, 500)
@@ -570,471 +600,369 @@ def phase_start_session(page: Page, iteration: int) -> bool:
         return False
 
 
-def phase_test_notes(page: Page, iteration: int) -> bool:
-    """Test all note creation types on the Notes screen.
+def phase_test_session_log(page: Page, iteration: int) -> bool:
+    """Test capture on the full-screen session log.
 
-    Tests the following note drawers:
+    Replaces the old ``phase_test_notes``, which drove the Quick Note / Quick
+    NPC / Quick Location drawers. Those were deleted with the quick-action
+    surface; capture now happens entirely on ``/session/log``.
 
-    1. **Quick Note** — fills title, saves generic note
-    2. **Quick NPC** — fills name, role, affiliation, saves NPC note
-    3. **Quick Location** — fills name, type, region, saves location note
-    4. **Link Note** — attempts to link an existing note to the active session
+    Covers:
 
-    :param page: Playwright page instance.
-    :param iteration: Current iteration number.
-    :returns: True if all testable note types were created successfully.
-    :rtype: bool
-    """
-    print(f"  [Notes] Testing all note types...")
-    nav_to(page, "/notes")
-    wait_stable(page, 1000)
-
-    success = True
-
-    # 1. Quick Note
-    print("    Testing Quick Note...")
-    qn_btn = page.get_by_text("Quick Note", exact=True)
-    if qn_btn.count() > 0:
-        qn_btn.first.click()
-        wait_stable(page, 800)
-
-        dialog = page.locator('div[role="dialog"][aria-label="Quick note"]')
-        if dialog.count() > 0:
-            # Fill title
-            title_input = dialog.locator('input[placeholder="Note title (required)"]')
-            if title_input.count() > 0:
-                title_input.first.fill(f"Battle Notes - Iter {iteration}")
-                wait_stable(page, 300)
-
-            # Save
-            save_btn = dialog.get_by_text("Save", exact=True)
-            if save_btn.count() > 0:
-                save_btn.first.click()
-                wait_stable(page, 800)
-                print("      OK: Quick Note saved")
-            else:
-                print("      WARN: No Save button")
-                success = False
-                page.keyboard.press("Escape")
-        else:
-            print("      WARN: Quick note dialog not found")
-            success = False
-    else:
-        print("      WARN: No 'Quick Note' button")
-        success = False
-
-    # 2. Quick NPC
-    print("    Testing Quick NPC...")
-    npc_btn = page.get_by_text("Quick NPC", exact=True)
-    if npc_btn.count() > 0:
-        npc_btn.first.click()
-        wait_stable(page, 800)
-
-        dialog = page.locator('div[role="dialog"][aria-label="Quick NPC"]')
-        if dialog.count() > 0:
-            name_input = dialog.locator('input[placeholder="NPC name (required)"]')
-            if name_input.count() > 0:
-                name_input.first.fill(f"Blacksmith Dorgan")
-
-            role_input = dialog.locator('input[placeholder="Role (optional)"]')
-            if role_input.count() > 0:
-                role_input.first.fill("Weaponsmith")
-
-            affil_input = dialog.locator('input[placeholder="Affiliation (optional)"]')
-            if affil_input.count() > 0:
-                affil_input.first.fill("Outskirt Village")
-
-            wait_stable(page, 300)
-
-            save_btn = dialog.get_by_text("Save NPC")
-            if save_btn.count() > 0:
-                save_btn.first.click()
-                wait_stable(page, 800)
-                print("      OK: Quick NPC saved")
-            else:
-                print("      WARN: No 'Save NPC' button")
-                success = False
-                page.keyboard.press("Escape")
-        else:
-            print("      WARN: Quick NPC dialog not found")
-            success = False
-    else:
-        print("      WARN: No 'Quick NPC' button")
-        success = False
-
-    # 3. Quick Location
-    print("    Testing Quick Location...")
-    loc_btn = page.get_by_text("Location", exact=True)
-    if loc_btn.count() > 0:
-        loc_btn.first.click()
-        wait_stable(page, 800)
-
-        dialog = page.locator('div[role="dialog"][aria-label="Quick Location"]')
-        if dialog.count() > 0:
-            name_input = dialog.locator('input[placeholder="Location name (required)"]')
-            if name_input.count() > 0:
-                name_input.first.fill(f"Dragon's Lair")
-
-            type_input = dialog.locator('input[placeholder*="tavern, dungeon"]')
-            if type_input.count() > 0:
-                type_input.first.fill("dungeon")
-
-            region_input = dialog.locator('input[placeholder="Region (optional)"]')
-            if region_input.count() > 0:
-                region_input.first.fill("Misty Mountains")
-
-            wait_stable(page, 300)
-
-            save_btn = dialog.get_by_text("Save Location")
-            if save_btn.count() > 0:
-                save_btn.first.click()
-                wait_stable(page, 800)
-                print("      OK: Quick Location saved")
-            else:
-                print("      WARN: No 'Save Location' button")
-                success = False
-                page.keyboard.press("Escape")
-        else:
-            print("      WARN: Quick Location dialog not found")
-            success = False
-    else:
-        print("      WARN: No 'Location' button")
-        success = False
-
-    # 4. Link Note (only works with active session)
-    print("    Testing Link Note...")
-    link_btn = page.get_by_text("Link Note", exact=True)
-    if link_btn.count() > 0:
-        link_btn.first.click()
-        wait_stable(page, 800)
-
-        dialog = page.locator('div[role="dialog"][aria-label="Link note to session"]')
-        if dialog.count() > 0:
-            # Try to link the first available note
-            note_btns = dialog.locator('button').all()
-            linked = False
-            for btn in note_btns:
-                try:
-                    text = btn.inner_text()
-                    if text and text not in ["Cancel", "✕", "Link Note to Session"]:
-                        btn.click()
-                        wait_stable(page, 800)
-                        print(f"      OK: Linked note '{text[:30]}'")
-                        linked = True
-                        break
-                except Exception:
-                    continue
-            if not linked:
-                print("      INFO: No notes available to link")
-                page.keyboard.press("Escape")
-                wait_stable(page, 300)
-        else:
-            print("      WARN: Link note dialog not found")
-    else:
-        print("      WARN: No 'Link Note' button")
-
-    screenshot(page, "notes_tested", iteration)
-    return success
-
-
-def phase_combat_10_rounds(page: Page, iteration: int) -> bool:
-    """Start a combat encounter and run 10 full rounds with varied events.
-
-    Each round adds 2-3 random combat events (Attack, Damage, Heal, Note).
-    Every 3rd round tests condition events, every 4th tests spell events,
-    and every 5th tests ability events. Uses ``force=True`` clicks to bypass
-    potential overlay interference from SessionQuickActions.
-
-    After 10 rounds, ends the combat encounter.
+    1. **Route + chrome** - the FAB navigates here and hides itself on arrival.
+    2. **Commit** - three entries appear in the list and the pad clears.
+    3. **Draft protection** - tapping an entry while a draft is pending is
+       refused rather than silently destroying the draft.
+    4. **Edit mode** - with no pending draft, tapping loads the entry behind an
+       "Editing an entry" banner, and Cancel edit exits without saving.
 
     :param page: Playwright page instance.
     :param iteration: Current iteration number.
-    :returns: True if combat ran and ended successfully.
+    :returns: True if every check passed.
     :rtype: bool
     """
-    print(f"  [Combat] Running 10 rounds of combat...")
-    nav_to(page, "/session")
-    wait_stable(page, 1000)
+    print("  [SessionLog] Testing capture on /session/log...")
+    ok = True
 
-    # Start combat
-    start_combat_btn = page.get_by_text("Start Combat")
-    if start_combat_btn.count() == 0:
-        # Maybe there's already a combat - try Resume
-        resume_btn = page.get_by_text("Resume Combat")
-        if resume_btn.count() > 0:
-            resume_btn.first.click()
-            wait_stable(page, 1000)
-        else:
-            print("    WARN: No 'Start Combat' button")
-            screenshot(page, "combat_no_start", iteration)
-            return False
-    else:
-        start_combat_btn.first.click()
-        wait_stable(page, 1500)
-
-    screenshot(page, "combat_started", iteration)
-
-    EVENT_TYPES = ["Attack", "Damage", "Heal", "Note"]
-
-    for round_num in range(1, 11):
-        print(f"    Round {round_num}/10...")
-
-        # Scroll to top of combat area to avoid overlay issues
-        page.evaluate("window.scrollTo(0, 0)")
-        wait_stable(page, 300)
-
-        # Add 2-3 events per round
-        events_this_round = random.randint(2, 3)
-        for ev_idx in range(events_this_round):
-            event_type = random.choice(EVENT_TYPES)
-
-            # Click the event type chip (use force to bypass any overlay)
-            chip = page.get_by_text(event_type, exact=True)
-            if chip.count() > 0:
-                try:
-                    chip.first.click(force=True, timeout=5000)
-                    wait_stable(page, 500)
-                except Exception:
-                    # Try scrolling into view and clicking
-                    chip.first.scroll_into_view_if_needed()
-                    wait_stable(page, 300)
-                    chip.first.click(force=True, timeout=3000)
-                    wait_stable(page, 500)
-
-                # Fill in any visible event form inputs
-                all_inputs = page.locator('input[type="text"]').all()
-                for inp in all_inputs:
-                    try:
-                        ph = inp.get_attribute("placeholder") or ""
-                        if not inp.is_visible():
-                            continue
-                        if "actor" in ph.lower() or "who" in ph.lower():
-                            inp.fill(random.choice(CHAR_NAMES[:5]))
-                        elif "target" in ph.lower():
-                            inp.fill(random.choice(["Goblin", "Orc", "Dragon", "Skeleton"]))
-                        elif "value" in ph.lower() or "damage" in ph.lower() or "amount" in ph.lower():
-                            inp.fill(str(random.randint(1, 12)))
-                        elif "label" in ph.lower() or "description" in ph.lower() or "note" in ph.lower():
-                            inp.fill(f"Combat event R{round_num}")
-                    except Exception:
-                        continue
-
-                # Submit the event
-                add_btn = page.get_by_text("Log Event")
-                if add_btn.count() > 0:
-                    try:
-                        add_btn.first.click(force=True, timeout=3000)
-                        wait_stable(page, 500)
-                    except Exception:
-                        pass
-
-        # Also try condition events
-        if round_num % 3 == 0:
-            try:
-                cond_chip = page.get_by_text("Condition", exact=True)
-                if cond_chip.count() > 0:
-                    cond_chip.first.click(force=True, timeout=3000)
-                    wait_stable(page, 500)
-                    cond_name = random.choice(["Exhausted", "Dazed", "Angry", "Scared"])
-                    cond_btn = page.get_by_text(cond_name, exact=False)
-                    if cond_btn.count() > 0:
-                        cond_btn.first.click(force=True, timeout=3000)
-                        wait_stable(page, 500)
-            except Exception:
-                page.keyboard.press("Escape")
-                wait_stable(page, 300)
-
-        # Try spell/ability events occasionally
-        if round_num % 4 == 0:
-            try:
-                spell_chip = page.get_by_text("Spell", exact=True)
-                if spell_chip.count() > 0:
-                    spell_chip.first.click(force=True, timeout=3000)
-                    wait_stable(page, 800)
-                    page.keyboard.press("Escape")
-                    wait_stable(page, 300)
-            except Exception:
-                pass
-
-        if round_num % 5 == 0:
-            try:
-                ability_chip = page.get_by_text("Ability", exact=True)
-                if ability_chip.count() > 0:
-                    ability_chip.first.click(force=True, timeout=3000)
-                    wait_stable(page, 800)
-                    page.keyboard.press("Escape")
-                    wait_stable(page, 300)
-            except Exception:
-                pass
-
-        screenshot(page, f"combat_round_{round_num}", iteration)
-
-        # Next round (except for last round)
-        if round_num < 10:
-            next_btn = page.get_by_text("Next Round")
-            if next_btn.count() > 0:
-                try:
-                    next_btn.first.click(force=True, timeout=5000)
-                    wait_stable(page, 800)
-                    print(f"      Advanced to round {round_num + 1}")
-                except Exception:
-                    print(f"      WARN: Could not advance to round {round_num + 1}")
-
-    # Close any open drawers before ending combat
-    page.keyboard.press("Escape")
-    wait_stable(page, 500)
-    page.keyboard.press("Escape")
-    wait_stable(page, 300)
-
-    # Scroll to top where End Combat button is
-    page.evaluate("window.scrollTo(0, 0)")
-    wait_stable(page, 300)
-
-    # End combat
-    end_combat_btn = page.get_by_text("End Combat")
-    if end_combat_btn.count() > 0:
-        try:
-            end_combat_btn.first.click(force=True, timeout=5000)
-            wait_stable(page, 1000)
-            print("    OK: Combat ended after 10 rounds")
-        except Exception:
-            print("    WARN: Could not click End Combat, forcing navigation")
-            nav_to(page, "/session")
-            wait_stable(page, 1000)
-
-    screenshot(page, "combat_ended", iteration)
-    return True
-
-
-def phase_test_session_quick_actions(page: Page, iteration: int) -> bool:
-    """Test the Session Quick Actions toolbar on the session screen.
-
-    The SessionQuickActions component provides 14 action chips (Skill Check,
-    Cast Spell, Ability, Condition, Damage, Death Roll, Rest, Camp, Travel,
-    Quote, Rumor, Shopping, Encounter, Loot). This test clicks available chips
-    and interacts with the resulting drawers.
-
-    :param page: Playwright page instance.
-    :param iteration: Current iteration number.
-    :returns: True if at least one quick action was successfully tested.
-    :rtype: bool
-    """
-    print(f"  [QuickActions] Testing session quick actions...")
-    nav_to(page, "/session")
-    wait_stable(page, 1000)
-
-    # The SessionQuickActions component has expandable drawers
-    # Look for skill check, spell, ability chips
-    tested = 0
-
-    # The SessionQuickActions chips may be obscured by session log overlay FABs.
-    # Scroll to the quick actions area first.
-    page.evaluate("window.scrollTo(0, 0)")
-    wait_stable(page, 300)
-
-    # Try clicking chips for quick actions
-    for chip_text in ["Skill Check", "Cast Spell", "Use Ability", "Quick Note", "Quick NPC"]:
-        chip = page.get_by_text(chip_text, exact=False)
-        if chip.count() > 0:
-            try:
-                chip.first.scroll_into_view_if_needed()
-                wait_stable(page, 200)
-                chip.first.click(force=True, timeout=5000)
-                wait_stable(page, 800)
-                tested += 1
-
-                # If a drawer/list opens, interact with the first item
-                list_items = page.locator('button').filter(has=page.locator('text=/^[A-Z]/'))
-                if list_items.count() > 0:
-                    try:
-                        list_items.first.click(timeout=3000)
-                        wait_stable(page, 500)
-
-                        # If it's a skill check, pick a result
-                        for result in ["Success", "Failure", "Dragon (1)", "Demon (20)"]:
-                            result_btn = page.get_by_text(result, exact=True)
-                            if result_btn.count() > 0:
-                                result_btn.first.click(timeout=3000)
-                                wait_stable(page, 500)
-                                break
-                    except Exception:
-                        pass
-
-                # Close any open drawers
-                page.keyboard.press("Escape")
-                wait_stable(page, 500)
-            except Exception as e:
-                print(f"      WARN: Could not click '{chip_text}': {str(e)[:60]}")
-                page.keyboard.press("Escape")
-                wait_stable(page, 300)
-
-    screenshot(page, "quick_actions", iteration)
-    print(f"    OK: Tested {tested} quick action types")
-    return tested > 0
-
-
-def phase_test_session_log_overlay(page: Page, iteration: int) -> bool:
-    """Test the floating session log overlay FABs on character screens.
-
-    The SessionLogOverlay renders floating action buttons (dice, spell, sword
-    emojis) on character tab screens when a session is active AND a character
-    is loaded. Clicks the skill check FAB, selects a skill, applies a modifier
-    (Boon), and picks a result.
-
-    :param page: Playwright page instance.
-    :param iteration: Current iteration number.
-    :returns: True if FABs were found and interacted with, or if absence
-              is expected (no active character).
-    :rtype: bool
-    """
-    print(f"  [LogOverlay] Testing session log overlay...")
     nav_to(page, "/character/sheet")
+    wait_stable(page, 600)
+    fab = page.locator('button[aria-label="Open session log"]')
+    if fab.count() == 0:
+        print("    FAIL: no session-log FAB on /character/sheet")
+        return False
+    fab.first.click()
+    wait_stable(page, 800)
+    if "/session/log" not in page.url:
+        print("    FAIL: FAB did not navigate to the log (url=" + page.url + ")")
+        return False
+    if page.locator('button[aria-label="Open session log"]').count() != 0:
+        print("    FAIL: FAB still rendered on /session/log (would overlap the pad)")
+        ok = False
+    print("    OK: FAB navigates to the log and hides itself there")
+
+    pad = page.locator("textarea").first
+    if pad.count() == 0:
+        print("    FAIL: no write pad on the log route")
+        return False
+
+    texts = [
+        "iter" + str(iteration) + " first entry",
+        "iter" + str(iteration) + " the innkeeper knows more than he is saying",
+        "iter" + str(iteration) + " party sold the drive coupling",
+    ]
+    for text in texts:
+        pad.fill(text)
+        page.locator('button:has-text("Commit")').first.click()
+        wait_stable(page, 700)
+    committed = page.locator("main li button").count()
+    if committed < len(texts):
+        print("    FAIL: expected >= " + str(len(texts)) + " entries, found " + str(committed))
+        ok = False
+    else:
+        print("    OK: committed " + str(len(texts)) + " entries (" + str(committed) + " in list)")
+
+    if pad.input_value() != "":
+        print("    FAIL: pad not cleared after commit")
+        ok = False
+
+    pending = "iter" + str(iteration) + " UNCOMMITTED draft"
+    pad.fill(pending)
+    page.locator("main li button").first.click()
+    wait_stable(page, 500)
+    if pad.input_value() != pending:
+        print("    FAIL: tapping an entry destroyed the in-progress draft")
+        ok = False
+    elif "Editing an entry" in page.inner_text("body"):
+        print("    FAIL: entered edit mode despite a pending draft")
+        ok = False
+    else:
+        print("    OK: pending draft survives a tap on an entry")
+
+    pad.fill("")
+    wait_stable(page, 300)
+    page.locator("main li button").first.click()
+    wait_stable(page, 500)
+    if "Editing an entry" not in page.inner_text("body"):
+        print("    FAIL: no edit-mode banner after tapping an entry")
+        ok = False
+    else:
+        cancel = page.locator('button:has-text("Cancel edit")')
+        if cancel.count() == 0:
+            print("    FAIL: edit mode has no Cancel affordance")
+            ok = False
+        else:
+            cancel.first.click()
+            wait_stable(page, 400)
+            if "Editing an entry" in page.inner_text("body") or pad.input_value() != "":
+                print("    FAIL: Cancel edit did not exit cleanly")
+                ok = False
+            else:
+                print("    OK: edit mode is visible and escapable")
+
+    screenshot(page, "session-log", iteration)
+    return ok
+
+
+def phase_encounter_lifecycle(page: Page, iteration: int) -> bool:
+    """Start an encounter, confirm it becomes active, then end it.
+
+    Replaces the old ``phase_combat_10_rounds``, which looked for a
+    ``Start Combat`` button and drove per-round "Log Event" / "Condition" /
+    "Spell" / "Ability" chips. None of that exists: the domain model calls these
+    Encounters, and the chips belonged to the deleted quick-action surface. The
+    phase had been reporting ``WARN: No 'Start Combat' button`` and failing.
+
+    Scope is deliberately what can be asserted truthfully — the modal opens,
+    an encounter starts and shows as active, and it can be ended. Per-round
+    event logging is left for a future phase written against
+    ``CombatEncounterView`` rather than guessed at here.
+
+    :param page: Playwright page instance.
+    :param iteration: Current iteration number.
+    :returns: True if the encounter started and ended.
+    :rtype: bool
+    """
+    print("  [Encounter] Testing the encounter lifecycle...")
+    nav_to(page, "/session")
     wait_stable(page, 1000)
 
-    # Look for the floating action buttons (dice emoji, spell emoji, sword emoji)
-    # The overlay requires both an active session AND an active character.
-    # If no character is active, the FABs won't appear - this is expected.
-    fab_btns = page.locator('button[title="Log Skill Check"], button[title="Log Spell"], button[title="Log Ability"]')
-    found = fab_btns.count()
+    start_btn = page.locator('button:has-text("Start Encounter")')
+    if start_btn.count() == 0:
+        print("    FAIL: no 'Start Encounter' control on the session screen")
+        return False
+    start_btn.first.click()
+    wait_stable(page, 700)
 
-    if found > 0:
-        # Click the skill check FAB
-        skill_fab = page.locator('button[title="Log Skill Check"]')
-        if skill_fab.count() > 0:
-            skill_fab.first.click()
-            wait_stable(page, 800)
+    dialog = page.locator('[role="dialog"][aria-labelledby="start-encounter-title"]')
+    if dialog.count() == 0:
+        print("    FAIL: Start Encounter modal did not open")
+        return False
+    print("    OK: Start Encounter modal opened")
 
-            # Should show a drawer with skill list
-            # Click first skill
-            skill_btns = page.locator('button').all()
-            for btn in skill_btns:
-                try:
-                    text = btn.inner_text()
-                    if text and text.isupper() and len(text) > 3:
-                        btn.click()
-                        wait_stable(page, 500)
+    title = "iter" + str(iteration) + " ambush on the road"
+    title_input = page.get_by_label("Encounter title")
+    if title_input.count() == 0:
+        print("    FAIL: modal has no encounter-title field")
+        return False
+    title_input.first.fill(title)
+    wait_stable(page, 300)
 
-                        # Click a modifier
-                        boon_btn = page.get_by_text("Boon", exact=True)
-                        if boon_btn.count() > 0:
-                            boon_btn.first.click()
-                            wait_stable(page, 300)
+    submit = dialog.first.locator('button:has-text("Start")')
+    if submit.count() == 0:
+        print("    FAIL: modal has no Start button")
+        return False
+    submit.first.click()
+    wait_stable(page, 1400)
 
-                        # Pick a result
-                        success_btn = page.get_by_text("Success", exact=True)
-                        if success_btn.count() > 0:
-                            success_btn.first.click()
-                            wait_stable(page, 500)
-                        break
-                except Exception:
-                    continue
+    if page.locator('[role="dialog"][aria-labelledby="start-encounter-title"]').count() != 0:
+        print("    FAIL: modal stayed open after Start")
+        return False
 
-        screenshot(page, "log_overlay", iteration)
-        print(f"    OK: Found {found} FAB buttons, tested skill log")
-        return True
+    # The session screen does not print the encounter's title inline; it surfaces
+    # an "Open Active Encounter" button, and the title lives inside the encounter
+    # view. Asserting on the title here was wrong about the app, not the reverse.
+    open_btn = page.locator('button:has-text("Open Active Encounter")')
+    if open_btn.count() == 0:
+        print("    FAIL: no 'Open Active Encounter' after starting one")
+        screenshot(page, "encounter-lifecycle", iteration)
+        return False
+    print("    OK: encounter started and shows as active")
+
+    open_btn.first.click()
+    wait_stable(page, 1000)
+    if title not in page.inner_text("body"):
+        print("    FAIL: encounter view does not show the title '" + title + "'")
+        screenshot(page, "encounter-lifecycle", iteration)
+        return False
+    print("    OK: encounter view opened on the right encounter")
+
+    ok = True
+    end_btn = page.locator('button:has-text("End Encounter")')
+    if end_btn.count() == 0:
+        print("    FAIL: encounter view has no End Encounter control")
+        ok = False
     else:
-        print("    INFO: No session log overlay FABs (requires active session + active character)")
-        return True  # Not a failure - just means no active character on character screen
+        end_btn.first.click()
+        wait_stable(page, 800)
+        confirm = page.locator('[role="dialog"] button:has-text("End Encounter")')
+        if confirm.count() > 0:
+            confirm.last.click()
+            wait_stable(page, 1200)
+        nav_to(page, "/session")
+        wait_stable(page, 900)
+        if page.locator('button:has-text("Open Active Encounter")').count() != 0:
+            print("    FAIL: encounter still active after End Encounter")
+            ok = False
+        else:
+            print("    OK: encounter ended and is no longer active")
+
+    screenshot(page, "encounter-lifecycle", iteration)
+    return ok
+
+
+
+
+def phase_test_promote_flow(page: Page, iteration: int) -> bool:
+    """Test selecting log entries and promoting them into a typed note.
+
+    Replaces the old ``phase_test_session_quick_actions``, which drove the
+    deleted 14-chip SessionQuickActions toolbar.
+
+    Selection is bound to ``onContextMenu`` - a right-click with a mouse, a
+    long-press on touch - and once anything is selected, ordinary clicks toggle.
+    The load-bearing assertion is that **the raw entries survive promotion**:
+    the log is the permanent record and promotion only ever adds a note.
+
+    :param page: Playwright page instance.
+    :param iteration: Current iteration number.
+    :returns: True if the promote flow completed and the raw log was preserved.
+    :rtype: bool
+    """
+    print("  [Promote] Testing select -> promote...")
+    nav_to(page, "/session/log")
+    wait_stable(page, 800)
+
+    rows = page.locator("main li button")
+    before = rows.count()
+    if before < 2:
+        print("    SKIP: need >= 2 entries to test promotion, found " + str(before))
+        return True
+
+    rows.nth(0).click(button="right")
+    wait_stable(page, 400)
+    toolbar = page.locator('[role="toolbar"][aria-label="Selection actions"]')
+    if toolbar.count() == 0:
+        print("    FAIL: right-click did not enter selection mode")
+        return False
+    rows.nth(1).click()
+    wait_stable(page, 300)
+    if "2 selected" not in toolbar.first.inner_text():
+        print("    FAIL: second click did not extend the selection")
+        return False
+    print("    OK: right-click selects, click extends")
+
+    toolbar.first.locator('button:has-text("Promote")').click()
+    wait_stable(page, 600)
+    sheet = page.locator('[role="dialog"][aria-label="Promote entries"]')
+    if sheet.count() == 0:
+        print("    FAIL: promote sheet did not open")
+        return False
+
+    try:
+        page.get_by_role("textbox", name="Note title").fill(
+            "iter" + str(iteration) + " promoted lead"
+        )
+    except Exception:
+        pass
+
+    sheet.first.locator('button:has-text("Create note")').click()
+    wait_stable(page, 1200)
+
+    ok = True
+    if page.locator('[role="dialog"][aria-label="Promote entries"]').count() != 0:
+        print("    FAIL: promote sheet stayed open after Create note")
+        ok = False
+
+    after = page.locator("main li button").count()
+    if after != before:
+        print("    FAIL: raw log changed on promotion (" + str(before) + " -> "
+              + str(after) + "); entries must be preserved")
+        ok = False
+    else:
+        print("    OK: all " + str(after) + " raw entries preserved after promotion")
+
+    badges = page.locator("[data-promoted-into]")
+    n_badges = badges.count()
+    if n_badges < 2:
+        print("    FAIL: expected 2 Promoted badges, found " + str(n_badges))
+        ok = False
+    else:
+        targets = set()
+        for i in range(n_badges):
+            targets.add(badges.nth(i).get_attribute("data-promoted-into"))
+        if len(targets) != 1:
+            print("    FAIL: badges point at " + str(len(targets))
+                  + " different notes, expected 1")
+            ok = False
+        else:
+            print("    OK: both entries badged, pointing at one target note")
+
+    screenshot(page, "promote-flow", iteration)
+    return ok
+
+
+def phase_test_timeline_log_lane(page: Page, iteration: int) -> bool:
+    """Test the session timeline's Log lane.
+
+    Replaces the old ``phase_test_session_log_overlay``, which drove the deleted
+    SessionLogOverlay FABs.
+
+    The lane is deliberately **hidden by default** (``defaultHidden``) so a
+    session's worth of raw capture does not bury the promoted notes the timeline
+    exists to surface - but it must remain switchable from the Tracks menu. Both
+    halves are asserted, because the first mechanism tried here satisfied the
+    "hidden" half while leaving the lane permanently unreachable.
+
+    :param page: Playwright page instance.
+    :param iteration: Current iteration number.
+    :returns: True if the lane is hidden on load and revealable on demand.
+    :rtype: bool
+    """
+    print("  [Timeline] Testing the Log lane...")
+    nav_to(page, "/session")
+    wait_stable(page, 1200)
+
+    def track_rows():
+        rows = page.locator("main button")
+        out = []
+        for i in range(rows.count()):
+            try:
+                text = rows.nth(i).inner_text().replace("\n", " | ").strip()
+            except Exception:
+                continue
+            if ("Session log entries" in text
+                    or "Overall session span" in text
+                    or "Encounter beats" in text):
+                out.append(text)
+        return out
+
+    before = track_rows()
+    if any(r.startswith("Log |") for r in before):
+        print("    FAIL: Log lane visible on first render; it must start hidden")
+        return False
+    print("    OK: Log lane hidden on first render")
+
+    tracks_btn = page.locator('button:has-text("Tracks")')
+    if tracks_btn.count() == 0:
+        print("    SKIP: no Tracks control on this screen")
+        return True
+    tracks_btn.first.click()
+    wait_stable(page, 500)
+
+    items = page.locator('div[role="menuitem"]')
+    log_index = -1
+    for i in range(items.count()):
+        if items.nth(i).inner_text().strip().startswith("Log"):
+            log_index = i
+            break
+    if log_index < 0:
+        print("    FAIL: Tracks menu omits the Log lane, so it can never be revealed")
+        return False
+    print("    OK: Tracks menu lists the Log lane")
+
+    items.nth(log_index).click()
+    wait_stable(page, 600)
+    page.keyboard.press("Escape")
+    wait_stable(page, 400)
+
+    after = track_rows()
+    if not any(r.startswith("Log |") for r in after):
+        print("    FAIL: toggling the Tracks entry did not reveal the Log lane")
+        return False
+    print("    OK: Log lane revealed from the Tracks menu")
+
+    screenshot(page, "timeline-log-lane", iteration)
+    return True
 
 
 def phase_test_character_subscreens(page: Page, iteration: int) -> bool:
@@ -1173,17 +1101,49 @@ def phase_end_session(page: Page, iteration: int) -> bool:
 
 
 def phase_verify_notes_screen(page: Page, iteration: int) -> bool:
-    """Verify notes are visible and pin/unpin works."""
-    print(f"  [Verify] Checking notes screen final state...")
-    nav_to(page, "/notes")
-    wait_stable(page, 1000)
+    """Verify the promoted note is discoverable in the Session Notes panel.
 
-    # Count notes
-    note_items = page.locator('div').filter(has_text="Battle Notes")
-    count = note_items.count()
-    print(f"    Found ~{count} note references on screen")
+    This is a stronger check than it looks. The panel reads ``kb_nodes``, not
+    ``notes``, so a note whose graph node was never written is present in the
+    database and invisible here. That is exactly how imported notes used to
+    disappear, and how promoted notes disappeared before the repository started
+    firing ``syncNote``. Finding the title proves the whole write path ran.
+
+    The previous version of this phase navigated ``/notes`` (now a redirect),
+    counted ``div``s containing hardcoded text from an unrelated fixture, and
+    returned ``True`` unconditionally - it could not fail.
+
+    :param page: Playwright page instance.
+    :param iteration: Current iteration number.
+    :returns: True if the promoted note is listed, or if none was created.
+    :rtype: bool
+    """
+    print("  [Verify] Checking the promoted note is discoverable...")
+    expected = "iter" + str(iteration) + " promoted lead"
+
+    nav_to(page, "/session")
+    wait_stable(page, 1200)
+
+    body = page.inner_text("body")
+    if expected in body:
+        print("    OK: promoted note listed in the Session Notes panel")
+        screenshot(page, "notes_final", iteration)
+        return True
+
+    # Fall back to the panel's own search, which queries the same index.
+    search = page.get_by_placeholder("Search notes, characters, locations...")
+    if search.count() > 0:
+        search.first.fill("promoted lead")
+        wait_stable(page, 900)
+        if expected in page.inner_text("body"):
+            print("    OK: promoted note found via Session Notes search")
+            screenshot(page, "notes_final", iteration)
+            return True
+
+    print("    FAIL: promoted note '" + expected + "' is not discoverable in the "
+          "Session Notes panel - its KB node was probably never written")
     screenshot(page, "notes_final", iteration)
-    return True
+    return False
 
 
 def phase_test_descriptor_chips(page: Page, iteration: int) -> bool:
@@ -1201,29 +1161,21 @@ def phase_test_descriptor_chips(page: Page, iteration: int) -> bool:
     :rtype: bool
     """
     print(f"  [Descriptors] Testing #descriptor chips...")
-    nav_to(page, "/notes")
-    wait_stable(page, 1000)
-
+    # Retargeted: this phase used to open the Quick Note drawer, which was
+    # deleted with the quick-action surface. The descriptor extension itself is
+    # very much alive, and the note editor at `/note/new` is now the way in.
     note_title = f"Descriptor Test {iteration}"
 
-    # Open Quick Note drawer
-    qn_btn = page.get_by_text("Quick Note", exact=True)
-    if qn_btn.count() == 0:
-        print("    WARN: No Quick Note button — skipping descriptor test")
+    nav_to(page, "/note/new")
+    wait_stable(page, 1200)
+
+    # The editor screen is the whole page here, not a dialog.
+    dialog = page.locator("main")
+    if dialog.count() == 0:
+        print("    WARN: note editor did not render — skipping descriptor test")
         return True
 
-    qn_btn.first.click()
-    wait_stable(page, 800)
-
-    dialog = page.locator('div[role="dialog"]').filter(has_text="Quick note")
-    if dialog.count() == 0:
-        dialog = page.locator('div[role="dialog"]').first
-    if dialog.count() == 0:
-        print("    WARN: Note dialog not found — skipping descriptor test")
-        return True
-
-    # Fill title
-    title_input = dialog.locator('input[placeholder*="title"]').first
+    title_input = page.locator('input[placeholder*="itle"], input[aria-label*="itle"]').first
     if title_input.count() > 0:
         try:
             title_input.wait_for(state="visible", timeout=3000)
@@ -1286,7 +1238,7 @@ def phase_test_descriptor_chips(page: Page, iteration: int) -> bool:
     # Test B: Navigate away and back, check for descriptor chip row on NoteItem
     nav_to(page, "/session")
     wait_stable(page, 500)
-    nav_to(page, "/notes")
+    nav_to(page, "/session?view=notes")
     wait_stable(page, 1000)
 
     found_chip_row = False
@@ -1309,101 +1261,29 @@ def phase_test_descriptor_chips(page: Page, iteration: int) -> bool:
     return True  # Non-blocking — descriptor chips are progressive enhancement
 
 
-def phase_test_partypicker(page: Page, iteration: int) -> bool:
-    """Test PartyPicker sticky 'Who?' header and active character pre-selection.
-
-    Test C: Open a session, open a quick-action drawer (e.g. Skill Check),
-    scroll the drawer down, and assert the 'Who?' section is still visible.
-
-    Test D: Verify the active character is pre-selected (highlighted chip)
-    in the Who? picker without any user interaction.
-
-    :param page: Playwright page instance.
-    :param iteration: Current iteration number.
-    :returns: True if PartyPicker tests passed or were gracefully skipped.
-    :rtype: bool
-    """
-    print(f"  [PartyPicker] Testing sticky header and pre-selection...")
-    nav_to(page, "/session")
-    wait_stable(page, 1000)
-
-    # Ensure a session is active
-    end_btn = page.get_by_text("End Session", exact=True)
-    if end_btn.count() == 0:
-        print("    INFO: No active session — skipping PartyPicker test")
-        return True
-
-    # Open a quick-action drawer that shows the PartyPicker (e.g. Skill Check)
-    skill_chip = page.get_by_text("Skill Check", exact=False)
-    if skill_chip.count() == 0:
-        skill_chip = page.get_by_text("Skill", exact=False)
-
-    if skill_chip.count() == 0:
-        print("    WARN: No Skill Check chip found — skipping PartyPicker test")
-        return True
-
-    try:
-        skill_chip.first.scroll_into_view_if_needed()
-        wait_stable(page, 200)
-        skill_chip.first.click(force=True, timeout=5000)
-        wait_stable(page, 1000)
-    except Exception as e:
-        print(f"    WARN: Could not open Skill Check drawer: {str(e)[:60]}")
-        return True
-
-    # Test C: Verify 'Who?' section is visible (sticky header)
-    who_section = page.get_by_text("Who?", exact=True)
-    if who_section.count() == 0:
-        who_section = page.get_by_text("Who", exact=False).first
-
-    sticky_visible = False
-    if who_section.count() > 0:
-        try:
-            # Scroll down inside the drawer
-            drawer = page.locator('div[role="dialog"]').last
-            if drawer.count() > 0:
-                page.evaluate("document.querySelector('[role=\"dialog\"]').scrollTop = 300")
-                wait_stable(page, 400)
-            # After scroll, Who? section should still be visible (sticky)
-            if who_section.first.is_visible():
-                sticky_visible = True
-                print("      OK: 'Who?' section visible after scroll (sticky)")
-            else:
-                print("      WARN: 'Who?' section not visible after scroll")
-        except Exception:
-            pass
-    else:
-        print("      INFO: 'Who?' section not found — party picker may not be open")
-
-    # Test D: Check for pre-selected active character chip
-    pre_selected = False
-    # Look for a chip button with accent background or selected state
-    # The active character chip will have background: var(--color-accent)
-    # We check for any chip that appears highlighted/selected
-    selected_chips = page.locator('button[style*="--color-accent"]').all()
-    if len(selected_chips) > 0:
-        pre_selected = True
-        print(f"      OK: Found {len(selected_chips)} pre-selected chip(s) in Who? picker")
-    else:
-        # Also try looking for a chip with high contrast text or checked aria-state
-        party_chips = page.locator('button').filter(has_text=page.locator('span')).all()
-        # Gracefully accept if we can see any party member chips at all
-        all_chips = page.locator('button[style*="border-radius: 15px"], button[style*="border-radius:15px"]').all()
-        if len(all_chips) > 0:
-            print(f"      INFO: Found {len(all_chips)} party chips — pre-selection state unverified")
-        else:
-            print("      INFO: No party chips found (party may be empty)")
-
-    # Close drawer
-    page.keyboard.press("Escape")
-    wait_stable(page, 500)
-
-    screenshot(page, "partypicker_test", iteration)
-    print(f"    OK: PartyPicker test complete (sticky={sticky_visible}, pre_selected={pre_selected})")
-    return True
 
 
 # ── Main Runner ──────────────────────────────────────────────────
+
+#: Every phase key an iteration is expected to record, in execution order.
+#: `run_iteration` pre-seeds all of them to ``None`` so a phase that never ran
+#: is reported as NOT RUN rather than vanishing from the results.
+PHASE_KEYS = [
+    "campaign",
+    "characters",
+    "party",
+    "session_start",
+    "session_log",
+    "promote_flow",
+    "timeline_log_lane",
+    "descriptor_chips",
+    "encounter",
+    "char_screens",
+    "other_screens",
+    "notes_verify",
+    "session_end",
+]
+
 
 def run_iteration(browser, iteration: int) -> dict:
     """Run one full test iteration through all 12 test phases.
@@ -1437,7 +1317,11 @@ def run_iteration(browser, iteration: int) -> dict:
     page_errors = []
     page.on("pageerror", lambda err: page_errors.append(str(err)))
 
-    results = {}
+    # Pre-seeded with None ("did not run") for every phase. Previously `results`
+    # started empty, so an iteration that threw partway through simply omitted
+    # every later phase -- and the pass-rate maths below counted only what ran.
+    # A crash at phase two therefore reported 100% and exited 0.
+    results = {key: None for key in PHASE_KEYS}
     try:
         nav_to(page, "/")
         wait_stable(page, 1000)
@@ -1447,12 +1331,11 @@ def run_iteration(browser, iteration: int) -> dict:
         results["characters"] = len(char_names) == 5
         results["party"] = phase_manage_party(page, iteration, char_names)
         results["session_start"] = phase_start_session(page, iteration)
-        results["notes"] = phase_test_notes(page, iteration)
+        results["session_log"] = phase_test_session_log(page, iteration)
+        results["promote_flow"] = phase_test_promote_flow(page, iteration)
+        results["timeline_log_lane"] = phase_test_timeline_log_lane(page, iteration)
         results["descriptor_chips"] = phase_test_descriptor_chips(page, iteration)
-        results["partypicker"] = phase_test_partypicker(page, iteration)
-        results["combat"] = phase_combat_10_rounds(page, iteration)
-        results["quick_actions"] = phase_test_session_quick_actions(page, iteration)
-        results["log_overlay"] = phase_test_session_log_overlay(page, iteration)
+        results["encounter"] = phase_encounter_lifecycle(page, iteration)
         results["char_screens"] = phase_test_character_subscreens(page, iteration)
         results["other_screens"] = phase_test_other_screens(page, iteration)
         results["notes_verify"] = phase_verify_notes_screen(page, iteration)
@@ -1479,7 +1362,10 @@ def run_iteration(browser, iteration: int) -> dict:
                 for item in val[:5]:
                     print(f"      - {item[:120]}")
             continue
-        status = "PASS" if val else "FAIL"
+        if key == "exception":
+            print(f"    {key}: FAIL ({str(val)[:100]})")
+            continue
+        status = "PASS" if val is True else ("NOT RUN" if val is None else "FAIL")
         print(f"    {key}: {status}")
 
     return results
@@ -1532,16 +1418,27 @@ def main():
 
     total_passes = 0
     total_tests = 0
+    total_not_run = 0
+    total_crashed = 0
     for result in all_results:
+        if result.get("exception") or result.get("critical_error"):
+            total_crashed += 1
         for key, val in result.items():
-            if key not in ("console_errors", "page_errors", "exception", "critical_error"):
-                total_tests += 1
-                if val:
-                    total_passes += 1
+            if key in ("console_errors", "page_errors", "exception", "critical_error"):
+                continue
+            total_tests += 1
+            if val is True:
+                total_passes += 1
+            elif val is None:
+                # Never ran, because the iteration threw before reaching it.
+                # Counted as a failure: an unexecuted assertion is not a pass.
+                total_not_run += 1
 
     print(f"  Total tests: {total_tests}")
     print(f"  Passes: {total_passes}")
-    print(f"  Failures: {total_tests - total_passes}")
+    print(f"  Failures: {total_tests - total_passes - total_not_run}")
+    print(f"  Did not run: {total_not_run}")
+    print(f"  Iterations that crashed: {total_crashed}/{len(all_results)}")
     print(f"  Pass rate: {total_passes/max(total_tests,1)*100:.1f}%")
 
     if issues_found:
@@ -1559,7 +1456,9 @@ def main():
         f.write(f"{'='*60}\n\n")
         f.write(f"Total tests: {total_tests}\n")
         f.write(f"Passes: {total_passes}\n")
-        f.write(f"Failures: {total_tests - total_passes}\n")
+        f.write(f"Failures: {total_tests - total_passes - total_not_run}\n")
+        f.write(f"Did not run: {total_not_run}\n")
+        f.write(f"Iterations that crashed: {total_crashed}/{len(all_results)}\n")
         f.write(f"Pass rate: {total_passes/max(total_tests,1)*100:.1f}%\n\n")
         f.write("Issues:\n")
         seen = set()
@@ -1569,7 +1468,10 @@ def main():
                 seen.add(key)
                 f.write(f"  [{issue['type']}] {issue['detail'][:200]} (iter {issue['iteration']})\n")
 
-    return 0 if (total_tests - total_passes) == 0 else 1
+    # An exception used to be excluded from the tally entirely, so a run that
+    # crashed after the first phase exited 0. Any failure, any unrun phase, or
+    # any crashed iteration now fails the suite.
+    return 0 if (total_passes == total_tests and total_crashed == 0) else 1
 
 
 if __name__ == "__main__":
