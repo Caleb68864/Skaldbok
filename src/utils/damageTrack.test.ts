@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyDamage, damageStatus } from './damageTrack';
+import { applyDamage, damageStatus, statusConditions } from './damageTrack';
 import { travellerEngine } from '../features/systems/engine/travellerEngine';
 import type { CharacterRecord } from '../types/character';
 import type { DamageTrackModel } from '../features/systems/engine/types';
@@ -39,16 +39,43 @@ describe('applyDamage', () => {
   });
 
   it('ignores an overflow target the system does not allow', () => {
-    // 'soc' is a characteristic but not part of the damage track.
+    // 'soc' is a characteristic but not part of the damage track, so the choice
+    // is discarded. The damage is NOT discarded with it — it follows the model's
+    // own overflow order (STR first). This assertion previously expected the
+    // remaining 2 points to vanish, which encoded the stranding bug.
     const r = applyDamage(character(), model, 9, 'soc');
-    expect(r.dealt).toEqual({ end: 7 });
-    expect(r.unassigned).toBe(2);
+    expect(r.dealt).toEqual({ end: 7, str: 2 });
+    expect(r.unassigned).toBe(0);
   });
 
   it('reports damage that has nowhere left to go', () => {
-    const r = applyDamage(character({ end: 7, str: 7 }), model, 10, 'str');
+    // Every track full, so there is genuinely nowhere for it to go.
+    const r = applyDamage(character({ end: 7, str: 7, dex: 7 }), model, 10, 'str');
     expect(r.unassigned).toBe(10);
     expect(r.dealt).toEqual({});
+  });
+
+  it('continues past the chosen overflow into the remaining tracks', () => {
+    // The finding: STR/DEX/END all 7 and one hit of 20 used to fill END and STR,
+    // silently strand 6, leave DEX untouched and report 'down'. deadAtDepleted
+    // is 3, so death was unreachable in a single application.
+    const r = applyDamage(character(), model, 20, 'str');
+    expect(r.dealt).toEqual({ end: 7, str: 7, dex: 6 });
+    expect(r.unassigned).toBe(0);
+    expect(r.depleted).toEqual(expect.arrayContaining(['end', 'str']));
+  });
+
+  it('kills outright when one hit depletes every track', () => {
+    const r = applyDamage(character(), model, 21, 'str');
+    expect(r.unassigned).toBe(0);
+    expect(r.depleted.sort()).toEqual(['dex', 'end', 'str']);
+    expect(r.status).toBe('dead');
+  });
+
+  it('keeps the player choice first when continuing', () => {
+    // DEX chosen, so DEX takes the first overflow and STR only the leftovers.
+    const r = applyDamage(character(), model, 20, 'dex');
+    expect(r.dealt).toEqual({ end: 7, dex: 7, str: 6 });
   });
 
   it('skips a track that is already full and uses the next one', () => {
@@ -84,9 +111,11 @@ describe('applyDamage', () => {
     const r = applyDamage(character(), model, 100, 'str');
     expect(r.resources['end']).toBe(7);
     expect(r.resources['str']).toBe(7);
-    // dex is untouched: only one overflow target is chosen per hit.
-    expect(r.resources['dex']).toBeUndefined();
-    expect(r.unassigned).toBe(86);
+    // DEX fills too. The old assertion here was that DEX stayed untouched
+    // because "only one overflow target is chosen per hit" — that premise was
+    // the bug, not the rule.
+    expect(r.resources['dex']).toBe(7);
+    expect(r.unassigned).toBe(100 - 21);
   });
 });
 
@@ -120,5 +149,34 @@ describe('systems without a cascading track', () => {
     // null means "damage lands on one pool and stops" — the death-roll model
     // handles being at 0, so no cascade UI should render.
     expect(classicFantasyEngine.damageTrack).toBeNull();
+  });
+});
+
+describe('statusConditions', () => {
+  it('sets the down condition when the character is down', () => {
+    expect(statusConditions(model, 'down')).toEqual({ unconscious: true });
+  });
+
+  it('sets it when dead too — dead implies down', () => {
+    expect(statusConditions(model, 'dead')).toEqual({ unconscious: true });
+  });
+
+  // Without this, Recover All cleared every track but left the character
+  // flagged unconscious, and the print sheet kept reporting them out.
+  it('clears the condition when the status returns to ok', () => {
+    expect(statusConditions(model, 'ok')).toEqual({ unconscious: false });
+  });
+
+  it('never mentions a condition the model does not claim', () => {
+    // 'fatigued' and 'wounded' are the player's to tick, so they must not
+    // appear in the update at all — not even as false.
+    const keys = Object.keys(statusConditions(model, 'down'));
+    expect(keys).not.toContain('fatigued');
+    expect(keys).not.toContain('wounded');
+  });
+
+  it('is empty for a system that declares no mapping', () => {
+    const noMapping = { ...model, statusConditions: undefined };
+    expect(statusConditions(noMapping, 'dead')).toEqual({});
   });
 });

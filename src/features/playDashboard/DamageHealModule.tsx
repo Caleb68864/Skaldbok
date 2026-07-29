@@ -3,7 +3,7 @@ import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { nowISO } from '../../utils/dates';
 import type { PlayModuleProps } from './types';
 import { getEngine } from '../systems/engine';
-import { applyDamage, damageStatus } from '../../utils/damageTrack';
+import { applyDamage, damageStatus, statusConditions } from '../../utils/damageTrack';
 import { useSessionLog } from '../session/useSessionLog';
 
 /**
@@ -53,14 +53,38 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
 
   const labelFor = (id: string) => system?.resources.find(r => r.id === id)?.name ?? id.toUpperCase();
 
-  /** Writes new track `current` values back to the character. */
+  /**
+   * Writes new track `current` values back to the character, keeping any
+   * status-implied condition flags in step.
+   *
+   * @remarks
+   * Every path that changes the track — damage, heal, Recover All — goes through
+   * here, which is why the condition sync lives here rather than in each handler.
+   * Status is recomputed from the *post-write* resources, so healing out of an
+   * unconscious state clears the flag as reliably as taking the hit set it.
+   *
+   * Previously nothing wrote these flags at all: the banner read UNCONSCIOUS
+   * while `conditions.unconscious` stayed false, so the print sheet and every
+   * export recorded a character who was up.
+   */
   function writeResources(next: Record<string, number>) {
     updateCharacter(prev => {
       const resources = { ...prev.resources };
       for (const [id, current] of Object.entries(next)) {
         resources[id] = { ...resources[id], current };
       }
-      return { resources, updatedAt: nowISO() };
+      const implied = statusConditions(
+        track,
+        damageStatus({ ...prev, resources } as typeof prev, track),
+      );
+      if (Object.keys(implied).length === 0) {
+        return { resources, updatedAt: nowISO() };
+      }
+      return {
+        resources,
+        conditions: { ...prev.conditions, ...implied },
+        updatedAt: nowISO(),
+      };
     });
   }
 

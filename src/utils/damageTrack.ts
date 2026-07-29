@@ -41,11 +41,24 @@ export function applyDamage(
   // Primary defaults to the model's order (END-first); a caller may name any
   // track the model knows about. Overflow stays restricted to `overflowTo`.
   const primary = primaryTarget && allTracks.includes(primaryTarget) ? [primaryTarget] : [...model.order];
-  const overflow =
+  const chosenOverflow =
     overflowTarget && model.overflowTo.includes(overflowTarget) && overflowTarget !== primary[0]
       ? [overflowTarget]
       : [];
-  const sequence = [...new Set([...primary, ...overflow])];
+  // Continue through the model's remaining overflow tracks after the chosen one.
+  // Stopping at `[primary, chosen]` meant a big hit stranded its remainder: with
+  // STR/DEX/END all 7/7, 20 damage filled END and STR, silently dropped the last
+  // 6, left DEX untouched, and reported `down` — so `deadAtDepleted: 3` was
+  // unreachable in a single application and one hit could never kill.
+  //
+  // The player's choice still decides which track is hit *first*; the rest follow
+  // the model's own order. Overflow stays restricted to `overflowTo`, so an
+  // out-of-range choice falls back to that order rather than stranding the
+  // damage — losing points silently is worse at the table than defaulting.
+  const remainingOverflow = model.overflowTo.filter(
+    id => id !== primary[0] && !chosenOverflow.includes(id),
+  );
+  const sequence = [...new Set([...primary, ...chosenOverflow, ...remainingOverflow])];
 
   for (const id of sequence) {
     if (remaining <= 0) break;
@@ -72,6 +85,40 @@ export function applyDamage(
         : 'ok';
 
   return { resources, dealt, unassigned: remaining, depleted, status };
+}
+
+/**
+ * Condition flags implied by a damage status, per the model's own declaration.
+ *
+ * @remarks
+ * Returns every id the model claims for `down`/`dead`, mapped to whether it
+ * should now be set. A status of `'ok'` clears them, so recovering fully does
+ * not leave a stale "Unconscious" behind. Ids the model does not claim are
+ * absent from the result and so are never written — a manually-ticked condition
+ * is the player's, not ours.
+ *
+ * Empty when the system declares no mapping (Savage Worlds sets conditions
+ * through `resolveDamage().setsConditions` instead).
+ *
+ * @param model - The system's damage-track rules.
+ * @param status - Status reported by {@link applyDamage} or {@link damageStatus}.
+ * @returns Condition id → whether it should be set.
+ */
+export function statusConditions(
+  model: DamageTrackModel,
+  status: DamageApplication['status'],
+): Record<string, boolean> {
+  const declared = model.statusConditions;
+  if (!declared) return {};
+  const owned = [...new Set([...(declared.down ?? []), ...(declared.dead ?? [])])];
+  const active = new Set(
+    status === 'dead'
+      ? [...(declared.dead ?? []), ...(declared.down ?? [])]
+      : status === 'down'
+        ? (declared.down ?? [])
+        : [],
+  );
+  return Object.fromEntries(owned.map(id => [id, active.has(id)]));
 }
 
 /**

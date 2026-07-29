@@ -292,6 +292,15 @@ export const travellerEngine: SystemEngine = {
     deadAtDepleted: 3,
     downLabel: 'UNCONSCIOUS',
     deadLabel: 'DEAD',
+    // A depleted physical track is what "Unconscious" means in Mongoose 2e, so
+    // the stored flag follows the banner instead of the two disagreeing.
+    // `wounded` is left to the player: its description ("Physical damage track
+    // is depleted") overlaps, but a GM may want it ticked before a full
+    // depletion, and auto-owning it would fight them.
+    statusConditions: {
+      down: ['unconscious'],
+      dead: ['unconscious'],
+    },
   },
   // Psionics exist but the app does not automate a PP economy yet.
   magic: null,

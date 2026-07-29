@@ -853,3 +853,32 @@
   spell edit drawer writes a literal `wpCost: 2` default, and `SpellCard` prints
   the header "WP Cost:".
 - Commit: fix(magic) — drive the casting economy from engine.magic.
+
+## 2026-07-29 — One hit could never kill, and being knocked out was never recorded
+- Symptom: two defects in the Traveller damage track. (a) `applyDamage` built its
+  sequence as `[primary, exactly one overflow]`, so with STR/DEX/END all 7 a hit
+  of 20 filled END and STR, **silently stranded the last 6**, left DEX untouched
+  and reported `down`. `deadAtDepleted: 3` was therefore unreachable in a single
+  application — death needed three separate hits. (b) `result.status` only ever
+  fed the on-screen message, so a knocked-out character showed the UNCONSCIOUS
+  banner while `conditions.unconscious` stayed false; neither the print sheet nor
+  any export recorded that they were out of the fight.
+- Fix: (a) the sequence continues through the model's remaining `overflowTo`
+  entries after the player's chosen one; the choice still decides which track is
+  hit *first*. An out-of-range choice now falls back to the model order rather
+  than stranding the damage — losing points silently is worse at the table than
+  defaulting. (b) new `DamageTrackModel.statusConditions` declares which
+  conditions a status implies, and `statusConditions()` maps status → flags.
+  Synced inside `writeResources`, the single choke point for damage, heal and
+  Recover All, and computed from the post-write resources so healing out of it
+  clears the flag as reliably as the hit set it.
+- Surfaces: utils/damageTrack.ts (+10 tests), features/systems/engine/types.ts,
+  travellerEngine.ts, features/playDashboard/DamageHealModule.tsx.
+- Watch: **three existing tests encoded the bug** and had to be rewritten —
+  "reports damage that has nowhere left to go", "ignores an overflow target the
+  system does not allow", and "never exceeds a track maximum", the last of which
+  asserted DEX stayed untouched "because only one overflow target is chosen per
+  hit". That premise was the defect, not the rule. A green suite is no evidence
+  when the assertions were written from the implementation. Only ids a model
+  claims are ever synced, so a manually-ticked `fatigued` is never touched.
+- Commit: fix(traveller) — cascade damage through every track, and record being down.

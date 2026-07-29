@@ -321,6 +321,30 @@ export interface DamageTrackModel {
   downLabel: string;
   /** Banner text when `deadAtDepleted` is reached. */
   deadLabel: string;
+  /**
+   * Condition ids this system considers implied by a damage status, so the
+   * stored flags stay in step with the banner.
+   *
+   * @remarks
+   * `applyDamage` reports a status, but nothing used to *write* it: a character
+   * knocked out showed the `downLabel` banner while
+   * `character.conditions.unconscious` stayed false, so neither the print sheet
+   * nor an export recorded that they were out of the fight.
+   *
+   * Which condition a status implies is a ruleset question — Traveller's
+   * depleted physical track means unconscious; Savage Worlds routes conditions
+   * through `resolveDamage().setsConditions` instead — so it is declared here
+   * rather than mapped in a screen.
+   *
+   * Only the ids listed here are ever synced, in both directions. A flag the
+   * model does not claim (a manually-ticked `fatigued`) is never touched, and a
+   * status back to `ok` clears the ones it does claim, so a full recovery does
+   * not leave a stale banner condition behind.
+   */
+  statusConditions?: {
+    down?: string[];
+    dead?: string[];
+  };
 }
 
 /** Outcome of applying damage through a {@link DamageTrackModel}. */
