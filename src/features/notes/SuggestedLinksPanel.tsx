@@ -9,7 +9,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { LinkScanSuggestion } from './linkScanner.js';
-import { docToText } from './textToDoc.js';
+import { textToDoc } from './textToDoc.js';
 import * as settingsRepository from '../../storage/repositories/settingsRepository.js';
 import type { AppSettings } from '../../types/settings.js';
 
@@ -75,6 +75,14 @@ function escapeRegex(text: string): string {
  * Replaces the first whole-word occurrence of `suggestion.matchedText` in
  * `bodyText` with a `wikiLink` node carrying the target's id and label.
  * Returns a ProseMirror-shaped doc, mirroring {@link features/notes/textToDoc!textToDoc | textToDoc}'s output.
+ *
+ * @remarks
+ * **Single-shot only — do not chain.** Its text-in/doc-out asymmetry means
+ * feeding one call's output back in requires `docToText`, which renders each
+ * `wikiLink` to a bare `[[label]]` and loses the resolved id. Use
+ * {@link applySuggestionToDoc} to apply more than one suggestion; the panel
+ * itself does. Retained because it is the shape the SS-06 contract documents
+ * and it has direct test coverage, but it has no production caller.
  */
 export function applySuggestionToBody(
   bodyText: string,
@@ -132,6 +140,81 @@ export function applySuggestionToBody(
 }
 
 /**
+ * Doc-in / doc-out counterpart to {@link applySuggestionToBody}, used to apply
+ * several suggestions in sequence without losing the ids of earlier ones.
+ *
+ * @remarks
+ * The text-based variant cannot be chained. Serializing its result with
+ * `docToText` renders every `wikiLink` back to a bare `[[label]]`, and
+ * re-parsing sets `attrs.id` to `null` — so approving a second suggestion
+ * silently unresolved the first, and "Approve all" kept an id only for the
+ * link it happened to handle last. This walks the doc instead, so nodes it
+ * does not touch survive byte-for-byte, ids included.
+ *
+ * Working structurally also retires the `alreadyWrapped` guard the text path
+ * needs: an existing link is a `wikiLink` atom rather than the characters
+ * `[[…]]`, so a later suggestion whose `matchedText` is a substring of it has
+ * nothing to match against and cannot produce `[[Sir [[Aldric]]]]`.
+ *
+ * Only the first match across the whole doc is replaced, matching the text
+ * variant's contract.
+ *
+ * @param doc - Doc to apply the suggestion to; not mutated.
+ * @param suggestion - The suggestion whose `matchedText` should become a link.
+ * @returns A new doc with the first plain-text occurrence linked.
+ */
+export function applySuggestionToDoc(
+  doc: ProseMirrorNode,
+  suggestion: LinkScanSuggestion
+): ProseMirrorNode {
+  const boundary = new RegExp(`\\b${escapeRegex(suggestion.matchedText)}\\b`);
+  let replaced = false;
+
+  const visit = (node: ProseMirrorNode): ProseMirrorNode => {
+    if (replaced || !Array.isArray(node.content)) return node;
+
+    const nodes: ProseMirrorNode[] = [];
+    let changed = false;
+
+    for (const child of node.content) {
+      if (replaced) {
+        nodes.push(child);
+        continue;
+      }
+      // Descend into blocks; only `text` children are candidates for linking.
+      if (child.type !== 'text' || typeof child.text !== 'string') {
+        const visited = visit(child);
+        if (visited !== child) changed = true;
+        nodes.push(visited);
+        continue;
+      }
+      const match = boundary.exec(child.text);
+      if (!match) {
+        nodes.push(child);
+        continue;
+      }
+      replaced = true;
+      changed = true;
+      const before = child.text.slice(0, match.index);
+      const after = child.text.slice(match.index + match[0].length);
+      if (before) nodes.push({ type: 'text', text: before });
+      nodes.push({
+        type: 'wikiLink',
+        attrs: {
+          id: suggestion.target?.entityId ?? null,
+          label: suggestion.matchedText,
+        },
+      });
+      if (after) nodes.push({ type: 'text', text: after });
+    }
+
+    return changed ? { ...node, content: nodes } : node;
+  };
+
+  return visit(doc);
+}
+
+/**
  * Reads the persisted set of dismissed suggestion keys for `campaignId` (see
  * {@link LinkScanSuggestion.key}). Pass `null`/`undefined` when no campaign
  * context is available; dismissals are then scoped to a fallback bucket
@@ -181,7 +264,7 @@ export interface SuggestedLinksPanelProps {
    * "no campaign" bucket rather than crashing.
    */
   campaignId?: string | null;
-  /** Called after a suggestion is approved, with the doc produced by {@link applySuggestionToBody}. */
+  /** Called after a suggestion is approved, with the doc produced by {@link applySuggestionToDoc}. */
   /**
    * Fired after a suggestion is applied. `updatedBody` is a ProseMirror doc
    * whose `wikiLink` nodes carry the resolved `entityId` — consumers must
@@ -204,7 +287,9 @@ export function SuggestedLinksPanel({
   onDismiss,
   onCreateNote,
 }: SuggestedLinksPanelProps) {
-  const [bodyText, setBodyText] = useState(body);
+  // Doc, not text: serializing between approvals nulls the ids of links already
+  // approved (see `applySuggestionToDoc`).
+  const [bodyDoc, setBodyDoc] = useState<ProseMirrorNode>(() => textToDoc(body));
   const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(new Set());
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
 
@@ -225,12 +310,12 @@ export function SuggestedLinksPanel({
 
   const handleApprove = useCallback(
     (suggestion: LinkScanSuggestion) => {
-      const updatedDoc = applySuggestionToBody(bodyText, suggestion);
-      setBodyText(docToText(updatedDoc));
+      const updatedDoc = applySuggestionToDoc(bodyDoc, suggestion);
+      setBodyDoc(updatedDoc);
       setResolvedKeys(prev => new Set(prev).add(suggestion.key));
       onApprove(suggestion, updatedDoc);
     },
-    [bodyText, onApprove]
+    [bodyDoc, onApprove]
   );
 
   const handleDismiss = useCallback(
@@ -244,18 +329,19 @@ export function SuggestedLinksPanel({
   );
 
   const handleBulkApprove = useCallback(() => {
-    let runningText = bodyText;
+    let runningDoc = bodyDoc;
     const resolved = new Set(resolvedKeys);
     for (const suggestion of visible) {
       if (suggestion.isMissingRecord) continue;
-      const updatedDoc = applySuggestionToBody(runningText, suggestion);
-      runningText = docToText(updatedDoc);
+      runningDoc = applySuggestionToDoc(runningDoc, suggestion);
       resolved.add(suggestion.key);
-      onApprove(suggestion, updatedDoc);
+      // Each callback carries the doc accumulated so far, so a consumer that
+      // keeps only the last one still ends up with every approved id.
+      onApprove(suggestion, runningDoc);
     }
-    setBodyText(runningText);
+    setBodyDoc(runningDoc);
     setResolvedKeys(resolved);
-  }, [bodyText, visible, resolvedKeys, onApprove]);
+  }, [bodyDoc, visible, resolvedKeys, onApprove]);
 
   if (visible.length === 0) {
     return null;

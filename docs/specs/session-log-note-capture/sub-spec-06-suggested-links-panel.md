@@ -30,13 +30,26 @@ UI over `scanForLinks` output. Per-row Approve / Dismiss plus bulk approve. Appr
 - Owner: SS-06
 - Shape: `applySuggestionToBody(bodyText: string, suggestion: LinkScanSuggestion): ProseMirrorNode` — pure; returns a doc with the matched span replaced by a `wikiLink` node
 
-> **Accepted deviation.** This contract originally specified
-> `applySuggestionToDoc(doc, suggestion) → doc`. The build produced a
-> text-in/node-out shape instead, which fits the promote pipeline (text-based
-> until the final `textToDoc`) and is the form verified working end to end by
-> the SS-12 Playwright run. Renaming to the doc-shaped contract would have
-> risked regressing the only path proven in a browser, so the contract was
+> **Accepted deviation — SINCE REVERTED (2026-07-29).** This contract
+> originally specified `applySuggestionToDoc(doc, suggestion) → doc`. The build
+> produced a text-in/node-out shape instead, which fits the promote pipeline
+> (text-based until the final `textToDoc`) and is the form verified working end
+> to end by the SS-12 Playwright run. Renaming to the doc-shaped contract would
+> have risked regressing the only path proven in a browser, so the contract was
 > aligned to the code rather than the reverse. Recorded, not silently changed.
+>
+> **The acceptance was wrong, and the original contract was right.** The
+> text-in/doc-out asymmetry cannot be chained: applying a second suggestion
+> requires serializing the first result with `docToText`, which renders each
+> `wikiLink` back to `[[label]]`, and `textToDoc` re-parses it with
+> `attrs.id = null`. So approving two suggestions silently unresolved the
+> first, and "Approve all" kept an id only for the link it handled last — the
+> exact data loss the doc-in contract was specified to prevent. The SS-12
+> Playwright run did not catch it because it only ever approved one suggestion.
+>
+> `applySuggestionToDoc` now exists as specified and the panel uses it;
+> `applySuggestionToBody` is retained for its test coverage but has no
+> production caller and is documented as non-chainable.
 
 ## Implementation Steps
 

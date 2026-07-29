@@ -755,3 +755,27 @@
   One console warning is left visible rather than filtered: a Radix
   `DialogContent` without `aria-describedby`, a real unfixed a11y gap.
 - Commit: test(e2e) — cover the log-and-promote flow and make the tally honest.
+
+## 2026-07-29 — Approving a second wikilink suggestion unresolved the first
+- Symptom: `SuggestedLinksPanel` held its working body as **text** and called
+  `applySuggestionToBody(bodyText, …)` per approval, re-serializing with
+  `docToText` in between. `docToText` renders a `wikiLink` back to a bare
+  `[[label]]` and `textToDoc` re-parses it with `attrs.id = null`, so approving
+  two suggestions silently unresolved the first and "Approve all" kept an id
+  only for whichever link it handled last. The earlier PromoteEntriesSheet fix
+  (persist the doc, not `docToText` of it) was necessary but not sufficient —
+  it only held for a single approval, because the panel flattened internally.
+- Fix: added `applySuggestionToDoc(doc, suggestion)` — the shape SS-06
+  originally specified — and switched the panel's state to a doc. Untouched
+  nodes now survive byte-for-byte, ids included. Working structurally also
+  makes the double-wrap class unreachable: an applied link is a `wikiLink`
+  atom, not the characters `[[…]]`, so a later substring suggestion has no text
+  node to match and cannot produce `[[Sir [[Aldric]]]]`.
+- Surfaces: features/notes/SuggestedLinksPanel.tsx (+6 tests),
+  docs/specs/session-log-note-capture/sub-spec-06-suggested-links-panel.md.
+- Watch: the 2026-07-27 converge pass **accepted** the text-in deviation as
+  "Low" risk on the grounds that it was "the form verified working end to end
+  by the SS-12 Playwright run". That run only ever approved one suggestion, so
+  it could not have caught this. A browser-verified path is only evidence for
+  the path it actually exercised.
+- Commit: fix(notes) — chain wikilink approvals through the doc, not text.
