@@ -129,8 +129,13 @@ export function useNoteActions() {
       // on their next refresh. This hook's `createNote` is the manual
       // note-editor path (`NoteEditorScreen`), which writes from outside those
       // views — without the sync the note persists but they stay stale until a
-      // manual rebuild. Auto-logging does not come through here; `useSessionLog`
-      // writes via `noteRepository` and fires its own `syncNote`.
+      // manual rebuild.
+      //
+      // Auto-logging does not come through here: `useSessionLog` writes
+      // `db.notes.add()` directly inside its own Dexie transaction and calls
+      // `syncNote` itself afterwards. That is the one sanctioned exception to
+      // "the repository is the only place that fires syncNote" — it compensates
+      // by hand, so any further direct-to-Dexie write path must do the same.
       try {
         const module = await getSyncModule();
         await module.syncNote(note.id);

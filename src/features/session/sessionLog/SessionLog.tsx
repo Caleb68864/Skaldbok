@@ -3,6 +3,7 @@ import { WritePad } from '../../../components/notes/WritePad';
 import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useToast } from '../../../context/ToastContext';
 import * as noteRepository from '../../../storage/repositories/noteRepository';
+import * as entityLinkRepository from '../../../storage/repositories/entityLinkRepository';
 import { generateSoftDeleteTxId } from '../../../utils/softDelete';
 import { textToDoc, docToText } from '../../notes/textToDoc';
 import { SessionLogSelection } from './SessionLogSelection';
@@ -150,6 +151,14 @@ export function SessionLog() {
     const txId = generateSoftDeleteTxId();
     try {
       for (const entry of toDelete) {
+        // Cascade the entry's edges first, under the same txId — matching
+        // `useNoteActions.deleteNote`. A promoted entry carries a live
+        // `promoted_into` edge to a note that is still active; without this the
+        // edge outlives the entry, and an export bundle then ships an
+        // `entityLink` whose `fromEntityId` names a note the bundle excludes.
+        // Sharing the txId is also what lets Undo below restore the edges, via
+        // `restoreLinksForTxId`.
+        await entityLinkRepository.deleteLinksForNote(entry.id, txId);
         await noteRepository.softDelete(entry.id, txId);
       }
       if (editingId && toDelete.some(e => e.id === editingId)) {

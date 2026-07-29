@@ -320,7 +320,7 @@ function ActiveSessionContent() {
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
   const [timelineSearchText, setTimelineSearchText] = useState('');
-  const { timelineRefreshToken, sessionNotesRefreshToken, bumpTimeline } =
+  const { timelineRefreshToken, sessionNotesRefreshToken, bumpTimeline, bumpAll } =
     useSessionRefresh();
 
   const { encounters, refresh: refreshEncounters } = useEncounterList(activeSession?.id ?? null);
@@ -780,7 +780,11 @@ function ActiveSessionContent() {
         open={!!skillCheckNote}
         onClose={closeSkillCheckEditor}
         note={skillCheckNote}
-        onSaved={bumpTimeline}
+        // `bumpAll`, not `bumpTimeline`: saving here rewrites the note's title,
+        // which both the timeline and the Session Notes panel display. Bumping
+        // only the timeline left the notes panel showing the old title until
+        // the next navigation.
+        onSaved={bumpAll}
       />
     </div>
   );

@@ -523,3 +523,51 @@
   disagree, establish which one is wrong before editing either.
 - Commit: converge(pass-6-7) — correct false comments, drop dead
   bumpSessionNotes, fix stale spec.
+
+## 2026-07-29 — Deleting a log entry orphaned its `promoted_into` edge
+- Symptom: `SessionLog`'s delete path soft-deleted the note and nothing else.
+  A promoted entry carries a live `promoted_into` edge to a note that is still
+  active, so the edge outlived the entry. Export then shipped an `entityLink`
+  whose `fromEntityId` names a note the bundle excludes (collectors read notes
+  through `excludeDeleted`, but pull links for the *live* target), and the merge
+  engine inserts links verbatim with no referential check — a round-trip
+  produced a permanently orphaned edge. Undo appeared to work only because the
+  edges were never deleted in the first place.
+- Fix: cascade `entityLinkRepository.deleteLinksForNote(id, txId)` before
+  `softDelete`, under the same transaction id — matching
+  `useNoteActions.deleteNote`, which had always done this. Sharing the txId is
+  also what makes Undo restore the edges, via `restoreLinksForTxId`.
+  Verified live: entry and edge both carry `deletedAt` and the same
+  `softDeletedBy`.
+- Surfaces: `src/features/session/sessionLog/SessionLog.tsx`.
+- Watch: two delete paths for the same entity type existed and only one
+  cascaded. When adding a delete path, diff it against the established one
+  rather than writing it fresh — `softDelete` alone is never the whole
+  operation for an entity that owns edges.
+
+## 2026-07-29 — An executable check in a phase spec would have reverted a fixed bug
+- Symptom: `docs/specs/notes-overhaul-completion/sub-spec-4-timeline-log-lane.md`
+  still prescribed `visible: false` for the Log lane after converge pass 1 proved
+  that mechanism makes the lane permanently unreachable and replaced it with
+  `defaultHidden`. The master spec was corrected; the phase spec was not. Its
+  `[STRUCTURAL]` gate — `grep -q "visible: false" … || exit 1` — was run and
+  **failed against correct code**. `/forge-run` and `/forge-converge` read the
+  phase spec, not the master, so a re-run of SS-04 would have "fixed" the code
+  back to the broken mechanism.
+- Fix: rewrote the phase spec's C-1 rationale with an explicit "do not restore
+  that" note, inverted the gate to assert `defaultHidden: true` **and** the
+  absence of `visible: false`, added gates for the `types.ts` declaration and
+  the `useTimelineState` seeding, and corrected the Files list and `git add`
+  step, which named only 3 of the 6 files the change actually needs. Also
+  corrected both copies of the red-team report, whose C-1 Resolution still
+  recorded `visible: false` as the accepted fix.
+- Surfaces: `sub-spec-4-timeline-log-lane.md`, both `redteam-report.md` copies,
+  and the master spec's SS-06 `docs/`-tracking Decision (which claimed files
+  under `docs/` are "never tracked by git" — 28 are, via force-add, including
+  the `decisions.md` this hook makes us commit every pass).
+- Watch: a spec is executable here, not just descriptive. When a converge pass
+  corrects a mechanism, grep every artifact that encodes it — master spec, phase
+  specs, red-team reports, and any embedded check command — or the next
+  automated run silently undoes the fix. Correcting only the prose is worse than
+  useless: the gate still enforces the old behaviour.
+- Commit: converge(pass-8-9) — cascade log-entry edges, unstick the phase spec.

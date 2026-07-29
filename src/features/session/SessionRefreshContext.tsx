@@ -14,11 +14,12 @@ import type { ReactNode } from 'react';
  * either one's local state. Before this context they stayed stale until a
  * manual reload.
  *
- * A component that mutates session notes or encounters calls
- * {@link SessionRefreshContextValue.bumpAll} (promotion, combat writes) or
- * {@link SessionRefreshContextValue.bumpTimeline} when only the timeline is
- * affected; consumers watch the matching numeric token and re-query when it
- * changes.
+ * A component that mutates session notes calls
+ * {@link SessionRefreshContextValue.bumpAll} — promotion, combat writes, and
+ * note edits, since a note's title shows in both surfaces.
+ * {@link SessionRefreshContextValue.bumpTimeline} is for encounter-lifecycle
+ * changes, which move the timeline without touching a note. Consumers watch
+ * the matching numeric token and re-query when it changes.
  */
 export interface SessionRefreshContextValue {
   timelineRefreshToken: number;
