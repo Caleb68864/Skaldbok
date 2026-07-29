@@ -14,6 +14,12 @@ Status values: **OPEN** (verified still present) · **DONE** · **BLOCKED**
 (needs hardware or a product decision) · **UNVERIFIED** (carried over, not
 re-checked today).
 
+> **Read this before trusting a status.** The first version of this file marked
+> the whole Traveller section OPEN by copying the wave-4 report rather than
+> checking the code, and four of five items were already fixed. Sections carrying
+> a dated "verified" note have been checked individually; anything else is
+> inherited and may be stale. Re-check before acting on it.
+
 ---
 
 ## Fixed since the notes overhaul shipped
@@ -46,31 +52,37 @@ Behaviour is currently correct *by accident*; the config is misleading.
 
 ---
 
-## OPEN — Traveller table-affecting (from the 2026-07-28 wave)
+## OPEN — Traveller
 
-### T1. Damage logged as "Healed" on an accumulating track
-Sign is not flipped for a track that accumulates rather than depletes.
+**Correction (2026-07-29).** This section was originally copied from the
+2026-07-28 wave-4 report **without re-checking it**, despite this file claiming
+to be status-verified. Four of the five items had already been fixed. Verified
+individually this time.
 
-### T2. `DamageHealModule` logs nothing at all
-The primary damage surface produces no session-log entry.
-
-### T3. Ticking Wounded double-penalises
-Conditions declare `linkedAttributeId: "end"`, so the condition penalty stacks
-with the END damage it represents.
-
-### T4. "Recover All" is a one-tap unconfirmed wipe
-Sits next to a disabled (dead-zone) Heal button. Destructive, no confirm.
-
-### T5. One hit can never kill
-A single overflow slot against `deadAtDepleted: 3`.
+| Was | Item | Actual status |
+|---|---|---|
+| T1 | Log records damage as "Healed" | **Already fixed** — `useSessionLog` carries an `accumulates` flag and `SheetScreen` derives it from the resource's `direction` |
+| T2 | `DamageHealModule` logs nothing | **Already fixed** — it imports `useSessionLog` and logs every outcome |
+| T3 | Ticking Wounded double-penalises | **Already fixed** — `linkedAttributeId` removed from all three Traveller conditions; `system.json` at v10 |
+| T4 | "Recover All" unconfirmed | **Already fixed** — two-step tap-again-to-confirm, self-clearing after 5s |
+| T5 | One hit can never kill | **Fixed `bbf4b89`** — overflow continues through the remaining tracks |
+| — | Knocked-out state never stored | **Fixed `bbf4b89`** — `DamageTrackModel.statusConditions` + sync in `writeResources` |
 
 ### T6. Four producer/consumer key spaces with zero assertions
-Three of four have a hardcoded closed union on the consumer side with a cast
-hiding the mismatch. `engineContract.test.ts` passes **every** finding in the
-wave-4 report — it never renders a component and never invokes a function-valued
-engine field. A contract test that cannot fail is the real defect here.
+**Still open, and the most valuable item here.** Three of four have a hardcoded
+closed union on the consumer side with a cast hiding the mismatch.
+`engineContract.test.ts` passes **every** finding in the wave-4 report — it never
+renders a component and never invokes a function-valued engine field. A contract
+test that cannot fail is the real defect: it is why the modifier bug (F1) and the
+damage-cascade bug (T5) both sat green.
 
----
+### T7. Traveller has no UI to add a temporary modifier
+`BuffChipBar` and `AddModifierDrawer` are both mounted inside `attributesPanel`.
+Traveller's engine lists `'characteristics'`, and `characteristicsPanel` has no
+equivalent, so no mounting site exists. Meanwhile `modifiableStats` enumerates
+`attr:*`/`res:*` targets and `getEffectiveValue` is called on the Traveller panel
+— the plumbing is complete end to end with no entry point. "The stim gives you +2
+DEX for the scene" has nowhere to go, so the player tracks it on paper.
 
 ## OPEN — data integrity
 
