@@ -125,6 +125,39 @@ async function createNoteAndPromote(
 }
 
 /**
+ * Creates a stub note for a name the link scanner matched but found no record
+ * for, and returns its id so the span can be linked to it.
+ *
+ * @remarks
+ * Typed `npc` because a missing-record suggestion is almost always a person the
+ * log mentioned in passing; the user can retype it afterwards. The body is left
+ * empty deliberately — inventing content would put words in the GM's mouth, and
+ * an empty stub is what makes the name resolvable and searchable.
+ *
+ * @param campaignId - Campaign the stub belongs to.
+ * @param sessionId - Session it was first mentioned in, when known.
+ * @param title - The matched text, used verbatim as the note title.
+ * @returns The new note's id.
+ */
+async function createStubNoteForSuggestion(
+  campaignId: string,
+  sessionId: string | undefined,
+  title: string,
+): Promise<string> {
+  const note = await noteRepository.createNote({
+    campaignId,
+    sessionId,
+    title,
+    type: 'npc',
+    typeData: {},
+    body: textToDoc(''),
+    status: 'active',
+    pinned: false,
+  } as Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>);
+  return note.id;
+}
+
+/**
  * Appends the selection under a `---` divider on an existing note's body,
  * leaving its title unchanged.
  *
@@ -421,6 +454,9 @@ export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone, init
           // suppresses it in every other one.
           campaignId={campaignId}
           onApprove={(_, updatedBody) => setApprovedBody(updatedBody)}
+          onCreateNote={suggestion =>
+            createStubNoteForSuggestion(campaignId, entries[0]?.sessionId, suggestion.matchedText)
+          }
         />
 
         <button

@@ -779,3 +779,32 @@
   it could not have caught this. A browser-verified path is only evidence for
   the path it actually exercised.
 - Commit: fix(notes) — chain wikilink approvals through the doc, not text.
+
+## 2026-07-29 — Two dead buttons in the link panel, and a Tracks menu that outgrew the screen
+- Symptom: three separate defects in the suggested-links surface. (a) The
+  "Create NPC note" action called an `onCreateNote` prop that **no caller ever
+  supplied**, so it was a permanent no-op. (b) The session review sweep rendered
+  Approve / Approve all and silently discarded the result — it scans every entry
+  concatenated into one body, so an approved span cannot be mapped back to the
+  entry it came from and there was nowhere to persist it. (c) The timeline's
+  Tracks menu had no bounded height; once a session contained enough note types
+  the panel overflowed the viewport, Radix kept repositioning it, and every row
+  past the fold — including the Log lane toggle — became unreachable.
+- Fix: `onCreateNote` now returns `Promise<string | null>`; the panel awaits it,
+  and on an id creates the link so the span resolves. `PromoteEntriesSheet`
+  supplies it, creating an empty `npc`-typed stub (an empty body is deliberate —
+  inventing content would put words in the GM's mouth). A new `allowApply` prop
+  hides the apply actions where they cannot persist; the review sweep sets it
+  `false` and keeps Dismiss, which does persist. Both timeline dropdowns are now
+  `max-h-[60vh] overflow-y-auto`.
+- Surfaces: features/notes/SuggestedLinksPanel.tsx,
+  features/notes/PromoteEntriesSheet.tsx,
+  features/session/sessionLog/SessionLogSelection.tsx,
+  components/timeline/TimelineToolbar.tsx, tests/e2e_full_test.py.
+- Watch: (c) was found only because a new E2E phase added one more note type and
+  pushed the menu over the fold — the test failed as an unstable-element
+  timeout, which reads like a flaky locator. Two test-side "fixes" (`:visible`
+  scoping, `scroll_into_view_if_needed`) did not help, which is what showed the
+  instability was the app repositioning an overflowing panel. Prefer suspecting
+  the app when a locator is never *stable* rather than never *present*.
+- Commit: fix(notes) — wire the create-record action and bound the timeline menus.

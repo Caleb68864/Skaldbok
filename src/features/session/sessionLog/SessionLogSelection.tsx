@@ -264,7 +264,13 @@ export function SessionLogSelection({
               body={entries.map(entry => docToText(entry.body)).join('\n\n')}
               // Scopes dismissals to this campaign — see PromoteEntriesSheet.
               campaignId={campaignId}
-              onApprove={() => { /* review sweep is read-only; approving here does not mutate log entries */ }}
+              // The scan runs over every entry concatenated into one body, so an
+              // approved span cannot be mapped back to the entry it came from and
+              // there is nowhere to persist it. The panel used to render Approve
+              // and Approve all here and silently discard the result; this hides
+              // them. Dismiss still works — it persists to settings.
+              allowApply={false}
+              onApprove={() => { /* unreachable: allowApply={false} hides every apply action */ }}
             />
             <button
               type="button"

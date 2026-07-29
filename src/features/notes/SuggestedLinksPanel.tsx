@@ -274,8 +274,25 @@ export interface SuggestedLinksPanelProps {
   onApprove: (suggestion: LinkScanSuggestion, updatedBody: ProseMirrorNode) => void;
   /** Called after a suggestion's dismissal has been persisted. */
   onDismiss?: (suggestion: LinkScanSuggestion) => void;
-  /** Called when the user asks to create an NPC note for a missing-record candidate. */
-  onCreateNote?: (suggestion: LinkScanSuggestion) => void;
+  /**
+   * Called when the user asks to create a note for a missing-record candidate.
+   * Resolve with the new note's id to have the panel link the span to it, or
+   * with `null` if creation was cancelled or failed. Omit the prop entirely to
+   * hide the action.
+   */
+  onCreateNote?: (suggestion: LinkScanSuggestion) => Promise<string | null>;
+  /**
+   * Whether approving is meaningful here. Defaults to `true`.
+   *
+   * @remarks
+   * Set `false` for callers that scan a **merged** body — the session review
+   * sweep concatenates every log entry, so an approved span cannot be mapped
+   * back to the entry it came from and the caller has nowhere to persist it.
+   * Those callers previously rendered Approve / Approve all anyway and silently
+   * discarded the result. Dismiss stays available in either mode: it persists
+   * to settings and does not depend on a writable body.
+   */
+  allowApply?: boolean;
 }
 
 /** Lists link suggestions with Approve/Dismiss actions and a bulk-approve control. */
@@ -286,11 +303,14 @@ export function SuggestedLinksPanel({
   onApprove,
   onDismiss,
   onCreateNote,
+  allowApply = true,
 }: SuggestedLinksPanelProps) {
   // Doc, not text: serializing between approvals nulls the ids of links already
   // approved (see `applySuggestionToDoc`).
   const [bodyDoc, setBodyDoc] = useState<ProseMirrorNode>(() => textToDoc(body));
   const [resolvedKeys, setResolvedKeys] = useState<Set<string>>(new Set());
+  /** Key of the suggestion whose record is currently being created, if any. */
+  const [creatingKey, setCreatingKey] = useState<string | null>(null);
   const [dismissedKeys, setDismissedKeys] = useState<Set<string>>(new Set());
 
   // Belt-and-suspenders: re-check persisted dismissals here so a suggestion
@@ -328,6 +348,37 @@ export function SuggestedLinksPanel({
     [onDismiss, campaignId]
   );
 
+  /**
+   * Creates the missing record, then links the span to it.
+   *
+   * A suggestion with `isMissingRecord` has no `target`, so approving it would
+   * insert a `wikiLink` with a null id — a link to nothing. Creation has to
+   * supply the id first, which is why this awaits the caller rather than
+   * firing and forgetting.
+   */
+  const handleCreateNote = useCallback(
+    (suggestion: LinkScanSuggestion) => {
+      if (!onCreateNote) return;
+      setCreatingKey(suggestion.key);
+      onCreateNote(suggestion)
+        .then(entityId => {
+          if (!entityId) return;
+          const linked: LinkScanSuggestion = {
+            ...suggestion,
+            target: { entityId, entityType: 'note' },
+            isMissingRecord: false,
+          };
+          const updatedDoc = applySuggestionToDoc(bodyDoc, linked);
+          setBodyDoc(updatedDoc);
+          setResolvedKeys(prev => new Set(prev).add(suggestion.key));
+          onApprove(linked, updatedDoc);
+        })
+        .catch(err => console.error('Failed to create note for link suggestion', err))
+        .finally(() => setCreatingKey(null));
+    },
+    [onCreateNote, bodyDoc, onApprove]
+  );
+
   const handleBulkApprove = useCallback(() => {
     let runningDoc = bodyDoc;
     const resolved = new Set(resolvedKeys);
@@ -351,13 +402,15 @@ export function SuggestedLinksPanel({
     <div className="rounded-lg border border-[var(--color-border)] p-3">
       <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold">Suggested links</h3>
-        <button
-          type="button"
-          onClick={handleBulkApprove}
-          className="text-xs font-medium text-[var(--color-accent)]"
-        >
-          Approve all
-        </button>
+        {allowApply && (
+          <button
+            type="button"
+            onClick={handleBulkApprove}
+            className="text-xs font-medium text-[var(--color-accent)]"
+          >
+            Approve all
+          </button>
+        )}
       </div>
       <ul className="flex flex-col gap-2">
         {visible.map(suggestion => (
@@ -383,21 +436,32 @@ export function SuggestedLinksPanel({
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {suggestion.isMissingRecord ? (
-                <button
-                  type="button"
-                  onClick={() => onCreateNote?.(suggestion)}
-                  className="text-xs font-medium"
-                >
-                  Create NPC note
-                </button>
+                // Only offered when a caller can actually create the record.
+                // Without a handler this button was a permanent no-op.
+                allowApply &&
+                onCreateNote && (
+                  <button
+                    type="button"
+                    onClick={() => handleCreateNote(suggestion)}
+                    disabled={creatingKey === suggestion.key}
+                    className="text-xs font-medium disabled:opacity-50"
+                  >
+                    {/* Deliberately not "Create note": the promote sheet's own
+                        submit button uses that label, and two controls with one
+                        label is ambiguous for the user and for a test locator. */}
+                    {creatingKey === suggestion.key ? 'Creating…' : 'Create NPC note'}
+                  </button>
+                )
               ) : (
-                <button
-                  type="button"
-                  onClick={() => handleApprove(suggestion)}
-                  className="text-xs font-medium"
-                >
-                  Approve
-                </button>
+                allowApply && (
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(suggestion)}
+                    className="text-xs font-medium"
+                  >
+                    Approve
+                  </button>
+                )
               )}
               <button
                 type="button"

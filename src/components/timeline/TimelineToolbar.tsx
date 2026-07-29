@@ -122,7 +122,15 @@ export function TimelineToolbar({
                 Tracks
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
+            {/* The track list grows with every note type present in the session,
+                so it can exceed the viewport. Without a bounded, scrollable
+                height Radix keeps repositioning the overflowing panel and the
+                rows past the fold are unreachable — on a tablet that hid the
+                Log lane toggle entirely. */}
+            <DropdownMenuContent
+              align="end"
+              className="max-h-[60vh] w-64 overflow-y-auto"
+            >
               <DropdownMenuLabel>Visible tracks</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {tracks.map((track) => {
@@ -148,7 +156,11 @@ export function TimelineToolbar({
                 Filters
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-72">
+            {/* Same unbounded-growth problem as the Tracks menu above. */}
+            <DropdownMenuContent
+              align="end"
+              className="max-h-[60vh] w-72 overflow-y-auto"
+            >
               {availableFilters.kinds.length > 0 ? (
                 <>
                   <DropdownMenuLabel>Kinds</DropdownMenuLabel>

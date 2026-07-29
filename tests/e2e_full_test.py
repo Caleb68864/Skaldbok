@@ -645,10 +645,13 @@ def phase_test_session_log(page: Page, iteration: int) -> bool:
         print("    FAIL: no write pad on the log route")
         return False
 
+    # "Brakko" is a capitalised name with no dictionary entry, repeated across
+    # entries. The link scanner needs 2+ occurrences to raise a missing-record
+    # suggestion, which is what the promote phase's Create-note check needs.
     texts = [
-        "iter" + str(iteration) + " first entry",
-        "iter" + str(iteration) + " the innkeeper knows more than he is saying",
-        "iter" + str(iteration) + " party sold the drive coupling",
+        "iter" + str(iteration) + " Brakko opened the cargo hatch",
+        "iter" + str(iteration) + " we paid Brakko for the drive coupling",
+        "iter" + str(iteration) + " Brakko says the innkeeper knows more",
     ]
     for text in texts:
         pad.fill(text)
@@ -891,6 +894,81 @@ def phase_test_promote_flow(page: Page, iteration: int) -> bool:
     return ok
 
 
+def phase_test_create_missing_record(page: Page, iteration: int) -> bool:
+    """Test creating a note for a name the scanner found no record for.
+
+    A missing-record suggestion has ``target: null``, so approving it would
+    insert a wikiLink pointing at nothing. The offer is to create the record
+    first and link to that. The button existed but no caller ever supplied
+    ``onCreateNote``, so it was a permanent no-op; this covers the wiring.
+
+    :param page: Playwright page instance.
+    :param iteration: Current iteration number.
+    :returns: True if the missing-record offer appears and creating one links it.
+    :rtype: bool
+    """
+    print("  [CreateRecord] Testing create-note for a missing record...")
+    nav_to(page, "/session/log")
+    wait_stable(page, 900)
+
+    rows = page.locator("main li button")
+    if rows.count() < 2:
+        print("    SKIP: need >= 2 entries")
+        return True
+
+    rows.nth(0).click(button="right")
+    wait_stable(page, 400)
+    toolbar = page.locator('[role="toolbar"][aria-label="Selection actions"]')
+    if toolbar.count() == 0:
+        print("    FAIL: could not enter selection mode")
+        return False
+    rows.nth(1).click()
+    wait_stable(page, 300)
+    toolbar.first.locator('button:has-text("Promote")').click()
+    wait_stable(page, 900)
+
+    sheet = page.locator('[role="dialog"][aria-label="Promote entries"]')
+    if sheet.count() == 0:
+        print("    FAIL: promote sheet did not open")
+        return False
+
+    if "no matching record" not in sheet.first.inner_text():
+        print("    FAIL: scanner raised no missing-record suggestion for 'Brakko'")
+        screenshot(page, "create-record", iteration)
+        return False
+    print("    OK: missing-record suggestion offered")
+
+    create = sheet.first.locator('button:has-text("Create NPC note")')
+    if create.count() == 0:
+        print("    FAIL: no Create note action for the missing record")
+        screenshot(page, "create-record", iteration)
+        return False
+
+    create.first.click()
+    wait_stable(page, 1400)
+
+    ok = True
+    if sheet.first.locator('button:has-text("Create NPC note")').count() != 0:
+        print("    FAIL: Create NPC note did not resolve the suggestion")
+        ok = False
+    else:
+        print("    OK: creating the record resolved the suggestion")
+
+    page.keyboard.press("Escape")
+    wait_stable(page, 600)
+
+    nav_to(page, "/notes")
+    wait_stable(page, 1100)
+    if "Brakko" not in page.inner_text("body"):
+        print("    FAIL: created note 'Brakko' is not listed on the Notes screen")
+        ok = False
+    else:
+        print("    OK: created note is discoverable in Notes")
+
+    screenshot(page, "create-record", iteration)
+    return ok
+
+
 def phase_test_timeline_log_lane(page: Page, iteration: int) -> bool:
     """Test the session timeline's Log lane.
 
@@ -939,18 +1017,27 @@ def phase_test_timeline_log_lane(page: Page, iteration: int) -> bool:
     tracks_btn.first.click()
     wait_stable(page, 500)
 
-    items = page.locator('div[role="menuitem"]')
-    log_index = -1
+    # Scoped to :visible — a Radix dropdown that has been closed leaves its
+    # portal (and its menuitems) in the DOM, so an unscoped locator can resolve
+    # to a row belonging to a closed menu and then time out waiting for it to
+    # become visible, which it never will.
+    items = page.locator('div[role="menuitem"]:visible')
+    log_item = None
     for i in range(items.count()):
         if items.nth(i).inner_text().strip().startswith("Log"):
-            log_index = i
+            log_item = items.nth(i)
             break
-    if log_index < 0:
+    if log_item is None:
         print("    FAIL: Tracks menu omits the Log lane, so it can never be revealed")
         return False
     print("    OK: Tracks menu lists the Log lane")
 
-    items.nth(log_index).click()
+    # The menu grows with every note type present in the session, so the Log row
+    # can sit below the fold. Clicking without scrolling timed out on visibility
+    # once other phases started creating notes of additional types.
+    log_item.scroll_into_view_if_needed()
+    wait_stable(page, 200)
+    log_item.click()
     wait_stable(page, 600)
     page.keyboard.press("Escape")
     wait_stable(page, 400)
@@ -1275,6 +1362,7 @@ PHASE_KEYS = [
     "session_start",
     "session_log",
     "promote_flow",
+    "create_record",
     "timeline_log_lane",
     "descriptor_chips",
     "encounter",
@@ -1333,6 +1421,7 @@ def run_iteration(browser, iteration: int) -> dict:
         results["session_start"] = phase_start_session(page, iteration)
         results["session_log"] = phase_test_session_log(page, iteration)
         results["promote_flow"] = phase_test_promote_flow(page, iteration)
+        results["create_record"] = phase_test_create_missing_record(page, iteration)
         results["timeline_log_lane"] = phase_test_timeline_log_lane(page, iteration)
         results["descriptor_chips"] = phase_test_descriptor_chips(page, iteration)
         results["encounter"] = phase_encounter_lifecycle(page, iteration)

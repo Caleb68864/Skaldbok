@@ -1,8 +1,8 @@
 Skaldmark E2E Test Report — 1 iterations
 ============================================================
 
-Total tests: 13
-Passes: 13
+Total tests: 14
+Passes: 14
 Failures: 0
 Did not run: 0
 Iterations that crashed: 0/1
