@@ -10,7 +10,7 @@ import { Card } from '../primitives/Card';
  * @remarks
  * `isGrimoireView` shows the whole spellbook (prepare/unprepare); otherwise only
  * prepared spells are castable. `preparedCount`/`maxPrepared` gate the prepare
- * toggle, and `currentWP` gates casting so an unaffordable cast is disabled.
+ * toggle, and `currentResource` gates casting so an unaffordable cast is disabled.
  */
 export interface MagicSpellCardProps {
   spell: Spell;
@@ -18,11 +18,23 @@ export interface MagicSpellCardProps {
   isGrimoireView: boolean;
   preparedCount: number;
   maxPrepared: number;
-  currentWP: number;
+  /** Current value of the pool casting is paid from. */
+  currentResource: number;
   powerLevel: number;
+  /**
+   * The active system's magic economy — selectable levels and their cost.
+   *
+   * @remarks
+   * Passed in rather than read from a hook so this stays a presentational
+   * component. It replaces the hardcoded `powerLevel * 2`, trick-costs-1 and
+   * `[1, 2, 3]` that made every system pay Dragonbane's prices.
+   */
+  magic: { powerLevels: number[]; costPerLevel: number; trickCost: number };
+  /** The system's name for that pool, e.g. `WP`. Was the literal "WP". */
+  resourceTerm: string;
   onPowerLevelChange: (lvl: number) => void;
   onTogglePrepare: () => void;
-  onCast?: (spell: Spell, wpCost: number) => void;
+  onCast?: (spell: Spell, cost: number) => void;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -32,17 +44,18 @@ export interface MagicSpellCardProps {
  * selector, and cast button.
  *
  * @remarks
- * WP cost scales with `powerLevel` (a trick is always 1 WP; otherwise `powerLevel * 2`).
- * Magic tricks render a simplified layout. This is the play-oriented counterpart to
+ * Cost scales with `powerLevel` via `magic.costPerLevel`; a trick costs
+ * `magic.trickCost`. Magic tricks render a simplified layout. This is the
+ * play-oriented counterpart to
  * {@link components/fields/SpellCard!SpellCard | SpellCard}, which is a static summary.
  */
 export function MagicSpellCard({
-  spell, isTrick, isGrimoireView, preparedCount, maxPrepared, currentWP, powerLevel,
-  onPowerLevelChange, onTogglePrepare, onCast, onEdit, onDelete,
+  spell, isTrick, isGrimoireView, preparedCount, maxPrepared, currentResource, powerLevel,
+  magic, resourceTerm, onPowerLevelChange, onTogglePrepare, onCast, onEdit, onDelete,
 }: MagicSpellCardProps) {
   const atLimit = preparedCount >= maxPrepared;
   const isReaction = spell.castingTime === 'reaction';
-  const wpCost = isTrick ? 1 : powerLevel * 2;
+  const castCost = isTrick ? magic.trickCost : powerLevel * magic.costPerLevel;
   const rank = getSpellRank(spell);
   const requirements = formatRequirements(spell.requirements);
   const castingTime = formatCastingTime(spell.castingTime);
@@ -65,7 +78,7 @@ export function MagicSpellCard({
               <span className="text-[var(--color-accent)] text-[length:var(--font-size-sm)] ml-[var(--space-sm)]">{spell.school}</span>
             </h3>
             <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
-              Rank: {rank} · 1 WP · Always available · Auto-succeed
+              Rank: {rank} · {magic.trickCost} {resourceTerm} · Always available · Auto-succeed
             </p>
             <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
               Range: {spell.range} · Duration: {spell.duration} · Casting Time: {castingTime}
@@ -124,9 +137,9 @@ export function MagicSpellCard({
 
         {/* Power level selector */}
         <div className="flex items-center gap-[var(--space-2)]" role="group" aria-label="Power level">
-          {([1, 2, 3] as const).map((lvl) => {
-            const cost = lvl * 2;
-            const insufficient = currentWP < cost;
+          {magic.powerLevels.map((lvl) => {
+            const cost = lvl * magic.costPerLevel;
+            const insufficient = currentResource < cost;
             const isActive = lvl === powerLevel;
             return (
               <button
@@ -140,14 +153,14 @@ export function MagicSpellCard({
                   insufficient && !isActive && "opacity-40 cursor-not-allowed"
                 )}
                 onClick={() => onPowerLevelChange(lvl)}
-                aria-label={`Power level ${lvl} — ${cost} WP`}
+                aria-label={`Power level ${lvl} — ${cost} ${resourceTerm}`}
                 aria-pressed={isActive}
               >
                 {lvl}
               </button>
             );
           })}
-          <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-semibold ml-[var(--space-1)]">{wpCost} WP</span>
+          <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-semibold ml-[var(--space-1)]">{castCost} {resourceTerm}</span>
           {spell.powerScaling && spell.powerScaling[powerLevel - 1] && (
             <span className="text-[length:var(--font-size-sm)] text-[var(--color-accent-alt)] ml-[var(--space-2)]">
               — {spell.powerScaling[powerLevel - 1]}
@@ -197,14 +210,14 @@ export function MagicSpellCard({
               type="button"
               className={cn(
                 "px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--font-size-sm)] font-semibold border ml-auto transition-colors",
-                currentWP < wpCost
+                currentResource < castCost
                   ? "border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] opacity-40 cursor-not-allowed"
                   : "border-[var(--color-accent)] bg-[var(--color-accent)] text-white hover:opacity-90"
               )}
-              disabled={currentWP < wpCost}
-              onClick={() => onCast(spell, wpCost)}
+              disabled={currentResource < castCost}
+              onClick={() => onCast(spell, castCost)}
             >
-              Cast ({wpCost} WP)
+              Cast ({castCost} {resourceTerm})
             </button>
           )}
         </div>

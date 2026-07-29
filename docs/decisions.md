@@ -831,3 +831,25 @@
   `hp`/`armor`/`movement` triple, so a system with a different stat *shape* needs
   a data-model change rather than another label.
 - Commit: fix(engine) — source the creature base-stat headings from the engine.
+
+## 2026-07-29 — Only Dragonbane could actually cast
+- Symptom: `MagicScreen` and `MagicSpellCard` restated Dragonbane's magic economy
+  as literals — `character.resources['wp']`, `powerLevel * 2`, trick costs 1,
+  power levels `[1, 2, 3]`, and the string "WP" in five places. `engine.magic`
+  (E11) exists precisely to supply all of that, and `MagicModule` already reads
+  it correctly. **Any system whose `magic.resourceId` is not `wp` showed 0
+  available and could never cast.** Separately `toSpells` projected
+  `wpCost: a.cost?.wp ?? 0`, so a spell costing `{ psi: 3 }` read as free.
+- Fix: the screen resolves `engine.magic.resourceId` and spends from that pool;
+  `MagicSpellCard` takes the `magic` model and `resourceTerm` as props (kept
+  presentational — it does not reach for the hook) and derives every cost and
+  level from them. `toSpells`/`fromSpell` gained an optional `resourceId`
+  defaulting to `'wp'`, so all six existing call sites are unchanged.
+- Surfaces: screens/MagicScreen.tsx, components/fields/MagicSpellCard.tsx,
+  utils/abilities.ts (+2 tests).
+- Watch: Dragonbane's numbers remain as an explicit fallback for a system that
+  declares `hasMagic` with a null `magic` model, so the screen degrades rather
+  than rendering a card with no power levels. Still open and catalogued: the
+  spell edit drawer writes a literal `wpCost: 2` default, and `SpellCard` prints
+  the header "WP Cost:".
+- Commit: fix(magic) — drive the casting economy from engine.magic.

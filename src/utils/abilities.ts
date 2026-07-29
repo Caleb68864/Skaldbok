@@ -32,7 +32,16 @@ function num(ability: Ability, key: string, fallback = 0): number {
 }
 
 /** Projects the spell-typed abilities into the {@link Spell} shape. */
-export function toSpells(abilities: Ability[] | undefined): Spell[] {
+export function toSpells(
+  abilities: Ability[] | undefined,
+  /**
+   * Resource id the stored `cost` map is keyed by. Defaults to `'wp'` so the
+   * six existing call sites keep their behaviour; pass `engine.magic.resourceId`
+   * to read a system whose pool is named anything else. Without it a spell
+   * costing `{ psi: 3 }` projected to `wpCost: 0`.
+   */
+  resourceId: string = 'wp',
+): Spell[] {
   return (abilities ?? [])
     .filter(a => a.type === ABILITY_TYPE.spell)
     .map(a => ({
@@ -41,7 +50,7 @@ export function toSpells(abilities: Ability[] | undefined): Spell[] {
       summary: a.summary,
       school: str(a, 'school'),
       powerLevel: num(a, 'powerLevel', 1),
-      wpCost: a.cost?.wp ?? 0,
+      wpCost: a.cost?.[resourceId] ?? 0,
       range: str(a, 'range'),
       duration: str(a, 'duration'),
       prepared: a.prepared,
@@ -80,13 +89,18 @@ function compact(bag: Record<string, unknown>): Record<string, unknown> | undefi
 }
 
 /** Converts one {@link Spell} back into storage form. */
-export function fromSpell(spell: Spell): Ability {
+export function fromSpell(
+  spell: Spell,
+  /** Resource id to key the stored `cost` map by. Must match what
+   * {@link toSpells} reads, or the cost round-trips to 0. */
+  resourceId: string = 'wp',
+): Ability {
   return {
     id: spell.id,
     type: ABILITY_TYPE.spell,
     name: spell.name,
     summary: spell.summary,
-    cost: { wp: spell.wpCost },
+    cost: { [resourceId]: spell.wpCost },
     prepared: spell.prepared,
     pinnedAsStamp: spell.pinnedAsStamp,
     effects: spell.effects,

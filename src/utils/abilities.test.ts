@@ -94,4 +94,32 @@ describe('ability projections', () => {
     const bare: Ability = { id: 'x', type: ABILITY_TYPE.spell, name: 'Cantrip', summary: '' };
     expect(toSpells([bare])[0].wpCost).toBe(0);
   });
+
+  // The projection used to read `a.cost?.wp` literally, so a system whose magic
+  // pool is named anything else reported every spell as free.
+  it('reads the cost under the requested resource id', () => {
+    const psionic: Ability = {
+      id: 'p1',
+      type: ABILITY_TYPE.spell,
+      name: 'Telepathy',
+      summary: '',
+      cost: { psi: 3 },
+    };
+    expect(toSpells([psionic], 'psi')[0].wpCost).toBe(3);
+    // Still 0 under the default id — the cost is genuinely not stored there.
+    expect(toSpells([psionic])[0].wpCost).toBe(0);
+  });
+
+  it('round-trips a non-default resource id through fromSpell', () => {
+    const spell = toSpells([{
+      id: 'p1',
+      type: ABILITY_TYPE.spell,
+      name: 'Telepathy',
+      summary: '',
+      cost: { psi: 3 },
+    }], 'psi')[0];
+    const stored = fromSpell(spell, 'psi');
+    expect(stored.cost).toEqual({ psi: 3 });
+    expect(toSpells([stored], 'psi')[0].wpCost).toBe(3);
+  });
 });

@@ -137,7 +137,17 @@ export default function MagicScreen() {
   const maxPrepared = computeMaxPreparedSpells(character);
   const preparedCount = allSpells.filter(s => s.prepared && !isMagicTrick(s)).length;
   const metalBlocked = isMetalEquipped(character);
-  const currentWP = character.resources?.wp?.current ?? 0;
+  // The pool spent on casting comes from `engine.magic.resourceId`; it is not
+  // assumed to be `wp`. Reading `resources.wp` directly meant any system whose
+  // magic resource is named anything else showed 0 available and could never
+  // cast. `engine.hasMagic` is already true here, so `magic` is non-null, but
+  // the fallback keeps this honest if the two ever disagree.
+  const magicResourceId = engine.magic?.resourceId ?? 'wp';
+  const currentMagicResource = character.resources?.[magicResourceId]?.current ?? 0;
+  // Dragonbane's economy is the fallback, matching what the screen hardcoded
+  // before, so a system that declares `hasMagic` without a `magic` model keeps
+  // working rather than rendering a card with no power levels.
+  const magicModel = engine.magic ?? { powerLevels: [1, 2, 3], costPerLevel: 2, trickCost: 1 };
   const overLimit = preparedCount > maxPrepared;
 
   const visibleSpells = (filter === 'prepared'
@@ -232,16 +242,20 @@ export default function MagicScreen() {
     });
   }
 
-  function handleCastSpell(spell: Spell, wpCost: number) {
+  function handleCastSpell(spell: Spell, cost: number) {
     if (!character) return;
-    const wp = character.resources['wp'];
-    if (!wp || wp.current < wpCost) {
+    // Spend from the engine's declared magic pool rather than a literal `wp`,
+    // so a system that names its pool anything else can actually cast.
+    const pool = character.resources[magicResourceId];
+    if (!pool || pool.current < cost) {
       showToast(`Not enough ${magicResourceTerm} to cast this spell.`, 'error');
       return;
     }
-    // Deduct WP
     const updates: Record<string, unknown> = {
-      resources: { ...character.resources, wp: { ...wp, current: wp.current - wpCost } },
+      resources: {
+        ...character.resources,
+        [magicResourceId]: { ...pool, current: pool.current - cost },
+      },
       updatedAt: nowISO(),
     };
     // Create temp modifiers from spell effects if defined
@@ -261,9 +275,9 @@ export default function MagicScreen() {
         createdAt: nowISO(),
       }));
       updates.tempModifiers = [...(character.tempModifiers ?? []), ...newModifiers];
-      showToast(`Cast ${spell.name} (${wpCost} ${magicResourceTerm}) — effects applied!`, 'success');
+      showToast(`Cast ${spell.name} (${cost} ${magicResourceTerm}) — effects applied!`, 'success');
     } else {
-      showToast(`Cast ${spell.name} (${wpCost} ${magicResourceTerm})`, 'success');
+      showToast(`Cast ${spell.name} (${cost} ${magicResourceTerm})`, 'success');
     }
     updateCharacter(updates);
   }
@@ -360,7 +374,9 @@ export default function MagicScreen() {
               isGrimoireView={filter === 'grimoire'}
               preparedCount={preparedCount}
               maxPrepared={maxPrepared}
-              currentWP={currentWP}
+              currentResource={currentMagicResource}
+              magic={magicModel}
+              resourceTerm={magicResourceTerm}
               powerLevel={powerLevels[spell.id] ?? 1}
               onPowerLevelChange={(lvl) => setPowerLevels(prev => ({ ...prev, [spell.id]: lvl }))}
               onTogglePrepare={() => handleTogglePrepare(spell)}
