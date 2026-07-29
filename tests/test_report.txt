@@ -9,4 +9,3 @@ Iterations that crashed: 0/1
 Pass rate: 100.0%
 
 Issues:
-  [console_errors] [warning] Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}. (iter 1)

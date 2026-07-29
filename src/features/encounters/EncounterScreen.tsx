@@ -16,6 +16,7 @@ import {
   DialogBody,
   DialogFooter,
   DialogTitle,
+  DialogDescription,
 } from '../../components/ui/dialog';
 import { cn } from '../../lib/utils';
 
@@ -403,9 +404,11 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
             <DialogTitle>End Encounter</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <p className="text-sm text-[var(--color-text-muted)] mb-3">
+            {/* Radix wires this to the dialog's aria-describedby; it is the
+                same copy that was already on screen, not an sr-only addition. */}
+            <DialogDescription className="text-[var(--color-text-muted)] mb-3">
               Optional summary — what happened?
-            </p>
+            </DialogDescription>
             <TiptapNoteEditor
               initialContent={endSummary}
               onChange={setEndSummary}
