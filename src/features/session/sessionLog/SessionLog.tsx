@@ -122,19 +122,50 @@ export function SessionLog() {
           scope: 'campaign',
         });
       }
+      // Refresh BEFORE clearing. If the re-read throws, WritePad's contract is
+      // that the text stays in the pad — but clearing first meant the user saw
+      // "failed to save" over an empty pad, retyped the thought, and committed
+      // a duplicate.
+      await refresh();
       setDraft('');
       setEditingId(null);
-      await refresh();
     } catch (e) {
       // Re-throw so WritePad retains the draft text and shows a toast.
       throw e instanceof Error ? e : new Error('Failed to save log entry');
     }
   }, [activeSession, activeCampaign, editingId, refresh]);
 
+  /**
+   * Opens an entry for editing.
+   *
+   * @remarks
+   * Refuses to clobber an uncommitted draft. The entry list sits directly above
+   * the pad on the capture screen, so tapping a row to re-read it is a natural
+   * gesture — and it used to overwrite the in-progress draft *and* the parked
+   * localStorage copy in the same tick, destroying a half-written thought with
+   * no confirmation and no way back. On a screen whose entire premise is that a
+   * thought is never lost, that was the easiest way to lose one.
+   */
   const handleTapEntry = useCallback((entry: Note) => {
+    const entryText = docToText(entry.body);
+    const pending = draft.trim();
+    if (pending && draft !== entryText) {
+      showToast(
+        'Commit or clear what you have written before editing another entry',
+        'warning',
+        4000,
+      );
+      return;
+    }
     setEditingId(entry.id);
-    setDraft(docToText(entry.body));
+    setDraft(entryText);
     setPadOpen(true);
+  }, [draft, showToast]);
+
+  /** Leaves edit mode without saving, restoring the pad to a blank new entry. */
+  const cancelEdit = useCallback(() => {
+    setEditingId(null);
+    setDraft('');
   }, []);
 
   /**
@@ -274,8 +305,24 @@ export function SessionLog() {
     // of writing area, which on the capture screen is the thing we are trying
     // hardest to preserve.
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center border-b border-[var(--color-border,#ddd)] px-4 py-2">
+      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--color-border,#ddd)] px-4 py-2">
         <h1 className="text-sm font-semibold">{activeSession.title}</h1>
+        {/* Editing has to be visible and escapable. Without a banner there was
+            no indication the pad was pointed at an existing entry, and without
+            a way out the next new thought overwrote that entry instead of
+            being added. */}
+        {editingId && (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs text-[var(--color-text-muted,#666)]">Editing an entry</span>
+            <button
+              type="button"
+              onClick={cancelEdit}
+              className="min-h-9 rounded border border-[var(--color-border,#ddd)] px-2 text-xs"
+            >
+              Cancel edit
+            </button>
+          </div>
+        )}
       </div>
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-2">
         {entries.length === 0 && (

@@ -7,7 +7,7 @@
  * inverse, rendering `wikiLink` nodes back to `[[label]]` text.
  */
 
-type ProseMirrorNode = {
+export type ProseMirrorNode = {
   type: string;
   text?: string;
   attrs?: Record<string, unknown>;
@@ -41,7 +41,7 @@ function parseParagraphText(text: string): ProseMirrorNode[] {
  * Converts plain text into a ProseMirror doc: blank lines split paragraphs,
  * `[[label]]` spans become `wikiLink` inline atom nodes.
  */
-export function textToDoc(text: string): unknown {
+export function textToDoc(text: string): ProseMirrorNode {
   const paragraphs = text.split(/\n\s*\n/);
 
   return {

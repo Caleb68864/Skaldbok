@@ -71,6 +71,11 @@ export function WritePad({
 
   const commit = async () => {
     if (!value.trim()) return;
+    // Guard at entry, not just on the button. `committing` disables the button
+    // but Ctrl/Cmd+Enter bypasses it entirely, and a stylus can double-fire —
+    // two invocations then close over the same `value` and the same edit
+    // target, producing either a duplicate entry or two racing writes to one row.
+    if (committing) return;
     const textarea = textareaRef.current;
     setCommitting(true);
     try {

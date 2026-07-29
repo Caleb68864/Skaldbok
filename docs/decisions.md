@@ -617,3 +617,52 @@
   while everything beside it was dropped.
 - Commit: converge(pass-12) — make log-entry deletion atomic, correct a false
   rationale.
+
+## 2026-07-29 — Approving a wikilink suggestion always persisted it unresolved
+- Symptom: the link scanner exists to turn a typed name into an edge to the real
+  character, creature or note. It resolved correctly — `applySuggestionToBody`
+  builds a `wikiLink` node carrying `suggestion.target.entityId` — and then
+  `PromoteEntriesSheet` did `setApprovedText(docToText(updatedBody))`, flattening
+  the doc back to `[[label]]` text. `createNoteAndPromote` re-parsed it with
+  `textToDoc`, which cannot recover an id and hardcodes `id: null`. **Every**
+  approved link persisted unresolved, so `linkSyncEngine` minted an
+  `unresolved-<label>` placeholder node instead of an edge. The feature's entire
+  output was discarded one line after being computed.
+- Fix: carry the ProseMirror doc end to end — `approvedBody` instead of
+  `approvedText`, `promoteEntriesToNewNote` takes a body doc, and "Add to
+  existing" concatenates the two docs instead of flattening both to text (which
+  had also been destroying ids already present in the target note). `textToDoc`
+  now returns `ProseMirrorNode` rather than `unknown`; the `unknown` return is
+  what let a text/doc mixup type-check for as long as it did.
+- Surfaces: `PromoteEntriesSheet.tsx`, `SuggestedLinksPanel.tsx` (`onApprove`
+  now typed to the doc), `textToDoc.ts`.
+- Watch: `unknown` on a boundary that carries structure is a place bugs hide.
+  Also: an approval computed against one selection is now discarded when
+  `entries` changes, since the sheet stays open while the log keeps accepting
+  commits.
+
+## 2026-07-29 — The capture screen ate in-progress thoughts
+- Symptom: two data-loss paths on the one screen whose premise is that a thought
+  written at the table is never lost. (1) Tapping any entry in the list — the
+  natural gesture for re-reading one, and the list sits directly above the pad —
+  ran `setDraft(docToText(entry.body))` unconditionally, destroying the
+  half-written draft *and*, via the park effect on the next tick, its
+  localStorage backup. (2) Edit mode had no exit and no indicator: once
+  `editingId` was set there was no cancel, no banner, and the label still read
+  "Commit", so the next new thought overwrote an existing entry instead of
+  adding one. Neither had a confirmation or an undo.
+- Fix: tapping an entry now refuses while an uncommitted draft is present and
+  says so; a banner plus a "Cancel edit" button make edit mode visible and
+  escapable. Separately, `handleCommit` now refreshes *before* clearing the pad
+  — clearing first meant a failed re-read showed "failed to save" over an empty
+  pad, so the user retyped and produced a duplicate — and `WritePad.commit`
+  guards on `committing` at entry, since the disabled button never stopped
+  Ctrl/Cmd+Enter or a double-firing stylus.
+- Surfaces: `sessionLog/SessionLog.tsx`, `components/notes/WritePad.tsx`.
+- Watch: these came from a hardening pass aimed specifically at "how does a user
+  lose text", not at spec compliance — the spec was fully satisfied while both
+  bugs were live. Remaining known gaps in the same area: two tabs on one session
+  share a draft key and clobber each other, committing onto an entry another tab
+  soft-deleted succeeds silently into a tombstone, and `textToDoc` round-tripping
+  rewrites CRLF and collapses blank runs.
+- Commit: harden(notes) — stop losing drafts, and persist resolved wikilink ids.

@@ -9,8 +9,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { extractText } from '../../utils/prosemirror';
 import { formatLocalDateTime } from '../../utils/dates';
-import { textToDoc, docToText } from './textToDoc.js';
-import { SuggestedLinksPanel } from './SuggestedLinksPanel';
+import { textToDoc } from './textToDoc.js';
+import { SuggestedLinksPanel, type ProseMirrorNode } from './SuggestedLinksPanel';
 import { useNoteSearch } from './useNoteSearch';
 import { scanForLinks, buildLinkScanDictionary, type LinkScanSuggestion } from './linkScanner.js';
 import { TagPicker } from '../../components/notes/TagPicker';
@@ -96,27 +96,61 @@ function buildTitlePrefill(entries: Note[]): string {
   return text.slice(0, 60);
 }
 
-/** Creates a brand-new note from the selection and links every entry to it, all in one transaction. */
+/**
+ * Creates a brand-new note from the selection and links every entry to it, all
+ * in one transaction.
+ *
+ * @remarks
+ * Takes an already-built ProseMirror doc rather than text. Approving a link
+ * suggestion produces a `wikiLink` node carrying the resolved `entityId`
+ * (`applySuggestionToBody`), and flattening that to text and re-parsing with
+ * `textToDoc` throws the id away — `textToDoc` cannot recover it, so it
+ * hardcodes `id: null`. Every approved link was persisted unresolved, which
+ * made `linkSyncEngine` mint an `unresolved-<label>` placeholder instead of an
+ * edge to the real character or creature.
+ */
 async function createNoteAndPromote(
   entries: Note[],
-  data: { campaignId: string; sessionId?: string; title: string; type: NoteType; tags?: string[]; bodyText: string },
+  data: { campaignId: string; sessionId?: string; title: string; type: NoteType; tags?: string[]; body: ProseMirrorNode },
 ): Promise<string> {
   return noteRepository.promoteEntriesToNewNote(entries, {
     campaignId: data.campaignId,
     sessionId: data.sessionId,
     title: data.title,
-    body: textToDoc(data.bodyText),
+    body: data.body,
     type: data.type,
     typeData: {},
     tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
   } as Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'status' | 'pinned'>);
 }
 
-/** Appends the selection under a `---` divider on an existing note's body, leaving its title unchanged. */
-async function appendEntriesToExistingNote(entries: Note[], targetNoteId: string, appendedText: string): Promise<void> {
+/**
+ * Appends the selection under a `---` divider on an existing note's body,
+ * leaving its title unchanged.
+ *
+ * @remarks
+ * Concatenates the two docs rather than flattening both to text and re-parsing.
+ * The old text round-trip destroyed resolved `wikiLink` ids on **both** sides —
+ * the appended entries *and* every link already present in the target note.
+ */
+async function appendEntriesToExistingNote(
+  entries: Note[],
+  targetNoteId: string,
+  appendedBody: ProseMirrorNode,
+): Promise<void> {
   await noteRepository.appendEntriesToNote(entries, targetNoteId, existingBody => {
-    const existingText = extractText(existingBody);
-    return textToDoc(existingText ? `${existingText}\n\n---\n\n${appendedText}` : appendedText);
+    const existing = existingBody as ProseMirrorNode | null | undefined;
+    const existingContent = Array.isArray(existing?.content) ? existing.content : [];
+    const appendedContent = Array.isArray(appendedBody.content) ? appendedBody.content : [];
+    if (existingContent.length === 0) return appendedBody;
+    return {
+      type: 'doc',
+      content: [
+        ...existingContent,
+        { type: 'paragraph', content: [{ type: 'text', text: '---' }] },
+        ...appendedContent,
+      ],
+    };
   });
 }
 
@@ -156,10 +190,20 @@ export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone, init
   // Separate, timestamp-free text handed to the link scanner only — the
   // promoted/appended body text (previewText/approvedText) is unaffected.
   const scanText = useMemo(() => buildScanText(entries), [entries]);
-  // Tracks the running text after any approved suggestions have been applied,
-  // so the promoted/appended note body carries the resolved `[[link]]`s
-  // rather than the raw pre-scan text.
-  const [approvedText, setApprovedText] = useState<string | null>(null);
+  // Tracks the running ProseMirror doc after any approved suggestions have been
+  // applied, so the promoted/appended note body carries the resolved wikiLink
+  // nodes -- ids included -- rather than the raw pre-scan text.
+  //
+  // Held as a doc, not text: `docToText` serializes a wikiLink back to
+  // `[[label]]`, and re-parsing that with `textToDoc` cannot recover the
+  // entityId, so every approved link used to persist unresolved.
+  const [approvedBody, setApprovedBody] = useState<ProseMirrorNode | null>(null);
+
+  // Drop an approval that was computed against a previous selection. `entries`
+  // changes whenever a new entry is committed or one is edited/deleted while
+  // the sheet is open; keeping the old doc would write a body derived from
+  // pre-refresh text, silently dropping or resurrecting entry content.
+  useEffect(() => { setApprovedBody(null); }, [scanText]);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,7 +242,7 @@ export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone, init
         title: newTitle.trim() || 'Untitled',
         type: newType,
         tags: newTags,
-        bodyText: approvedText ?? previewText,
+        body: approvedBody ?? textToDoc(previewText),
       });
       onDone?.();
       onClose();
@@ -211,7 +255,11 @@ export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone, init
     if (saving || !selectedExistingId) return;
     setSaving(true);
     try {
-      await appendEntriesToExistingNote(entries, selectedExistingId, approvedText ?? previewText);
+      await appendEntriesToExistingNote(
+        entries,
+        selectedExistingId,
+        approvedBody ?? textToDoc(previewText),
+      );
       onDone?.();
       onClose();
     } finally {
@@ -372,7 +420,7 @@ export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone, init
           // to a shared bucket and dismissing a suggestion in one campaign
           // suppresses it in every other one.
           campaignId={campaignId}
-          onApprove={(_, updatedBody) => setApprovedText(docToText(updatedBody))}
+          onApprove={(_, updatedBody) => setApprovedBody(updatedBody)}
         />
 
         <button

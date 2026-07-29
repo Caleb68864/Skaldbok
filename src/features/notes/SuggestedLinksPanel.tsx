@@ -182,7 +182,13 @@ export interface SuggestedLinksPanelProps {
    */
   campaignId?: string | null;
   /** Called after a suggestion is approved, with the doc produced by {@link applySuggestionToBody}. */
-  onApprove: (suggestion: LinkScanSuggestion, updatedBody: unknown) => void;
+  /**
+   * Fired after a suggestion is applied. `updatedBody` is a ProseMirror doc
+   * whose `wikiLink` nodes carry the resolved `entityId` — consumers must
+   * persist the **doc**, not a text serialization of it. Flattening it via
+   * `docToText` and re-parsing with `textToDoc` silently discards every id.
+   */
+  onApprove: (suggestion: LinkScanSuggestion, updatedBody: ProseMirrorNode) => void;
   /** Called after a suggestion's dismissal has been persisted. */
   onDismiss?: (suggestion: LinkScanSuggestion) => void;
   /** Called when the user asks to create an NPC note for a missing-record candidate. */
