@@ -177,26 +177,36 @@ export function SessionTimelinePanel({
   }));
 
   useEffect(() => {
+    const tracks = timelineDataset.tracks;
+    const seen = classifiedTrackIdsRef.current;
+
+    // Tracks arrive — and leave — over time: notes load async, and switching
+    // sessions swaps the whole dataset without remounting this panel. A track
+    // takes its `defaultHidden` default exactly once per appearance; after that
+    // the user's toggle is the only thing that moves it.
+    //
+    // The ref is pruned to the live track set below, so a lane that leaves and
+    // comes back is classified afresh rather than inheriting a stale verdict.
+    // Without that pruning the Log lane returned *expanded*: `hiddenTrackIds`
+    // is recomputed from the current dataset each pass, so a departed track
+    // silently dropped out of it while staying in `seen` — on return it read as
+    // already-classified and fell through to "not hidden, therefore visible".
+    // Reachable by reviewing a session with entries, switching to a fresh one,
+    // and committing its first entry.
+    const defaultForNewlyArrived = new Map(
+      tracks.filter((track) => !seen.has(track.id)).map((track) => [track.id, !track.defaultHidden]),
+    );
+    // Mutated here, not inside the updater: React may invoke a state updater
+    // more than once, and a ref write in there would make the second pass see
+    // the first pass's bookkeeping.
+    classifiedTrackIdsRef.current = new Set(tracks.map((track) => track.id));
+
     setTimelineFilterState((currentState) => {
-      // Tracks arrive over time — notes load async, so a lane can join the
-      // dataset long after this state was seeded. A track is classified by its
-      // own defaults exactly once (`defaultHidden` starts it switched off);
-      // after that the user's toggle is the only thing that moves it.
-      //
-      // "Already classified" is tracked in a ref rather than derived from
-      // `currentState`, because the shared timeline hook prunes
-      // `hiddenTrackIds` against the current track list — deriving it from
-      // state made a lane that appeared late read as still-unclassified on one
-      // render and already-visible on the next, so the Log lane came up
-      // expanded instead of off.
-      const seen = classifiedTrackIdsRef.current;
       const nextVisibleTrackIds = timelineDataset.tracks
         .filter((track) => {
           if (!track.visible) return false;
-          if (!seen.has(track.id)) {
-            seen.add(track.id);
-            return !track.defaultHidden;
-          }
+          const freshDefault = defaultForNewlyArrived.get(track.id);
+          if (freshDefault !== undefined) return freshDefault;
           return !currentState.hiddenTrackIds.includes(track.id);
         })
         .map((track) => track.id);

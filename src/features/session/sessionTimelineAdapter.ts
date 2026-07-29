@@ -204,8 +204,10 @@ export function buildSessionTimelineDataset({
     tracks.push(buildTrack(childKind));
   }
   // `npc` and `log` are first-class top-level tracks — add only if notes of
-  // that kind exist. `log` starts hidden (`visible: false` in the catalog);
-  // the track filter reveals it. Neither belongs in NOTE_CHILD_TRACK_KINDS.
+  // that kind exist. `log` starts switched off via `defaultHidden` in the
+  // catalog (deliberately **not** `visible: false`, which would make the lane
+  // permanently unreachable — see TimelineTrack.defaultHidden); the track
+  // filter reveals it. Neither belongs in NOTE_CHILD_TRACK_KINDS.
   if (noteTrackKinds.has('npc')) {
     tracks.push(buildTrack('npc'));
   }

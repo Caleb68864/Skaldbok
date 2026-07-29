@@ -429,3 +429,31 @@
   `main.scrollHeight === main.clientHeight` in the running app rather than by
   reasoning; measured 2464 === 2464 at 1600×2560.
 - Commit: converge(pass-1) — stop wasting 140px on the log route.
+
+## 2026-07-29 — A "classified once" ref must be pruned, or a returning track comes back wrong
+- Symptom: the session timeline's Log lane is meant to start switched off. It
+  did on first render, but came back **expanded** after the track left and
+  rejoined the dataset — reviewing a session with entries, ending it, starting a
+  fresh one, then committing its first entry. `SessionScreen` renders
+  `ActiveSessionContent` and `SessionTimelinePanel` without a `key`, so
+  switching sessions swaps the dataset without remounting the panel and the
+  bookkeeping survives.
+- Fix: `classifiedTrackIdsRef` recorded which tracks had already taken their
+  `defaultHidden` default, but only ever grew. `hiddenTrackIds` is recomputed
+  from the *current* dataset each pass, so a departed track silently dropped out
+  of it while staying in the ref; on return it read as already-classified and
+  fell through to "not in hiddenTrackIds, therefore visible". The ref is now
+  pruned to the live track set each pass, so a lane that leaves and returns is
+  classified afresh.
+- Surfaces: `features/session/SessionTimelinePanel.tsx`,
+  `components/timeline/hooks/useTimelineState.ts` (`buildInitialFilterState`
+  also now honours `defaultHidden`, which it ignored — any *uncontrolled*
+  `TimelineRoot` would otherwise render such a track fully visible).
+- Watch: the ref is mutated in the effect body, **not** inside the
+  `setTimelineFilterState` updater. React may invoke an updater more than once,
+  and a ref write in there lets the second invocation observe the first one's
+  bookkeeping and reach the opposite conclusion. Any similar "seen set" needs
+  the same treatment. More generally: a first-render check does not prove a
+  default holds — verify across a dataset swap.
+- Commit: converge(pass-3) — keep the Log lane hidden when a track leaves and
+  returns.

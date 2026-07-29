@@ -76,8 +76,13 @@ function buildInitialFilterState(
   initialFilterState?: Partial<TimelineFilterState>,
 ): TimelineFilterState {
   const trackIds = tracks.filter((track) => track.visible).map((track) => track.id);
+  // `visible: false` means the track can never render; `defaultHidden` means it
+  // starts switched off but stays toggleable. Both seed `hiddenTrackIds`, which
+  // is the source of truth from here on. Omitting `defaultHidden` here left an
+  // uncontrolled `TimelineRoot` rendering such a track fully visible, which is
+  // the opposite of what the flag promises.
   const hiddenTrackIds = initialFilterState?.hiddenTrackIds ?? tracks
-    .filter((track) => !track.visible)
+    .filter((track) => !track.visible || track.defaultHidden)
     .map((track) => track.id);
 
   // Default-collapse any track whose catalog entry marked it `collapsed`.
