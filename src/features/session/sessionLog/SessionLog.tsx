@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { PenHelpPanel } from '../../../components/notes/PenHelpPanel';
 import { WritePad } from '../../../components/notes/WritePad';
 import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useToast } from '../../../context/ToastContext';
@@ -422,6 +423,7 @@ export function SessionLog() {
           />
         )}
       </div>
+      <PenHelpPanel />
       {/* Docked, not fullscreen. A fullscreen pad would bury the entry list —
           and the list is not decoration: tap-to-edit and selection both live
           there. Docked keeps capture one tap from the session screen while
