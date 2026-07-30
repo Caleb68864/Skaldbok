@@ -1188,3 +1188,28 @@
   still violated it while every gate reported green. Run the E2E against factory
   output before believing the run summary.
 - Commit: fix(handwriting) — keep the entry list usable beside the writing pad.
+
+## 2026-07-30 — Device test: DirectWriting docks regardless, and Ink was hidden
+- Symptom: first real Tab S9 run. Two findings. (a) **The pivotal unknown
+  resolves against Approach A**: Samsung DirectWriting docks its panel no matter
+  how tall the textarea is, so a taller text pad buys more visible text but never
+  the notebook page that was asked for. (b) Handwriting works with **Samsung
+  Keyboard** and not with Gboard — which is exactly what `PenHelpPanel` already
+  tells the user, so that guidance is now confirmed rather than assumed.
+- Fix: `hasFinePointerMedia` probed `matchMedia('(pointer: fine)')`. `pointer`
+  describes the **primary** input, which on a touchscreen tablet is the finger,
+  so a Tab S9 reports `pointer: coarse` even with an S Pen — the query was false
+  on precisely the device the feature exists for. It now probes
+  `any-pointer: fine` as well.
+- Surfaces: features/notes/ink/penCapability.ts.
+- Watch: the Ink toggle is gated on `penAvailable`, so with that probe false the
+  toggle only appeared **after** an S Pen touch was observed anywhere on the log
+  (`onPointerDownCapture` on the root). The mode that actually delivers a
+  full-page writing surface was therefore reachable only by accident — a
+  discoverability failure that reads as "the feature doesn't work". Worth
+  remembering that a capability probe gating a UI affordance fails *silently*:
+  nothing errors, the control is simply absent.
+- Watch also: Approach A has now hit its documented ceiling. The design predicted
+  this — "if it docks regardless, Approach A's ceiling is much lower and the ink
+  layer becomes the primary answer." That is now the position, not a hypothesis.
+- Commit: fix(ink) — detect a stylus via any-pointer, not the primary pointer.

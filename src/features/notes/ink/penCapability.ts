@@ -25,9 +25,30 @@ function safeProbe(probe: () => boolean): boolean {
   }
 }
 
-/** Whether the environment reports a fine (stylus/mouse-precision) pointer via `matchMedia`. */
+/**
+ * Whether a fine (stylus/mouse-precision) pointer is available at all.
+ *
+ * @remarks
+ * Probes **`any-pointer: fine`**, not `pointer: fine`. `pointer` describes the
+ * *primary* input, which on a touchscreen tablet is the finger — so a Galaxy Tab
+ * S9 reports `pointer: coarse` even with an S Pen docked in it, and the original
+ * `pointer: fine` query was false on precisely the device this feature exists
+ * for. `any-pointer: fine` asks the question actually being asked: is there a
+ * fine pointer among the available ones?
+ *
+ * Confirmed on the device: the Ink toggle stayed hidden until an S Pen touch was
+ * observed, so the mode that gives a full writing page was reachable only by
+ * accident.
+ *
+ * A desktop mouse also matches, which is correct — the ink pad is usable with
+ * one, and it keeps the toggle testable outside a tablet.
+ */
 export function hasFinePointerMedia(): boolean {
-  return safeProbe(() => typeof matchMedia === 'function' && matchMedia('(pointer: fine)').matches);
+  return safeProbe(
+    () =>
+      typeof matchMedia === 'function' &&
+      (matchMedia('(any-pointer: fine)').matches || matchMedia('(pointer: fine)').matches),
+  );
 }
 
 /** Whether the experimental `navigator.ink` low-latency ink API is present. */
