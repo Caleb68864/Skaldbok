@@ -60,6 +60,7 @@ Every catalogued item was worked. What follows is the closing position.
 | E1 dead play-mode policy | `75637c5` |
 | A2 keyboard-inoperable cards | `75637c5` |
 | D1 duplicate-edge race | `16c3c0e` — syncs serialised per note |
+| D1 placeholder scope / resolution / reaping | `8fafeea` |
 | B2 collapsed Notes lane | already live via `sessionTimelineAdapter`; needed no change |
 | A1 all 14 dialogs | `75637c5` (8) + `5f2dd41` (6) |
 
@@ -72,10 +73,11 @@ so the ref goes on the inner panel and the hook takes the open flag. The better
 end state is still the Radix wrappers; the hook is deliberately the same
 contract, so each remains a straight substitution.
 
-**D1 (partial).** The race is fixed and soft-delete integration was already
-done. Still open: a `[[target]]` written before its note exists is never
-re-resolved when the note appears, and slug ids remain lossy across distinct
-labels. Both are graph-modelling changes rather than defects in the sync path.
+**D1 — now complete (`8fafeea`).** The race was fixed in `16c3c0e`;
+soft-delete integration was already done. The remaining two are closed:
+placeholder ids are campaign-scoped and no longer slug-merged, a placeholder is
+folded into the note or character that later resolves it, and orphaned stubs are
+reaped. Nothing remains under D1.
 
 **P1.** Screens ignoring play/edit mode — untouched, as you asked.
 
