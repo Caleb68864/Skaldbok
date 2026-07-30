@@ -14,6 +14,12 @@ Status values: **OPEN** (verified still present) · **DONE** · **BLOCKED**
 (needs hardware or a product decision) · **UNVERIFIED** (carried over, not
 re-checked today).
 
+> **Re-verified 2026-07-29 (second pass).** Every item below outside the
+> Traveller section has now been checked against the code individually, with the
+> evidence recorded inline. All of them are genuinely open. The two bad calls
+> this session were both in the Traveller section, which had been copied from the
+> wave-4 report; the items inherited from the earlier waves hold up.
+>
 > **Read this before trusting a status.** The first version of this file marked
 > the whole Traveller section OPEN by copying the wave-4 report rather than
 > checking the code, and four of five items were already fixed. Sections carrying
@@ -108,14 +114,20 @@ seeded once at mount and only "self-heals" because of that unmount.
 
 ## OPEN — accessibility
 
-### A1. ~11 hand-rolled `<div role="dialog">` modals
+### A1. 14 hand-rolled `<div role="dialog">` modals
+**Verified — the count is 14, not the ~11 previously recorded:**
+`CharacterPortrait`, `ImportPreview`, `BestiaryScreen`, `CreatureTemplateForm`,
+`CampaignContext`, `CampaignCreateModal`, `EndSessionModal`, `ManagePartyDrawer`,
+`EncounterScreen`, `ParticipantDrawer`, `QuickCreateParticipantFlow`,
+`PromoteEntriesSheet`, `SessionLogSelection`, `SessionScreen`.
 CampaignCreateModal, ManagePartyDrawer, QuickNoteDrawer, ParticipantDrawer,
 CreatureTemplateForm, ImportPreview, inline dialogs in SessionScreen /
 EncounterScreen, stale-session in CampaignContext. No focus trap, no Escape, no
 focus restore. Route them through the existing Radix Modal/Drawer wrappers.
 
 ### A2. Non-keyboard-operable controls
-`NotesGrid` note cards are `<div onClick>`. (`AttachmentThumbs` was deleted in
+**Verified** at `NotesGrid.tsx:276-279` — the note card is a
+`<div onClick={() => openNote(note.id)} className="cursor-pointer">`. (`AttachmentThumbs` was deleted in
 the tidy sweep, so its 20px destructive target is moot.)
 
 ---
@@ -138,7 +150,9 @@ layer exists yet.
 Always prints the active character.
 
 ### L2. `useEncounter.startEncounter` (dead variant)
-Can violate the one-active-encounter invariant. Delete or harden before reuse.
+**Verified dead:** exported at `useEncounter.ts:328`, but `EncounterScreen` — the
+hook's only consumer — does not destructure it. Can violate the
+one-active-encounter invariant. Delete or harden before reuse.
 
 ### L3. `notesToTimeline.buildTrack` silently drops `defaultHidden`
 No production consumer today. Matters if that adapter is ever wired to a screen.
