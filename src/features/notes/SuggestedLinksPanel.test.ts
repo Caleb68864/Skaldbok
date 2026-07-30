@@ -83,3 +83,19 @@ describe('applySuggestionToDoc', () => {
     expect(wikiLinks(doc)).toEqual([{ label: 'Ostrand', id: 'c1' }]);
   });
 });
+
+describe('textToDoc line-ending handling', () => {
+  // A tablet keyboard that sends CRLF used to round-trip a lone \r into the
+  // stored body: /\n\s*\n/ only consumed the carriage returns adjacent to a
+  // blank line, leaving the rest inside paragraph text.
+  it('normalises CRLF without leaving stray carriage returns', () => {
+    const doc = textToDoc('first line\r\nsecond line\r\n\r\nnew paragraph');
+    expect(docToText(doc)).toBe('first line\nsecond line\n\nnew paragraph');
+    expect(JSON.stringify(doc)).not.toContain('\r');
+  });
+
+  it('treats a CRLF blank line as a paragraph break', () => {
+    const doc = textToDoc('one\r\n\r\ntwo');
+    expect(doc.content).toHaveLength(2);
+  });
+});

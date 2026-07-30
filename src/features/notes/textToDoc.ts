@@ -42,7 +42,11 @@ function parseParagraphText(text: string): ProseMirrorNode[] {
  * `[[label]]` spans become `wikiLink` inline atom nodes.
  */
 export function textToDoc(text: string): ProseMirrorNode {
-  const paragraphs = text.split(/\n\s*\n/);
+  // Normalise CRLF first. Splitting on /\n\s*\n/ left a lone `\r` at the end of
+  // every line inside a paragraph — `\s` only consumed the ones adjacent to a
+  // blank line — so editing an entry typed on a device that sends CRLF
+  // round-tripped invisible carriage returns back into the stored body.
+  const paragraphs = text.replace(/\r\n?/g, '\n').split(/\n[ \t]*\n/);
 
   return {
     type: 'doc',

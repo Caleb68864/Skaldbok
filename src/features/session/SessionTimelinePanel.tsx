@@ -86,6 +86,16 @@ export function SessionTimelinePanel({
     parentEncounterMap: {},
   });
   const [loading, setLoading] = useState(true);
+  /**
+   * Whether the first load has completed.
+   *
+   * @remarks
+   * The placeholder is shown only before it has. Re-raising `loading` on every
+   * refresh swapped `TimelineRoot` out for a div, and remounting it discarded
+   * the viewport — so committing a log entry silently threw away the user's
+   * zoom and pan. Subsequent loads now re-render the mounted timeline in place.
+   */
+  const hasLoadedOnceRef = useRef(false);
 
   const encounterSignature = useMemo(
     () => encounters
@@ -104,7 +114,7 @@ export function SessionTimelinePanel({
     let cancelled = false;
 
     async function loadTimelineData() {
-      setLoading(true);
+      if (!hasLoadedOnceRef.current) setLoading(true);
       try {
         const loadedData = await loadSessionTimelineSourceData(session.id, encounters);
         if (!cancelled) {
@@ -112,6 +122,7 @@ export function SessionTimelinePanel({
         }
       } finally {
         if (!cancelled) {
+          hasLoadedOnceRef.current = true;
           setLoading(false);
         }
       }

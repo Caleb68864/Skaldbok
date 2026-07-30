@@ -34,6 +34,15 @@ async function getSyncModule() {
 export interface LogToSessionOptions {
   /** Explicit encounter target for the `contains` edge. */
   targetEncounterId?: string | null;
+  /**
+   * Session to write against, overriding the currently active one.
+   *
+   * @remarks
+   * For buffered writes that may flush *after* the session has ended. The
+   * buffer records the session it was opened against so the entry still lands
+   * in the right place rather than being dropped.
+   */
+  session?: { id: string; campaignId: string } | null;
 }
 
 /**
@@ -70,6 +79,8 @@ interface CoinBuffer {
    * line lists denominations in the order the player touched them.
    */
   changes: Record<string, { delta: number; abbr: string }>;
+  /** Session this buffer was opened against, so a late flush still lands. */
+  session: { id: string; campaignId: string } | null;
   /** Handle for the active debounce timer, or null when idle. */
   timer: ReturnType<typeof setTimeout> | null;
 }
@@ -113,6 +124,8 @@ interface ResourceBuffer {
    * Traveller hit as "Healed".
    */
   accumulates: boolean;
+  /** Session this buffer was opened against, so a late flush still lands. */
+  session: { id: string; campaignId: string } | null;
   /** Handle for the active debounce timer, or null when idle. */
   timer: ReturnType<typeof setTimeout> | null;
 }
@@ -145,8 +158,8 @@ interface ResourceBuffer {
  */
 export function useSessionLog() {
   const { activeSession } = useCampaignContext();
-  const coinBuffer = useRef<CoinBuffer>({ character: '', changes: {}, timer: null });
-  const resourceBuffer = useRef<ResourceBuffer>({ character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, timer: null });
+  const coinBuffer = useRef<CoinBuffer>({ character: '', changes: {}, session: null, timer: null });
+  const resourceBuffer = useRef<ResourceBuffer>({ character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, session: null, timer: null });
 
   /**
    * Core primitive — creates a note attached to the active session.
@@ -171,7 +184,13 @@ export function useSessionLog() {
     typeData: unknown = {},
     options?: LogToSessionOptions,
   ): Promise<string | undefined> => {
-    if (!activeSession) {
+    // `options.session` lets a buffered write name the session it was opened
+    // against. Without it, a flush triggered *by* the session ending ran after
+    // `activeSession` was already null, hit the guard below and silently threw
+    // the buffer away — end-of-combat damage and coin lines written in the last
+    // three seconds of a session never reached the log.
+    const target = options?.session ?? activeSession;
+    if (!target) {
       console.warn('useSessionLog.logToSession: no active session');
       return undefined;
     }
@@ -179,7 +198,7 @@ export function useSessionLog() {
     let noteId: string | undefined;
     await db.transaction('rw', [db.notes, db.entityLinks, db.encounters], async () => {
       const attachTo = await resolveEncounterAttachmentTarget({
-        sessionId: activeSession.id,
+        sessionId: target.id,
         targetEncounterId: options?.targetEncounterId,
         resolveActiveEncounterId: async (sessionId) => {
           const encounter = await encounterRepository.getActiveEncounterForSession(sessionId);
@@ -188,8 +207,8 @@ export function useSessionLog() {
       });
 
       const note = buildNoteRecord({
-        campaignId: activeSession.campaignId,
-        sessionId: activeSession.id,
+        campaignId: target.campaignId,
+        sessionId: target.id,
         title,
         type,
         typeData,
@@ -202,7 +221,7 @@ export function useSessionLog() {
 
       await persistCanonicalNoteLinks({
         note,
-        sessionId: activeSession.id,
+        sessionId: target.id,
         encounterId: attachTo,
       });
     });
@@ -309,7 +328,7 @@ export function useSessionLog() {
   const flushResourceBuffer = useCallback(async () => {
     const buf = resourceBuffer.current;
     if (!buf.character || buf.startValue === buf.currentValue) {
-      resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, timer: null };
+      resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, session: null, timer: null };
       return;
     }
     const diff = buf.currentValue - buf.startValue;
@@ -325,8 +344,8 @@ export function useSessionLog() {
     const label = healed
       ? `${buf.character}: Healed ${amount} ${resLabel} (${readout})`
       : `${buf.character}: Took ${amount} ${resLabel} damage (${readout})`;
-    await logToSession(label);
-    resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, timer: null };
+    await logToSession(label, 'generic', {}, { session: buf.session });
+    resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, session: null, timer: null };
   }, [logToSession]);
 
   /**
@@ -362,7 +381,7 @@ export function useSessionLog() {
     }
     // Initialize start value on first change in this batch
     if (!buf.character || buf.character !== characterName || buf.resource !== resourceId) {
-      resourceBuffer.current = { character: characterName, resource: resourceId, startValue: oldHP, currentValue: newHP, maxValue: maxHP, accumulates, timer: null };
+      resourceBuffer.current = { character: characterName, resource: resourceId, startValue: oldHP, currentValue: newHP, maxValue: maxHP, accumulates, session: activeSession, timer: null };
     } else {
       resourceBuffer.current.currentValue = newHP;
       resourceBuffer.current.maxValue = maxHP;
@@ -433,9 +452,9 @@ export function useSessionLog() {
       .filter(entry => entry.delta !== 0)
       .map(entry => `${entry.delta > 0 ? '+' : ''}${entry.delta}${entry.abbr}`);
     if (parts.length > 0) {
-      await logToSession(`${buf.character}: Coins ${parts.join(' ')}`);
+      await logToSession(`${buf.character}: Coins ${parts.join(' ')}`, 'generic', {}, { session: buf.session });
     }
-    coinBuffer.current = { character: '', changes: {}, timer: null };
+    coinBuffer.current = { character: '', changes: {}, session: null, timer: null };
   }, [logToSession]);
 
   /**
@@ -473,6 +492,8 @@ export function useSessionLog() {
     }
     // Accumulate
     buf.character = characterName;
+    // Remember the session so a flush after it ends still writes the entry.
+    buf.session = activeSession;
     const suffix = abbr ?? LEGACY_COIN_ABBREVIATIONS[coinType] ?? coinType;
     buf.changes[coinType] = {
       delta: (buf.changes[coinType]?.delta ?? 0) + delta,
@@ -483,7 +504,7 @@ export function useSessionLog() {
     buf.timer = setTimeout(() => {
       flushCoinBuffer();
     }, 3000);
-  }, [flushCoinBuffer]);
+  }, [flushCoinBuffer, activeSession]);
 
   /**
    * Creates a free-form generic note attached to the active session and
@@ -684,17 +705,26 @@ export function useSessionLog() {
     }
   }, [activeSession, flushCoinBuffer, flushResourceBuffer]);
 
-  // Flush on unmount
+  // Flush on unmount.
+  //
+  // The flush callbacks are held in a ref rather than listed as deps: with `[]`
+  // the cleanup closed over the *first* render's callbacks, which were bound to
+  // whichever session was active at mount, so unmounting after a session switch
+  // flushed the buffer into the wrong session. Listing them as deps instead
+  // would re-run the effect on every change and flush on each one, which is not
+  // what "on unmount" means. The ref gives the cleanup the current callbacks
+  // while still running exactly once.
+  const flushRef = useRef({ flushCoinBuffer, flushResourceBuffer });
+  flushRef.current = { flushCoinBuffer, flushResourceBuffer };
   useEffect(() => {
     return () => {
       const coinBuf = coinBuffer.current;
       if (coinBuf.timer !== null) clearTimeout(coinBuf.timer);
-      flushCoinBuffer();
+      flushRef.current.flushCoinBuffer();
       const resBuf = resourceBuffer.current;
       if (resBuf.timer !== null) clearTimeout(resBuf.timer);
-      flushResourceBuffer();
+      flushRef.current.flushResourceBuffer();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {

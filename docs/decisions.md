@@ -945,3 +945,35 @@
   symptoms of a missing layer, not of two careless components. Any future
   grouping should read through `useConfigurableDefaults`.
 - Commit: refactor — wire the campaign index, drop dead code, add a config selector.
+
+## 2026-07-29 — The session-log cluster: four ways capture lost data or state
+- Symptom: (S1) two tabs open on one session shared the localStorage key
+  `skaldbok-log-draft-<sessionId>` and overwrote each other's in-progress text on
+  every keystroke. (S2) `logToSession` early-returns when `activeSession` is
+  null, and the flush effect fires *because* the session went null — so
+  end-of-combat damage and coin lines buffered in the last three seconds of a
+  session were silently dropped; the unmount flush additionally used `[]` deps
+  and closed over the mount-time callbacks, flushing into the wrong session
+  after a switch. (S3) `text.split(/\n\s*\n/)` only consumed carriage returns
+  adjacent to a blank line, so editing an entry typed on a CRLF device
+  round-tripped invisible `\r`s into the body. (S4) `setLoading(true)` on every
+  refresh swapped `TimelineRoot` for a div, and remounting discarded the
+  viewport — committing a log entry threw away the user's zoom and pan.
+- Fix: the draft key is now per-tab (id in `sessionStorage`), and a tab with no
+  draft adopts the newest orphan left for that session, so closing and reopening
+  the app still recovers the text while two live tabs never share a key. Buffers
+  record the session they were opened against and `logToSession` takes an
+  explicit `options.session`, so a late flush still lands. The unmount flush
+  reads its callbacks from a ref — running once, but with current bindings.
+  CRLF is normalised before splitting. The timeline placeholder shows only
+  before the first load completes.
+- Surfaces: features/session/sessionLog/SessionLog.tsx,
+  features/session/useSessionLog.ts, features/notes/textToDoc.ts (+2 tests),
+  features/session/SessionTimelinePanel.tsx.
+- Watch: S2's two halves have opposite fixes and it is worth not confusing them.
+  A buffered write needs the session **captured at buffer-open time**, because
+  by flush time the active one may be gone. The unmount cleanup needs the
+  **latest** callbacks, because `[]` deps freeze them at mount — listing them as
+  deps instead would flush on every change, which is not what "on unmount"
+  means.
+- Commit: fix(session) — stop the log losing drafts, entries and viewport state.

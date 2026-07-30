@@ -8,9 +8,39 @@ import { textToDoc, docToText } from '../../notes/textToDoc';
 import { SessionLogSelection } from './SessionLogSelection';
 import type { Note } from '../../../types/note';
 
-/** localStorage key holding the unsaved pad draft for one session. */
+/** Prefix shared by every parked draft for one session, across tabs. */
+function draftKeyPrefix(sessionId: string): string {
+  return `skaldbok-log-draft-${sessionId}-`;
+}
+
+/**
+ * Id identifying this browser tab, stable for its lifetime.
+ *
+ * @remarks
+ * Held in `sessionStorage`, which is per-tab by definition, so a second tab gets
+ * a different one. The draft key needs it because two tabs open on the same
+ * session previously shared a single key and overwrote each other's in-progress
+ * text on every keystroke.
+ */
+function tabId(): string {
+  const KEY = 'skaldbok-tab-id';
+  try {
+    const existing = sessionStorage.getItem(KEY);
+    if (existing) return existing;
+    const fresh = crypto.randomUUID();
+    sessionStorage.setItem(KEY, fresh);
+    return fresh;
+  } catch {
+    // Private-mode or disabled storage: fall back to a per-mount id. Drafts
+    // then do not survive a remount, which is strictly better than two tabs
+    // silently destroying each other's work.
+    return 'ephemeral';
+  }
+}
+
+/** localStorage key holding this tab's unsaved pad draft for one session. */
 function draftKey(sessionId: string): string {
-  return `skaldbok-log-draft-${sessionId}`;
+  return `${draftKeyPrefix(sessionId)}${tabId()}`;
 }
 
 /** The unsaved pad state parked in localStorage between mounts. */
@@ -18,16 +48,57 @@ interface ParkedDraft {
   text: string;
   /** Id of the entry being edited, so a restored draft updates rather than duplicates. */
   editingId: string | null;
+  /** When it was parked, used to pick the newest when adopting an orphan. */
+  savedAt?: number;
 }
 
-/** Reads the parked draft for a session, tolerating absent or corrupt values. */
-function readParkedDraft(sessionId: string): ParkedDraft | null {
+/** Parses a stored draft, tolerating absent or corrupt values. */
+function parseDraft(raw: string | null): ParkedDraft | null {
+  if (!raw) return null;
   try {
-    const raw = localStorage.getItem(draftKey(sessionId));
-    if (!raw) return null;
     const parsed = JSON.parse(raw) as ParkedDraft;
     if (typeof parsed?.text !== 'string') return null;
-    return { text: parsed.text, editingId: parsed.editingId ?? null };
+    return { text: parsed.text, editingId: parsed.editingId ?? null, savedAt: parsed.savedAt };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Reads this tab's parked draft, adopting an orphan from a previous tab when
+ * this one has none.
+ *
+ * @remarks
+ * Keying by tab stops two open tabs clobbering each other, but on its own it
+ * would also lose the draft whenever the app is closed and reopened, since that
+ * is a new tab id. So a tab with no draft of its own takes over the newest one
+ * left for this session and deletes the original — the common case (reopening
+ * the PWA) recovers the text, while two *live* tabs never share a key because
+ * the second one writes under its own id from its first keystroke.
+ */
+function readParkedDraft(sessionId: string): ParkedDraft | null {
+  try {
+    const own = parseDraft(localStorage.getItem(draftKey(sessionId)));
+    if (own) return own;
+
+    const prefix = draftKeyPrefix(sessionId);
+    let bestKey: string | null = null;
+    let best: ParkedDraft | null = null;
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (!key || !key.startsWith(prefix)) continue;
+      const candidate = parseDraft(localStorage.getItem(key));
+      if (!candidate) continue;
+      if (!best || (candidate.savedAt ?? 0) > (best.savedAt ?? 0)) {
+        best = candidate;
+        bestKey = key;
+      }
+    }
+    if (best && bestKey) {
+      localStorage.setItem(draftKey(sessionId), JSON.stringify(best));
+      localStorage.removeItem(bestKey);
+    }
+    return best;
   } catch {
     return null;
   }
@@ -92,7 +163,10 @@ export function SessionLog() {
       return;
     }
     try {
-      localStorage.setItem(key, JSON.stringify({ text: draft, editingId } satisfies ParkedDraft));
+      localStorage.setItem(
+        key,
+        JSON.stringify({ text: draft, editingId, savedAt: Date.now() } satisfies ParkedDraft),
+      );
     } catch {
       // A full or unavailable quota must not break capture — the draft simply
       // is not recoverable across a remount.
