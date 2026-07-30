@@ -15,6 +15,7 @@ import {
 } from '../../storage/repositories/kbNodeRepository';
 import {
   getEdgesFromNode,
+  getEdgesToNode,
   upsertEdge,
   deleteEdge,
   deleteEdgesFromNode,
@@ -37,6 +38,99 @@ function noteTypeToKBNodeType(noteType: string): KBNode['type'] {
     case 'location': return 'location';
     case 'loot': return 'item';
     default: return 'note';
+  }
+}
+
+/**
+ * Id for the placeholder node standing in for an unresolved `[[label]]`.
+ *
+ * @remarks
+ * Scoped by campaign and built from the normalised label rather than a slug.
+ * The previous form, `unresolved-${label.toLowerCase().replace(/\s+/g, '-')}`,
+ * had two failure modes:
+ *
+ * 1. **No campaign in the id.** `[[Ostrand]]` in two campaigns produced one
+ *    shared row, whose `campaignId` was whichever synced last — so one
+ *    campaign's edges pointed at a node claiming to belong to the other.
+ * 2. **Slugging merged distinct labels.** `Sir Aldric` and `Sir-Aldric` both
+ *    collapsed to `sir-aldric` and became the same node.
+ *
+ * Whitespace is still collapsed and case still folded, because resolution
+ * (`getNodeByLabel`) is case-insensitive — those two must agree or a placeholder
+ * would never match the note that resolves it.
+ *
+ * @param campaignId - Campaign the link was written in.
+ * @param label - Raw link label.
+ * @returns Deterministic node id.
+ */
+function placeholderNodeId(campaignId: string, label: string): string {
+  return `unresolved:${campaignId}:${label.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+}
+
+/**
+ * Repoints edges from a placeholder onto the real node that now carries its
+ * label, then removes the placeholder.
+ *
+ * @remarks
+ * A `[[target]]` written before its note exists creates a placeholder. Nothing
+ * used to revisit it, so creating the note afterwards left every earlier
+ * reference pointing at the stub: the backlinks panel showed nothing and the
+ * graph kept a permanent orphan beside the real node.
+ *
+ * An inbound edge whose source *already* links to the real node is deleted
+ * rather than repointed, since repointing it would duplicate the edge it would
+ * become.
+ *
+ * @param realNodeId - Node that should own the label from now on.
+ * @param label - Label being resolved.
+ * @param campaignId - Campaign scope.
+ */
+async function absorbPlaceholder(
+  realNodeId: string,
+  label: string,
+  campaignId: string,
+): Promise<void> {
+  const stubId = placeholderNodeId(campaignId, label);
+  if (stubId === realNodeId) return;
+  const stub = await db.kb_nodes.get(stubId).catch(() => null);
+  if (!stub || stub.type !== 'unresolved') return;
+
+  const inbound = await getEdgesToNode(stubId);
+  const realInbound = await getEdgesToNode(realNodeId);
+  const alreadyLinked = new Set(realInbound.map(e => `${e.fromId}:${e.type}`));
+
+  for (const edge of inbound) {
+    if (alreadyLinked.has(`${edge.fromId}:${edge.type}`)) {
+      await deleteEdge(edge.id);
+      continue;
+    }
+    await upsertEdge({ ...edge, toId: realNodeId });
+    alreadyLinked.add(`${edge.fromId}:${edge.type}`);
+  }
+  await deleteNode(stubId);
+}
+
+/**
+ * Deletes unresolved placeholders in a campaign that nothing points at any more.
+ *
+ * @remarks
+ * Placeholders were only ever created, never reaped, so removing the last
+ * `[[link]]` to a name left its stub in the graph forever. This also clears
+ * stubs left behind by the id-format change, which are unreachable by
+ * construction: nothing can link to an id no code generates.
+ *
+ * @param campaignId - Campaign to sweep.
+ */
+async function reapOrphanPlaceholders(campaignId: string): Promise<void> {
+  const stubs = await db.kb_nodes
+    .where('campaignId')
+    .equals(campaignId)
+    .and(node => node.type === 'unresolved')
+    .toArray()
+    .catch(() => []);
+  for (const stub of stubs) {
+    const inbound = await getEdgesToNode(stub.id);
+    if (inbound.length === 0) await deleteNode(stub.id);
   }
 }
 
@@ -129,6 +223,13 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
     }
     await upsertNode(noteNode);
 
+    // This note may be the thing earlier links were waiting for. Fold any
+    // placeholder carrying its title into it before building edges, so the
+    // diff below sees the real node rather than re-creating the stub.
+    if (noteNode.label) {
+      await absorbPlaceholder(noteNodeId, noteNode.label, note.campaignId);
+    }
+
     // Build the desired edge set
     const desiredEdges = new Map<string, { toId: string; type: KBEdge['type'] }>();
 
@@ -140,7 +241,7 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
         targetId = target.id;
       } else {
         // Create unresolved placeholder
-        targetId = `unresolved-${label.toLowerCase().replace(/\s+/g, '-')}`;
+        targetId = placeholderNodeId(note.campaignId, label);
         await upsertNode({
           id: targetId,
           type: 'unresolved',
@@ -161,7 +262,7 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
       if (target) {
         targetId = target.id;
       } else {
-        targetId = `unresolved-${label.toLowerCase().replace(/\s+/g, '-')}`;
+        targetId = placeholderNodeId(note.campaignId, label);
         await upsertNode({
           id: targetId,
           type: 'unresolved',
@@ -225,6 +326,9 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
       }
     }
 
+    // A removed `[[link]]` can leave its placeholder with no inbound edges.
+    await reapOrphanPlaceholders(note.campaignId);
+
     if (import.meta.env.DEV) {
       const duration = performance.now() - startTime;
       console.debug(
@@ -275,6 +379,9 @@ export async function syncCharacter(
       createdAt: existing?.createdAt ?? now,
       updatedAt: now,
     });
+    // A character can be what earlier `[[Name]]` links were waiting for just as
+    // a note can, so it absorbs a matching placeholder too.
+    await absorbPlaceholder(nodeId, name, campaignId);
   } catch (err) {
     console.warn('[linkSyncEngine] syncCharacter failed', characterId, err);
   }

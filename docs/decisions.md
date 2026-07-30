@@ -1087,3 +1087,30 @@
   an unused variable, the build failed, and the E2E silently ran the previous
   bundle — a green run against a stale `dist` looks identical to a real pass.
 - Commit: fix(a11y) — trap focus in the last six hand-rolled dialogs.
+
+## 2026-07-30 — Unresolved wikilink placeholders: three defects in one id
+- Symptom: a `[[label]]` with no matching record creates an `unresolved`
+  placeholder node keyed `unresolved-${label.toLowerCase().replace(/\s+/g,'-')}`.
+  (a) **No campaign in the id.** `[[Ostrand]]` in two campaigns produced one
+  shared row whose `campaignId` was whichever synced last, so one campaign's
+  edges pointed at a node claiming to belong to the other. (b) **Slugging merged
+  distinct labels** — `Sir Aldric` and `Sir-Aldric` both collapsed to
+  `sir-aldric`. (c) **Nothing ever revisited a placeholder**: creating the note
+  it was waiting for left every earlier reference pointing at the stub, so
+  backlinks showed nothing and the graph kept a permanent orphan beside the real
+  node. Placeholders were also never reaped, so removing the last link to a name
+  left its stub forever.
+- Fix: ids are now `unresolved:<campaignId>:<normalised label>` — scoped, and
+  built from the label rather than a slug. `absorbPlaceholder` repoints a stub's
+  inbound edges onto the real node and deletes it, called when a note *or* a
+  character node is upserted. `reapOrphanPlaceholders` drops stubs with no
+  inbound edges at the end of each sync.
+- Surfaces: features/kb/linkSyncEngine.ts, +5 tests.
+- Watch: whitespace is still collapsed and case still folded, because
+  `getNodeByLabel` resolves with `equalsIgnoreCase` — the two normalisations
+  have to agree or a placeholder could never match the note that resolves it.
+  An inbound edge whose source already links to the real node is deleted rather
+  than repointed, since repointing would duplicate the edge it becomes. The
+  reaper also clears stubs stranded by the id-format change, which are
+  unreachable by construction — nothing can link to an id no code generates.
+- Commit: fix(kb) — scope, resolve and reap unresolved link placeholders.
