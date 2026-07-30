@@ -19,6 +19,7 @@ import {
   DialogDescription,
 } from '../../components/ui/dialog';
 import { cn } from '../../lib/utils';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 export interface EncounterScreenProps {
   encounterId: string;
@@ -58,6 +59,10 @@ export function EncounterScreen({ encounterId, onClose }: EncounterScreenProps) 
   const { showToast } = useToast();
 
   const [showParticipantPicker, setShowParticipantPicker] = useState(false);
+  const participantPickerRef = useModalBehaviour<HTMLDivElement>(
+    () => setShowParticipantPicker(false),
+    showParticipantPicker,
+  );
   const [showEndDialog, setShowEndDialog] = useState(false);
   const [endSummary, setEndSummary] = useState<unknown>(null);
   const [submittingEnd, setSubmittingEnd] = useState(false);
@@ -367,7 +372,9 @@ export function EncounterScreen({ encounterId, onClose }: EncounterScreenProps) 
       {/* Participant picker modal */}
       {showParticipantPicker && (
         <div
+          ref={participantPickerRef}
           role="dialog"
+          aria-modal="true"
           aria-label="Add participant"
           onClick={() => setShowParticipantPicker(false)}
           className="fixed inset-0 bg-black/50 z-[300] flex items-end justify-center"

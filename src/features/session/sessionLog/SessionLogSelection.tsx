@@ -16,6 +16,7 @@ import * as creatureTemplateRepository from '../../../storage/repositories/creat
 import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useSessionRefreshSafe } from '../SessionRefreshContext';
 import { cn } from '../../../lib/utils';
+import { useModalBehaviour } from '../../../hooks/useModalBehaviour';
 import type { Note } from '../../../types/note';
 import type { EntityLink } from '../../../types/entityLink';
 
@@ -83,6 +84,7 @@ export function SessionLogSelection({
   const [sheetMode, setSheetMode] = useState<'new' | 'tag'>('new');
   const [promotedTargets, setPromotedTargets] = useState<Record<string, string>>({});
   const [reviewOpen, setReviewOpen] = useState(false);
+  const reviewRef = useModalBehaviour<HTMLDivElement>(() => setReviewOpen(false), reviewOpen);
   const [reviewSuggestions, setReviewSuggestions] = useState<LinkScanSuggestion[]>([]);
 
   useEffect(() => {
@@ -249,7 +251,9 @@ export function SessionLogSelection({
 
       {reviewOpen && (
         <div
+          ref={reviewRef}
           role="dialog"
+          aria-modal="true"
           aria-label="Review session links"
           onClick={() => setReviewOpen(false)}
           className="fixed inset-0 z-[300] flex items-end justify-center bg-black/50"

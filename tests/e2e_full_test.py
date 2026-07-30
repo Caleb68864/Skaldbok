@@ -742,6 +742,36 @@ def phase_encounter_lifecycle(page: Page, iteration: int) -> bool:
         return False
     print("    OK: Start Encounter modal opened")
 
+    # Focus trap: Tab from the last focusable inside must wrap back into the
+    # dialog, not escape to the page behind. This is what `useModalBehaviour`
+    # adds — Escape and initial focus were already handled by this particular
+    # modal's own effect and `autoFocus`, so asserting those would pass with the
+    # hook removed and prove nothing.
+    DIALOG = '[role="dialog"][aria-labelledby="start-encounter-title"]'
+    page.evaluate(
+        """(sel) => {
+            const dialog = document.querySelector(sel);
+            const focusables = dialog.querySelectorAll(
+              'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])'
+            );
+            focusables[focusables.length - 1].focus();
+        }""",
+        DIALOG,
+    )
+    page.keyboard.press("Tab")
+    wait_stable(page, 300)
+    still_inside = page.evaluate(
+        """(sel) => {
+            const dialog = document.querySelector(sel);
+            return !!dialog && dialog.contains(document.activeElement);
+        }""",
+        DIALOG,
+    )
+    if not still_inside:
+        print("    FAIL: Tab escaped the Start Encounter dialog (no focus trap)")
+        return False
+    print("    OK: focus is trapped inside the dialog")
+
     title = "iter" + str(iteration) + " ambush on the road"
     title_input = page.get_by_label("Encounter title")
     if title_input.count() == 0:

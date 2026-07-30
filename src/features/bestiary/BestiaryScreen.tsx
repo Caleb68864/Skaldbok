@@ -11,6 +11,7 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 export interface BestiaryScreenProps {
   campaignId: string;
@@ -49,6 +50,13 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
   const [showForm, setShowForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CreatureTemplate | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<CreatureTemplate | null>(null);
+  // The ref goes on the inner panel, which is the element carrying
+  // role="dialog" — the outer div is only the click-away backdrop, and trapping
+  // focus on it would include nothing.
+  const statblockRef = useModalBehaviour<HTMLDivElement>(
+    () => setViewingTemplate(null),
+    viewingTemplate !== null,
+  );
 
   // Escape closes the stat-block modal (additive keyboard support for the
   // hand-rolled overlay, which otherwise only closed on backdrop click).
@@ -156,6 +164,7 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
           className="fixed inset-0 bg-black/50 z-[300] flex items-end sm:items-center justify-center"
         >
           <div
+            ref={statblockRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="bestiary-statblock-title"

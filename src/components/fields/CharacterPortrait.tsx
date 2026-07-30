@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { cn } from '../../lib/utils';
 import { useToast } from '../../context/ToastContext';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 /** Props for {@link CharacterPortrait}. `onPortraitChange` receives a compressed JPEG data URI, not the raw file. */
 export interface CharacterPortraitProps {
@@ -66,6 +67,12 @@ async function compressImage(file: File): Promise<string> {
  */
 export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPortraitChange }: CharacterPortraitProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  // Rendered conditionally, so the hook is told when it is live rather than
+  // being called conditionally itself.
+  const lightboxRef = useModalBehaviour<HTMLDivElement>(
+    () => setModalOpen(false),
+    modalOpen,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
 
@@ -178,6 +185,7 @@ export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPo
       {/* Lightbox modal */}
       {modalOpen && portraitUri && (
         <div
+          ref={lightboxRef}
           className="portrait-lightbox"
           onClick={() => setModalOpen(false)}
           role="dialog"

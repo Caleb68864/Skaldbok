@@ -38,6 +38,7 @@ import type { Session } from '../types/session';
 import type { Note } from '../types/note';
 import { formatLocalDateOnly, formatLocalDateTime } from '../utils/dates';
 import { addPartyCharactersToEncounter } from '../features/encounters/addPartyCharactersToEncounter';
+import { useModalBehaviour } from '../hooks/useModalBehaviour';
 
 function formatDateTime(iso: string): string {
   return formatLocalDateTime(iso);
@@ -317,6 +318,12 @@ function ActiveSessionContent() {
   const [newEncounterParentOverride, setNewEncounterParentOverride] = useState<'auto' | 'none' | string>('auto');
   const [includePartyInEncounter, setIncludePartyInEncounter] = useState(true);
   const [submittingEncounter, setSubmittingEncounter] = useState(false);
+  // Escape is disabled mid-submit, matching the backdrop click, so a slow write
+  // cannot be abandoned halfway. The trap and focus restore stay active.
+  const startEncounterRef = useModalBehaviour<HTMLDivElement>(
+    submittingEncounter ? undefined : () => setShowStartEncounter(false),
+    showStartEncounter,
+  );
   const [pastSessions, setPastSessions] = useState<Session[]>([]);
   const [loadingPast, setLoadingPast] = useState(false);
   const [timelineSearchText, setTimelineSearchText] = useState('');
@@ -608,6 +615,7 @@ function ActiveSessionContent() {
           className="fixed inset-0 bg-black/50 z-[300] flex items-end justify-center"
         >
           <div
+            ref={startEncounterRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="start-encounter-title"

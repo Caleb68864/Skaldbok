@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 import { ReopenEncounterPrompt } from '../../components/modals/ReopenEncounterPrompt';
 import { flushAll } from '../persistence/autosaveFlush';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
@@ -37,9 +38,14 @@ interface StaleSessionModalProps {
  * @param props - {@link StaleSessionModalProps}
  */
 function StaleSessionModal({ sessionTitle, onEnd, onContinue }: StaleSessionModalProps) {
+  // Continue is the non-destructive choice, so Escape maps to it.
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onContinue);
+
   return (
     <div
+      ref={dialogRef}
       role="dialog"
+      aria-modal="true"
       aria-label="Stale session warning"
       onClick={onContinue}
       className="fixed inset-0 bg-black/50 z-[300] flex items-center justify-center p-4"

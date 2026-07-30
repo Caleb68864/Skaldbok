@@ -1061,3 +1061,29 @@
   hidden. Reverted. A test that contradicts a change is worth reading before
   assuming it is stale.
 - Commit: fix(kb) — serialise KB syncs per note.
+
+## 2026-07-30 — The last six hand-rolled dialogs, and two assertions that proved nothing
+- Symptom: six of the fourteen `role="dialog"` overlays were left unconverted in
+  the previous pass because their dialog element is rendered conditionally or
+  nested inside a backdrop, so the uniform top-level transform did not reach
+  them: the portrait lightbox, the session review sheet, the bestiary statblock,
+  the participant picker, the start-encounter modal and the stale-session
+  warning.
+- Fix: all six now use `useModalBehaviour`. Where the element is conditional the
+  hook takes the open flag rather than being called conditionally, and where the
+  dialog is nested inside a click-away backdrop the ref goes on the **inner**
+  panel — trapping focus on the backdrop would enclose nothing. Start-encounter
+  passes `undefined` as the closer while submitting, matching the guard its
+  backdrop click already had. All 14 are covered.
+- Surfaces: CharacterPortrait, SessionLogSelection, BestiaryScreen,
+  EncounterScreen, SessionScreen, CampaignContext, tests/e2e_full_test.py.
+- Watch: the first two E2E assertions written for this — "focus moves into the
+  dialog" and "Escape closes the dialog" — **passed with the hook removed**.
+  That modal already had its own Escape effect and an `autoFocus`, so both
+  assertions described pre-existing behaviour and demonstrated nothing about the
+  change. Replaced with a focus-trap assertion (Tab from the last focusable must
+  wrap back inside), which fails with the hook removed and passes with it. Note
+  also that the first mutation attempt was itself void: deleting the `ref` left
+  an unused variable, the build failed, and the E2E silently ran the previous
+  bundle — a green run against a stale `dist` looks identical to a real pass.
+- Commit: fix(a11y) — trap focus in the last six hand-rolled dialogs.
