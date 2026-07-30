@@ -34,8 +34,22 @@ export interface WritePadProps {
    * entry list, hiding the entries the user edits, selects and promotes.
    */
   variant?: 'fullscreen' | 'docked';
-  /** Height of the writing area when docked. Ignored when fullscreen. */
+  /**
+   * Minimum height of the writing area when docked. Ignored when fullscreen.
+   * The pad grows taller than this as the user types, up to `maxHeightFraction`
+   * of the viewport.
+   */
   dockedHeight?: string;
+  /**
+   * Whether the docked pad auto-grows to fit its content. Defaults to `true`.
+   * Ignored when fullscreen (which is already full-page).
+   */
+  autoGrow?: boolean;
+  /**
+   * Fraction of `window.innerHeight` the docked pad may grow to before it
+   * stops growing and starts scrolling internally. Defaults to `0.6`.
+   */
+  maxHeightFraction?: number;
 }
 
 /**
@@ -56,16 +70,47 @@ export function WritePad({
   commitLabel = 'Commit',
   variant = 'fullscreen',
   dockedHeight = '14rem',
+  autoGrow = true,
+  maxHeightFraction = 0.6,
 }: WritePadProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [committing, setCommitting] = useState(false);
   const { showToast } = useToast();
+  const docked = variant === 'docked';
+  const growing = docked && autoGrow;
 
   useEffect(() => {
     if (open) {
       textareaRef.current?.focus();
     }
   }, [open]);
+
+  // Growing the docked pad to fit content. Snaps to a whole multiple of
+  // LINE_HEIGHT_PX so the ruled background stripes stay aligned with the
+  // text baseline at every height.
+  useEffect(() => {
+    if (!growing || !open) return;
+
+    const recompute = () => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+      const minPx = parseFloat(dockedHeight) * 16 || textarea.scrollHeight;
+      const maxPx = window.innerHeight * maxHeightFraction;
+      // Reset height first so scrollHeight reflects content, not the last grow.
+      textarea.style.height = 'auto';
+      const contentPx = textarea.scrollHeight;
+      const clampedPx = Math.min(Math.max(contentPx, minPx), maxPx);
+      const snappedPx = Math.max(
+        LINE_HEIGHT_PX,
+        Math.round(clampedPx / LINE_HEIGHT_PX) * LINE_HEIGHT_PX,
+      );
+      textarea.style.height = `${snappedPx}px`;
+    };
+
+    recompute();
+    window.addEventListener('resize', recompute);
+    return () => window.removeEventListener('resize', recompute);
+  }, [growing, open, value, dockedHeight, maxHeightFraction]);
 
   if (!open) return null;
 
@@ -100,8 +145,6 @@ export function WritePad({
     // A bare Enter falls through and inserts a newline as usual.
   };
 
-  const docked = variant === 'docked';
-
   return (
     <div
       className={cn(
@@ -110,7 +153,7 @@ export function WritePad({
           ? 'w-full shrink-0 border-t border-[var(--color-border,#ddd)]'
           : 'fixed inset-0 z-50',
       )}
-      style={docked ? { height: dockedHeight } : undefined}
+      style={docked ? (growing ? { minHeight: dockedHeight } : { height: dockedHeight }) : undefined}
     >
       <div className="flex shrink-0 items-center justify-between border-b border-[var(--color-border,#ddd)] px-4 py-2">
         <button
@@ -136,7 +179,8 @@ export function WritePad({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className={cn(
-          'flex-1 w-full resize-none border-0 bg-transparent px-4 py-4 font-mono text-base outline-none',
+          'w-full resize-none border-0 bg-transparent px-4 py-4 font-mono text-base outline-none',
+          growing ? 'flex-none overflow-y-auto' : 'flex-1',
         )}
         style={{
           lineHeight: `${LINE_HEIGHT_PX}px`,

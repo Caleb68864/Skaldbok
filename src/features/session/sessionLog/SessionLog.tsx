@@ -434,6 +434,7 @@ export function SessionLog() {
         onClose={() => setPadOpen(false)}
         placeholder="Log what's happening..."
         variant="docked"
+        dockedHeight="28rem"
         commitLabel="Commit"
       />
       {!padOpen && (
