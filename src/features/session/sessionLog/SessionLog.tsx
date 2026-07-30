@@ -636,7 +636,14 @@ export function SessionLog() {
           onClose={() => setPadOpen(false)}
           placeholder="Log what's happening..."
           variant="docked"
-          dockedHeight="28rem"
+          // A *floor*, not a target. This was 28rem, which on a tablet in
+          // landscape left the entry list with no usable height at all: the
+          // sticky selection toolbar and the header between them covered every
+          // row, so selecting a second entry made it unclickable. Auto-grow is
+          // what delivers the big writing surface — it climbs to
+          // `maxHeightFraction` of the viewport as the user writes — so the
+          // floor only has to be comfortable to start writing in.
+          dockedHeight="14rem"
           commitLabel="Commit"
         />
       ) : (

@@ -1163,3 +1163,28 @@
   bypass requires the committer email to equal `forge.json:git_username`, which
   it does not here, so a real entry is required — this one.
 - Commit: factory(SS-04) — worker output.
+
+## 2026-07-30 — The handwriting pad squeezed the entry list out of existence
+- Symptom: after the factory built SS-01–SS-06, the E2E crashed in the promote
+  phase — `main li button` nth(1) never became clickable, with the sticky
+  selection toolbar and the log header both reported as intercepting pointer
+  events. Not a test artefact: a user selecting two entries would find the second
+  one unclickable, covered by the toolbar their own selection had just opened.
+- Fix: two changes. `SessionLog` passed `dockedHeight="28rem"` (448px) where the
+  previous default was `14rem`, and SS-01 had turned that prop from a fixed
+  height into a **floor** — so the pad could never be smaller than 448px, and on
+  a tablet in landscape the header, pen-help panel, pad and toolbar together left
+  the list no usable height. The floor is back to `14rem`; auto-grow is what
+  delivers the large writing surface, climbing to `maxHeightFraction` of the
+  viewport as the user writes. `SessionLogSelection` also now reserves the sticky
+  toolbar's own height beneath the list.
+- Surfaces: features/session/sessionLog/SessionLog.tsx,
+  features/session/sessionLog/SessionLogSelection.tsx.
+- Watch: the factory's own verification passed this. Its checks are largely
+  structural greps and per-file spec compliance; nothing it runs opens the app
+  and clicks a row, so a layout regression that makes a control unreachable is
+  invisible to it. The spec even states the constraint this broke — "the list is
+  not decoration: tap-to-edit and selection both live there" — and the build
+  still violated it while every gate reported green. Run the E2E against factory
+  output before believing the run summary.
+- Commit: fix(handwriting) — keep the entry list usable beside the writing pad.

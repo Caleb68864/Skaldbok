@@ -197,6 +197,13 @@ export function SessionLogSelection({
         </button>
       </div>
 
+      {/* Reserves the sticky toolbar's own height beneath the list.
+          `sticky bottom-0` pins the bar to the bottom of the scrollport, which
+          is fine on a long list but covers the entries outright on a short one —
+          and the writing surface growing taller made every list short. Selecting
+          two entries then left the second one unclickable, because the bar the
+          selection had just opened was sitting on top of it. */}
+      {selectedIds.size > 0 && <div aria-hidden="true" className="h-14 shrink-0" />}
       {selectedIds.size > 0 && (
         <div
           role="toolbar"
