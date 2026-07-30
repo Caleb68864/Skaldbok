@@ -68,63 +68,20 @@ individually this time.
 | T5 | One hit can never kill | **Fixed `bbf4b89`** — overflow continues through the remaining tracks |
 | — | Knocked-out state never stored | **Fixed `bbf4b89`** — `DamageTrackModel.statusConditions` + sync in `writeResources` |
 
-### T6. Four producer/consumer key spaces with zero assertions
-**Still open, and the most valuable item here.** Three of four have a hardcoded
-closed union on the consumer side with a cast hiding the mismatch.
-`engineContract.test.ts` passes **every** finding in the wave-4 report — it never
-renders a component and never invokes a function-valued engine field. A contract
-test that cannot fail is the real defect: it is why the modifier bug (F1) and the
-damage-cascade bug (T5) both sat green.
+### T6. ~~Contract test that cannot fail~~ — **fixed `dadb95d`**
+`engineContract.test.ts` gained behavioural assertions (adapter routing by
+function identity, producer/consumer key agreement, capability coherence, actual
+invocation of the function-valued fields), and a new `engineConsumers.test.ts`
+scans source for the consumer-side mistakes no engine-internal assertion can
+reach. `TempModifier.duration` is no longer a closed Dragonbane union, and
+`AddModifierDrawer` no longer defaults to the literal `'stretch'`. Every
+assertion was mutation-tested.
 
-### T7. Traveller has no UI to add a temporary modifier
-`BuffChipBar` and `AddModifierDrawer` are both mounted inside `attributesPanel`.
-Traveller's engine lists `'characteristics'`, and `characteristicsPanel` has no
-equivalent, so no mounting site exists. Meanwhile `modifiableStats` enumerates
-`attr:*`/`res:*` targets and `getEffectiveValue` is called on the Traveller panel
-— the plumbing is complete end to end with no entry point. "The stim gives you +2
-DEX for the scene" has nowhere to go, so the player tracks it on paper.
-
-## OPEN — data integrity
-
-### D1. KB graph not integrated with soft-delete
-`src/features/kb/linkSyncEngine.ts`. Note *soft*-delete leaves ghost `note-<id>`
-nodes and live backlinks visible in GraphView/BacklinksPanel. Also: duplicate-edge
-race (fire-and-forget non-transactional `syncNote`), no placeholder re-resolution
-when a `[[target]]` note later appears, and lossy slug ids merging distinct
-labels. Partially mitigated — `softDeleteWithLinks` now calls `deleteNoteNode` —
-but restore does not re-sync and `syncNote` is still unserialized.
-
-### D2. Reference groups keyed on a mutable title string
-`referenceSectionRepository`. The group→section relationship joins on the
-group's `title`, not a stable id, so two cards both named "New Card" share and
-clobber each other's sections and cannot be deleted. Classic
-label-as-join-key. Needs a migration.
-
-### D3. `referenceSection` / `referenceGroup` hard-delete
-Dexie v11/v12 tables violate the project-wide soft-delete convention (added
-after them).
-
-### D4. Bundle import strips non-character entity fields
-Only `characterRecordSchema` has `.passthrough()`. note / creatureTemplate /
-session / campaign / party / encounter schemas drop unenumerated fields on
-import, so a Traveller/SWADE bestiary loses its system stats. Adding
-`.passthrough()` to the shared storage schemas broke the build (ripples into
-`z.infer` index signatures) — needs **separate bundle-parse schemas**, not edits
-to the storage types.
-
-### D5. Dexie v7 ref-note migration emits malformed notes
-`client.ts:268` spreads a ReferenceNote into `notes` without
-`campaignId`/`body`/`status`, so `baseNoteSchema` drops it on read. Legacy
-bundled content only. LOW.
-
-### D6. Import envelope `type` not cross-checked against contents
-`bundleParser`. A hand-edited or community bundle with a mislabelled `type`
-merges as the wrong kind. Matters for the community-template goal.
-
-### D7. Referential closure prunes rather than includes
-`src/utils/export/referentialClosure.ts` drops edges whose endpoints fall
-outside the bundle. Correct and honest, but the *better* fix is to widen
-collection so the endpoint ships.
+### T7. ~~Traveller has no modifier UI~~ — **already fixed in `708cce3`**
+`modifierAndConditionExtras` is shared by both the attributes and characteristics
+panels. I listed this as open on 2026-07-29 without checking the code — the
+**second** time in one session I reported a Traveller item open that was already
+done. Verify before reporting.
 
 ---
 
