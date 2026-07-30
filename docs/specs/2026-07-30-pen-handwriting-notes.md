@@ -267,7 +267,10 @@ value change plus a `window.resize` listener is sufficient and dependency-free.
 - `[STRUCTURAL]` `SessionLog.tsx` passes a `dockedHeight` (or equivalent minimum)
   materially greater than the previous `14rem` default. *(REQ-002)*
 - `[STRUCTURAL]` A maximum height bound exists and is derived from viewport
-  height, not a hardcoded pixel constant. *(REQ-003)*
+  height, not a hardcoded pixel constant (the exact fraction/formula is a
+  worker decision per Intent's "Decide autonomously" list — verify the bound
+  references a viewport dimension such as `window.innerHeight`, not that it
+  equals any particular percentage). *(REQ-003)*
 - `[MECHANICAL]` `grep -rn "touch-action\|touchAction\|touch-none\|touch-pan\|touch-manipulation" src/components/notes/WritePad.tsx src/features/session/sessionLog/ src/components/shell/ShellLayout.tsx` returns **no matches**. *(REQ-005)*
 - `[MECHANICAL]` `npm run build` exits 0. *(REQ-025)*
 - `[STRUCTURAL]` `WritePad`'s `commit()` still calls `textarea?.focus()` on both
