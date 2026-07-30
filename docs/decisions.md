@@ -1114,3 +1114,29 @@
   reaper also clears stubs stranded by the id-format change, which are
   unreachable by construction — nothing can link to an id no code generates.
 - Commit: fix(kb) — scope, resolve and reap unresolved link placeholders.
+
+## 2026-07-30 — P1 investigated: the screens "ignoring play mode" are not a defect list
+- Symptom (as catalogued): "most screens ignore play/edit mode" — CharacterLibrary
+  (16 write affordances), NoteEditor (9), Session (8), Trash (5), plus "the
+  portrait file-picker is the one input still enabled in play mode (69/70)".
+- Finding: **there is almost nothing to fix here, and gating those four screens
+  would be a regression.** The original spec scopes play mode to the character
+  sheet — "wire mode guards into the Sheet screen as the initial enforcement
+  point", allowing HP, WP, death rolls, conditions and equipped state. It locks a
+  character's *build* so a mistap at the table cannot rewrite it. Writing notes
+  and running a session are what play mode exists *for*; `NoteEditorScreen` and
+  `SessionScreen` write no character data at all (verified). `TrashScreen` only
+  restores — `hardDelete` has no UI caller anywhere — so there is nothing
+  destructive to guard. `CharacterLibrary`'s Delete already goes through a
+  confirm dialog and is a soft delete, recoverable from Trash.
+- Fix: one line. The hidden `<input type="file">` behind the portrait now carries
+  `disabled={!isEditMode}`.
+- Surfaces: components/fields/CharacterPortrait.tsx.
+- Watch: the audit's counts were **reachability-blind**. The portrait upload
+  button is already inside `{isEditMode && (`, so the file input it triggers was
+  unreachable in play mode; the two story-beat inputs the same sweep would flag
+  sit inside `{isEditMode && (` as well; and the rest-prompt roll input is
+  deliberately live, because resting happens during play. Counting raw `<input>`
+  elements without checking whether anything can reach them manufactures work
+  that does not exist — and here it would have manufactured a regression.
+- Commit: fix(sheet) — disable the portrait file input outside edit mode.

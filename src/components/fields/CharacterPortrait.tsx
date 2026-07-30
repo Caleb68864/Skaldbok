@@ -172,13 +172,18 @@ export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPo
         )}
       </div>
 
-      {/* Hidden file input */}
+      {/* Hidden file input. Disabled outside edit mode as defence in depth: the
+          only affordance that opens it is the upload button above, which edit
+          mode already hides, but an enabled file input on a locked sheet is a
+          reachable write path for anything that finds it by selector — and it
+          was the single input on the sheet not carrying the play-mode lock. */}
       <input
         ref={fileInputRef}
         type="file"
         accept="image/jpeg,image/png,image/gif,image/webp"
         aria-label="Choose character portrait image"
         onChange={handleFileChange}
+        disabled={!isEditMode}
         className="hidden"
       />
 
