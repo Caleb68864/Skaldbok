@@ -1039,3 +1039,25 @@
   dialogs are still unconverted: their `role="dialog"` is nested rather than the
   component's top-level return, so the same uniform transform does not apply.
 - Commit: fix(a11y,export) — trap focus in hand-rolled dialogs, drop dead policy.
+
+## 2026-07-29 — Concurrent KB syncs of one note raced into duplicate edges
+- Symptom: every caller fires `syncNote` and forgets it — `noteRepository` starts
+  it with `.then().catch(() => {})` from create, update and append — so two edits
+  landing close together ran two syncs over the same node at once. Each read the
+  existing edge set before either wrote, both concluded the same edges were
+  missing, and both inserted them. Result: duplicate `kb_edges` rows and a
+  backlink counted twice.
+- Fix: `syncNote` chains onto the note's in-flight sync via a per-note map, so
+  the read-then-write sequence is atomic with respect to other syncs of the *same*
+  note while unrelated notes still run in parallel. The chain links onto
+  `previous.catch(…)` so a failed sync does not poison the queue behind it.
+- Surfaces: features/kb/linkSyncEngine.ts, +3 tests.
+- Watch: B2 (Notes lane collapsed by default) turned out to need **no change**.
+  The catalog already sets `collapsed: true` and `sessionTimelineAdapter` —
+  the adapter a screen actually mounts — honours it, so it has been live all
+  along. I carried `collapsed` into `notesToTimeline` for consistency and a test
+  ("does not start any track collapsed") failed: that adapter is the generic one
+  used by the mock example, and its contract is deliberately that nothing arrives
+  hidden. Reverted. A test that contradicts a change is worth reading before
+  assuming it is stale.
+- Commit: fix(kb) — serialise KB syncs per note.

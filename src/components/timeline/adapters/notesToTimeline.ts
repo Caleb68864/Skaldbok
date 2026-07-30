@@ -52,10 +52,12 @@ function buildTrack(kind: string, catalog: typeof DEFAULT_TIMELINE_TRACK_CATALOG
     visible: entry.visible ?? true,
     collapsible: entry.collapsible,
     // Carry the nesting parent so child note-type lanes group under their
-    // parent row. Deliberately NOT carrying `collapsed` yet: enabling
-    // collapse-by-default risks hiding note lanes if the expand affordance
-    // misbehaves, so nesting ships first (expanded, nothing hidden) and
-    // collapsed-default can be turned on once verified in the running app.
+    // parent row. `collapsed` is deliberately NOT carried, and a test pins that
+    // ("does not start any track collapsed"): this adapter is the generic one,
+    // used by the mock example rather than a screen, and its contract is that
+    // nothing arrives hidden. The session adapter — the one a screen actually
+    // mounts — does honour the catalog's `collapsed: true` on the Notes parent,
+    // so collapse-by-default is live where it matters.
     parentTrackId: entry.parentTrackId,
     // Carried so a lane the catalog marks as starting hidden actually does. The
     // session adapter already forwards this; omitting it here meant the two

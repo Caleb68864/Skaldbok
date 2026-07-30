@@ -48,6 +48,36 @@ function noteTypeToKBNodeType(noteType: string): KBNode['type'] {
  * If sync fails internally, the error is caught and logged — never propagated.
  */
 export async function syncNote(noteId: string): Promise<void> {
+  // Serialised per note. Callers fire this and forget it — `noteRepository`
+  // kicks it off with `.then().catch(() => {})` from create, update and
+  // append — so two edits landing close together previously ran two syncs
+  // concurrently over the same node. Both read the existing edge set before
+  // either wrote, so both decided the same edges were missing and inserted
+  // them: duplicate edges, and a backlink counted twice.
+  //
+  // Chaining onto the note's in-flight sync makes the read-then-write
+  // sequence atomic with respect to other syncs of the same note, without
+  // serialising unrelated notes against each other.
+  const previous = inFlightSyncs.get(noteId) ?? Promise.resolve();
+  const run = previous.catch(() => {}).then(() => syncNoteUnsafe(noteId));
+  inFlightSyncs.set(noteId, run);
+  try {
+    await run;
+  } finally {
+    // Only clear when this is still the newest, or a queued sync would be
+    // dropped from the chain and lose its ordering guarantee.
+    if (inFlightSyncs.get(noteId) === run) inFlightSyncs.delete(noteId);
+  }
+}
+
+/**
+ * In-flight sync per note id, so concurrent syncs of the same note queue rather
+ * than racing. Keyed by note, so unrelated notes still sync in parallel.
+ */
+const inFlightSyncs = new Map<string, Promise<void>>();
+
+/** The actual sync. Call {@link syncNote}, which serialises per note. */
+async function syncNoteUnsafe(noteId: string): Promise<void> {
   const startTime = import.meta.env.DEV ? performance.now() : 0;
   let addedCount = 0;
   let removedCount = 0;
