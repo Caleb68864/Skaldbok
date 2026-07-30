@@ -79,7 +79,16 @@ placeholder ids are campaign-scoped and no longer slug-merged, a placeholder is
 folded into the note or character that later resolves it, and orphaned stubs are
 reaped. Nothing remains under D1.
 
-**P1.** Screens ignoring play/edit mode — untouched, as you asked.
+**P1 — investigated and closed (`579311e`), almost entirely a non-finding.**
+Play mode is scoped by its own spec to the character *sheet*: it locks a
+character's build so a mistap at the table cannot rewrite it. Gating the four
+screens listed would have been a regression — writing notes and running a session
+are what play mode is *for*, and neither screen writes character data. Trash only
+restores (`hardDelete` has no UI caller), and Library's Delete is a confirmed
+soft delete recoverable from Trash. One line was real: the hidden portrait file
+input now carries `disabled={!isEditMode}`. The audit's "69/70" was
+reachability-blind — the upload button that opens that input is already inside
+`{isEditMode && (}`.
 
 **B1.** Tab S9 + S Pen handwriting fit. Needs the physical device.
 
