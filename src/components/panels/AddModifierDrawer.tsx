@@ -60,7 +60,17 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
     return [...grouped.entries()];
   }, [engine, system]);
   const [label, setLabel] = useState('');
-  const [duration, setDuration] = useState<Duration>('stretch');
+  /**
+   * Defaults to the active system's first time unit.
+   *
+   * @remarks
+   * Was the hardcoded Dragonbane id `'stretch'`, which is not in Savage Worlds'
+   * `timeUnits`. A SWADE buff saved without touching the Duration row stored
+   * `duration: 'stretch'`, `BuffChipBar` could not resolve it and fell back to
+   * the raw id — the chip read "+2 stretch" — and because SWADE has
+   * `rest: null`, nothing could ever expire it.
+   */
+  const [duration, setDuration] = useState<Duration>(durationOptions[0]?.id ?? '');
   const [effects, setEffects] = useState<EffectRow[]>([{ ...EMPTY_EFFECT }]);
 
   const validEffects = effects.filter(
@@ -71,7 +81,7 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
 
   function resetForm() {
     setLabel('');
-    setDuration('stretch');
+    setDuration(durationOptions[0]?.id ?? '');
     setEffects([{ ...EMPTY_EFFECT }]);
   }
 

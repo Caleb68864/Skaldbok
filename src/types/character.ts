@@ -285,7 +285,21 @@ export interface TempModifier {
   id: string;
   label: string;
   effects: TempModifierEffect[];
-  duration: 'round' | 'stretch' | 'shift' | 'scene' | 'permanent';
+  /**
+   * Id of a {@link features/systems/engine/types!TimeUnit | TimeUnit} from the
+   * active system's `timeUnits`.
+   *
+   * @remarks
+   * Deliberately `string`, not a closed union. It was
+   * `'round' | 'stretch' | 'shift' | 'scene' | 'permanent'` — Dragonbane's
+   * units — while the producer (`engine.timeUnits`) is engine data. Every
+   * consumer therefore needed an `as Duration` cast, which suppressed the one
+   * place the compiler could have objected, and a Savage Worlds buff stored a
+   * `'stretch'` that its own engine cannot resolve. A closed union that is
+   * always cast into is worse than a `string`: it gives false assurance while
+   * asserting nothing. `engineContract.test.ts` now asserts the round trip.
+   */
+  duration: string;
   sourceSpellId?: string;
   createdAt: string;
 }

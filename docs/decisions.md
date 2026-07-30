@@ -882,3 +882,35 @@
   when the assertions were written from the implementation. Only ids a model
   claims are ever synced, so a manually-ticked `fatigued` is never touched.
 - Commit: fix(traveller) — cascade damage through every track, and record being down.
+
+## 2026-07-29 — The engine contract test could not fail
+- Symptom: `engineContract.test.ts` asserted referential integrity of string ids
+  *within* one engine object. It never imported a component, never invoked a
+  function-valued field (`derivedStats`, `modifiableStats`, `currency.read/write`,
+  `attributeBadge` — not once), and never checked which adapter a system resolves
+  to. **Every finding in the 2026-07-28 wave-4 report passed it cleanly**,
+  including the inert-modifier bug and the damage-cascade bug. Separately
+  `TempModifier.duration` was still the closed Dragonbane union
+  `'round'|'stretch'|'shift'|'scene'|'permanent'` while its producer
+  (`engine.timeUnits`) is engine data, so every consumer cast into it — and
+  `AddModifierDrawer` initialised to the literal `'stretch'`, absent from Savage
+  Worlds' units, giving a chip reading "+2 stretch" that nothing could expire.
+- Fix: `duration` is now `string` (a union that is always cast into asserts
+  nothing while reading as safety), and the drawer defaults to `timeUnits[0]`.
+  Added behavioural contract assertions — adapter routing via function identity,
+  producer/consumer key agreement, capability coherence, and actual invocation of
+  the function-valued fields — plus a new `engineConsumers.test.ts` that scans
+  source for the consumer-side mistakes no engine-internal assertion can catch:
+  a bare id passed to `getEffectiveValue`, a hardcoded time-unit id,
+  `panels.includes('rest')` instead of `rest !== null`, and `systemId ===`
+  outside the resolver.
+- Surfaces: features/systems/engine/engineContract.test.ts (+33 assertions),
+  engineConsumers.test.ts (new), types/character.ts,
+  components/panels/AddModifierDrawer.tsx.
+- Watch: every new assertion was **mutation-tested** — a bogus condition id, a
+  lying `hasMagic`, a reintroduced bare-id call and a reintroduced `'stretch'`
+  default each make it fail. Adding assertions that pass is worthless here; the
+  defect being fixed *was* a suite that passed. The comment stripper is not a
+  parser: a breach hidden in a trailing same-line comment is missed, accepted
+  against mangling string literals containing `//`.
+- Commit: test(engine) — make the contract test capable of failing.
