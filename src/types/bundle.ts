@@ -93,6 +93,30 @@ export const bundleEnvelopeSchema = z.object({
 export type BundleContents = z.infer<typeof bundleContentsSchema>;
 
 /**
+ * Envelope schema used to **parse** an incoming bundle.
+ *
+ * @remarks
+ * Deliberately permissive about `contents`, unlike {@link bundleEnvelopeSchema},
+ * which stays strict because it is the source of the `BundleContents` type.
+ * Two problems came from parsing with the strict one:
+ *
+ * 1. Zod strips keys a schema does not enumerate, so every field outside the
+ *    fixed shape was silently discarded before per-entity validation ran. Only
+ *    `characters` survived, because it is typed `z.array(z.record(z.any()))` —
+ *    which is why a Traveller or Savage Worlds bestiary imported gutted while
+ *    characters came through intact.
+ * 2. One malformed row failed the whole envelope parse, so the entire bundle was
+ *    rejected and `validateContentsEntities`' per-entity
+ *    warn-and-skip — the documented design — could never run for those types.
+ *
+ * Rows are validated individually by `validateContentsEntities`, which is where
+ * that check belongs. This schema only asserts the envelope around them.
+ */
+export const bundleEnvelopeParseSchema = bundleEnvelopeSchema.extend({
+  contents: z.record(z.any()),
+});
+
+/**
  * A complete bundle envelope, inferred from {@link bundleEnvelopeSchema}.
  */
 export type BundleEnvelope = z.infer<typeof bundleEnvelopeSchema>;

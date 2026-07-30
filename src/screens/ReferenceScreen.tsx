@@ -148,6 +148,21 @@ export default function ReferenceScreen() {
     });
   }, [searchQuery, sections]);
 
+  /**
+   * Whether a section belongs to a group.
+   *
+   * @remarks
+   * `groupId` is authoritative. `category` is only consulted for a section the
+   * v14 migration could not stamp — the join used to be on the group's *title*,
+   * so two cards named the same thing shared and clobbered each other's
+   * sections and neither could be deleted.
+   */
+  const sectionInGroup = useCallback(
+    (section: ReferenceSection, group: ReferenceGroup): boolean =>
+      section.groupId ? section.groupId === group.id : (section.category || 'General') === group.title,
+    [],
+  );
+
   const visibleGroups = useMemo(() => {
     const knownTitles = new Set(groups.map(group => group.title));
     const orphanGroups = Array.from(new Set(sections.map(section => section.category || 'General')))
@@ -166,7 +181,10 @@ export default function ReferenceScreen() {
     const section = emptySection();
     const targetGroup = visibleGroups[0];
     section.category = targetGroup?.title ?? 'General';
-    section.order = sections.filter(s => s.category === section.category).length;
+    section.groupId = targetGroup?.id;
+    section.order = targetGroup
+      ? sections.filter(s => sectionInGroup(s, targetGroup)).length
+      : sections.length;
     setEditingSection(section);
     setSectionBody(sectionToEditorBody(section));
     setSectionDrawerOpen(true);
@@ -188,12 +206,16 @@ export default function ReferenceScreen() {
     const next = { ...editingGroup, title: editingGroup.title.trim() || 'Untitled Card', updatedAt: nowISO() };
     try {
       if (previous && previous.title !== next.title) {
-        const updatedSections = sections.map(section =>
-          section.category === previous.title ? { ...section, category: next.title, updatedAt: nowISO() } : section
-        );
+        // Sections join on `groupId`, so a rename only has to refresh the
+        // denormalised `category` label they carry for display. It used to be
+        // the join key, which made renaming a card a rewrite of every section
+        // in it — and left them orphaned if that write half-failed.
+        const updatedSections = sections
+          .filter(section => sectionInGroup(section, previous))
+          .map(section => ({ ...section, category: next.title, groupId: next.id, updatedAt: nowISO() }));
         await referenceSectionRepository.saveLayout(
           groups.map(group => group.id === next.id ? next : group),
-          updatedSections,
+          sections.map(section => updatedSections.find(u => u.id === section.id) ?? section),
         );
       } else {
         await referenceSectionRepository.saveGroup(next);
@@ -208,7 +230,7 @@ export default function ReferenceScreen() {
 
   async function handleGroupDeleteConfirm() {
     if (!deleteGroupTarget) return;
-    if (sections.some(section => section.category === deleteGroupTarget.title)) {
+    if (sections.some(section => sectionInGroup(section, deleteGroupTarget))) {
       setError('Move or delete the sections in this card before deleting it.');
       setDeleteGroupTarget(null);
       return;
@@ -263,27 +285,39 @@ export default function ReferenceScreen() {
     await persistLayout(next, sections);
   }
 
-  async function moveSection(sectionId: string, targetCategory: string, targetSectionId?: string) {
+  /**
+   * Moves a section into a group, optionally before a specific sibling.
+   *
+   * @param sectionId - Section being dragged.
+   * @param targetGroup - Group it is dropped on. Taken as the whole group rather
+   *   than its title: routing by title sent the section to whichever card
+   *   happened to share that name.
+   * @param targetSectionId - Sibling to insert before, if dropped onto one.
+   */
+  async function moveSection(sectionId: string, targetGroup: ReferenceGroup, targetSectionId?: string) {
     const moving = sections.find(section => section.id === sectionId);
     if (!moving) return;
 
     const withoutMoving = sections.filter(section => section.id !== sectionId);
     const targetSections = withoutMoving
-      .filter(section => section.category === targetCategory)
+      .filter(section => sectionInGroup(section, targetGroup))
       .sort((a, b) => a.order - b.order);
     const targetIndex = targetSectionId
       ? Math.max(0, targetSections.findIndex(section => section.id === targetSectionId))
       : targetSections.length;
-    const moved = { ...moving, category: targetCategory };
+    const moved = { ...moving, groupId: targetGroup.id, category: targetGroup.title };
     targetSections.splice(targetIndex < 0 ? targetSections.length : targetIndex, 0, moved);
 
     const reorderedTarget = targetSections.map((section, index) => ({ ...section, order: index }));
-    const otherSections = withoutMoving.filter(section => section.category !== targetCategory);
+    const targetIds = new Set(reorderedTarget.map(section => section.id));
+    const otherSections = withoutMoving.filter(section => !targetIds.has(section.id));
     const normalizedOthers = visibleGroups.flatMap(group =>
-      otherSections
-        .filter(section => section.category === group.title)
-        .sort((a, b) => a.order - b.order)
-        .map((section, index) => ({ ...section, order: index }))
+      group.id === targetGroup.id
+        ? []
+        : otherSections
+            .filter(section => sectionInGroup(section, group))
+            .sort((a, b) => a.order - b.order)
+            .map((section, index) => ({ ...section, order: index }))
     );
     await persistLayout(groups, [...normalizedOthers, ...reorderedTarget]);
   }
@@ -408,7 +442,7 @@ export default function ReferenceScreen() {
 
           {visibleGroups.map(group => {
             const categorySections = filteredSections
-              .filter(section => section.category === group.title)
+              .filter(section => sectionInGroup(section, group))
               .sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
             if (categorySections.length === 0 && searchQuery.trim()) return null;
             return (
@@ -434,7 +468,7 @@ export default function ReferenceScreen() {
                   const droppedGroupId = event.dataTransfer.getData('text/reference-group-id');
                   const droppedSectionId = event.dataTransfer.getData('text/reference-section-id');
                   if (droppedGroupId) moveGroup(droppedGroupId, group.id).catch(console.error);
-                  if (droppedSectionId) moveSection(droppedSectionId, group.title).catch(console.error);
+                  if (droppedSectionId) moveSection(droppedSectionId, group).catch(console.error);
                   setDraggingGroupId(null);
                   setDraggingSectionId(null);
                 }}
@@ -462,7 +496,7 @@ export default function ReferenceScreen() {
                   onDrop={event => {
                     event.preventDefault();
                     const droppedSectionId = event.dataTransfer.getData('text/reference-section-id');
-                    if (droppedSectionId) moveSection(droppedSectionId, group.title).catch(console.error);
+                    if (droppedSectionId) moveSection(droppedSectionId, group).catch(console.error);
                     setDraggingSectionId(null);
                   }}
                 >
@@ -487,7 +521,7 @@ export default function ReferenceScreen() {
                       onDrop={event => {
                         event.preventDefault();
                         const droppedSectionId = event.dataTransfer.getData('text/reference-section-id');
-                        if (droppedSectionId) moveSection(droppedSectionId, group.title, section.id).catch(console.error);
+                        if (droppedSectionId) moveSection(droppedSectionId, group, section.id).catch(console.error);
                         setDraggingSectionId(null);
                       }}
                       onDragEnd={() => setDraggingSectionId(null)}

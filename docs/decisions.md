@@ -977,3 +977,34 @@
   deps instead would flush on every change, which is not what "on unmount"
   means.
 - Commit: fix(session) — stop the log losing drafts, entries and viewport state.
+
+## 2026-07-29 — The data-integrity cluster: reference groups, and a lossy import
+- Symptom: (D2) reference sections joined to their card on the card's **title**,
+  so two cards named "New Card" shared and clobbered each other's sections and
+  neither could be deleted, and renaming a card had to rewrite every section in
+  it. (D3) both reference tables hard-deleted — the last two in the app to do so.
+  (D4) the envelope schema nests the contents schema, and Zod strips unenumerated
+  keys, so parsing discarded every field outside the fixed shape *before*
+  per-entity validation ran; only `characters` survived, because it alone is
+  typed `z.array(z.record(z.any()))`. (D5) the v7 reference-note migration
+  spread a ReferenceNote into `notes` without `campaignId`/`body`/`status`, so
+  `baseNoteSchema` dropped it on read. (D6) nothing cross-checked the envelope's
+  declared `type` against its contents.
+- Fix: schema **v14** adds `groupId` and soft-delete columns, backfilling from
+  the title map and materialising real groups for categories the screen used to
+  synthesise at render time. The repository soft-deletes with a cascade and a
+  `restoreGroup`. A new `bundleEnvelopeParseSchema` keeps `contents` permissive
+  for parsing while `bundleEnvelopeSchema` stays strict as the type source. The
+  v7 migration fills the required fields, and a scope mismatch now raises a
+  warning.
+- Surfaces: storage/db/client.ts (+ exported `upgradeReferenceGroupsToV14`),
+  types/reference.ts, referenceSectionRepository.ts, screens/ReferenceScreen.tsx,
+  types/bundle.ts, utils/import/bundleParser.ts, +6 migration and +4 parser tests.
+- Watch: D4 turned out to have a **second** half nobody had recorded — because
+  every non-character array was strictly typed inside the envelope schema, one
+  malformed row failed the whole envelope parse, so the documented
+  warn-and-skip path was unreachable for those types entirely. Fixing the strip
+  fixed that too. Also: the migration test imports the **exported** upgrade
+  function rather than a copy, since a duplicated migration in a test passes
+  happily while the shipped one drifts.
+- Commit: fix(data) — key reference groups by id, soft-delete them, stop import stripping.

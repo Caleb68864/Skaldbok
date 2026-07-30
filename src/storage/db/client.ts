@@ -1,4 +1,4 @@
-import Dexie, { type Table } from 'dexie';
+import Dexie, { type Table, type Transaction } from 'dexie';
 import type { CharacterRecord } from '../../types/character';
 import type { SystemDefinition } from '../../types/system';
 import type { AppSettings } from '../../types/settings';
@@ -79,6 +79,55 @@ export interface KBEdge {
  * indexes. Repositories are the only code that touches these tables; UI and hooks
  * go through repositories, never the tables directly.
  */
+/**
+ * v14 upgrade: gives every reference section the id of its group.
+ *
+ * @remarks
+ * Exported so `referenceGroupMigration.test.ts` runs the **real** function
+ * rather than a copy of it — a duplicated migration in a test can pass happily
+ * while the shipped one drifts.
+ *
+ * Sections used to join to their group on the group's *title*, so two cards
+ * named the same thing shared and clobbered each other's sections and neither
+ * could be deleted. Duplicate titles resolve first-writer-wins; a category with
+ * no group row (the screen used to synthesise a throwaway one at render time)
+ * gets a real group materialised here, so no section migrates pointing at
+ * nothing.
+ *
+ * @param tx - Dexie upgrade transaction.
+ */
+export async function upgradeReferenceGroupsToV14(tx: Transaction): Promise<void> {
+  const groups = await tx.table('referenceGroups').toArray();
+  const sections = await tx.table('referenceSections').toArray();
+  const idByTitle = new Map<string, string>();
+  for (const group of groups) {
+    if (!idByTitle.has(group.title)) idByTitle.set(group.title, group.id);
+  }
+
+  const now = new Date().toISOString();
+  let nextOrder = groups.length;
+  for (const section of sections) {
+    const category = section.category || 'General';
+    if (idByTitle.has(category)) continue;
+    const id = generateId();
+    idByTitle.set(category, id);
+    await tx.table('referenceGroups').put({
+      id,
+      title: category,
+      order: nextOrder,
+      createdAt: now,
+      updatedAt: now,
+    });
+    nextOrder += 1;
+  }
+
+  for (const section of sections) {
+    const groupId = idByTitle.get(section.category || 'General');
+    if (!groupId) continue;
+    await tx.table('referenceSections').update(section.id, { groupId });
+  }
+}
+
 export class SkaldbokDatabase extends Dexie {
   characters!: Table<CharacterRecord, string>;
   systems!: Table<SystemDefinition, string>;
@@ -266,8 +315,16 @@ export class SkaldbokDatabase extends Dexie {
           .toArray()
           .catch(() => []);
         for (const ref of refNotes) {
+          // Fill the fields `baseNoteSchema` requires. Spreading a ReferenceNote
+          // alone produced a row with no campaignId, body or status, which the
+          // schema then dropped on read — the migration appeared to succeed and
+          // the content was invisible.
           await tx.table('notes').put({
             ...ref,
+            campaignId: ref.campaignId ?? '',
+            body: ref.body ?? ref.content ?? null,
+            status: ref.status ?? 'active',
+            pinned: ref.pinned ?? false,
             scope: 'shared',
             type: ref.type ?? 'reference',
           });
@@ -489,6 +546,20 @@ export class SkaldbokDatabase extends Dexie {
     this.version(13).stores({
       ships: 'id, campaignId, ownerCharacterId, deletedAt',
     });
+
+    // --- Version 14: Reference groups get a stable id, and soft delete ---
+    // The group -> section relationship was keyed on the group's *title*, so two
+    // cards both named "New Card" shared and clobbered each other's sections and
+    // could not be deleted, and renaming a card had to rewrite every section it
+    // held. `groupId` is the join key now; `category` survives as the display
+    // fallback for sections whose group has gone.
+    //
+    // These two tables were also the only ones still hard-deleting, having been
+    // added after the soft-delete convention landed.
+    this.version(14).stores({
+      referenceSections: 'id, category, groupId, order, updatedAt, deletedAt',
+      referenceGroups: 'id, title, order, updatedAt, deletedAt',
+    }).upgrade(upgradeReferenceGroupsToV14);
   }
 }
 

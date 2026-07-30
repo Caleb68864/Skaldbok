@@ -2,16 +2,19 @@ import { db } from '../db/client';
 import type { ReferenceGroup, ReferenceImportBundle, ReferenceSection } from '../../types/reference';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
+import { excludeDeleted } from '../../utils/softDelete';
 
 /** Every user-owned reference section, sorted by explicit order then category then title. */
-export async function getAll(): Promise<ReferenceSection[]> {
-  const rows = await db.referenceSections.toArray();
+export async function getAll(options?: { includeDeleted?: boolean }): Promise<ReferenceSection[]> {
+  const all = await db.referenceSections.toArray();
+  const rows = options?.includeDeleted ? all : excludeDeleted(all);
   return rows.sort((a, b) => a.order - b.order || a.category.localeCompare(b.category) || a.title.localeCompare(b.title));
 }
 
 /** The reorderable grouping cards for reference sections, sorted by order then title. */
-export async function getGroups(): Promise<ReferenceGroup[]> {
-  const rows = await db.referenceGroups.toArray();
+export async function getGroups(options?: { includeDeleted?: boolean }): Promise<ReferenceGroup[]> {
+  const all = await db.referenceGroups.toArray();
+  const rows = options?.includeDeleted ? all : excludeDeleted(all);
   return rows.sort((a, b) => a.order - b.order || a.title.localeCompare(b.title));
 }
 
@@ -27,12 +30,59 @@ export async function saveGroup(group: ReferenceGroup): Promise<void> {
   }
 }
 
-/** Deletes a grouping card by id. */
+/**
+ * Soft-deletes a grouping card, cascading to the sections it holds.
+ *
+ * @remarks
+ * These two tables were the last hard-deleting ones in the app, having been
+ * added after the soft-delete convention. Both rows and their sections share one
+ * `softDeletedBy` id so {@link restoreGroup} can bring the card back intact.
+ *
+ * @param id - Group to soft-delete.
+ */
 export async function removeGroup(id: string): Promise<void> {
   try {
-    await db.referenceGroups.delete(id);
+    const txId = generateId();
+    const now = nowISO();
+    await db.transaction('rw', [db.referenceGroups, db.referenceSections], async () => {
+      await db.referenceGroups.update(id, { deletedAt: now, softDeletedBy: txId });
+      const held = await db.referenceSections.where('groupId').equals(id).toArray();
+      await db.referenceSections.bulkUpdate(
+        held
+          .filter(section => !section.deletedAt)
+          .map(section => ({ key: section.id, changes: { deletedAt: now, softDeletedBy: txId } })),
+      );
+    });
   } catch (err) {
     throw new Error(`Failed to delete reference card: ${String(err)}`);
+  }
+}
+
+/**
+ * Restores a soft-deleted grouping card and everything deleted with it.
+ *
+ * @param id - Group to restore.
+ */
+export async function restoreGroup(id: string): Promise<void> {
+  try {
+    await db.transaction('rw', [db.referenceGroups, db.referenceSections], async () => {
+      const group = await db.referenceGroups.get(id);
+      if (!group?.softDeletedBy) {
+        await db.referenceGroups.update(id, { deletedAt: undefined, softDeletedBy: undefined });
+        return;
+      }
+      const txId = group.softDeletedBy;
+      await db.referenceGroups.update(id, { deletedAt: undefined, softDeletedBy: undefined });
+      const cascaded = await db.referenceSections.where('softDeletedBy').equals(txId).toArray();
+      await db.referenceSections.bulkUpdate(
+        cascaded.map(section => ({
+          key: section.id,
+          changes: { deletedAt: undefined, softDeletedBy: undefined },
+        })),
+      );
+    });
+  } catch (err) {
+    throw new Error(`Failed to restore reference card: ${String(err)}`);
   }
 }
 
@@ -77,12 +127,21 @@ export async function save(section: ReferenceSection): Promise<void> {
   }
 }
 
-/** Deletes a reference section by id. */
+/** Soft-deletes a reference section by id. */
 export async function remove(id: string): Promise<void> {
   try {
-    await db.referenceSections.delete(id);
+    await db.referenceSections.update(id, { deletedAt: nowISO(), softDeletedBy: generateId() });
   } catch (err) {
     throw new Error(`Failed to delete reference section: ${String(err)}`);
+  }
+}
+
+/** Restores a soft-deleted reference section. */
+export async function restore(id: string): Promise<void> {
+  try {
+    await db.referenceSections.update(id, { deletedAt: undefined, softDeletedBy: undefined });
+  } catch (err) {
+    throw new Error(`Failed to restore reference section: ${String(err)}`);
   }
 }
 

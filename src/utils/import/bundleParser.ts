@@ -1,5 +1,5 @@
 import {
-  bundleEnvelopeSchema,
+  bundleEnvelopeParseSchema,
   type BundleEnvelope,
   type BundleContents,
 } from '../../types/bundle';
@@ -86,7 +86,7 @@ export function parseBundle(json: string): ParsedBundleResult {
   }
 
   // 4. Validate envelope structure
-  const envelopeResult = bundleEnvelopeSchema.safeParse(obj);
+  const envelopeResult = bundleEnvelopeParseSchema.safeParse(obj);
 
   if (!envelopeResult.success) {
     return {
@@ -99,8 +99,39 @@ export function parseBundle(json: string): ParsedBundleResult {
   const bundle = envelopeResult.data;
   const warnings: ValidationWarning[] = [];
 
-  // 5. Per-entity validation with warnings (not hard failures)
-  const validatedContents = validateContentsEntities(bundle.contents, warnings);
+  // 5. Per-entity validation with warnings (not hard failures). The envelope was
+  // parsed with `bundleEnvelopeParseSchema`, which leaves `contents` untouched,
+  // so rows still carry every field they arrived with and one bad row no longer
+  // rejects the whole bundle. `validateContentsEntities` filters the arrays and
+  // returns the original objects (never `result.data`), so a malformed row is
+  // still dropped with a warning — the rows it keeps are simply not rewritten.
+  const validatedContents = validateContentsEntities(bundle.contents as BundleContents, warnings);
+
+  // Cross-check the envelope's declared scope against what it actually holds.
+  // Nothing verified this, so a hand-edited or community bundle labelled
+  // `character` while carrying a whole campaign merged as the wrong kind — the
+  // importer branches on `type` to decide what to offer and what to link.
+  // A warning rather than a rejection: the contents are still individually
+  // valid, and the user is better served by an accurate prompt than a refusal.
+  const declaredScope = bundle.type;
+  const carriesCampaign = Boolean(validatedContents.campaign);
+  const carriesSessions = (validatedContents.sessions?.length ?? 0) > 0;
+  const carriesCharacters = (validatedContents.characters?.length ?? 0) > 0;
+  const scopeMismatch =
+    (declaredScope === 'character' && (carriesCampaign || carriesSessions)) ||
+    (declaredScope === 'session' && carriesCampaign) ||
+    (declaredScope === 'campaign' && !carriesCampaign && !carriesSessions && carriesCharacters);
+  if (scopeMismatch) {
+    warnings.push({
+      entityType: 'envelope',
+      entityIndex: 0,
+      path: 'type',
+      message:
+        `Bundle is labelled "${declaredScope}" but its contents do not match ` +
+        `(campaign: ${carriesCampaign}, sessions: ${carriesSessions}, characters: ${carriesCharacters}). ` +
+        'Importing it may bring in more or less than expected.',
+    });
+  }
   // Reassign validated contents (with invalid entities stripped)
   (bundle as { contents: BundleContents }).contents = validatedContents;
 
