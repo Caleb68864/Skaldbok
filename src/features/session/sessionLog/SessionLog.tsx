@@ -1,13 +1,103 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { InkPad } from '../../../components/notes/InkPad';
 import { PenHelpPanel } from '../../../components/notes/PenHelpPanel';
 import { WritePad } from '../../../components/notes/WritePad';
 import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useToast } from '../../../context/ToastContext';
 import * as noteRepository from '../../../storage/repositories/noteRepository';
 import { generateSoftDeleteTxId } from '../../../utils/softDelete';
+import { createPenObservationTracker, detectPenCapability } from '../../notes/ink/penCapability';
+import { strokeBounds, type Stroke, type StrokePage } from '../../notes/ink/strokeModel';
 import { textToDoc, docToText } from '../../notes/textToDoc';
 import { SessionLogSelection } from './SessionLogSelection';
 import type { Note } from '../../../types/note';
+
+/** Which capture surface the pad slot is showing. Text is always the default. */
+type CaptureMode = 'text' | 'ink';
+
+/** A fresh, empty ink page. Never mutated — every update replaces the object. */
+const EMPTY_INK_PAGE: StrokePage = { version: 1, strokes: [], pageHeight: 0 };
+
+/** Bounded raster size for a committed ink entry's read-only preview. */
+const INK_PREVIEW_WIDTH = 280;
+const INK_PREVIEW_HEIGHT = 96;
+
+/**
+ * Read-only, bounded raster of a committed ink entry.
+ *
+ * @remarks
+ * An ink log entry has an empty ProseMirror body by design, so without this it
+ * renders as a blank row — indistinguishable from data loss. The strokes are
+ * scaled to fit a fixed preview box rather than rendered at page scale; this is
+ * a glance-and-recognise thumbnail, not an editing surface.
+ */
+function InkEntryPreview({ note }: { note: Note }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const page = useMemo(() => noteRepository.readInkPage(note), [note]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (page.strokes.length === 0) return;
+
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const stroke of page.strokes) {
+      const bounds = strokeBounds(stroke);
+      minX = Math.min(minX, bounds.minX);
+      minY = Math.min(minY, bounds.minY);
+      maxX = Math.max(maxX, bounds.maxX);
+      maxY = Math.max(maxY, bounds.maxY);
+    }
+    const contentWidth = Math.max(1, maxX - minX);
+    const contentHeight = Math.max(1, maxY - minY);
+    // Never scale up: a two-word note should read as two words, not as a
+    // blown-up smear filling the row.
+    const scale = Math.min(canvas.width / contentWidth, canvas.height / contentHeight, 1);
+
+    ctx.save();
+    ctx.scale(scale, scale);
+    ctx.translate(-minX, -minY);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const stroke of page.strokes) {
+      if (stroke.points.length === 0) continue;
+      ctx.beginPath();
+      ctx.strokeStyle = stroke.tool === 'eraser' ? '#ffffff' : stroke.color;
+      ctx.globalAlpha = stroke.tool === 'highlighter' ? 0.35 : 1;
+      ctx.lineWidth = stroke.width;
+      const [firstX, firstY] = stroke.points[0];
+      ctx.moveTo(firstX, firstY);
+      for (let i = 1; i < stroke.points.length; i += 1) {
+        const [x, y] = stroke.points[i];
+        ctx.lineTo(x, y);
+      }
+      if (stroke.points.length === 1) ctx.lineTo(firstX + 0.01, firstY + 0.01);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }, [page]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={INK_PREVIEW_WIDTH}
+      height={INK_PREVIEW_HEIGHT}
+      role="img"
+      aria-label="Handwritten log entry"
+      className="max-w-full"
+    />
+  );
+}
+
+/** Whether a note carries an ink `typeData` payload with strokes in it. */
+function hasInkPayload(note: Note): boolean {
+  return noteRepository.readInkPage(note).strokes.length > 0;
+}
 
 /** Prefix shared by every parked draft for one session, across tabs. */
 function draftKeyPrefix(sessionId: string): string {
@@ -127,6 +217,28 @@ export function SessionLog() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
+  // Capture mode always starts on the text pad. Approach A is the path that
+  // yields text, so ink is strictly opt-in and never the default — including
+  // on a device that plainly has a pen.
+  const [captureMode, setCaptureMode] = useState<CaptureMode>('text');
+  const [inkPage, setInkPage] = useState<StrokePage>(EMPTY_INK_PAGE);
+  const penTrackerRef = useRef(createPenObservationTracker());
+  // Feature detection only — never a user-agent sniff. `pointer: fine` covers
+  // the desktop/dev case, `navigator.ink` the low-latency-ink case, and the
+  // observation tracker catches an S Pen that only announces itself when it
+  // actually touches the screen.
+  const [penAvailable, setPenAvailable] = useState(() => {
+    const capability = detectPenCapability();
+    return capability.pointerFine || capability.inkAPI;
+  });
+  const inkHostRef = useRef<HTMLDivElement>(null);
+  const [inkViewport, setInkViewport] = useState({ width: 0, height: 0 });
+
+  const notePenPointer = useCallback((pointerType: string) => {
+    penTrackerRef.current.recordPointerType(pointerType);
+    if (penTrackerRef.current.hasObservedPen()) setPenAvailable(true);
+  }, []);
+
   const refresh = useCallback(async () => {
     if (!activeSession) {
       setEntries([]);
@@ -181,6 +293,60 @@ export function SessionLog() {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [entries.length]);
+
+  // InkPad is told its viewport explicitly — it allocates canvas by viewport
+  // plus overscan, never by page height, so it needs a real measurement.
+  useEffect(() => {
+    if (captureMode !== 'ink') return;
+    const el = inkHostRef.current;
+    if (!el) return;
+    const measure = () => setInkViewport({ width: el.clientWidth, height: el.clientHeight });
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [captureMode]);
+
+  const handleStrokeCommit = useCallback((stroke: Stroke) => {
+    setInkPage(page => ({ ...page, strokes: [...page.strokes, stroke] }));
+  }, []);
+
+  const handleInkUndo = useCallback(() => {
+    setInkPage(page => ({ ...page, strokes: page.strokes.slice(0, -1) }));
+  }, []);
+
+  const handleInkPageHeightChange = useCallback((nextHeight: number) => {
+    setInkPage(page => (nextHeight > page.pageHeight ? { ...page, pageHeight: nextHeight } : page));
+  }, []);
+
+  /**
+   * Commits the current ink page as a log entry.
+   *
+   * @remarks
+   * Mirrors {@link handleCommit}'s rejection contract exactly: refresh before
+   * clearing, and on failure show a toast and re-throw with the strokes still
+   * in memory. There is deliberately no `finally` — clearing the surface after
+   * a failed write is how a page of handwriting disappears for good.
+   */
+  const handleInkCommit = useCallback(async () => {
+    if (!activeSession || !activeCampaign) {
+      throw new Error('No active session');
+    }
+    if (inkPage.strokes.length === 0) return;
+    try {
+      const targetId = editingId ?? (await noteRepository.createInkLogEntry({
+        campaignId: activeCampaign.id,
+        sessionId: activeSession.id,
+        scope: 'campaign',
+      })).id;
+      await noteRepository.saveInkPage(targetId, inkPage);
+      await refresh();
+      setInkPage(EMPTY_INK_PAGE);
+      setEditingId(null);
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Failed to save ink entry', 'error');
+      throw e instanceof Error ? e : new Error('Failed to save ink entry');
+    }
+  }, [activeSession, activeCampaign, editingId, inkPage, refresh, showToast]);
 
   const handleCommit = useCallback(async (text: string) => {
     if (!activeSession || !activeCampaign) {
@@ -379,7 +545,7 @@ export function SessionLog() {
     // Subtracting the 140px again here would double-count it and waste ~140px
     // of writing area, which on the capture screen is the thing we are trying
     // hardest to preserve.
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" onPointerDownCapture={e => notePenPointer(e.pointerType)}>
       <div className="flex shrink-0 items-center gap-3 border-b border-[var(--color-border,#ddd)] px-4 py-2">
         <h1 className="text-sm font-semibold">{activeSession.title}</h1>
         {/* Editing has to be visible and escapable. Without a banner there was
@@ -398,6 +564,32 @@ export function SessionLog() {
             </button>
           </div>
         )}
+        {/* The ink option appears only when a pen is actually detected; the
+            text pad is always offered and always the initial mode. */}
+        <div className="ml-auto flex items-center gap-1" role="group" aria-label="Capture mode">
+          <button
+            type="button"
+            aria-pressed={captureMode === 'text'}
+            onClick={() => setCaptureMode('text')}
+            className={`min-h-9 rounded border border-[var(--color-border,#ddd)] px-2 text-xs ${
+              captureMode === 'text' ? 'bg-[var(--color-primary,#2563eb)] text-white' : ''
+            }`}
+          >
+            Text
+          </button>
+          {penAvailable && (
+            <button
+              type="button"
+              aria-pressed={captureMode === 'ink'}
+              onClick={() => setCaptureMode('ink')}
+              className={`min-h-9 rounded border border-[var(--color-border,#ddd)] px-2 text-xs ${
+                captureMode === 'ink' ? 'bg-[var(--color-primary,#2563eb)] text-white' : ''
+              }`}
+            >
+              Ink
+            </button>
+          )}
+        </div>
       </div>
       <div ref={listRef} className="flex-1 overflow-y-auto px-4 py-2">
         {entries.length === 0 && (
@@ -417,7 +609,14 @@ export function SessionLog() {
                 <div className="text-xs text-[var(--color-text-muted,#666)]">
                   {new Date(entry.createdAt).toLocaleTimeString()}
                 </div>
-                <div className="whitespace-pre-wrap text-sm">{docToText(entry.body)}</div>
+                {/* An ink entry's body is an empty ProseMirror doc by design, so
+                    it must render from its `typeData` payload — otherwise the
+                    row is blank and reads as lost data. */}
+                {hasInkPayload(entry) ? (
+                  <InkEntryPreview note={entry} />
+                ) : (
+                  <div className="whitespace-pre-wrap text-sm">{docToText(entry.body)}</div>
+                )}
               </div>
             )}
           />
@@ -428,18 +627,47 @@ export function SessionLog() {
           and the list is not decoration: tap-to-edit and selection both live
           there. Docked keeps capture one tap from the session screen while
           leaving prior entries visible. */}
-      <WritePad
-        value={draft}
-        onChange={setDraft}
-        onCommit={handleCommit}
-        open={padOpen}
-        onClose={() => setPadOpen(false)}
-        placeholder="Log what's happening..."
-        variant="docked"
-        dockedHeight="28rem"
-        commitLabel="Commit"
-      />
-      {!padOpen && (
+      {captureMode === 'text' ? (
+        <WritePad
+          value={draft}
+          onChange={setDraft}
+          onCommit={handleCommit}
+          open={padOpen}
+          onClose={() => setPadOpen(false)}
+          placeholder="Log what's happening..."
+          variant="docked"
+          dockedHeight="28rem"
+          commitLabel="Commit"
+        />
+      ) : (
+        <div className="shrink-0 border-t border-[var(--color-border,#ddd)]">
+          <div ref={inkHostRef} className="h-[28rem] w-full">
+            {inkViewport.width > 0 && inkViewport.height > 0 && (
+              <InkPad
+                page={inkPage}
+                onStrokeCommit={handleStrokeCommit}
+                onUndo={handleInkUndo}
+                onPageHeightChange={handleInkPageHeightChange}
+                viewportWidth={inkViewport.width}
+                viewportHeight={inkViewport.height}
+              />
+            )}
+          </div>
+          <div className="flex items-center justify-end gap-2 px-4 py-2">
+            <button
+              type="button"
+              // Caught only to keep this click handler from producing an
+              // unhandled rejection — `handleInkCommit` has already toasted and
+              // has deliberately left the strokes on the pad.
+              onClick={() => void handleInkCommit().catch(() => {})}
+              className="min-h-9 rounded bg-[var(--color-primary,#2563eb)] px-4 text-sm font-medium text-white"
+            >
+              Commit
+            </button>
+          </div>
+        </div>
+      )}
+      {captureMode === 'text' && !padOpen && (
         <button
           type="button"
           onClick={() => setPadOpen(true)}
