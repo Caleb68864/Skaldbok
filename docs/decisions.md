@@ -1140,3 +1140,26 @@
   elements without checking whether anything can reach them manufactures work
   that does not exist — and here it would have manufactured a regression.
 - Commit: fix(sheet) — disable the portrait file input outside edit mode.
+
+## 2026-07-30 — SS-04 worker succeeded without committing
+- Symptom: the factory reported `agent SS-04 → success` after 5m16s, then
+  immediately downgraded it to `deferred_manual` with
+  `worker-success-without-commit`. The work was real and sitting uncommitted in
+  the tree: `src/features/notes/ink/` (stroke model, pen-latch state machine, pen
+  capability detection, and their tests) plus 93 lines of ink persistence on
+  `noteRepository`.
+- Fix: verified the output independently before trusting it — `npm run build`
+  clean and the 12 new unit tests passing — then committed it in the factory's
+  own `factory(SS-04): worker output [factory-managed]` form so the run can
+  advance past it.
+- Surfaces: features/notes/ink/{strokeModel,penLatch,penCapability}.ts (+2 test
+  files), storage/repositories/noteRepository.ts.
+- Watch: this is the **second** time this session a factory worker has written
+  correct code and skipped the commit — the same gate caught SS-02 during the
+  notes overhaul. The orchestrator's commit-advance gate is what makes it
+  visible rather than silently lost, so treat `worker-success-without-commit` as
+  "inspect the tree", not "the work failed". Note also that the commit is *not*
+  bypassed by the decision-log hook despite the `[factory-managed]` tag: that
+  bypass requires the committer email to equal `forge.json:git_username`, which
+  it does not here, so a real entry is required — this one.
+- Commit: factory(SS-04) — worker output.

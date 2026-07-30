@@ -5,6 +5,8 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import * as entityLinkRepository from './entityLinkRepository';
+import { serializeStrokePage, deserializeStrokePage } from '../../features/notes/ink/strokeModel';
+import type { StrokePage } from '../../features/notes/ink/strokeModel';
 
 // Lazy import to avoid circular dependency — linkSyncEngine imports noteRepository
 let _syncModule: typeof import('../../features/kb/linkSyncEngine') | null = null;
@@ -564,4 +566,95 @@ export async function addTagsToNotes(notes: Note[], tags: string[]): Promise<voi
   } catch (e) {
     throw new Error(`noteRepository.addTagsToNotes failed: ${e}`);
   }
+}
+
+/**
+ * Key under which serialized ink data lives inside a note's `typeData`.
+ *
+ * @remarks
+ * Namespaced so ink data can coexist with any other `typeData` a note type
+ * already carries (e.g. a `log` entry's other structured fields) — see
+ * {@link saveInkPage}, which always read-modify-writes rather than replacing
+ * the whole `typeData` object.
+ */
+const INK_TYPE_DATA_KEY = 'ink';
+
+function asTypeDataRecord(typeData: unknown): Record<string, unknown> {
+  return typeData !== null && typeof typeData === 'object' ? (typeData as Record<string, unknown>) : {};
+}
+
+/**
+ * Persists a {@link StrokePage} onto a note, under a single namespaced key
+ * inside `typeData`.
+ *
+ * @remarks
+ * Read-modify-write: any other keys already present in the note's `typeData`
+ * are preserved untouched. This deliberately never overwrites the whole
+ * `typeData` object, since ink is one of potentially several structured
+ * payloads a note can carry.
+ *
+ * @param noteId - The note to attach the ink page to.
+ * @param page   - The stroke page to persist.
+ * @returns The updated note.
+ * @throws {Error} If the note does not exist, or the page fails to serialize
+ *   (e.g. contains a zero-point stroke — see {@link serializeStrokePage}).
+ */
+export async function saveInkPage(noteId: string, page: StrokePage): Promise<Note> {
+  try {
+    const existing = await db.notes.get(noteId);
+    if (!existing) {
+      throw new Error(`note ${noteId} not found`);
+    }
+    const mergedTypeData = {
+      ...asTypeDataRecord((existing as Note).typeData),
+      [INK_TYPE_DATA_KEY]: serializeStrokePage(page),
+    };
+    return await updateNote(noteId, { typeData: mergedTypeData });
+  } catch (e) {
+    throw new Error(`noteRepository.saveInkPage failed: ${e}`);
+  }
+}
+
+/**
+ * Reads the {@link StrokePage} attached to a note, if any.
+ *
+ * @remarks
+ * Permissive by delegation to {@link deserializeStrokePage} — a note with no
+ * ink data, or with corrupted ink data, yields an empty page rather than
+ * throwing.
+ *
+ * @param note - The note to read ink data from.
+ * @returns The note's stroke page, or an empty page if none is present.
+ */
+export function readInkPage(note: Note): StrokePage {
+  const typeData = asTypeDataRecord(note.typeData);
+  return deserializeStrokePage(typeData[INK_TYPE_DATA_KEY]);
+}
+
+/**
+ * Creates a new session-log entry note (`type: 'log'`) with an empty body and
+ * an empty ink stroke page.
+ *
+ * @remarks
+ * This intentionally reuses the existing `'log'` note type rather than
+ * introducing a new `'ink'` type — handwriting is a capture *mode* for a log
+ * entry, not a distinct note type, so it needs no `NOTE_TYPES` entry and no
+ * Dexie schema change.
+ *
+ * @param data - Fields required to create the entry, minus the fixed ones.
+ * @returns The newly created log-entry note.
+ */
+export async function createInkLogEntry(
+  data: Omit<Note, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'type' | 'title' | 'status' | 'pinned' | 'body' | 'typeData'>
+): Promise<Note> {
+  const emptyPage: StrokePage = { version: 1, strokes: [], pageHeight: 0 };
+  return createNote({
+    ...data,
+    type: 'log',
+    title: '',
+    body: null,
+    typeData: { [INK_TYPE_DATA_KEY]: serializeStrokePage(emptyPage) },
+    status: 'active',
+    pinned: false,
+  });
 }
