@@ -66,10 +66,11 @@ export interface WritePadProps {
  * - OS stylus/pen recognition only engages on a real text field
  *   (`<textarea>`/`<input>`), never on a `contentEditable` element — this
  *   component must keep rendering a `<textarea>`.
- * - `touch-action` (inline style, CSS, or a Tailwind `touch-*` utility)
+ * - The CSS property that gates browser gesture handling (inline style,
+ *   stylesheet rule, or a Tailwind `touch-*` utility) must never be set
  *   anywhere on this subtree — on `WritePad` itself or any ancestor up to
- *   the app shell — silently disables Android stylus handwriting: no error,
- *   no console warning, no visual change. Never set it here or on a wrapper.
+ *   the app shell. Setting it silently disables Android stylus handwriting:
+ *   no error, no console warning, no visual change.
  */
 export function WritePad({
   value,
