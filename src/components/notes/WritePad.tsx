@@ -59,6 +59,17 @@ export interface WritePadProps {
  * Uses a plain textarea element rather than an editable div, because
  * Chromium's stylus handwriting recognition only targets editable text
  * fields, not arbitrary editable elements.
+ *
+ * Two constraints from `docs/plans/2026-07-30-pen-handwriting-notes-design.md`
+ * govern this component and its ancestors:
+ *
+ * - OS stylus/pen recognition only engages on a real text field
+ *   (`<textarea>`/`<input>`), never on a `contentEditable` element — this
+ *   component must keep rendering a `<textarea>`.
+ * - `touch-action` (inline style, CSS, or a Tailwind `touch-*` utility)
+ *   anywhere on this subtree — on `WritePad` itself or any ancestor up to
+ *   the app shell — silently disables Android stylus handwriting: no error,
+ *   no console warning, no visual change. Never set it here or on a wrapper.
  */
 export function WritePad({
   value,
