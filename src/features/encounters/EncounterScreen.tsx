@@ -22,8 +22,6 @@ import { cn } from '../../lib/utils';
 
 export interface EncounterScreenProps {
   encounterId: string;
-  sessionId: string;
-  campaignId: string;
   onClose: () => void;
 }
 
@@ -40,7 +38,7 @@ const actionBtnClass =
  * Lifecycle (start / end) is driven through SessionEncounterContext so every
  * consumer of that context stays in sync off one hook instance.
  */
-export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }: EncounterScreenProps) {
+export function EncounterScreen({ encounterId, onClose }: EncounterScreenProps) {
   const {
     encounter,
     linkedNotes,
@@ -52,7 +50,7 @@ export function EncounterScreen({ encounterId, sessionId, campaignId, onClose }:
     getChildEncounters,
     getParentEncounter,
     refresh: refreshEncounter,
-  } = useEncounter(encounterId, sessionId, campaignId);
+  } = useEncounter(encounterId);
 
   const { endEncounter, recentEnded, activeEncounter } = useSessionEncounterContext();
   const { reassignNote } = useSessionLog();

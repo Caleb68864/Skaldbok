@@ -1,24 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { cn } from '../../lib/utils';
+import { useTagPresets } from '../../hooks/useConfigurableDefaults';
 
-/** Mood-related tags describing the emotional tone of a session moment. */
-const MOOD_TAGS = ['tense', 'funny', 'dramatic', 'sad', 'victorious'] as const;
-
-/** Scene-type tags categorising the kind of encounter or activity. */
-const SCENE_TAGS = ['combat', 'exploration', 'social', 'mystery', 'travel', 'downtime'] as const;
-
-/** Meta-organisational tags for follow-up, plotting, and campaign bookkeeping. */
-const META_TAGS = ['important', 'follow-up', 'plot-hook', 'lore', 'treasure'] as const;
-
-/** Content-type tags identifying the primary subject of a note. */
-const TYPE_TAGS = ['npc', 'location', 'rumor', 'quest', 'loot', 'skill-check', 'spell', 'ability', 'death', 'rest'] as const;
-
-/**
- * Flat array of all built-in predefined tags, combining mood, scene, meta, and
- * type categories. Used to deduplicate against custom tags and to drive the
- * chip list rendered by {@link TagPicker}.
- */
-const PREDEFINED_TAGS = [...MOOD_TAGS, ...SCENE_TAGS, ...META_TAGS, ...TYPE_TAGS];
 
 /**
  * Props for the {@link TagPicker} component.
@@ -85,7 +68,14 @@ export function TagPicker({ selected, onToggle, customTags = [], onCreateTag }: 
   const [inputValue, setInputValue] = useState('');
 
   /** Merge predefined tags with campaign custom tags, deduplicating against the predefined list. */
-  const allTags = [...PREDEFINED_TAGS, ...customTags.filter(t => !PREDEFINED_TAGS.includes(t as never))];
+  // Presets come from the settings layer, not four `as const` arrays in this
+  // file — a GM running horror wants different moods than one running a heist.
+  const presetGroups = useTagPresets();
+  const predefinedTags = useMemo(
+    () => presetGroups.flatMap(group => group.tags),
+    [presetGroups],
+  );
+  const allTags = [...predefinedTags, ...customTags.filter(t => !predefinedTags.includes(t))];
 
   /**
    * Normalises the current input value and either toggles a matching predefined
@@ -99,7 +89,7 @@ export function TagPicker({ selected, onToggle, customTags = [], onCreateTag }: 
     if (!normalized) return;
 
     // If it matches a predefined tag, just toggle it
-    if (PREDEFINED_TAGS.includes(normalized as never)) {
+    if (predefinedTags.includes(normalized)) {
       onToggle(normalized);
       setInputValue('');
       return;

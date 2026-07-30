@@ -1,3 +1,5 @@
+import type { TagPresetGroup } from '../config/defaults/tagPresets';
+import type { InventoryContainerKindConfig } from '../config/defaults/inventoryContainerKinds';
 import type { Versioned } from './common';
 import type { ID } from './common';
 import type { ThemeName } from '../theme/themes';
@@ -63,6 +65,18 @@ export interface AppSettings extends Versioned {
   showOtherSessionNotes?: Record<string, boolean>;
   /** Per-campaign custom tags created by the user. Keyed by `campaignId`; value is an array of tag strings. */
   customTags?: Record<string, string[]>;
+  /**
+   * Preset tag palette shown by the tag picker, overriding
+   * `DEFAULT_TAG_PRESETS`. Read via `useTagPresets()`, never imported directly
+   * by a component — see CLAUDE.md's Configuration Over Hardcoding rule.
+   */
+  tagPresets?: TagPresetGroup[];
+  /**
+   * Carrier kinds offered for party inventory containers, overriding
+   * `DEFAULT_INVENTORY_CONTAINER_KINDS`. Read via
+   * `useInventoryContainerKinds()`.
+   */
+  inventoryContainerKinds?: InventoryContainerKindConfig[];
   /**
    * If `true`, the `Abilities / Magic` character screen shows both Spells and
    * Heroic Abilities. If `false` (or absent), only Heroic Abilities render —

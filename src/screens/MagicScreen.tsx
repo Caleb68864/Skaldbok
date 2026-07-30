@@ -194,7 +194,9 @@ export default function MagicScreen() {
           rank: normalizedRank ?? 1,
           requirements,
           castingTime: sCastingTime,
-          wpCost: 2,
+          // One power level's worth in this system, not a hardcoded 2 (which
+          // was Dragonbane's cost for a level-1 spell).
+          wpCost: magicModel.costPerLevel,
           range: sRange,
           duration: sDuration,
           summary: sSummary,

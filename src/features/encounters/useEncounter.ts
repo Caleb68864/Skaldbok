@@ -17,15 +17,15 @@ import { generateSoftDeleteTxId } from '../../utils/softDelete';
  * Hook for managing a single encounter: loading data, adding/updating
  * participants, auto-linking notes, and controlling lifecycle.
  *
+ * @remarks
+ * Took `sessionId`/`campaignId` only for a dead `startEncounter` variant that
+ * created an encounter with `status: 'active'` without checking the
+ * one-active-encounter invariant. `useSessionEncounter.startEncounter` is the
+ * real one; this hook loads and mutates an encounter that already exists.
+ *
  * @param encounterId - ID of the encounter to manage (null if none).
- * @param sessionId - The current session ID.
- * @param campaignId - The current campaign ID.
  */
-export function useEncounter(
-  encounterId: string | null,
-  sessionId: string,
-  campaignId: string
-) {
+export function useEncounter(encounterId: string | null) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [linkedNotes, setLinkedNotes] = useState<Note[]>([]);
 
@@ -58,27 +58,6 @@ export function useEncounter(
   useEffect(() => {
     loadEncounter();
   }, [loadEncounter]);
-
-  const startEncounter = useCallback(
-    async (type: 'combat' | 'social' | 'exploration', title: string): Promise<Encounter | undefined> => {
-      const now = nowISO();
-      const enc = await encounterRepository.create({
-        sessionId,
-        campaignId,
-        title,
-        type,
-        status: 'active',
-        tags: [],
-        segments: [{ startedAt: now }],
-        participants: [],
-        combatData: type === 'combat' ? { currentRound: 1, events: [] } : undefined,
-      });
-      if (!enc) return undefined;
-      setEncounter(enc);
-      return enc;
-    },
-    [sessionId, campaignId]
-  );
 
   const endEncounter = useCallback(async () => {
     if (!encounterId) return;
@@ -325,7 +304,6 @@ export function useEncounter(
     encounter,
     participants: encounter?.participants ?? [],
     linkedNotes,
-    startEncounter,
     endEncounter,
     addParticipantFromTemplate,
     addParticipantFromCharacter,

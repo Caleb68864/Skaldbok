@@ -914,3 +914,34 @@
   parser: a breach hidden in a trailing same-line comment is missed, accepted
   against mangling string literals containing `//`.
 - Commit: test(engine) — make the contract test capable of failing.
+
+## 2026-07-29 — Dead-code cluster, and the missing configuration selector layer
+- Symptom: eight catalogued items, all verified present. `renderCampaignIndex`
+  had no caller while every sibling renderer was wired into `useExportActions`,
+  so a campaign export shipped a flat pile of notes with no landing page.
+  `notesToTimeline.buildTrack` silently dropped `defaultHidden`, so the two
+  timeline adapters disagreed about the same catalog entry.
+  `applySuggestionToBody` survived with no production caller as a chainable-
+  looking function that cannot be chained. `ProseMirrorNode` was declared twice,
+  interoperating by accident. `useEncounter.startEncounter` was dead and unsafe —
+  it wrote `status: 'active'` with no one-active-encounter check. `SpellCard` was
+  entirely unreferenced and carried a hardcoded "WP Cost:". `MagicScreen` still
+  defaulted a new spell to `wpCost: 2`. And `TagPicker`/`PartyInventoryTab`
+  imported their defaults directly.
+- Fix: wired the campaign index into `exportAllNotes`; carried `defaultHidden`;
+  deleted `applySuggestionToBody`, `SpellCard` and `startEncounter` (the last of
+  which orphaned two hook params and two screen props, also removed);
+  `ProseMirrorNode` now has one owner and is re-exported; the spell-cost default
+  is `magicModel.costPerLevel`. Added `src/hooks/useConfigurableDefaults.ts` plus
+  `config/defaults/tagPresets.ts` and two settings fields.
+- Surfaces: features/export/useExportActions.ts, timeline notesToTimeline.ts,
+  notes SuggestedLinksPanel/PromoteEntriesSheet, encounters useEncounter +
+  EncounterScreen, screens SessionScreen/MagicScreen, components fields
+  (SpellCard deleted), notes/TagPicker, party/PartyInventoryTab, types/settings.ts.
+- Watch: CLAUDE.md's Configuration Over Hardcoding rule has three steps — a
+  default in `config/defaults`, the value in settings, and a **selector** the
+  component reads. Only step one existed, so every component that wanted a
+  configurable list had no choice but to import the constant; C1 and C2 were
+  symptoms of a missing layer, not of two careless components. Any future
+  grouping should read through `useConfigurableDefaults`.
+- Commit: refactor — wire the campaign index, drop dead code, add a config selector.

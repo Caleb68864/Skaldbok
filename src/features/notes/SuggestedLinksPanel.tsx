@@ -9,24 +9,20 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import type { LinkScanSuggestion } from './linkScanner.js';
-import { textToDoc } from './textToDoc.js';
+import { textToDoc, type ProseMirrorNode } from './textToDoc.js';
 import * as settingsRepository from '../../storage/repositories/settingsRepository.js';
 import type { AppSettings } from '../../types/settings.js';
 
 /**
- * Minimal structural view of a ProseMirror node.
+ * Re-exported from {@link features/notes/textToDoc!ProseMirrorNode | textToDoc}
+ * so importers of this panel keep working.
  *
  * @remarks
- * Deliberately not Tiptap's own node type: this file only needs to walk
- * `content` and read `text`, and depending on Tiptap's internal types here
- * would couple link approval to an editor upgrade.
+ * This file used to declare its own structurally identical copy. The two
+ * interoperated by accident rather than by contract, and nothing would have
+ * caught them drifting apart — the doc shape has exactly one owner now.
  */
-export type ProseMirrorNode = {
-  type: string;
-  text?: string;
-  attrs?: Record<string, unknown>;
-  content?: ProseMirrorNode[];
-};
+export type { ProseMirrorNode } from './textToDoc.js';
 
 /** Settings shape carrying the dismissed-suggestion bucket, kept local to this panel. */
 type SettingsWithDismissals = AppSettings;
@@ -72,84 +68,17 @@ function escapeRegex(text: string): string {
 }
 
 /**
- * Replaces the first whole-word occurrence of `suggestion.matchedText` in
- * `bodyText` with a `wikiLink` node carrying the target's id and label.
- * Returns a ProseMirror-shaped doc, mirroring {@link features/notes/textToDoc!textToDoc | textToDoc}'s output.
+ * Replaces the first plain-text occurrence of `suggestion.matchedText` with a
+ * `wikiLink` node carrying the target's id and label.
  *
  * @remarks
- * **Single-shot only — do not chain.** Its text-in/doc-out asymmetry means
- * feeding one call's output back in requires `docToText`, which renders each
- * `wikiLink` to a bare `[[label]]` and loses the resolved id. Use
- * {@link applySuggestionToDoc} to apply more than one suggestion; the panel
- * itself does. Retained because it is the shape the SS-06 contract documents
- * and it has direct test coverage, but it has no production caller.
- */
-export function applySuggestionToBody(
-  bodyText: string,
-  suggestion: LinkScanSuggestion
-): ProseMirrorNode {
-  const paragraphs = bodyText.split(/\n\s*\n/);
-  let replaced = false;
-  const boundary = new RegExp(`\\b${escapeRegex(suggestion.matchedText)}\\b`, 'g');
-
-  /**
-   * True when the match at `index` already sits inside a `[[…]]` span.
-   *
-   * Without this, approving two suggestions that share the same
-   * `matchedText` — e.g. a note titled after an NPC plus that NPC's creature
-   * template, which produce distinct suggestion keys but identical text —
-   * wraps the span twice and corrupts the body to `[[[[Name]]]]`. The word
-   * boundary alone does not protect against it, because `[` and `]` are
-   * non-word characters, so `\bName\b` happily matches inside `[[Name]]`.
-   */
-  const alreadyWrapped = (paragraph: string, index: number, length: number): boolean =>
-    paragraph.slice(Math.max(0, index - 2), index) === '[[' &&
-    paragraph.slice(index + length, index + length + 2) === ']]';
-
-  const content: ProseMirrorNode[] = paragraphs.map(paragraph => {
-    if (!replaced) {
-      boundary.lastIndex = 0;
-      let match = boundary.exec(paragraph);
-      while (match && alreadyWrapped(paragraph, match.index, match[0].length)) {
-        match = boundary.exec(paragraph);
-      }
-      if (match) {
-        replaced = true;
-        const before = paragraph.slice(0, match.index);
-        const after = paragraph.slice(match.index + match[0].length);
-        const nodes: ProseMirrorNode[] = [];
-        if (before) nodes.push({ type: 'text', text: before });
-        nodes.push({
-          type: 'wikiLink',
-          attrs: {
-            id: suggestion.target?.entityId ?? null,
-            label: suggestion.matchedText,
-          },
-        });
-        if (after) nodes.push({ type: 'text', text: after });
-        return { type: 'paragraph', content: nodes };
-      }
-    }
-    return {
-      type: 'paragraph',
-      content: paragraph ? [{ type: 'text', text: paragraph }] : [],
-    };
-  });
-
-  return { type: 'doc', content };
-}
-
-/**
- * Doc-in / doc-out counterpart to {@link applySuggestionToBody}, used to apply
- * several suggestions in sequence without losing the ids of earlier ones.
- *
- * @remarks
- * The text-based variant cannot be chained. Serializing its result with
- * `docToText` renders every `wikiLink` back to a bare `[[label]]`, and
- * re-parsing sets `attrs.id` to `null` — so approving a second suggestion
- * silently unresolved the first, and "Approve all" kept an id only for the
- * link it happened to handle last. This walks the doc instead, so nodes it
- * does not touch survive byte-for-byte, ids included.
+ * Doc-in / doc-out so approvals can be chained. This replaced a text-in variant
+ * whose result had to be serialized with `docToText` to be fed back in, which
+ * rendered every `wikiLink` to a bare `[[label]]` that re-parsed with
+ * `attrs.id = null` — so approving a second suggestion silently unresolved the
+ * first, and "Approve all" kept an id only for the link it handled last. This
+ * walks the doc instead, so nodes it does not touch survive byte-for-byte, ids
+ * included.
  *
  * Working structurally also retires the `alreadyWrapped` guard the text path
  * needs: an existing link is a `wikiLink` atom rather than the characters

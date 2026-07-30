@@ -57,6 +57,11 @@ function buildTrack(kind: string, catalog: typeof DEFAULT_TIMELINE_TRACK_CATALOG
     // misbehaves, so nesting ships first (expanded, nothing hidden) and
     // collapsed-default can be turned on once verified in the running app.
     parentTrackId: entry.parentTrackId,
+    // Carried so a lane the catalog marks as starting hidden actually does. The
+    // session adapter already forwards this; omitting it here meant the two
+    // adapters disagreed about the same catalog entry, and any screen wired to
+    // this one would show a lane the catalog says should start off.
+    defaultHidden: entry.defaultHidden,
     description: entry.description,
     colorToken: entry.colorToken,
   };

@@ -103,7 +103,7 @@ function buildTitlePrefill(entries: Note[]): string {
  * @remarks
  * Takes an already-built ProseMirror doc rather than text. Approving a link
  * suggestion produces a `wikiLink` node carrying the resolved `entityId`
- * (`applySuggestionToBody`), and flattening that to text and re-parsing with
+ * (`applySuggestionToDoc`), and flattening that to text and re-parsing with
  * `textToDoc` throws the id away — `textToDoc` cannot recover it, so it
  * hardcodes `id: null`. Every approved link was persisted unresolved, which
  * made `linkSyncEngine` mint an `unresolved-<label>` placeholder instead of an

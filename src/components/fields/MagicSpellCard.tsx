@@ -46,8 +46,8 @@ export interface MagicSpellCardProps {
  * @remarks
  * Cost scales with `powerLevel` via `magic.costPerLevel`; a trick costs
  * `magic.trickCost`. Magic tricks render a simplified layout. This is the
- * play-oriented counterpart to
- * {@link components/fields/SpellCard!SpellCard | SpellCard}, which is a static summary.
+ * the only spell card in the app: a static read-only variant existed alongside
+ * it with no callers and a hardcoded "WP Cost:" label, and was deleted.
  */
 export function MagicSpellCard({
   spell, isTrick, isGrimoireView, preparedCount, maxPrepared, currentResource, powerLevel,

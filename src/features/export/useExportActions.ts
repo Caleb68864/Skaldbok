@@ -3,11 +3,12 @@ import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import { getNoteById, getNotesByCampaign, getNotesBySession } from '../../storage/repositories/noteRepository';
 import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
-import { getSessionById } from '../../storage/repositories/sessionRepository';
+import { getSessionById, getSessionsByCampaign } from '../../storage/repositories/sessionRepository';
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
 import { renderNoteToMarkdown } from '../../utils/export/renderNote';
 import { renderAttachmentSidecar } from '../../utils/export/renderAttachmentSidecar';
 import { renderSessionBundle } from '../../utils/export/renderSession';
+import { renderCampaignIndex } from '../../utils/export/renderCampaignIndex';
 import { bundleToZip } from '../../utils/export/bundleToZip';
 import { shareFile, copyToClipboard } from '../../utils/export/delivery';
 import { generateFilename } from '../../utils/export/generateFilename';
@@ -291,6 +292,15 @@ export function useExportActions() {
           filesMap.set(`${folder}${att.filename.replace('.jpg', '.md')}`, renderAttachmentSidecar(att, note));
         }
       }
+
+      // Landing page for the exported vault. `renderCampaignIndex` existed with
+      // no caller while every sibling renderer was wired in, so a campaign export
+      // shipped a flat pile of notes with nothing linking them together. Written
+      // last so it can list what actually made it past the privacy filter.
+      const sessions = await getSessionsByCampaign(activeCampaign.id);
+      const npcs = allNotes.filter(n => n.type === 'npc');
+      const openRumors = allNotes.filter(n => n.type === 'rumor' && n.status !== 'archived');
+      filesMap.set('index.md', renderCampaignIndex(activeCampaign, sessions, npcs, openRumors));
 
       const zipBlob = await bundleToZip(filesMap);
       const zipFilename = `${activeCampaign.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-all-notes.zip`;

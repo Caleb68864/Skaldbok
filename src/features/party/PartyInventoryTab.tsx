@@ -7,7 +7,8 @@ import { Button } from '../../components/primitives/Button';
 import { Drawer } from '../../components/primitives/Drawer';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { InventoryItemEditor } from '../../components/fields/InventoryItemEditor';
-import { DEFAULT_INVENTORY_CONTAINER_KINDS } from '../../config/defaults/inventoryContainerKinds';
+import { useInventoryContainerKinds } from '../../hooks/useConfigurableDefaults';
+import type { InventoryContainerKindConfig } from '../../config/defaults/inventoryContainerKinds';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import * as inventoryContainerRepository from '../../storage/repositories/inventoryContainerRepository';
 import { computeEncumbranceLimit } from '../../utils/derivedValues';
@@ -102,11 +103,20 @@ function carrierWeight(items: InventoryItem[]): number {
   return items.reduce((sum, i) => sum + (i.tiny ? 0 : i.weight) * 1, 0);
 }
 
-function kindIcon(kind: InventoryContainerKind): string {
-  return DEFAULT_INVENTORY_CONTAINER_KINDS.find(k => k.id === kind)?.icon ?? '📦';
+/**
+ * Icon for a carrier kind, from the active (possibly user-overridden) list.
+ *
+ * @remarks
+ * Takes the list as a parameter rather than importing the default constant, so
+ * one configured source drives both this and the add/edit drawer's options. It
+ * is module-scope, so it cannot read the hook itself.
+ */
+function kindIcon(kind: InventoryContainerKind, kinds: InventoryContainerKindConfig[]): string {
+  return kinds.find(k => k.id === kind)?.icon ?? '📦';
 }
 
 export function PartyInventoryTab() {
+  const containerKinds = useInventoryContainerKinds();
   const { activeCampaign, activeParty } = useCampaignContext();
   const { showToast } = useToast();
   const engine = useSystemEngine();
@@ -485,7 +495,7 @@ export function PartyInventoryTab() {
                 {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
               </button>
               <span className="text-[length:var(--font-size-lg)]">
-                {c.kind === 'pc' ? '🧝' : kindIcon(c.containerKind)}
+                {c.kind === 'pc' ? '🧝' : kindIcon(c.containerKind, containerKinds)}
               </span>
               <div className="flex-1 min-w-0">
                 <div className="text-[var(--color-text)] text-[length:var(--font-size-md)] font-bold truncate">
@@ -741,6 +751,7 @@ function MoveItemDrawer({
   carriers: Carrier[];
   onMove: (fromId: string, item: InventoryItem, toId: string, amount: number) => void;
 }) {
+  const containerKinds = useInventoryContainerKinds();
   const [amount, setAmount] = useState(1);
   useEffect(() => {
     if (open && target) setAmount(target.item.quantity);
@@ -782,7 +793,7 @@ function MoveItemDrawer({
               className="text-left p-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] cursor-pointer min-h-[var(--touch-target-min)]"
             >
               <span className="mr-[var(--space-xs)]">
-                {d.kind === 'pc' ? '🧝' : kindIcon(d.containerKind)}
+                {d.kind === 'pc' ? '🧝' : kindIcon(d.containerKind, containerKinds)}
               </span>
               {d.name}
             </button>
@@ -808,6 +819,7 @@ function MoveCoinsDrawer({
   denominations: CurrencyDenomination[];
   onMove: (from: Carrier, toId: string, amounts: Wealth) => void;
 }) {
+  const containerKinds = useInventoryContainerKinds();
   const [amounts, setAmounts] = useState<Wealth>({});
   const [destId, setDestId] = useState<string | null>(null);
   useEffect(() => {
@@ -863,7 +875,7 @@ function MoveCoinsDrawer({
               )}
             >
               <span className="mr-[var(--space-xs)]">
-                {d.kind === 'pc' ? '🧝' : kindIcon(d.containerKind)}
+                {d.kind === 'pc' ? '🧝' : kindIcon(d.containerKind, containerKinds)}
               </span>
               {d.name}
             </button>
@@ -902,6 +914,7 @@ function ContainerEditor({
     capacity: number | null;
   }) => void;
 }) {
+  const containerKinds = useInventoryContainerKinds();
   const [name, setName] = useState('');
   const [kind, setKind] = useState<InventoryContainerKind>('coffer');
   const [unlimited, setUnlimited] = useState(true);
@@ -935,7 +948,7 @@ function ContainerEditor({
             Kind
           </label>
           <div className="grid grid-cols-2 gap-[var(--space-sm)]">
-            {DEFAULT_INVENTORY_CONTAINER_KINDS.map(k => (
+            {containerKinds.map(k => (
               <button
                 key={k.id}
                 type="button"

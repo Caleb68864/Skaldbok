@@ -480,8 +480,6 @@ function ActiveSessionContent() {
     return (
       <EncounterScreen
         encounterId={viewingEncounterId}
-        sessionId={activeSession.id}
-        campaignId={activeCampaign.id}
         onClose={() => {
           setViewingEncounterId(null);
           refreshEncounters();
