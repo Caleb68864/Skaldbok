@@ -10,6 +10,7 @@ import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
 import { nowISO } from '../../utils/dates';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 export interface ParticipantDrawerProps {
   participant: EncounterParticipant;
@@ -133,8 +134,13 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
     onUpdateState({ conditions: conditions.length > 0 ? conditions : undefined });
   };
 
+
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onClose);
+
   return (
     <div
+      ref={dialogRef}
+      aria-modal="true"
       role="dialog"
       aria-label={`${participant.name} stats`}
       onClick={onClose}

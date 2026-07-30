@@ -1,3 +1,4 @@
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 export interface EndSessionModalProps {
   sessionTitle: string;
   hasActiveEncounter?: boolean;
@@ -7,8 +8,13 @@ export interface EndSessionModalProps {
 }
 
 export function EndSessionModal({ sessionTitle, hasActiveEncounter, busy = false, onConfirm, onCancel }: EndSessionModalProps) {
+
+  const dialogRef = useModalBehaviour<HTMLDivElement>(busy ? undefined : onCancel);
+
   return (
     <div
+      ref={dialogRef}
+      aria-modal="true"
       role="dialog"
       aria-label="End session confirmation"
       onClick={busy ? undefined : onCancel}

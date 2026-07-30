@@ -5,6 +5,7 @@ import type { MergeOptions } from '../../utils/import/mergeEngine';
 import { getAllCampaigns } from '../../storage/repositories/campaignRepository';
 import type { Campaign } from '../../types/campaign';
 import { cn } from '../../lib/utils';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 /** One import conflict: an incoming entity whose id already exists locally, with both timestamps for the user to compare. */
 interface ConflictInfo {
@@ -104,8 +105,13 @@ export function ImportPreview({
     });
   };
 
+
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onCancel);
+
   return (
     <div
+      ref={dialogRef}
+      aria-modal="true"
       role="dialog"
       aria-label="Import preview"
       onClick={onCancel}

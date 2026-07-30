@@ -19,6 +19,7 @@ import * as creatureTemplateRepository from '../../storage/repositories/creature
 import * as noteRepository from '../../storage/repositories/noteRepository';
 import type { Note, NoteType } from '../../types/note';
 import { cn } from '../../lib/utils';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 /**
  * Selectable note types when promoting to a *new* note. System-only types
@@ -312,8 +313,13 @@ export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone, init
     }
   };
 
+
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onClose);
+
   return (
     <div
+      ref={dialogRef}
+      aria-modal="true"
       role="dialog"
       aria-label="Promote entries"
       onClick={onClose}

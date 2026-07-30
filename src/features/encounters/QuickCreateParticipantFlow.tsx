@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 export interface QuickCreateParticipantFlowProps {
   onSubmit: (name: string, stats: { hp?: number; armor?: number; movement?: number }) => Promise<void>;
@@ -34,8 +35,13 @@ export function QuickCreateParticipantFlow({ onSubmit, onCancel }: QuickCreatePa
     }
   };
 
+
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onCancel);
+
   return (
     <div
+      ref={dialogRef}
+      aria-modal="true"
       role="dialog"
       aria-label="Quick create participant"
       onClick={onCancel}

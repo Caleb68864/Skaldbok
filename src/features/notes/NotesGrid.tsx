@@ -273,9 +273,22 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
         </p>
       ) : (
         filteredNotes.map(note => (
+          // Not a <button>: NoteItem renders its own actions button inside, and
+          // nesting buttons is invalid. role/tabIndex/onKeyDown is the standard
+          // remedy — without it the card was mouse-only, unreachable by keyboard
+          // and invisible to a screen reader as an activatable thing.
           <div
             key={note.id}
+            role="button"
+            tabIndex={0}
             onClick={() => openNote(note.id)}
+            onKeyDown={event => {
+              if (event.key !== 'Enter' && event.key !== ' ') return;
+              // Ignore keys forwarded from the actions button inside.
+              if (event.target !== event.currentTarget) return;
+              event.preventDefault();
+              openNote(note.id);
+            }}
             className="cursor-pointer"
           >
             <NoteItem

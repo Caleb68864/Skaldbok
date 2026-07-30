@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { getEngine } from '../features/systems/engine';
+import * as characterRepository from '../storage/repositories/characterRepository';
+import type { CharacterRecord } from '../types/character';
 import PrintableSheet from '../components/PrintableSheet';
 import '../styles/print-sheet.css';
 
@@ -32,7 +34,50 @@ interface PrintDerivedValues {
 export default function PrintableSheetScreen() {
   const navigate = useNavigate();
   const { isLoading: settingsLoading, settings } = useAppState();
-  const { character, isLoading: characterLoading } = useActiveCharacter();
+  const { character: activeCharacter, isLoading: activeLoading } = useActiveCharacter();
+  const [searchParams] = useSearchParams();
+  const requestedId = searchParams.get('characterId');
+
+  /**
+   * Character named by `?characterId=`, when one is given.
+   *
+   * @remarks
+   * The route accepted this parameter and then ignored it, always printing the
+   * active character — so printing a party member meant switching the active
+   * character first and switching back afterwards. Loaded directly rather than
+   * through `ActiveCharacterContext`, so printing someone else's sheet does not
+   * disturb whoever is active.
+   */
+  const [requested, setRequested] = useState<CharacterRecord | null>(null);
+  const [requestedLoading, setRequestedLoading] = useState(Boolean(requestedId));
+
+  useEffect(() => {
+    if (!requestedId) {
+      setRequested(null);
+      setRequestedLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setRequestedLoading(true);
+    characterRepository
+      .getById(requestedId)
+      .then(found => {
+        if (!cancelled) setRequested(found ?? null);
+      })
+      .catch(() => {
+        // Fall back to the active character rather than blocking the print.
+        if (!cancelled) setRequested(null);
+      })
+      .finally(() => {
+        if (!cancelled) setRequestedLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [requestedId]);
+
+  const character = requestedId ? requested : activeCharacter;
+  const characterLoading = requestedId ? requestedLoading : activeLoading;
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   const [colorMode, setColorMode] = useState<'color' | 'bw'>('color');
 
@@ -40,7 +85,8 @@ export default function PrintableSheetScreen() {
   // The character provider re-fires when activeCharacterId changes,
   // so we must wait for both to settle before deciding "no character."
   const stillLoading = settingsLoading || characterLoading;
-  const waitingForCharacter = !settingsLoading && !characterLoading && !!settings.activeCharacterId && !character;
+  const waitingForCharacter =
+    !requestedId && !settingsLoading && !characterLoading && !!settings.activeCharacterId && !character;
 
   // Redirect to library only when fully settled with no character
   useEffect(() => {

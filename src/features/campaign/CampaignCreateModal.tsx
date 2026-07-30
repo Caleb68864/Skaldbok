@@ -6,6 +6,7 @@ import { updateCampaign } from '../../storage/repositories/campaignRepository';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
 import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../../systems/registry';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 export interface CampaignCreateModalProps {
   onClose: () => void;
@@ -53,8 +54,13 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
     }
   };
 
+
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onClose);
+
   return (
     <div
+      ref={dialogRef}
+      aria-modal="true"
       role="dialog"
       aria-label="Create campaign"
       onClick={onClose}

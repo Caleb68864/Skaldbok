@@ -1008,3 +1008,34 @@
   function rather than a copy, since a duplicated migration in a test passes
   happily while the shipped one drifts.
 - Commit: fix(data) — key reference groups by id, soft-delete them, stop import stripping.
+
+## 2026-07-29 — Keyboard traps, dead policy, and an ignored print parameter
+- Symptom: (A1) fourteen dialogs are built as a bare overlay `<div role="dialog">`
+  rather than through the Radix wrappers. Each is visually correct and each is
+  missing the same three behaviours — Tab escapes into the page behind, Escape
+  does nothing, and focus never returns to whatever opened them. A modal that
+  claims to be modal while the page underneath stays reachable is a trap for
+  anyone on a keyboard. (A2) note cards in `NotesGrid` were `<div onClick>`,
+  mouse-only. (E1) six of the eight `PLAY_MODE_EDITABLE_PREFIXES` had no call
+  site — policy that decided nothing, hardcoding Dragonbane resource ids. (L1)
+  `PrintableSheetScreen` accepted `?characterId=` and ignored it. (D7) collectors
+  gathered characters only via party membership, so an edge to a non-party
+  character was pruned on export.
+- Fix: new `useModalBehaviour` gives a hand-rolled dialog the focus trap, Escape
+  and focus restore Radix would have, applied to the eight whose dialog is the
+  component's top-level return. Note cards get `role="button"`, `tabIndex` and an
+  Enter/Space handler that ignores keys bubbling from the actions button inside.
+  The six dead prefixes are gone. The print route loads the requested character
+  directly, so printing a party member no longer means switching the active one
+  and switching back. Collectors pull in characters an edge references.
+- Surfaces: hooks/useModalBehaviour.ts (new), eight dialog components,
+  features/notes/NotesGrid.tsx, utils/modeGuards.ts,
+  screens/PrintableSheetScreen.tsx, utils/export/collectors.ts.
+- Watch: removing the six prefixes is behaviour-neutral **by definition** — an
+  allow-list entry nothing queries cannot change an outcome. The surfaces they
+  named (current HP, conditions, weapons) are not gated through this guard at
+  all; they are simply always editable. If one ever should be gated, the entry
+  alone will not do it — the `useFieldEditable` call has to exist too. Six
+  dialogs are still unconverted: their `role="dialog"` is nested rather than the
+  component's top-level return, so the same uniform transform does not apply.
+- Commit: fix(a11y,export) — trap focus in hand-rolled dialogs, drop dead policy.

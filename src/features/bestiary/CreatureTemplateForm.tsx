@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { cn } from '../../lib/utils';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 export type FormData = Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>;
 
@@ -61,8 +62,13 @@ export function CreatureTemplateForm({ initial, campaignId, onSave, onCancel }: 
     }
   };
 
+
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onCancel);
+
   return (
     <div
+      ref={dialogRef}
+      aria-modal="true"
       role="dialog"
       aria-label={initial ? 'Edit creature template' : 'New creature template'}
       onClick={onCancel}

@@ -42,6 +42,46 @@ async function getAllLinksForEntity(entityId: string): Promise<import('../../typ
 }
 
 /**
+ * Loads characters that entity links point at but collection missed.
+ *
+ * @remarks
+ * Collectors gather characters only through party membership, while links are
+ * gathered as "every edge touching a collected entity". An encounter
+ * participant `represents`-ing a character who is not in the party therefore
+ * produced an edge with no matching row, and `closeBundleReferences` pruned it —
+ * the relationship survived export only to be dropped on the way out.
+ *
+ * Pulling the endpoint in is the better answer where it is cheap, which it is
+ * for characters: the id is right there on the edge. Closure stays as the
+ * backstop for endpoints that genuinely cannot travel (a cross-campaign or
+ * soft-deleted target).
+ *
+ * @param links - Edges collected for the bundle.
+ * @param existing - Characters already collected.
+ * @returns `existing` plus any character an edge referenced that was missing.
+ */
+async function withLinkedCharacters(
+  links: Array<{ fromEntityType?: string; fromEntityId?: string; toEntityType?: string; toEntityId?: string }>,
+  existing: CharacterRecord[],
+): Promise<CharacterRecord[]> {
+  const have = new Set(existing.map((c) => c.id));
+  const wanted = new Set<string>();
+  for (const link of links) {
+    if (link.fromEntityType === 'character' && link.fromEntityId && !have.has(link.fromEntityId)) {
+      wanted.add(link.fromEntityId);
+    }
+    if (link.toEntityType === 'character' && link.toEntityId && !have.has(link.toEntityId)) {
+      wanted.add(link.toEntityId);
+    }
+  }
+  if (wanted.size === 0) return existing;
+  const loaded = (
+    await Promise.all([...wanted].map((id) => getCharacterById(id)))
+  ).filter((c): c is CharacterRecord => c !== undefined);
+  return [...existing, ...loaded];
+}
+
+/**
  * Collects all entities belonging to a character export scope.
  *
  * Includes: character record, notes linked via entity links (from OR to),
@@ -183,7 +223,8 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
         creatureTemplates,
         parties,
         partyMembers,
-        characters: characters.map((c) => c as unknown as Record<string, unknown>),
+        characters: (await withLinkedCharacters(entityLinks, characters))
+          .map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
         attachments: attachments.map(toBundleAttachment),
         inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
@@ -274,7 +315,8 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
         encounters,
         parties,
         partyMembers,
-        characters: characters.map((c) => c as unknown as Record<string, unknown>),
+        characters: (await withLinkedCharacters(entityLinks, characters))
+          .map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
         attachments: attachments.map(toBundleAttachment),
         inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],

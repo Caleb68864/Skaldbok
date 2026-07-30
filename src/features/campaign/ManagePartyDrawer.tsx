@@ -7,6 +7,7 @@ import { updateCampaign } from '../../storage/repositories/campaignRepository';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
 import { cn } from '../../lib/utils';
+import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
 /**
  * Props for the {@link ManagePartyDrawer} component.
@@ -146,8 +147,13 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
     }
   };
 
+
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onClose);
+
   return (
     <div
+      ref={dialogRef}
+      aria-modal="true"
       role="dialog"
       aria-label="Manage party"
       onClick={onClose}
