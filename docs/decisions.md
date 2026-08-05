@@ -1371,3 +1371,39 @@
   sound by construction and is the only place the union is asserted rather than
   inferred — if it ever needs a second, prefer a typed-entries helper.
 - Commit: fix(sheet) — key the panel maps by SheetPanelKey so the three lists cannot drift.
+
+## 2026-08-05 — Autosave's last-chance save, and the session log's render cost
+- Symptom: a follow-on sweep for the day's recurring theme — a signal the code
+  computes and then drops. Two candidates were investigated; ONE was real.
+- Non-finding, recorded because the wrong conclusion is easy to reach again:
+  `GearScreen`, `MagicScreen`, `ProfileScreen` and `SettingsScreen` all call
+  `useAutosave(...)` bare and discard the return value, which reads like a save
+  failing in silence. It is not — `useAutosave` toasts the failure itself
+  (`erroredRef` streak-guards it to once per failure, not once per keystroke).
+  Those four screens lack only the redundant inline banner Sheet and
+  PlayDashboard additionally render. Read the hook, not just the call sites.
+- Fix, real: the unmount flush was `saveFn(...).catch(console.error)`. That is
+  the most dangerous save path there is — it fires precisely when the user
+  navigates away mid-edit, it persists the change made in the final debounce
+  window, and nothing retries after it: the component is gone, so there is no
+  next tick and no banner left to render. It now toasts. The flush registers
+  with an empty dep array, so `showToast` is read through a ref rather than a
+  stale closure; `ToastProvider` sits above the routes, so reporting from a
+  child's unmount cleanup is safe.
+- Fix, perf: `hasInkPayload` was `readInkPage(note).strokes.length > 0` — a full
+  validate-and-copy of every point of every stroke, called once per entry per
+  render from `renderEntry`, on the surface that stays open for a whole session.
+  Replaced by `noteRepository.hasInkPage`, a structural check on `typeData`.
+- Surfaces: hooks/useAutosave.ts, storage/repositories/noteRepository.ts,
+  features/session/sessionLog/SessionLog.tsx.
+- Watch: `hasInkPage` deliberately reports TRUE for a page whose strokes are
+  malformed. It is not a validator, and it must not become one — answering false
+  would render a handwritten entry as an empty text row, which looks exactly
+  like data loss even though the strokes are still on disk. `readInkPage` is
+  what drops bad strokes, permissively, after the routing decision is made.
+  `inkPayload.test.ts` pins both that and the agreement with `readInkPage`.
+- Watch also: the day's real gap is unchanged — there is still no component/DOM
+  test setup, so every UI-behaviour fix shipped today (ink draft parking, entry
+  edit routing, the mode-switch guard) is verified by reading only. That is the
+  investment that stops this pattern, not another sweep.
+- Commit: fix(persistence) — report a failed last-chance save, stop decoding ink to ask a yes/no.

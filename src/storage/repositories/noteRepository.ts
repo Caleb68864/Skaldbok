@@ -632,6 +632,27 @@ export function readInkPage(note: Note): StrokePage {
 }
 
 /**
+ * Whether a note carries any handwriting, without decoding it.
+ *
+ * @remarks
+ * Answering this with `readInkPage(note).strokes.length > 0` costs a full
+ * validate-and-copy of every point of every stroke. The session log asks it per
+ * entry per render, so on the one screen that stays open all session that was
+ * the dominant render cost — and it is a yes/no question about a payload that
+ * is already plain JSON in memory.
+ *
+ * Structural, not validating: a malformed strokes array still reads as "has
+ * ink", which is the answer the caller wants — it routes to the ink surface,
+ * where {@link readInkPage} then drops the malformed strokes permissively.
+ */
+export function hasInkPage(note: Note): boolean {
+  const payload = asTypeDataRecord(note.typeData)[INK_TYPE_DATA_KEY];
+  if (payload === null || typeof payload !== 'object') return false;
+  const strokes = (payload as { strokes?: unknown }).strokes;
+  return Array.isArray(strokes) && strokes.length > 0;
+}
+
+/**
  * Creates a new session-log entry note (`type: 'log'`) with an empty body and
  * an empty ink stroke page.
  *

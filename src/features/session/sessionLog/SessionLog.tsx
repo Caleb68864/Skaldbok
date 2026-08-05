@@ -94,9 +94,17 @@ function InkEntryPreview({ note }: { note: Note }) {
   );
 }
 
-/** Whether a note carries an ink `typeData` payload with strokes in it. */
+/**
+ * Whether a note carries an ink `typeData` payload with strokes in it.
+ *
+ * @remarks
+ * Delegates to the repository's structural check rather than deserializing.
+ * This is called once per entry per render from `renderEntry`, and the decoding
+ * version made the log's render cost scale with the number of ink *points* on
+ * screen — on the surface that stays open for a whole session.
+ */
 function hasInkPayload(note: Note): boolean {
-  return noteRepository.readInkPage(note).strokes.length > 0;
+  return noteRepository.hasInkPage(note);
 }
 
 /** Prefix shared by every parked draft for one session, across tabs. */

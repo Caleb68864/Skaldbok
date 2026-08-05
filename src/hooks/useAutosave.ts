@@ -20,6 +20,12 @@ export function useAutosave(
   // Guards against toast spam: while saves keep failing on every debounce tick,
   // surface the error once per failure streak, not once per keystroke.
   const erroredRef = useRef(false);
+  // The unmount flush registers once with an empty dep array, so it cannot close
+  // over `showToast` directly without going stale. The provider outlives every
+  // screen (ToastProvider sits above the routes), so reporting from a child's
+  // unmount cleanup is safe.
+  const showToastRef = useRef(showToast);
+  showToastRef.current = showToast;
 
   useEffect(() => {
     if (!character) {
@@ -78,7 +84,17 @@ export function useAutosave(
         timerRef.current = null;
       }
       if (pendingRef.current) {
-        saveFn(pendingRef.current).catch(console.error);
+        // This is the last chance to persist the edit made in the final
+        // debounce window — it fires precisely when the user navigates away
+        // mid-edit. A console-only failure here loses that edit and tells
+        // nobody, on the one save path with no later retry: the component is
+        // gone, so there is no next tick and no inline banner left to render.
+        saveFn(pendingRef.current).catch(e => {
+          console.error(e);
+          showToastRef.current(`Couldn't save your last change — ${String(e)}`, 'error', {
+            duration: 8000,
+          });
+        });
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
