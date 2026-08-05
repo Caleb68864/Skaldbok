@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
+import { useAppState } from '../../context/AppStateContext';
 import { getNoteById, getNotesByCampaign, getNotesBySession } from '../../storage/repositories/noteRepository';
 import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
 import { getSessionById, getSessionsByCampaign } from '../../storage/repositories/sessionRepository';
@@ -42,6 +43,7 @@ import type { EntityLink } from '../../types/entityLink';
 export function useExportActions() {
   const { activeCampaign } = useCampaignContext();
   const { showToast } = useToast();
+  const { updateSettings } = useAppState();
 
   /**
    * Exports a single note as a Markdown file, or as a ZIP archive when the note
@@ -376,12 +378,16 @@ export function useExportActions() {
       const json = await serializeBundle('campaign', filtered);
       const slug = `campaign-${campaignId.slice(0, 8)}-${Date.now()}`;
       await deliverBundle(slug, json);
+      // Recorded only here, and only after delivery succeeded. This is the one
+      // export that produces something able to restore a campaign, so it is the
+      // only one that may claim the app is backed up — see `lastBackupAt`.
+      void updateSettings({ lastBackupAt: new Date().toISOString() });
       showToast('Campaign exported');
     } catch (err) {
       showToast('Export failed. Please try again.');
       console.error('[useExportActions] exportCampaign error', err);
     }
-  }, [showToast]);
+  }, [showToast, updateSettings]);
 
   return {
     exportNote,

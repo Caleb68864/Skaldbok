@@ -6,6 +6,7 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAutosave } from '../hooks/useAutosave';
 import { Card } from '../components/primitives/Card';
 import { Button } from '../components/primitives/Button';
+import { StorageSafetyCard } from '../features/settings/StorageSafetyCard';
 import { Modal } from '../components/primitives/Modal';
 import { db } from '../storage/db/client';
 import * as characterRepository from '../storage/repositories/characterRepository';
@@ -302,6 +303,9 @@ export default function SettingsScreen() {
         </p>
         <Button variant="secondary" onClick={() => navigate('/library')}>Go to Character Library</Button>
       </Card>
+
+      {/* Data safety — the only place the user can see whether their one copy is safe */}
+      <StorageSafetyCard />
 
       {/* About */}
       <Card>

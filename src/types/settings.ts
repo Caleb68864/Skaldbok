@@ -102,4 +102,18 @@ export interface AppSettings extends Versioned {
    * that legacy shape defensively rather than assume the `Record` shape.
    */
   dismissedLinkSuggestions?: Record<string, string[]> | string[];
+  /**
+   * ISO timestamp of the last completed **campaign** export.
+   *
+   * @remarks
+   * Deliberately only campaign exports. A note or session export is sharing, not
+   * redundancy — recording one here would report the campaign as backed up when
+   * nothing that could restore it exists, which is worse than tracking nothing.
+   */
+  lastBackupAt?: string;
+  /**
+   * Days a campaign may go un-exported before the app warns. Overrides
+   * `DEFAULT_BACKUP_REMINDER_DAYS`; read via `useBackupReminderDays()`.
+   */
+  backupReminderDays?: number;
 }

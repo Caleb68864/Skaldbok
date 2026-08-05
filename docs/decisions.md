@@ -1407,3 +1407,35 @@
   edit routing, the mode-switch guard) is verified by reading only. That is the
   investment that stops this pattern, not another sweep.
 - Commit: fix(persistence) — report a failed last-chance save, stop decoding ink to ask a yes/no.
+
+## 2026-08-05 — Storage durability: ask to keep the data, and say when it was last backed up
+- Symptom: `CLAUDE.md` states the architecture as "treat IndexedDB as the source
+  of truth; there is no server reconciliation to defer to" — and the app never
+  called `navigator.storage.persist()`. Zero hits in the codebase. Without that
+  grant a browser classifies origin storage as best-effort and may evict it
+  under storage pressure, with no prompt and no warning. The app was one
+  storage-pressure event from losing every campaign and never asked not to be.
+  Nothing tracked exports either, so the user had no way to protect themselves.
+- Why this is worse here than it sounds: Chrome usually grants persistence
+  automatically to an *installed* PWA. This app frequently is not one — it is
+  served from a self-signed LAN origin, which Google's WebAPK minting service
+  cannot reach, so it commonly runs as a plain bookmark shortcut (see the PWA
+  entry earlier today). Asking explicitly is not redundant with installing; it
+  is the only reliable path.
+- Fix: `storage/persistence.ts` — `ensurePersistentStorage()` called from
+  main.tsx before render and deliberately NOT awaited (advisory; must never gate
+  first paint). Idempotent, so a granted origin never re-prompts. Plus
+  `readStorageEstimate()` for a usage readout.
+- Fix: `lastBackupAt` recorded on a completed **campaign** export only, and a
+  Data Safety card in Settings showing persistence state, usage, and backup age.
+- Surfaces: storage/persistence.ts, config/defaults/backup.ts,
+  features/settings/StorageSafetyCard.tsx, main.tsx, types/settings.ts,
+  hooks/useConfigurableDefaults.ts, features/export/useExportActions.ts.
+- Watch: `lastBackupAt` is written ONLY by `exportCampaign`. A note or session
+  export is sharing, not redundancy — recording one would report the campaign as
+  backed up when nothing capable of restoring it exists. That is worse than
+  tracking nothing, because it is false reassurance. Do not widen it.
+- Watch also: `classifyBackup` treats a future-dated timestamp as `never`, not
+  as fresh. A clock that moved backwards must not be able to silence the
+  warning; failing safe here means over-warning, which is the correct direction.
+- Commit: feat(storage) — request persistent storage and surface backup age.

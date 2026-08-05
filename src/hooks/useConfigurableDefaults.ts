@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAppState } from '../context/AppStateContext';
 import { DEFAULT_INVENTORY_CONTAINER_KINDS } from '../config/defaults/inventoryContainerKinds';
 import { DEFAULT_TAG_PRESETS } from '../config/defaults/tagPresets';
+import { DEFAULT_BACKUP_REMINDER_DAYS } from '../config/defaults/backup';
 import type { InventoryContainerKindConfig } from '../config/defaults/inventoryContainerKinds';
 import type { TagPresetGroup } from '../config/defaults/tagPresets';
 
@@ -51,4 +52,17 @@ export function useTagPresets(): TagPresetGroup[] {
     () => (stored && stored.length > 0 ? stored : DEFAULT_TAG_PRESETS),
     [stored],
   );
+}
+
+/**
+ * How many days a campaign may go un-exported before the app warns.
+ *
+ * @returns The user's configured window, or {@link DEFAULT_BACKUP_REMINDER_DAYS}.
+ */
+export function useBackupReminderDays(): number {
+  const { settings } = useAppState();
+  const stored = settings.backupReminderDays;
+  // A zero or negative window would mark every campaign stale the moment it is
+  // exported, so it is treated as unset rather than honoured.
+  return typeof stored === 'number' && stored > 0 ? stored : DEFAULT_BACKUP_REMINDER_DAYS;
 }
