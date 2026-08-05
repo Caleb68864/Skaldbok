@@ -4,7 +4,12 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useSheetTemplate } from '../features/systems/useSheetTemplate';
-import { resolveSheetPanelOrder, SHEET_PANEL_KEYS } from '../features/systems/panelOrder';
+import {
+  resolveSheetPanelOrder,
+  SHEET_PANEL_KEYS,
+  type SheetPanelAvailability,
+  type SheetPanelKey,
+} from '../features/systems/panelOrder';
 import { GUARDS } from '../features/systems/cards/guards';
 import { getEngine } from '../features/systems/engine';
 import type { RestDefinition } from '../features/systems/engine/types';
@@ -272,8 +277,11 @@ export default function SheetScreen() {
    * Which sheet panels the active system has, derived from the engine rather
    * than from `systemId`. A system that declares no `characteristics` panel
    * simply never gets one; adding a ruleset needs no change here.
+   *
+   * Typed as {@link SheetPanelAvailability} so this object, `allPanels` below,
+   * and `SHEET_PANEL_KEYS` cannot drift apart — see the note on that type.
    */
-  const panelAvailability: Record<string, boolean> = {
+  const panelAvailability: SheetPanelAvailability = {
     identity: true,
     attributes: engine.panels.includes('attributes'),
     characteristics: engine.panels.includes('characteristics'),
@@ -1239,8 +1247,10 @@ export default function SheetScreen() {
 
   // ---- Panel map & visibility ----
   // Every panel this screen knows how to render, keyed the same way as
-  // `panelAvailability`; the system's declared panels select the subset.
-  const allPanels: Record<string, React.ReactNode> = {
+  // `panelAvailability`; the system's declared panels select the subset. Keyed
+  // by SheetPanelKey so a panel added here without a SHEET_PANEL_KEYS entry (or
+  // vice versa) fails the build instead of silently never rendering.
+  const allPanels: Record<SheetPanelKey, React.ReactNode> = {
     identity: identityPanel,
     attributes: attributesPanel,
     characteristics: characteristicsPanel,
@@ -1257,7 +1267,12 @@ export default function SheetScreen() {
   };
 
   const panelMap: Record<string, React.ReactNode> = Object.fromEntries(
-    Object.entries(allPanels).filter(([key]) => panelAvailability[key]),
+    // `Object.entries` widens the keys to `string`; they are SheetPanelKeys by
+    // construction, and the whole point of the typing above is that they cannot
+    // be anything else.
+    (Object.entries(allPanels) as [SheetPanelKey, React.ReactNode][]).filter(
+      ([key]) => panelAvailability[key],
+    ),
   );
 
   // Rest is the one panel that is also mode-gated: it is prep noise in Edit Mode.

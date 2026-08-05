@@ -8,7 +8,7 @@
  * that would otherwise vanish silently.
  *
  * A key here is *knowable*, not necessarily *available*: availability is decided
- * per system by the engine (see `panelAvailability` in SheetScreen).
+ * per system by the engine (see {@link SheetPanelAvailability}).
  */
 export const SHEET_PANEL_KEYS = [
   'identity',
@@ -25,6 +25,22 @@ export const SHEET_PANEL_KEYS = [
   'rest',
   'storyBank',
 ] as const;
+
+/** One of the sheet panel keys this build knows how to render. */
+export type SheetPanelKey = (typeof SHEET_PANEL_KEYS)[number];
+
+/**
+ * Whether each known panel applies to the active character.
+ *
+ * @remarks
+ * `Record<SheetPanelKey, …>` rather than `Record<string, …>` on purpose: it is
+ * what ties the three lists together. Adding a key to {@link SHEET_PANEL_KEYS}
+ * without giving it an availability rule, or an availability rule for a key that
+ * is not in the list, is now a type error rather than a panel that quietly never
+ * renders. `SheetScreen`'s panel *map* is keyed the same way, so all three move
+ * together or the build fails.
+ */
+export type SheetPanelAvailability = Record<SheetPanelKey, boolean>;
 
 /** Result of {@link resolveSheetPanelOrder}. */
 export interface PanelOrderResult {

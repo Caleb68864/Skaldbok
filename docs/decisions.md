@@ -1348,3 +1348,26 @@
   `magic !== null` (MagicScreen now documents the two as decoupled on purpose);
   panels/currency to data (structural, and its payoff arrives with system #4).
 - Commit: fix(engine) — surface template errors, guard bundled templates, drop dead schema fields.
+
+## 2026-08-05 — The sheet's three panel lists now move together or fail the build
+- Symptom: `beb6e41` left `SHEET_PANEL_KEYS` as a list a comment *asked* you to
+  keep in step with `panelAvailability` and `allPanels`. Three hand-maintained
+  lists, no enforcement. A panel added to the screen but not the list rendered
+  only when a template happened to name it; a key added to the list with no
+  panel rendered nothing. Both are silent.
+- Fix: `SheetPanelKey` = `typeof SHEET_PANEL_KEYS[number]`, and both objects in
+  SheetScreen are keyed by it (`SheetPanelAvailability` and
+  `Record<SheetPanelKey, ReactNode>`). A `Record` over a closed union is missing
+  a key *and* rejects an extra one, so all three drift directions are compile
+  errors.
+- Surfaces: features/systems/panelOrder.ts, screens/SheetScreen.tsx.
+- Watch: verified by breaking it in all three directions rather than by reading
+  the types — adding `inventory` to the key list failed at BOTH objects
+  (TS2741 twice), and adding a `bogusPanel` availability rule failed with
+  TS2353. A constraint nobody has watched fail is a constraint nobody knows the
+  shape of.
+- Watch also: `Object.entries` widens keys to `string`, so the `panelMap` build
+  needs one narrow cast back to `[SheetPanelKey, ReactNode][]`. That cast is
+  sound by construction and is the only place the union is asserted rather than
+  inferred — if it ever needs a second, prefer a typed-entries helper.
+- Commit: fix(sheet) — key the panel maps by SheetPanelKey so the three lists cannot drift.
