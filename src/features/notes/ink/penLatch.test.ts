@@ -43,18 +43,41 @@ describe('PenLatch', () => {
     expect(latch.processEvent({ pointerId: 2, pointerType: 'touch', phase: 'down', timestamp: 60 })).toBe(true);
   });
 
-  it('resets all state, including an active suppression window, once the active pointer set empties', () => {
+  it('suppresses a palm that lands after the pen lifts, with nothing else touching', () => {
+    const latch = createPenLatch();
+    latch.processEvent({ pointerId: 1, pointerType: 'pen', phase: 'down', timestamp: 0 });
+    latch.processEvent({ pointerId: 1, pointerType: 'pen', phase: 'up', timestamp: 100 });
+
+    // This is the scenario the suppression window exists for, and the only one
+    // that actually happens at a table: you lift the pen and your hand settles.
+    // Nothing else is in contact, so the active pointer set is empty here — an
+    // earlier version reset on that and accepted the palm as ink.
+    expect(latch.processEvent({ pointerId: 2, pointerType: 'touch', phase: 'down', timestamp: 150 })).toBe(false);
+    expect(latch.processEvent({ pointerId: 2, pointerType: 'touch', phase: 'move', timestamp: 300 })).toBe(false);
+    // And it still lapses on schedule.
+    expect(latch.processEvent({ pointerId: 3, pointerType: 'touch', phase: 'down', timestamp: 601 })).toBe(true);
+  });
+
+  it('releases the latch, but not the suppression window, once the active pointer set empties', () => {
     const latch = createPenLatch();
     latch.processEvent({ pointerId: 2, pointerType: 'touch', phase: 'down', timestamp: 0 });
     latch.processEvent({ pointerId: 1, pointerType: 'pen', phase: 'down', timestamp: 0 });
-    // Pen lifts, opening a 500ms suppression window; the touch pointer is
-    // still down so the active pointer set is not yet empty.
     latch.processEvent({ pointerId: 1, pointerType: 'pen', phase: 'up', timestamp: 100 });
-    // Now the last remaining pointer also lifts — the active set empties.
+    // The last remaining pointer lifts — the active set empties.
     latch.processEvent({ pointerId: 2, pointerType: 'touch', phase: 'up', timestamp: 110 });
 
-    // Well within what would have been the 500ms suppression window, but
-    // since the pointer set emptied, state reset unconditionally.
+    // Emptying the set clears the per-contact latch, so a fresh pen stroke is
+    // unaffected — but the time-based window survives it.
+    expect(latch.processEvent({ pointerId: 3, pointerType: 'touch', phase: 'down', timestamp: 150 })).toBe(false);
+    expect(latch.processEvent({ pointerId: 4, pointerType: 'pen', phase: 'down', timestamp: 160 })).toBe(true);
+  });
+
+  it('clears the suppression window on cancel, which means the gesture was abandoned', () => {
+    const latch = createPenLatch();
+    latch.processEvent({ pointerId: 1, pointerType: 'pen', phase: 'down', timestamp: 0 });
+    latch.processEvent({ pointerId: 1, pointerType: 'pen', phase: 'up', timestamp: 100 });
+    latch.processEvent({ pointerId: 2, pointerType: 'touch', phase: 'cancel', timestamp: 120 });
+
     expect(latch.processEvent({ pointerId: 3, pointerType: 'touch', phase: 'down', timestamp: 150 })).toBe(true);
   });
 });

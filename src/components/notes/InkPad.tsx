@@ -103,6 +103,34 @@ function strokeIntersectsTile(stroke: Stroke, tileTop: number, tileBottom: numbe
 }
 
 /**
+ * The display's device-pixel ratio, kept current.
+ *
+ * @remarks
+ * Handwriting is the one thing in this app where the difference is obvious: a
+ * canvas whose backing store is sized in CSS pixels renders every stroke at
+ * roughly a third of a modern tablet's panel resolution and lets the compositor
+ * upscale it, which reads as soft, slightly furry ink.
+ *
+ * `matchMedia` rather than a resize listener because DPR can change without the
+ * viewport changing at all — dragging a window to a display with a different
+ * scale factor. The query has to be rebuilt each time, since it tests one
+ * specific resolution.
+ */
+function useDevicePixelRatio(): number {
+  const [dpr, setDpr] = useState(() => (typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1));
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const query = window.matchMedia(`(resolution: ${dpr}dppx)`);
+    const onChange = () => setDpr(window.devicePixelRatio || 1);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, [dpr]);
+
+  return dpr;
+}
+
+/**
  * DOM half of Approach B handwriting ink: pointer capture, pen/touch routing
  * (delegated entirely to {@link createPenLatch}), stroke tessellation, and
  * the tiled two-canvas render.
@@ -135,10 +163,30 @@ export function InkPad({
   const activePointersRef = useRef<Set<number>>(new Set());
   const strokeRef = useRef<InProgressStroke | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
+  const dpr = useDevicePixelRatio();
 
   // Canvas height is bounded by the visible viewport plus overscan — never
-  // by page height, which can exceed the browser's per-axis canvas cap.
+  // by page height, which can exceed the browser's per-axis canvas cap. Note
+  // the cap applies to the *backing store*, so it is the dpr-scaled height
+  // below that has to stay under it, not this one.
   const canvasHeight = viewportHeight + OVERSCAN_PX * 2;
+
+  /**
+   * Sizes the backing store to physical pixels and scales the context so every
+   * draw call can keep working in CSS/page units. Clearing happens under the
+   * identity transform, because the backing store is what needs clearing.
+   */
+  const prepareContext = useCallback(
+    (canvas: HTMLCanvasElement): CanvasRenderingContext2D | null => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return ctx;
+    },
+    [dpr],
+  );
   const tileOffsetY = Math.max(0, scrollTop - OVERSCAN_PX);
   const tileTop = tileOffsetY;
   const tileBottom = tileOffsetY + canvasHeight;
@@ -146,15 +194,14 @@ export function InkPad({
   const redrawCommitted = useCallback(() => {
     const canvas = committedCanvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = prepareContext(canvas);
     if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const stroke of page.strokes) {
       if (strokeIntersectsTile(stroke, tileTop, tileBottom)) {
         drawStroke(ctx, stroke, tileOffsetY);
       }
     }
-  }, [page.strokes, tileTop, tileBottom, tileOffsetY]);
+  }, [page.strokes, tileTop, tileBottom, tileOffsetY, prepareContext]);
 
   useEffect(() => {
     redrawCommitted();
@@ -162,18 +209,17 @@ export function InkPad({
 
   const clearWetLayer = useCallback(() => {
     const canvas = wetCanvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (canvas && ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-  }, []);
+    if (canvas) prepareContext(canvas);
+  }, [prepareContext]);
 
   const drawWetStroke = useCallback(() => {
     const canvas = wetCanvasRef.current;
-    const ctx = canvas?.getContext('2d');
     const current = strokeRef.current;
-    if (!canvas || !ctx || !current || current.points.length === 0) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!canvas || !current || current.points.length === 0) return;
+    const ctx = prepareContext(canvas);
+    if (!ctx) return;
     drawStroke(ctx, current, tileOffsetY);
-  }, [tileOffsetY]);
+  }, [tileOffsetY, prepareContext]);
 
   const maybeExtendPage = useCallback(
     (maxYSeen: number) => {
@@ -349,8 +395,10 @@ export function InkPad({
       <div style={{ position: 'relative', width: viewportWidth, height: Math.max(page.pageHeight, viewportHeight) }}>
         <canvas
           ref={committedCanvasRef}
-          width={viewportWidth}
-          height={canvasHeight}
+          // Backing store in physical pixels; CSS box in layout pixels. The
+          // context is scaled by `prepareContext`, so draw code stays in page units.
+          width={Math.round(viewportWidth * dpr)}
+          height={Math.round(canvasHeight * dpr)}
           style={{
             position: 'absolute',
             left: 0,
@@ -362,8 +410,10 @@ export function InkPad({
         />
         <canvas
           ref={wetCanvasRef}
-          width={viewportWidth}
-          height={canvasHeight}
+          // Backing store in physical pixels; CSS box in layout pixels. The
+          // context is scaled by `prepareContext`, so draw code stays in page units.
+          width={Math.round(viewportWidth * dpr)}
+          height={Math.round(canvasHeight * dpr)}
           style={{
             position: 'absolute',
             left: 0,

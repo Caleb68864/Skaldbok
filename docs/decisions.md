@@ -1267,3 +1267,41 @@
   matches. Reverted. If this is ever revisited, the fix is a new export from the
   original art with padding baked in, not a composite of the existing PNG.
 - Commit: fix(pwa) — pin manifest id and use absolute icon paths.
+
+## 2026-08-05 — Ink capture: palm rejection, draft parking, edit routing, DPR
+- Symptom: a scanning pass over everything committed since the 2026-07-29
+  sweep — the handwriting feature, which had never been reviewed. Five real
+  findings, four fixed here.
+- Fix 1, palm rejection: `PenLatch` reset both the per-contact latch and the
+  time-based suppression window whenever the active pointer set emptied. The
+  set is empty at precisely the moment a pen lifts with no palm down, which is
+  the only scenario the window exists for — so `PEN_SUPPRESSION_WINDOW_MS` was
+  cleared on every normal stroke and a palm landing 50ms later was accepted as
+  ink. Split into `releaseLatch()` (set empties) and `resetAll()` (cancel only).
+- Fix 2, draft parking: the text draft was parked to localStorage on every
+  keystroke; the ink page was plain React state. Same pad, same
+  closes-on-outside-tap sheet, and handwriting is the one thing on that screen
+  that cannot be retyped from memory. `ParkedDraft` now carries `ink` + `mode`.
+- Fix 3, edit routing: an entry's ink was never read back into the pad. Tapping
+  an ink row only set `editingId`, so the next ink Commit replaced that entry's
+  page with whatever was on the pad, and a text Commit wrote a body onto a note
+  that still rendered as its ink preview — stored but invisible. Tap now loads
+  the strokes and switches surface; `handleSelectMode` drops a mismatched edit
+  target; `handleInkCommit` re-checks the target itself.
+- Fix 4, DPR: the canvas backing store was sized in CSS pixels, so on the target
+  tablet every stroke rendered at ~1/2.25 of panel resolution and was upscaled.
+- Surfaces: features/notes/ink/penLatch.ts, components/notes/InkPad.tsx,
+  features/session/sessionLog/SessionLog.tsx.
+- Watch: the latch's three suppression tests all held a *second* touch pointer
+  down for the duration, with a comment saying this "isolates the
+  suppression-window behavior from the separate 'set empties' reset rule". That
+  is how a green suite covered a dead code path for a week — the tests were
+  written around the scenario that mattered. The replacement test asserts the
+  bare pen-down/pen-up/palm sequence with nothing else touching.
+- Watch also: two things left standing. The eraser draws with
+  `strokeStyle = '#ffffff'` instead of `destination-out`, which would smear
+  white on a dark theme — latent only because no eraser UI is wired; fix it
+  before exposing one. And the park effect runs in the same commit as the
+  restore effect, before restore's state lands, so it momentarily removes the
+  record it just read; it self-heals on the next render and predates this work.
+- Commit: fix(ink) — make palm rejection real, park handwriting, route entry edits.

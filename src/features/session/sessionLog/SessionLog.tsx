@@ -7,7 +7,7 @@ import { useToast } from '../../../context/ToastContext';
 import * as noteRepository from '../../../storage/repositories/noteRepository';
 import { generateSoftDeleteTxId } from '../../../utils/softDelete';
 import { createPenObservationTracker, detectPenCapability } from '../../notes/ink/penCapability';
-import { strokeBounds, type Stroke, type StrokePage } from '../../notes/ink/strokeModel';
+import { deserializeStrokePage, strokeBounds, type Stroke, type StrokePage } from '../../notes/ink/strokeModel';
 import { textToDoc, docToText } from '../../notes/textToDoc';
 import { SessionLogSelection } from './SessionLogSelection';
 import type { Note } from '../../../types/note';
@@ -141,6 +141,18 @@ interface ParkedDraft {
   editingId: string | null;
   /** When it was parked, used to pick the newest when adopting an orphan. */
   savedAt?: number;
+  /**
+   * Uncommitted handwriting, parked on the same terms as the text.
+   *
+   * @remarks
+   * The pad sits in a sheet that closes on an outside tap, and a page of
+   * handwriting is the most expensive thing on this screen to lose — it cannot
+   * be retyped from memory the way a sentence can. Absent on drafts parked
+   * before this existed, hence optional.
+   */
+  ink?: StrokePage;
+  /** Which surface was open, so reopening lands where the user left off. */
+  mode?: CaptureMode;
 }
 
 /** Parses a stored draft, tolerating absent or corrupt values. */
@@ -149,10 +161,24 @@ function parseDraft(raw: string | null): ParkedDraft | null {
   try {
     const parsed = JSON.parse(raw) as ParkedDraft;
     if (typeof parsed?.text !== 'string') return null;
-    return { text: parsed.text, editingId: parsed.editingId ?? null, savedAt: parsed.savedAt };
+    // Ink goes through the permissive deserializer, so a corrupt page costs the
+    // malformed strokes rather than the whole parked draft, text included.
+    const ink = parsed.ink === undefined ? undefined : deserializeStrokePage(parsed.ink);
+    return {
+      text: parsed.text,
+      editingId: parsed.editingId ?? null,
+      savedAt: parsed.savedAt,
+      ink,
+      mode: parsed.mode === 'ink' ? 'ink' : undefined,
+    };
   } catch {
     return null;
   }
+}
+
+/** Whether a parked draft holds anything worth restoring. */
+function draftHasContent(draft: ParkedDraft): boolean {
+  return draft.text.trim() !== '' || (draft.ink?.strokes.length ?? 0) > 0;
 }
 
 /**
@@ -262,29 +288,46 @@ export function SessionLog() {
     if (!parked) return;
     setDraft(parked.text);
     setEditingId(parked.editingId);
-    if (parked.text) setPadOpen(true);
+    if (parked.ink) setInkPage(parked.ink);
+    // Only follow a parked mode of 'ink', and only with strokes to show for it.
+    // Text stays the default on every other path — see the capture-mode state.
+    if (parked.mode === 'ink' && (parked.ink?.strokes.length ?? 0) > 0) setCaptureMode('ink');
+    if (draftHasContent(parked)) setPadOpen(true);
   }, [activeSession]);
 
-  // Park the draft on every keystroke. localStorage is the right store here:
-  // this is transient UI state, not a domain record, and writing it into
-  // IndexedDB would mean a schema version for something deliberately throwaway.
+  // Park the draft on every keystroke, and the ink page on every stroke.
+  // localStorage is the right store here: this is transient UI state, not a
+  // domain record, and writing it into IndexedDB would mean a schema version
+  // for something deliberately throwaway.
   useEffect(() => {
     if (!activeSession) return;
     const key = draftKey(activeSession.id);
-    if (draft.trim() === '') {
+    const hasInk = inkPage.strokes.length > 0;
+    // Clearing needs BOTH surfaces empty. Keyed on the text alone, committing
+    // an ink page (which leaves the text empty) deleted the parked record while
+    // the other surface still held content.
+    if (draft.trim() === '' && !hasInk) {
       localStorage.removeItem(key);
       return;
     }
     try {
       localStorage.setItem(
         key,
-        JSON.stringify({ text: draft, editingId, savedAt: Date.now() } satisfies ParkedDraft),
+        JSON.stringify({
+          text: draft,
+          editingId,
+          savedAt: Date.now(),
+          // Omitted when empty so a text-only draft does not carry an ink blob.
+          ink: hasInk ? inkPage : undefined,
+          mode: captureMode,
+        } satisfies ParkedDraft),
       );
     } catch {
       // A full or unavailable quota must not break capture — the draft simply
-      // is not recoverable across a remount.
+      // is not recoverable across a remount. Ink is the likelier trigger: a
+      // dense page is orders of magnitude larger than a sentence of text.
     }
-  }, [draft, editingId, activeSession]);
+  }, [draft, editingId, activeSession, inkPage, captureMode]);
 
   // Entries render oldest-first, so the newest is at the bottom and off-screen
   // once a session runs long. Scroll to it whenever the list grows — otherwise
@@ -333,7 +376,13 @@ export function SessionLog() {
     }
     if (inkPage.strokes.length === 0) return;
     try {
-      const targetId = editingId ?? (await noteRepository.createInkLogEntry({
+      // Only reuse the edit target when it is itself a handwritten entry.
+      // `handleSelectMode` already drops a mismatched target, but this is the
+      // write that would be destructive, so it does not take that on trust.
+      const editingInk = editingId
+        ? entries.find(e => e.id === editingId && hasInkPayload(e))?.id ?? null
+        : null;
+      const targetId = editingInk ?? (await noteRepository.createInkLogEntry({
         campaignId: activeCampaign.id,
         sessionId: activeSession.id,
         scope: 'campaign',
@@ -346,7 +395,7 @@ export function SessionLog() {
       showToast(e instanceof Error ? e.message : 'Failed to save ink entry', 'error');
       throw e instanceof Error ? e : new Error('Failed to save ink entry');
     }
-  }, [activeSession, activeCampaign, editingId, inkPage, refresh, showToast]);
+  }, [activeSession, activeCampaign, editingId, entries, inkPage, refresh, showToast]);
 
   const handleCommit = useCallback(async (text: string) => {
     if (!activeSession || !activeCampaign) {
@@ -386,9 +435,30 @@ export function SessionLog() {
    * localStorage copy in the same tick, destroying a half-written thought with
    * no confirmation and no way back. On a screen whose entire premise is that a
    * thought is never lost, that was the easiest way to lose one.
+   *
+   * Handwritten entries route to the ink pad with their strokes loaded. Before,
+   * an entry's ink was never read back: tapping one only set `editingId`, so
+   * the next ink Commit replaced that entry's page with whatever happened to be
+   * on the pad, and a text Commit wrote a body onto a note that still rendered
+   * as its ink preview — the typed words were stored but invisible.
    */
   const handleTapEntry = useCallback((entry: Note) => {
+    // Already open. Re-tapping must not re-read it from storage: for ink that
+    // silently throws away every stroke added since it was opened, and for text
+    // it was a no-op anyway.
+    if (entry.id === editingId) return;
+
+    const entryPage = noteRepository.readInkPage(entry);
+    const entryIsInk = entryPage.strokes.length > 0;
     const entryText = docToText(entry.body);
+
+    // Uncommitted handwriting is guarded first and on its own terms: unlike a
+    // sentence of text, it cannot be reproduced from memory.
+    if (inkPage.strokes.length > 0) {
+      showToast('Commit or undo your handwriting before opening another entry', 'warning', 4000);
+      return;
+    }
+
     const pending = draft.trim();
     if (pending && draft !== entryText) {
       showToast(
@@ -398,15 +468,46 @@ export function SessionLog() {
       );
       return;
     }
+
     setEditingId(entry.id);
-    setDraft(entryText);
+    if (entryIsInk) {
+      setInkPage(entryPage);
+      setCaptureMode('ink');
+      setDraft('');
+    } else {
+      setInkPage(EMPTY_INK_PAGE);
+      setCaptureMode('text');
+      setDraft(entryText);
+    }
     setPadOpen(true);
-  }, [draft, showToast]);
+  }, [draft, editingId, inkPage, showToast]);
+
+  /**
+   * Switches capture surface, dropping the edit target when it belongs to the
+   * other kind.
+   *
+   * @remarks
+   * An entry is either handwritten or typed; the two commit paths write
+   * different fields. Carrying `editingId` across a mode switch is what lets a
+   * text commit land on an ink note (body set, still rendered as its ink
+   * preview) or an ink commit attach strokes to a typed one. Clearing it means
+   * the commit creates a new entry instead — the original is untouched.
+   */
+  const handleSelectMode = useCallback((mode: CaptureMode) => {
+    setCaptureMode(mode);
+    if (!editingId) return;
+    const editing = entries.find(e => e.id === editingId);
+    if (!editing) return;
+    if (hasInkPayload(editing) !== (mode === 'ink')) setEditingId(null);
+  }, [editingId, entries]);
 
   /** Leaves edit mode without saving, restoring the pad to a blank new entry. */
   const cancelEdit = useCallback(() => {
     setEditingId(null);
     setDraft('');
+    // The ink pad is part of "the pad" too. Left loaded, the strokes of the
+    // entry just abandoned would be committed as a brand-new duplicate entry.
+    setInkPage(EMPTY_INK_PAGE);
   }, []);
 
   /**
@@ -570,7 +671,7 @@ export function SessionLog() {
           <button
             type="button"
             aria-pressed={captureMode === 'text'}
-            onClick={() => setCaptureMode('text')}
+            onClick={() => handleSelectMode('text')}
             className={`min-h-9 rounded border border-[var(--color-border,#ddd)] px-2 text-xs ${
               captureMode === 'text' ? 'bg-[var(--color-primary,#2563eb)] text-white' : ''
             }`}
@@ -581,7 +682,7 @@ export function SessionLog() {
             <button
               type="button"
               aria-pressed={captureMode === 'ink'}
-              onClick={() => setCaptureMode('ink')}
+              onClick={() => handleSelectMode('ink')}
               className={`min-h-9 rounded border border-[var(--color-border,#ddd)] px-2 text-xs ${
                 captureMode === 'ink' ? 'bg-[var(--color-primary,#2563eb)] text-white' : ''
               }`}
@@ -667,7 +768,11 @@ export function SessionLog() {
               // unhandled rejection — `handleInkCommit` has already toasted and
               // has deliberately left the strokes on the pad.
               onClick={() => void handleInkCommit().catch(() => {})}
-              className="min-h-9 rounded bg-[var(--color-primary,#2563eb)] px-4 text-sm font-medium text-white"
+              // Matches the text pad, which greys out on an empty draft. The
+              // handler early-returns on an empty page, so an enabled button
+              // read as a save that silently did nothing.
+              disabled={inkPage.strokes.length === 0}
+              className="min-h-9 rounded bg-[var(--color-primary,#2563eb)] px-4 text-sm font-medium text-white disabled:opacity-40"
             >
               Commit
             </button>

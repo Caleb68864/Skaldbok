@@ -49,10 +49,19 @@ export class PenLatch {
    * 2. A pen `up` releases the latch and opens a 500ms suppression window
    *    during which non-pen events are still discarded.
    * 3. A `cancel` (of any pointer type) discards the in-progress stroke and
-   *    fully resets the machine (latch and suppression both cleared).
+   *    fully resets the machine (latch and suppression both cleared) — a
+   *    cancelled gesture is an abandoned one, so there is nothing to protect.
    * 4. Whenever the set of currently-down pointers (of any type) becomes
-   *    empty, the machine resets unconditionally — even mid-suppression —
-   *    since nothing remains in contact with the surface to protect against.
+   *    empty, the *latch* is released — it is per-contact, and no contact
+   *    remains. The suppression window is **not** cleared: it is a time-based
+   *    guard against contact that has not happened yet.
+   *
+   * @remarks
+   * Rule 4 used to reset both, on the reasoning that nothing remained in
+   * contact to protect against. That defeated rule 2 entirely. The set is
+   * empty at precisely the moment a pen lifts with no palm down, which is the
+   * only scenario the window exists for — so the window was cleared on every
+   * normal pen stroke and a palm landing 50ms later was accepted as ink.
    */
   processEvent(event: PenLatchEvent): boolean {
     let accepted: boolean;
@@ -60,7 +69,7 @@ export class PenLatch {
     if (event.pointerType === 'pen') {
       if (event.phase === 'cancel') {
         accepted = false;
-        this.reset();
+        this.resetAll();
       } else if (event.phase === 'down') {
         this.latchedPointerId = event.pointerId;
         accepted = true;
@@ -75,7 +84,7 @@ export class PenLatch {
     } else {
       if (event.phase === 'cancel') {
         accepted = false;
-        this.reset();
+        this.resetAll();
       } else if (this.latchedPointerId !== null) {
         accepted = false;
       } else if (this.suppressUntil !== null && event.timestamp < this.suppressUntil) {
@@ -87,7 +96,7 @@ export class PenLatch {
 
     this.updateActivePointers(event);
     if (this.activePointers.size === 0) {
-      this.reset();
+      this.releaseLatch();
     }
 
     return accepted;
@@ -101,7 +110,17 @@ export class PenLatch {
     }
   }
 
-  private reset(): void {
+  /**
+   * Releases the per-contact latch, leaving any suppression window intact.
+   * Used when the surface goes untouched — the latch tracks a contact that no
+   * longer exists, but the window guards against the *next* one.
+   */
+  private releaseLatch(): void {
+    this.latchedPointerId = null;
+  }
+
+  /** Clears every guard. Only a cancel warrants this — see {@link processEvent}. */
+  private resetAll(): void {
     this.latchedPointerId = null;
     this.suppressUntil = null;
   }
