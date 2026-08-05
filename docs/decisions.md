@@ -1439,3 +1439,30 @@
   as fresh. A clock that moved backwards must not be able to silence the
   warning; failing safe here means over-warning, which is the correct direction.
 - Commit: feat(storage) — request persistent storage and surface backup age.
+
+## 2026-08-05 — Tests for the privacy boundary and the storage grant
+- Symptom: asked whether `StorageSafetyCard` needed coverage. It does not — its
+  risk is `classifyBackup`/`describeBackup`, already tested; the rest is an
+  effect setting state and ternaries picking strings, which breaks on every copy
+  edit and would catch nothing. But the question surfaced two real gaps.
+- Fix 1: `utils/export/privacyFilter.ts` had ZERO tests. It decides whether a
+  note marked private leaves the device — filtering the note, entity links
+  pointing at it in either direction, and its attachments — across six call
+  sites in every export path. Its failure is silent and one-directional: a
+  leaked note produces a bundle that looks entirely normal.
+- Fix 2: `storage/persistence.ts` (written the same day) had none either. Its
+  load-bearing behaviour is the short-circuit that must NOT re-request a grant
+  the origin already holds — re-prompting a user who already said yes is how a
+  permission gets revoked. That was asserted in a comment and never verified.
+- Surfaces: utils/export/privacyFilter.test.ts, storage/persistence.test.ts.
+- Watch: BOTH suites were mutation-checked, and that is what earned them.
+  Removing the persistence short-circuit failed 2 tests. But removing the
+  `fromEntityType === 'note'` guard in the privacy filter failed NOTHING on the
+  first attempt — the id-collision test only exercised the `to` side, and the
+  guard exists twice. The test was widened to cover both directions and both
+  mutations now fail. A test written and passing is not evidence; a test that
+  has been watched fail is.
+- Watch also: `excludePrivateNotes` defaults to excluding. The default is
+  load-bearing — every caller that forgets the second argument must get the safe
+  behaviour, not the share-everything one. There is a test pinning exactly that.
+- Commit: test(export,storage) — cover the privacy boundary and the persistence grant.
