@@ -98,12 +98,12 @@ export const systemDefinitionSchema = z.object({
       armor: z.array(z.string()).optional(),
     }).optional(),
   }).optional().describe('Extra per-item fields, plus built-ins this system does not use'),
-  resolution: z.enum(['d20-roll-under', '2d6-plus', 'trait-die-vs-tn']).optional().describe('Core resolution mechanic'),
-  currency: z.object({
-    label: z.string().min(1),
-    abbr: z.string().min(1),
-    mode: z.enum(['coins', 'single']),
-  }).optional().describe('Currency display configuration'),
+  // `resolution` and `currency` used to be declared here. Both had zero readers
+  // — the authoritative values are `engine.resolution` and `engine.currency`,
+  // and nothing ever consulted the JSON copies. A schema field an author is
+  // invited to fill in and that the app then ignores is worse than no field:
+  // it reads as configuration and behaves as a comment. If either needs to
+  // become data, wire the consumer in the same change that re-adds the field.
   terms: z.object({
     abilities: z.string().optional(),
     spells: z.string().optional(),

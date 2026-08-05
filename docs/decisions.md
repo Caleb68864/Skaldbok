@@ -1305,3 +1305,46 @@
   restore effect, before restore's state lands, so it momentarily removes the
   record it just read; it self-heals on the next render and predates this work.
 - Commit: fix(ink) — make palm rejection real, park handwriting, route entry edits.
+
+## 2026-08-05 — Engine: stop the template layer failing in silence
+- Symptom: an engine-improvement pass, verified against current code rather than
+  against the 2026-07-26 audit notes. The theme in what remained was not missing
+  capability but missing *signal* — the template layer knew when something was
+  wrong and never said so. Same failure mode as the ink feature earlier today.
+- Fix 1: `useSheetTemplate` built an `error` for a malformed bundled or cached
+  template and both consumers destructured `{ template }` only. A broken
+  sheet.json fell back to the built-in order with nothing reported anywhere.
+  Both screens now toast it.
+- Fix 2: an unrenderable panel key vanished without a word, so a typo and a
+  deliberate omission looked identical. DEV warn now separates them — unknown
+  key is `warn` ("typo"), known-but-unavailable is `info`. Not a useEffect: at
+  that point in SheetScreen we are past the component's early returns, so a hook
+  would break hook order on the loading render. Module-level dedupe instead.
+- Fix 3: bundled templates are checked by `sheetTemplates.test.ts`, NOT by a
+  schema refine. A refine was the original plan and would have been wrong —
+  `CardRenderer` supports community components passed in via `componentRegistry`
+  at render time, and those are legitimately not `CARD_REGISTRY` keys, so
+  rejecting unknown keys in the schema would reject them too. Bundled templates
+  ship no registry, so only for those is the key set closed.
+- Fix 4: `when` guards are honored on the sheet surface, via the same `GUARDS`
+  map the play surface uses. No bundled template uses `when` under `sheet`, so
+  this is behaviour-preserving today.
+- Fix 5: `resolution` and `currency` deleted from the system schema and from the
+  two bundled system.json files that carried them (versions bumped). Both had
+  zero readers; the real values live on the engine.
+- Surfaces: schemas/system.schema.ts, features/systems/panelOrder.ts,
+  features/systems/cards/sheetTemplates.test.ts, screens/SheetScreen.tsx,
+  screens/PlayDashboardScreen.tsx, systems/{traveller,savage-worlds}/system.json.
+- Watch: the new test was checked against injected typos (`vitalz`,
+  `attribbutes`) and failed naming both, before being trusted. Do that with
+  every guard test added here — this file records one that passed for a week
+  while covering a dead code path.
+- Watch also: `SHEET_PANEL_KEYS` must stay a superset of `panelAvailability`'s
+  keys in SheetScreen. Nothing enforces that pairing yet; a panel added to the
+  screen but not the list renders only when a template names it explicitly.
+- Deliberately NOT done, with reasons: opening the `DerivedValues` shape (the
+  SWADE build already concluded the extended-object pattern works and the
+  refactor is risk with no functional gain); deriving `hasMagic` from
+  `magic !== null` (MagicScreen now documents the two as decoupled on purpose);
+  panels/currency to data (structural, and its payoff arrives with system #4).
+- Commit: fix(engine) — surface template errors, guard bundled templates, drop dead schema fields.

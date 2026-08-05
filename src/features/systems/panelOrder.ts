@@ -1,3 +1,31 @@
+/**
+ * Every panel key the sheet surface knows how to render, in canonical order.
+ *
+ * @remarks
+ * The single source of truth for "is this a real panel key". `SheetScreen` uses
+ * it as its fallback sequence, and `sheetTemplates.test.ts` checks every bundled
+ * `sheet.json` against it — a template key that is not in this list is a typo
+ * that would otherwise vanish silently.
+ *
+ * A key here is *knowable*, not necessarily *available*: availability is decided
+ * per system by the engine (see `panelAvailability` in SheetScreen).
+ */
+export const SHEET_PANEL_KEYS = [
+  'identity',
+  'attributes',
+  'characteristics',
+  'resources',
+  'derived',
+  'finances',
+  'careers',
+  'augments',
+  'ships',
+  'edges',
+  'hindrances',
+  'rest',
+  'storyBank',
+] as const;
+
 /** Result of {@link resolveSheetPanelOrder}. */
 export interface PanelOrderResult {
   /** Canonical default order for the current system (used by "reset to default"). */

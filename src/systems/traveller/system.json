@@ -1,14 +1,8 @@
 {
   "id": "traveller",
-  "version": 10,
+  "version": 11,
   "name": "traveller",
   "displayName": "Traveller",
-  "resolution": "2d6-plus",
-  "currency": {
-    "label": "Credits",
-    "abbr": "Cr",
-    "mode": "single"
-  },
   "attributes": [
     {
       "id": "str",

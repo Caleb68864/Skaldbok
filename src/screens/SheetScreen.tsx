@@ -4,7 +4,8 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useSheetTemplate } from '../features/systems/useSheetTemplate';
-import { resolveSheetPanelOrder } from '../features/systems/panelOrder';
+import { resolveSheetPanelOrder, SHEET_PANEL_KEYS } from '../features/systems/panelOrder';
+import { GUARDS } from '../features/systems/cards/guards';
 import { getEngine } from '../features/systems/engine';
 import type { RestDefinition } from '../features/systems/engine/types';
 import { useAutosave } from '../hooks/useAutosave';
@@ -39,6 +40,30 @@ import type { PanelItem } from '../components/panels/DraggableCardContainer';
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
   return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+/**
+ * Template key sets already reported this session, so the warning below fires
+ * once per (system, key set) rather than on every render.
+ */
+const warnedTemplatePanels = new Set<string>();
+
+/** DEV-only report of `sheet.json` panel keys this build cannot render. */
+function warnAboutTemplatePanels(
+  systemId: string,
+  keys: string[],
+  availability: Record<string, boolean>,
+): void {
+  const signature = `${systemId}:${keys.join(',')}`;
+  if (warnedTemplatePanels.has(signature)) return;
+  warnedTemplatePanels.add(signature);
+  for (const key of new Set(keys)) {
+    if (!(SHEET_PANEL_KEYS as readonly string[]).includes(key)) {
+      console.warn(`SheetScreen: sheet.json declares unknown panel "${key}" — check for a typo`);
+    } else if (!availability[key]) {
+      console.info(`SheetScreen: sheet.json declares panel "${key}", which this system does not offer`);
+    }
+  }
 }
 
 /**
@@ -114,10 +139,17 @@ export default function SheetScreen() {
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
-  const { template } = useSheetTemplate(character?.systemId ?? 'classic-fantasy');
+  const { template, error: templateError } = useSheetTemplate(character?.systemId ?? 'classic-fantasy');
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   useSyncedResourceMaxima(character, system, updateCharacter);
   const { showToast } = useToast();
+
+  // A malformed sheet.json silently fell back to the built-in panel order. The
+  // hook computed this message and both screens dropped it, so the one signal a
+  // template author gets never reached them.
+  useEffect(() => {
+    if (templateError) showToast(templateError, 'error', 6000);
+  }, [templateError, showToast]);
   const { logHPChange, logDeathRoll, logRest } = useSessionLog();
 
   const isEditMode = useIsEditMode();
@@ -258,34 +290,38 @@ export default function SheetScreen() {
     storyBank: true,
   };
 
-  // Canonical head-to-toe fallback order; each system shows the subset it declares.
-  // Must list EVERY key in `panelAvailability` — a key that is available but
-  // omitted here silently vanishes whenever a system falls back (no sheet.json).
-  const FALLBACK_PANEL_SEQUENCE = [
-    'identity',
-    'attributes',
-    'characteristics',
-    'resources',
-    'derived',
-    'finances',
-    'careers',
-    'augments',
-    'ships',
-    'edges',
-    'hindrances',
-    'rest',
-    'storyBank',
-  ];
+  // Canonical head-to-toe fallback order; each system shows the subset it
+  // declares. Lives in panelOrder.ts so the bundled-template test can check
+  // sheet.json keys against the same list this screen renders from — it must
+  // cover every key in `panelAvailability`, and now something enforces that.
+  const FALLBACK_PANEL_SEQUENCE = SHEET_PANEL_KEYS as readonly string[] as string[];
   // When the system's `sheet.json` declares a `sheet` surface, its panel keys set
   // the default order/selection — the Sheet is "authored as data". The panels
   // themselves stay bespoke editors; only which appear and in what order is
   // template-driven. Availability still gates, so a stale key can't render a
   // panel the system lacks. Falls back to the canonical order with no template.
-  // Note: unlike the play surface (CardRenderer), a sheet entry's `when` guard is
-  // NOT honored here — sheet panels are gated by `panelAvailability` only.
+  //
+  // `when` guards are honored here exactly as the play surface honors them.
+  // They used to be ignored, which meant one syntax with two meanings depending
+  // on which block of the same file it appeared in — an author writing
+  // `{"panel": "rest", "when": "hasRest"}` under `sheet` got a silent no-op.
   const templatePanelKeys = (template?.sheet?.regions ?? [])
     .flatMap(region => (Array.isArray(region) ? region : region.cells.flat()))
+    .filter(entry => typeof entry === 'string' || !entry.when || GUARDS[entry.when](engine))
     .map(entry => (typeof entry === 'string' ? entry : entry.card));
+
+  // A template key the sheet cannot render disappears without a word, which is
+  // indistinguishable from a deliberate omission. Separate the two cases: an
+  // unknown key is a typo, an unavailable one is this system simply not having
+  // that panel.
+  //
+  // Deliberately not a useEffect — everything above this point runs after the
+  // component's early returns, so a hook here would break hook order on the
+  // loading render. Module-level dedupe gives the once-per-template behaviour a
+  // dependency array would have, without the ordering hazard.
+  if (import.meta.env.DEV && template?.sheet) {
+    warnAboutTemplatePanels(character.systemId, templatePanelKeys, panelAvailability);
+  }
   // The three-layer template→availability→persisted-order reconciliation lives in
   // a pure, unit-tested helper (see panelOrder.ts).
   const { defaultOrder: DEFAULT_PANEL_ORDER, panelOrder } = resolveSheetPanelOrder(

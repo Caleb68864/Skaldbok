@@ -4,6 +4,7 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useSheetTemplate } from '../features/systems/useSheetTemplate';
+import { useToast } from '../context/ToastContext';
 import { getEngine } from '../features/systems/engine';
 import { CardRenderer } from '../features/systems/cards/CardRenderer';
 import { useAutosave } from '../hooks/useAutosave';
@@ -40,9 +41,16 @@ export default function PlayDashboardScreen() {
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { settings, isLoading: settingsLoading } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
-  const { template } = useSheetTemplate(character?.systemId ?? 'classic-fantasy');
+  const { template, error: templateError } = useSheetTemplate(character?.systemId ?? 'classic-fantasy');
   const { error } = useAutosave(character, characterRepository.save, 500);
   useSyncedResourceMaxima(character, system, updateCharacter);
+  const { showToast } = useToast();
+
+  // See the matching note in SheetScreen: the hook builds this message and both
+  // consumers used to discard it, so a broken template fell back in silence.
+  useEffect(() => {
+    if (templateError) showToast(templateError, 'error', 6000);
+  }, [templateError, showToast]);
 
   useEffect(() => {
     const stillLoading = settingsLoading || isLoading;
