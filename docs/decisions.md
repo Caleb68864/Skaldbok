@@ -1213,3 +1213,26 @@
   this — "if it docks regardless, Approach A's ceiling is much lower and the ink
   layer becomes the primary answer." That is now the position, not a hypothesis.
 - Commit: fix(ink) — detect a stylus via any-pointer, not the primary pointer.
+
+## 2026-08-05 — Traveller characteristics are stats, not derived values
+- Symptom: the play-dashboard panel showed a bare DM per characteristic ("STR
+  -2") under the heading "Derived Stats". At the table a player is asked for the
+  score at least as often as the DM, and had to read it off another screen.
+  Nothing in the panel is derived in the Dragonbane sense either — a Traveller
+  characteristic is authored, and its DM is just how that score reads.
+- Fix: `computeTravellerDerivedValues` now publishes `characteristicScores`
+  alongside `characteristicDMs`, both taken from a single
+  `effectiveCharacteristic` call per characteristic. `DerivedStatsModule` leads
+  the tile with the score and shows the DM beside it in muted text.
+  `labels.derivedPanel: 'Stats'` renames the panel.
+- Surfaces: features/systems/engine/travellerEngine.ts,
+  features/playDashboard/DerivedStatsModule.tsx.
+- Watch: the score/DM pair MUST stay derived from one number. A screen that
+  recomputes the score from `character.attributes` would print a score and a DM
+  that disagree the moment the character takes damage — damage in Traveller
+  lands on the characteristic itself. That is why the map is published from the
+  engine rather than recomputed at the call site.
+- Watch also: the render is gated on `characteristicScores` being present, not
+  on `systemId`; an engine that publishes only DMs renders modifier-only as
+  before. Keep it that way.
+- Commit: feat(traveller) — show characteristic score alongside its DM, titled "Stats".

@@ -132,6 +132,16 @@ describe('damage feeds through to DMs', () => {
     expect(derived.characteristicDMs['dex']).toBe(0);
   });
 
+  it('publishes the score each DM was computed from, after damage', () => {
+    const wounded = character({
+      resources: { str: { current: 5, max: 7 }, dex: { current: 0, max: 7 }, end: { current: 0, max: 7 } },
+    });
+    const derived = computeTravellerDerivedValues(wounded);
+    // STR 7 - 5 damage = 2, and 2 is DM -2. The pair must agree.
+    expect(derived.characteristicScores['str']).toBe(2);
+    expect(derived.characteristicScores['dex']).toBe(7);
+  });
+
   it('lowers a skill check chance when the linked characteristic is damaged', () => {
     const healthy = character();
     const wounded = character({

@@ -67,14 +67,27 @@ export function formatDM(dm: number): string {
 /** DerivedValues shape extended with Traveller-specific characteristic DMs. */
 export interface TravellerDerivedValues extends DerivedValues {
   characteristicDMs: Record<string, number>;
+  /**
+   * The score each DM was computed from — after temp modifiers and damage.
+   *
+   * @remarks
+   * Surfaces alongside `characteristicDMs` so a display can show "END 7 (+0)"
+   * without recomputing {@link effectiveCharacteristic} itself. The pair must
+   * come from one number: a screen deriving the score separately would print a
+   * score and a DM that disagree the moment a character takes damage.
+   */
+  characteristicScores: Record<string, number>;
   initiativeDM: number;
 }
 
 /** Computes the six characteristic DMs (and an initiative DM = DEX DM) for a Traveller character. */
 export function computeTravellerDerivedValues(character: CharacterRecord): TravellerDerivedValues {
   const characteristicDMs: Record<string, number> = {};
+  const characteristicScores: Record<string, number> = {};
   for (const id of TRAVELLER_ATTRIBUTE_IDS) {
-    characteristicDMs[id] = characteristicToDM(effectiveCharacteristic(character, id));
+    const score = effectiveCharacteristic(character, id);
+    characteristicScores[id] = score;
+    characteristicDMs[id] = characteristicToDM(score);
   }
   const initiativeDM = characteristicDMs['dex'] ?? 0;
 
@@ -94,6 +107,7 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
     aglDamageBonus: '+0',
     encumbranceLimit: computeTravellerCarryLimit(character),
     characteristicDMs,
+    characteristicScores,
     initiativeDM,
   };
 }
@@ -255,6 +269,10 @@ export const travellerEngine: SystemEngine = {
     abilitiesScreen: null,
     resourcesPanel: 'Damage Track',
     attributesPanel: 'Characteristics',
+    // Nothing in this panel is derived in the Dragonbane sense — a
+    // characteristic score is authored, and its DM is just how that score reads
+    // at the table. "Stats" is what a Traveller player calls them.
+    derivedPanel: 'Stats',
     encumbrance: 'Encumbrance',
     // Traveller has no hit points; END is the pool a hit actually depletes.
     participantHealth: 'Current END',

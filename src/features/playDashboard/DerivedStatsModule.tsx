@@ -2,7 +2,7 @@ import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { getEngine } from '../systems/engine';
 import type { PlayModuleProps } from './types';
 
-type StatEntry = { label: string; value: string | number };
+type StatEntry = { label: string; value: string | number; note?: string };
 
 /**
  * Formats a dice modifier as a signed string, e.g. 2 -> '+2', -1 -> '-1'.
@@ -23,6 +23,15 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
       ? (derived as { characteristicDMs?: Record<string, number> }).characteristicDMs
       : undefined;
 
+  // The scores those modifiers were computed from, when the engine publishes
+  // them. Present => the tile leads with the score and shows the modifier
+  // beside it, because the score is the number a player is asked for as often
+  // as the DM. Absent => modifier only, as before.
+  const attributeScores =
+    'characteristicScores' in derived
+      ? (derived as { characteristicScores?: Record<string, number> }).characteristicScores
+      : undefined;
+
   // The flat list is driven by the engine's declared derived fields; the dense
   // dashboard tile prefers the short label when the engine supplies one.
   const derivedValues = derived as unknown as Record<string, string | number | undefined>;
@@ -31,10 +40,14 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
   // silently dropped every declared field a modifier-based system had —
   // Traveller's Initiative DM and Carry Limit never reached the dashboard.
   const modifierStats: StatEntry[] = attributeModifiers
-    ? Object.entries(attributeModifiers).map(([id, dm]) => ({
-        label: system?.attributes.find(attr => attr.id === id)?.abbreviation ?? id.toUpperCase(),
-        value: formatModifier(dm),
-      }))
+    ? Object.entries(attributeModifiers).map(([id, dm]) => {
+        const score = attributeScores?.[id];
+        return {
+          label: system?.attributes.find(attr => attr.id === id)?.abbreviation ?? id.toUpperCase(),
+          value: score ?? formatModifier(dm),
+          note: score === undefined ? undefined : formatModifier(dm),
+        };
+      })
     : [];
 
   const fieldStats: StatEntry[] = engine.derivedFields
@@ -66,7 +79,12 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
             className="flex items-center justify-between gap-1 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-xs)] py-1"
           >
             <p className="m-0 text-xs font-semibold text-[var(--color-text-muted)]">{stat.label}</p>
-            <p className="m-0 text-[length:var(--font-size-lg)] font-bold leading-tight text-[var(--color-accent)]">{stat.value}</p>
+            <p className="m-0 flex items-baseline gap-1 text-[length:var(--font-size-lg)] font-bold leading-tight text-[var(--color-accent)]">
+              {stat.value}
+              {stat.note !== undefined && (
+                <span className="text-xs font-semibold text-[var(--color-text-muted)]">{stat.note}</span>
+              )}
+            </p>
           </div>
         ))}
       </div>
