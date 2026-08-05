@@ -22,10 +22,18 @@ export default defineConfig({
         background_color: '#111a17',
         display: 'standalone',
         start_url: '/',
+        // Without `id`, an install's identity falls back to `start_url`, which
+        // makes it hostage to whichever origin/path the app was served from —
+        // this app is installed from a LAN IP that can change. A fixed id keeps
+        // a reinstall replacing the existing app rather than minting a new one.
+        id: '/',
+        // Absolute, not relative. These resolve against the manifest URL, which
+        // is at the root today, so both forms work — but a relative src silently
+        // breaks the moment the manifest is emitted anywhere but `/`.
         icons: [
-          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: 'icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {

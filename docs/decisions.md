@@ -1236,3 +1236,34 @@
   on `systemId`; an engine that publishes only DMs renders modifier-only as
   before. Keep it that way.
 - Commit: feat(traveller) — show characteristic score alongside its DM, titled "Stats".
+
+## 2026-08-05 — PWA manifest identity pinned; maskable icon left alone
+- Symptom: an installed home-screen shortcut on the tablet lost its icon and
+  went blank. Suspicion was that a recent change broke the icons.
+- Fix: none needed for the icons themselves — they were never touched. `git log
+  --follow` on public/icons/* shows two commits, the most recent long before any
+  of this work; the built manifest still lists all three; `png` is in the Workbox
+  globPatterns so they are precached. What was actually wrong is device-side: on
+  a self-signed LAN origin Chrome cannot mint a WebAPK (Google's WebAPK service
+  fetches the manifest and icons server-side and can reach neither a private IP
+  nor an untrusted cert), so it falls back to a legacy bookmark shortcut whose
+  icon is fetched from the page at add-time — which on a cert-interstitial origin
+  comes back empty. Reinstall is the remedy.
+- Fix, hardening only: added `id: '/'` to the manifest and made the icon `src`
+  paths absolute.
+- Surfaces: vite.config.ts.
+- Watch: `id` is the important one. Without it an install's identity falls back
+  to `start_url`, so it is pinned to whichever LAN IP served it that day; a DHCP
+  change mints a *new* app rather than updating the old one. Do not remove it,
+  and do not change it — changing `id` has the same effect as never having had
+  one.
+- Watch also: `icon-maskable-512.png` is still byte-identical to
+  `icon-512.png` — no safe-zone padding. This was measured rather than assumed:
+  the gold emblem spans exactly 80% of the icon width, which is precisely the
+  maskable safe-zone circle, and every launcher squircle is larger than that
+  circle. Three attempts at a padded rebuild (shrink-on-flat-fill,
+  crop-emblem-on-sampled-fill, crop-on-blurred-backdrop) each left a visible
+  rectangle seam, because the plaque interior is a vignette that no flat fill
+  matches. Reverted. If this is ever revisited, the fix is a new export from the
+  original art with padding baked in, not a composite of the existing PNG.
+- Commit: fix(pwa) — pin manifest id and use absolute icon paths.
