@@ -71,6 +71,37 @@ export interface SkillDefinition {
   name: string;
   baseChance: number;
   linkedAttributeId?: string;
+  /**
+   * The speciality group this skill belongs to, if any — see
+   * {@link SkillGroupDefinition}.
+   *
+   * @remarks
+   * Membership, not hierarchy: Gun Combat (Slug), (Energy) and (Archaic) are
+   * three peer skills that share a group. There is no separate "parent skill"
+   * row, because in Traveller there is no such thing as plain Gun Combat — you
+   * always have a speciality.
+   */
+  groupId?: string;
+}
+
+/**
+ * A set of skills the rules treat as specialities of one another.
+ *
+ * @remarks
+ * Traveller grants level 0 in *every* speciality of a group when you gain the
+ * group at level 0, and levels 1+ apply to one speciality. Without a group, that
+ * is five separate rows to fill in by hand, once per speciality, and nothing in
+ * the app knows the five are related.
+ *
+ * Declared as a flat list on the system rather than as a nesting inside
+ * `skillCategories` so that a group may span categories if a ruleset needs it,
+ * and so adding groups to a system is additive — a system that declares none
+ * behaves exactly as before.
+ */
+export interface SkillGroupDefinition {
+  id: string;
+  /** Display name of the group as a whole, e.g. "Gun Combat". */
+  name: string;
 }
 
 export interface SkillCategory {
@@ -127,6 +158,8 @@ export interface SystemDefinition {
   conditions: ConditionDefinition[];
   resources: ResourceDefinition[];
   skillCategories: SkillCategory[];
+  /** Speciality groups referenced by `SkillDefinition.groupId`. */
+  skillGroups?: SkillGroupDefinition[];
   sectionLayouts?: SectionLayout[];
   themesSupported?: string[];
   /** At-the-table cheat-sheet cards; see {@link QuickRefCard}. */

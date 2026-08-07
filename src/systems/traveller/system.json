@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 14,
+  "version": 15,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -99,97 +99,113 @@
           "id": "gunCombat",
           "name": "Gun Combat (Slug)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "gunCombat"
         },
         {
           "id": "gunCombatEnergy",
           "name": "Gun Combat (Energy)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "gunCombat"
         },
         {
           "id": "gunCombatArchaic",
           "name": "Gun Combat (Archaic)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "gunCombat"
         },
         {
           "id": "meleeBlade",
           "name": "Melee (Blade)",
           "baseChance": 0,
-          "linkedAttributeId": "str"
+          "linkedAttributeId": "str",
+          "groupId": "melee"
         },
         {
           "id": "meleeBludgeon",
           "name": "Melee (Bludgeon)",
           "baseChance": 0,
-          "linkedAttributeId": "str"
+          "linkedAttributeId": "str",
+          "groupId": "melee"
         },
         {
           "id": "meleeNatural",
           "name": "Melee (Natural)",
           "baseChance": 0,
-          "linkedAttributeId": "str"
+          "linkedAttributeId": "str",
+          "groupId": "melee"
         },
         {
           "id": "meleeUnarmed",
           "name": "Melee (Unarmed)",
           "baseChance": 0,
-          "linkedAttributeId": "str"
+          "linkedAttributeId": "str",
+          "groupId": "melee"
         },
         {
           "id": "heavyWeapons",
           "name": "Heavy Weapons (Man Portable)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "heavyWeapons"
         },
         {
           "id": "heavyWeaponsArtillery",
           "name": "Heavy Weapons (Artillery)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "heavyWeapons"
         },
         {
           "id": "heavyWeaponsVehicle",
           "name": "Heavy Weapons (Vehicle)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "heavyWeapons"
         },
         {
           "id": "gunner",
           "name": "Gunner (Turret)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "gunner"
         },
         {
           "id": "gunnerCapital",
           "name": "Gunner (Capital)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "gunner"
         },
         {
           "id": "gunnerOrtillery",
           "name": "Gunner (Ortillery)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "gunner"
         },
         {
           "id": "gunnerScreen",
           "name": "Gunner (Screen)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "gunner"
         },
         {
           "id": "tactics",
           "name": "Tactics (Military)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "tactics"
         },
         {
           "id": "tacticsNaval",
           "name": "Tactics (Naval)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "tactics"
         }
       ]
     },
@@ -207,49 +223,57 @@
           "id": "electronics",
           "name": "Electronics (Comms)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "electronics"
         },
         {
           "id": "electronicsComputers",
           "name": "Electronics (Computers)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "electronics"
         },
         {
           "id": "electronicsRemoteOps",
           "name": "Electronics (Remote Ops)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "electronics"
         },
         {
           "id": "electronicsSensors",
           "name": "Electronics (Sensors)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "electronics"
         },
         {
           "id": "engineer",
           "name": "Engineer (J-Drive)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "engineer"
         },
         {
           "id": "engineerLifeSupport",
           "name": "Engineer (Life Support)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "engineer"
         },
         {
           "id": "engineerMDrive",
           "name": "Engineer (M-Drive)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "engineer"
         },
         {
           "id": "engineerPower",
           "name": "Engineer (Power)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "engineer"
         },
         {
           "id": "medic",
@@ -267,109 +291,127 @@
           "id": "science",
           "name": "Science (Physics)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceArchaeology",
           "name": "Science (Archaeology)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceAstronomy",
           "name": "Science (Astronomy)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceBiology",
           "name": "Science (Biology)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceChemistry",
           "name": "Science (Chemistry)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceCosmology",
           "name": "Science (Cosmology)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceCybernetics",
           "name": "Science (Cybernetics)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceEconomics",
           "name": "Science (Economics)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceGenetics",
           "name": "Science (Genetics)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceHistory",
           "name": "Science (History)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceLinguistics",
           "name": "Science (Linguistics)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "sciencePhilosophy",
           "name": "Science (Philosophy)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "sciencePlanetology",
           "name": "Science (Planetology)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "sciencePsionicology",
           "name": "Science (Psionicology)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "sciencePsychology",
           "name": "Science (Psychology)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceRobotics",
           "name": "Science (Robotics)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceSophontology",
           "name": "Science (Sophontology)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         },
         {
           "id": "scienceXenology",
           "name": "Science (Xenology)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "science"
         }
       ]
     },
@@ -381,19 +423,22 @@
           "id": "pilot",
           "name": "Pilot (Spacecraft)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "pilot"
         },
         {
           "id": "pilotSmallCraft",
           "name": "Pilot (Small Craft)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "pilot"
         },
         {
           "id": "pilotCapitalShips",
           "name": "Pilot (Capital Ships)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "pilot"
         },
         {
           "id": "astrogation",
@@ -417,85 +462,99 @@
           "id": "flyer",
           "name": "Flyer (Grav)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "flyer"
         },
         {
           "id": "flyerAirship",
           "name": "Flyer (Airship)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "flyer"
         },
         {
           "id": "flyerOrnithopter",
           "name": "Flyer (Ornithopter)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "flyer"
         },
         {
           "id": "flyerRotor",
           "name": "Flyer (Rotor)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "flyer"
         },
         {
           "id": "flyerWing",
           "name": "Flyer (Wing)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "flyer"
         },
         {
           "id": "drive",
           "name": "Drive (Wheel)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "drive"
         },
         {
           "id": "driveHovercraft",
           "name": "Drive (Hovercraft)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "drive"
         },
         {
           "id": "driveMole",
           "name": "Drive (Mole)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "drive"
         },
         {
           "id": "driveTrack",
           "name": "Drive (Track)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "drive"
         },
         {
           "id": "driveWalker",
           "name": "Drive (Walker)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "drive"
         },
         {
           "id": "seafarer",
           "name": "Seafarer (Ocean Ships)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "seafarer"
         },
         {
           "id": "seafarerPersonal",
           "name": "Seafarer (Personal)",
           "baseChance": 0,
-          "linkedAttributeId": "end"
+          "linkedAttributeId": "end",
+          "groupId": "seafarer"
         },
         {
           "id": "seafarerSail",
           "name": "Seafarer (Sail)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "seafarer"
         },
         {
           "id": "seafarerSubmarine",
           "name": "Seafarer (Submarine)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "seafarer"
         }
       ]
     },
@@ -561,19 +620,22 @@
           "id": "athletics",
           "name": "Athletics (Strength)",
           "baseChance": 0,
-          "linkedAttributeId": "str"
+          "linkedAttributeId": "str",
+          "groupId": "athletics"
         },
         {
           "id": "athleticsDexterity",
           "name": "Athletics (Dexterity)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "athletics"
         },
         {
           "id": "athleticsEndurance",
           "name": "Athletics (Endurance)",
           "baseChance": 0,
-          "linkedAttributeId": "end"
+          "linkedAttributeId": "end",
+          "groupId": "athletics"
         },
         {
           "id": "stealth",
@@ -638,109 +700,127 @@
           "id": "animals",
           "name": "Animals (Handling)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "animals"
         },
         {
           "id": "animalsTraining",
           "name": "Animals (Training)",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "int",
+          "groupId": "animals"
         },
         {
           "id": "animalsVeterinary",
           "name": "Animals (Veterinary)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "animals"
         },
         {
           "id": "art",
           "name": "Art (Performer)",
           "baseChance": 0,
-          "linkedAttributeId": "soc"
+          "linkedAttributeId": "soc",
+          "groupId": "art"
         },
         {
           "id": "artHolography",
           "name": "Art (Holography)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "art"
         },
         {
           "id": "artInstrument",
           "name": "Art (Instrument)",
           "baseChance": 0,
-          "linkedAttributeId": "dex"
+          "linkedAttributeId": "dex",
+          "groupId": "art"
         },
         {
           "id": "artVisualMedia",
           "name": "Art (Visual Media)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "art"
         },
         {
           "id": "artWrite",
           "name": "Art (Write)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "art"
         },
         {
           "id": "language",
           "name": "Language (Galanglic)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "language"
         },
         {
           "id": "languageVilani",
           "name": "Language (Vilani)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "language"
         },
         {
           "id": "languageZdetl",
           "name": "Language (Zdetl)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "language"
         },
         {
           "id": "languageOynprith",
           "name": "Language (Oynprith)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "language"
         },
         {
           "id": "profession",
           "name": "Profession (Belter)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "profession"
         },
         {
           "id": "professionBiologicals",
           "name": "Profession (Biologicals)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "profession"
         },
         {
           "id": "professionCivilEngineering",
           "name": "Profession (Civil Engineering)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "profession"
         },
         {
           "id": "professionConstruction",
           "name": "Profession (Construction)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "profession"
         },
         {
           "id": "professionHydroponics",
           "name": "Profession (Hydroponics)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "profession"
         },
         {
           "id": "professionPolymers",
           "name": "Profession (Polymers)",
           "baseChance": 0,
-          "linkedAttributeId": "edu"
+          "linkedAttributeId": "edu",
+          "groupId": "profession"
         }
       ]
     }
@@ -1000,6 +1080,76 @@
           "+3"
         ]
       ]
+    }
+  ],
+  "skillGroups": [
+    {
+      "id": "gunCombat",
+      "name": "Gun Combat"
+    },
+    {
+      "id": "melee",
+      "name": "Melee"
+    },
+    {
+      "id": "heavyWeapons",
+      "name": "Heavy Weapons"
+    },
+    {
+      "id": "gunner",
+      "name": "Gunner"
+    },
+    {
+      "id": "tactics",
+      "name": "Tactics"
+    },
+    {
+      "id": "electronics",
+      "name": "Electronics"
+    },
+    {
+      "id": "engineer",
+      "name": "Engineer"
+    },
+    {
+      "id": "science",
+      "name": "Science"
+    },
+    {
+      "id": "pilot",
+      "name": "Pilot"
+    },
+    {
+      "id": "flyer",
+      "name": "Flyer"
+    },
+    {
+      "id": "drive",
+      "name": "Drive"
+    },
+    {
+      "id": "seafarer",
+      "name": "Seafarer"
+    },
+    {
+      "id": "athletics",
+      "name": "Athletics"
+    },
+    {
+      "id": "animals",
+      "name": "Animals"
+    },
+    {
+      "id": "art",
+      "name": "Art"
+    },
+    {
+      "id": "language",
+      "name": "Language"
+    },
+    {
+      "id": "profession",
+      "name": "Profession"
     }
   ]
 }

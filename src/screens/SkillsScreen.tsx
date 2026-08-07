@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
@@ -21,6 +21,7 @@ import { conditionImposesBane } from '../utils/conditionEffects';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { getEngine } from '../features/systems/engine';
 import { buildSkillCategoryViews, countVisibleSkills } from '../features/characters/skillCategoryViews';
+import { groupMembers, groupFor, trainGroupAtZero, groupHasEveryMember } from '../features/characters/skillGroups';
 
 function clampSkillValue(value: number, range: { min: number; max: number }): number {
   if (!Number.isFinite(value)) return range.min;
@@ -212,6 +213,22 @@ export default function SkillsScreen() {
     setOpenOverrides(prev => ({ ...prev, [categoryId]: !currentlyOpen }));
   }
 
+  /**
+   * Grants the level-0 baseline a speciality group gives, for every member the
+   * character does not already have.
+   *
+   * @remarks
+   * Additive only — {@link trainGroupAtZero} returns the same bag when nothing
+   * is missing, so a no-op never dirties the record or triggers an autosave.
+   */
+  function trainWholeGroup(groupId: string) {
+    if (!character || !system) return;
+    const members = groupMembers(system.skillCategories, groupId);
+    const skills = trainGroupAtZero(character.skills, members);
+    if (skills === character.skills) return;
+    updateCharacter({ skills, updatedAt: nowISO() });
+  }
+
   function getOverrideLabel(skillId: string): string {
     const override = sessionState.skillOverrides[skillId];
     if (override === 'boon') return '★';
@@ -300,8 +317,15 @@ export default function SkillsScreen() {
                   </span>
                   <span aria-hidden="true">{open ? '▾' : '▸'}</span>
                 </button>
-                {open && visibleSkills.map(skill => {
+                {open && visibleSkills.map((skill, index) => {
                   const cs = character.skills[skill.id];
+                  // A group header opens each run of specialities. Members are
+                  // contiguous in the definition, so a change of groupId marks
+                  // the boundary — no separate pass needed.
+                  const group = groupFor(system.skillGroups, skill);
+                  const startsGroup = !!group && visibleSkills[index - 1]?.groupId !== skill.groupId;
+                  const members = startsGroup ? groupMembers(system.skillCategories, group.id) : [];
+                  const groupComplete = startsGroup && groupHasEveryMember(character.skills, members);
                   const computedValue = engine.skill.computeValue(skill, character, cs?.trained ?? false);
                   const skillValue = cs?.value ?? computedValue;
                   const attrAbbr = skill.linkedAttributeId ? (attrAbbrMap[skill.linkedAttributeId] ?? '') : '';
@@ -316,7 +340,36 @@ export default function SkillsScreen() {
                   const isTrained = cs?.trained ?? false;
 
                   return (
-                    <div key={skill.id} className={cn(
+                    <React.Fragment key={skill.id}>
+                    {startsGroup && group && (
+                      <div className="flex items-center justify-between gap-2 pt-[var(--space-sm)] pb-[var(--space-2xs,2px)]">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] opacity-70">
+                          {group.name}
+                        </span>
+                        {/* Traveller grants level 0 in every speciality of a
+                            group; without this it is one row per speciality,
+                            by hand. Edit Mode only — it writes to the record. */}
+                        {skillsEditable && (
+                          <button
+                            type="button"
+                            onClick={() => trainWholeGroup(group.id)}
+                            disabled={groupComplete}
+                            title={groupComplete
+                              ? `Every ${group.name} speciality is already on the sheet`
+                              : `Add every missing ${group.name} speciality at level 0`}
+                            className={cn(
+                              'shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] text-xs font-semibold',
+                              groupComplete
+                                ? 'bg-transparent text-[var(--color-text-muted)] opacity-40 cursor-default'
+                                : 'bg-[var(--color-surface-raised)] text-[var(--color-text)] cursor-pointer',
+                            )}
+                          >
+                            All at 0
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    <div className={cn(
                       // flex-wrap so a long boon/bane probability string wraps the
                       // controls to a second line on a phone instead of overflowing.
                       "flex flex-wrap items-center gap-[var(--space-sm)] py-[var(--space-xs)] border-b border-[var(--color-border)] min-h-[var(--touch-target-min)]",
@@ -417,6 +470,7 @@ export default function SkillsScreen() {
                         </button>
                       )}
                     </div>
+                    </React.Fragment>
                   );
                 })}
               </div>

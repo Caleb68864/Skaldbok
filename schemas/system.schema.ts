@@ -54,6 +54,12 @@ const skillDefinitionSchema = z.object({
   name: z.string().min(1).describe('Skill display name'),
   baseChance: z.number().describe('Base chance percentage (roll-under systems only; 0 and unused for trait-die systems)'),
   linkedAttributeId: z.string().optional().describe('Linked attribute id'),
+  groupId: z.string().optional().describe('Speciality group this skill belongs to'),
+});
+
+const skillGroupSchema = z.object({
+  id: z.string().min(1).describe('Unique skill group identifier'),
+  name: z.string().min(1).describe('Group display name, e.g. "Gun Combat"'),
 });
 
 const skillCategorySchema = z.object({
@@ -77,6 +83,7 @@ export const systemDefinitionSchema = z.object({
   conditions: z.array(conditionDefinitionSchema).describe('Condition definitions'),
   resources: z.array(resourceDefinitionSchema).describe('Resource definitions'),
   skillCategories: z.array(skillCategorySchema).describe('Grouped skill definitions'),
+  skillGroups: z.array(skillGroupSchema).optional().describe('Speciality groups referenced by skill groupId'),
   sectionLayouts: z.array(sectionLayoutSchema).optional().describe('Optional section layout overrides'),
   themesSupported: z.array(z.string()).optional().describe('Theme names this system supports'),
   quickReference: z.array(z.object({
@@ -169,6 +176,25 @@ export const systemDefinitionSchema = z.object({
   flagDupes(attrIds, 'attribute');
   flagDupes(resIds, 'resource');
   flagDupes(skillIds, 'skill');
+
+  // A groupId that resolves to nothing would silently drop the skill out of its
+  // speciality group — the group action would simply skip it, which is exactly
+  // the failure a hand-edited system.json produces and never notices.
+  const groupIds = (def.skillGroups ?? []).map(g => g.id);
+  const groupSet = new Set(groupIds);
+  flagDupes(groupIds, 'skill group');
+  for (const cat of def.skillCategories) {
+    for (const s of cat.skills) {
+      if (s.groupId && !groupSet.has(s.groupId)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Skill "${s.id}" belongs to unknown group "${s.groupId}"` });
+      }
+    }
+  }
+  for (const id of groupIds) {
+    if (!def.skillCategories.some(c => c.skills.some(s => s.groupId === id))) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Skill group "${id}" has no member skills` });
+    }
+  }
 
   for (const r of def.resources) {
     if (r.derivedFrom && !attrSet.has(r.derivedFrom)) {

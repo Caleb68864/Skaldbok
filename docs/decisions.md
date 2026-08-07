@@ -1570,3 +1570,42 @@
   the `delete`. This is the ladder rung most likely to be copied for the next
   retired skill; the merge semantics are the part worth copying.
 - Commit: fix(traveller) — migrate `sensors` into `electronicsSensors`.
+
+## 2026-08-07 — Speciality groups: membership, not hierarchy
+- Symptom: skills are a flat list, so nothing knew Gun Combat (Slug/Energy/
+  Archaic) are one skill. Traveller grants level 0 in *every* speciality of a
+  group when you gain it at 0 — five near-identical rows to enter by hand, per
+  group, and the omissions show up as a -3 unskilled DM the character should
+  not be taking.
+- Fix: `SkillGroupDefinition` on the system + optional `groupId` on
+  `SkillDefinition`, populated for all 80 Traveller specialities across 17
+  groups (version 14 -> 15). The Skills screen renders a group header per run
+  of specialities with an "All at 0" action in Edit Mode.
+- Why membership and not `parentId`: there is no parent *row* to hang it from.
+  In Traveller there is no plain "Gun Combat" — you always have a speciality,
+  which is why this file's convention already makes the bare id mean the first
+  one (`gunCombat` = Slug). A parent pointer would have to point at a peer.
+  Groups are also declared flat on the system rather than nested in
+  `skillCategories`, so a group may span categories.
+- Why NOT an engine rollup: `isRelevant` receives only the stored
+  `CharacterSkill` — no id, no definition — and `computeValue` only
+  `{baseChance, linkedAttributeId}`. Deriving the group baseline needs both
+  widened across three adapters. Worse, a derived baseline stops being a fact
+  on the record: `PrintableSheet` and the export bundle would each have to
+  re-derive it. The action writes real entries instead. Explicit data, one
+  tap.
+- Surfaces: types/system.ts, schemas/system.schema.ts (+ tests),
+  features/characters/skillGroups.ts (+ test), screens/SkillsScreen.tsx,
+  systems/traveller/system.json.
+- Watch: `trainGroupAtZero` is additive only and returns the *same* bag when
+  nothing is missing, so a no-op cannot dirty the record or fire an autosave.
+  It never touches a member that already has an entry — including an explicit
+  untrained-at-0, which is a player saying "I do not have this" and must not be
+  flipped by a bulk action.
+- Watch also: Zod strips unknown keys, so `groupId` had to be added to the
+  *schema* as well as the type or imported systems would silently lose it while
+  bundled ones kept it. There is a test parsing the real Traveller definition
+  and asserting the field survives. Mutation-checked: overwrite-instead-of-skip,
+  vacuous empty-group completeness, fresh-bag-on-no-op, and dropping the
+  schema's group-membership check each fail a test.
+- Commit: feat(systems) — speciality groups and a level-0 group action.

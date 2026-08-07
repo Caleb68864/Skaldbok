@@ -44,6 +44,46 @@ describe('systemDefinitionSchema', () => {
     expect(broken((d: any) => { d.attributes[0].min = 999; d.attributes[0].max = 0; })).toBe(false);
   });
 
+  it('rejects a skill in a group the system never declares', () => {
+    // Silently dropping the skill out of its group is the failure mode: the
+    // "all at 0" action would just skip it, and nobody would notice.
+    expect(broken((d: any) => { d.skillCategories[0].skills[0].groupId = 'ghost'; })).toBe(false);
+  });
+
+  it('rejects a declared group with no member skills', () => {
+    expect(broken((d: any) => { d.skillGroups = [...(d.skillGroups ?? []), { id: 'ghost', name: 'Ghost' }]; })).toBe(false);
+  });
+
+  it('rejects a duplicate skill group id', () => {
+    expect(broken((d: any) => {
+      d.skillGroups = [{ id: 'g', name: 'G' }, { id: 'g', name: 'G again' }];
+      d.skillCategories[0].skills[0].groupId = 'g';
+    })).toBe(false);
+  });
+
+  it('preserves groupId and skillGroups through the parse', () => {
+    // Zod strips unknown keys, so a field added to the type but not the schema
+    // reaches the engine as undefined — silently, and only for imported systems.
+    const traveller: any = BUNDLED_SYSTEMS.find(s => s.id === 'traveller');
+    const result = systemDefinitionSchema.safeParse(traveller);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const gunner = result.data.skillCategories
+        .flatMap(c => c.skills)
+        .find(s => s.id === 'gunner');
+      expect(gunner?.groupId).toBe('gunner');
+      expect(result.data.skillGroups?.find(g => g.id === 'gunner')?.name).toBe('Gunner');
+    }
+  });
+
+  it('accepts a system that declares no groups at all', () => {
+    // Groups are additive; a ruleset without specialities must be unaffected.
+    const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));
+    delete def.skillGroups;
+    for (const cat of def.skillCategories) for (const s of cat.skills) delete s.groupId;
+    expect(systemDefinitionSchema.safeParse(def).success).toBe(true);
+  });
+
   it('preserves the full label surface, not just the four core keys', () => {
     // Before the schema was widened these keys were silently stripped by Zod,
     // so a system.json override never reached the engine merge.
