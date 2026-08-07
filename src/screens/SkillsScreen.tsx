@@ -20,6 +20,7 @@ import { nowISO } from '../utils/dates';
 import { conditionImposesBane } from '../utils/conditionEffects';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { getEngine } from '../features/systems/engine';
+import { buildSkillCategoryViews, countVisibleSkills } from '../features/characters/skillCategoryViews';
 
 function clampSkillValue(value: number, range: { min: number; max: number }): number {
   if (!Number.isFinite(value)) return range.min;
@@ -69,6 +70,13 @@ export default function SkillsScreen() {
   } = useAppState();
   const skillsEditable = useFieldEditable('skills.any');
   const [filter, setFilter] = useState<'all' | 'relevant'>('relevant');
+  const [search, setSearch] = useState('');
+  /**
+   * Per-category open state the user has explicitly set, overriding the default.
+   * Sparse on purpose: a category the user has not touched follows the default,
+   * so the list keeps re-deciding sensibly as skills are trained or searched.
+   */
+  const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
   useAutosave(character, characterRepository.save, 1000);
   const engine = getEngine(system);
   const skillRange = engine.skill.range;
@@ -187,6 +195,23 @@ export default function SkillsScreen() {
       : `${normalPct} (${banePct} with bane)`;
   }
 
+  // Grouping/collapse/search rules live in a tested helper — see
+  // {@link features/characters/skillCategoryViews!buildSkillCategoryViews}.
+  const query = search.trim().toLowerCase();
+  const categoryViews = buildSkillCategoryViews({
+    categories: system?.skillCategories ?? [],
+    characterSkills: character.skills,
+    isRelevant: engine.skill.isRelevant,
+    filter,
+    search,
+    openOverrides,
+  });
+  const totalVisible = countVisibleSkills(categoryViews);
+
+  function toggleCategory(categoryId: string, currentlyOpen: boolean) {
+    setOpenOverrides(prev => ({ ...prev, [categoryId]: !currentlyOpen }));
+  }
+
   function getOverrideLabel(skillId: string): string {
     const override = sessionState.skillOverrides[skillId];
     if (override === 'boon') return '★';
@@ -243,22 +268,39 @@ export default function SkillsScreen() {
       </div>
       )}
 
+      {/* Name search — the only practical way through a 103-skill list */}
+      {system && (
+        <div className="relative mt-[var(--space-sm)]">
+          <input
+            type="search"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search skills…"
+            aria-label="Search skills by name"
+            className="w-full min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)]"
+          />
+        </div>
+      )}
+
       {/* Skill list with boon/bane overlays */}
       {system ? (
-        <div>
-          {system.skillCategories.map(category => {
-            const visibleSkills = filter === 'relevant'
-              ? category.skills.filter(skill => engine.skill.isRelevant(character.skills[skill.id]))
-              : category.skills;
-
-            if (visibleSkills.length === 0 && filter === 'relevant') return null;
-
+        <div className="mt-[var(--space-sm)]">
+          {categoryViews.map(({ category, skills: visibleSkills, open }) => {
             return (
               <div key={category.id} className="mb-[var(--space-md)]">
-                <h2 className="text-[length:var(--font-size-md)] text-[var(--color-text-muted)] mb-[var(--space-sm)] font-semibold">
-                  {category.name}
-                </h2>
-                {visibleSkills.map(skill => {
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(category.id, open)}
+                  aria-expanded={open}
+                  className="flex w-full items-center justify-between gap-2 mb-[var(--space-sm)] px-[var(--space-sm)] py-[var(--space-xs)] min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[length:var(--font-size-md)] text-[var(--color-text-muted)] font-semibold cursor-pointer"
+                >
+                  <span>
+                    {category.name}
+                    <span className="ml-2 font-normal opacity-70">{visibleSkills.length}</span>
+                  </span>
+                  <span aria-hidden="true">{open ? '▾' : '▸'}</span>
+                </button>
+                {open && visibleSkills.map(skill => {
                   const cs = character.skills[skill.id];
                   const computedValue = engine.skill.computeValue(skill, character, cs?.trained ?? false);
                   const skillValue = cs?.value ?? computedValue;
@@ -377,14 +419,18 @@ export default function SkillsScreen() {
                     </div>
                   );
                 })}
-                {visibleSkills.length === 0 && (
-                  <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] italic">
-                    No trained skills in this category.
-                  </p>
-                )}
               </div>
             );
           })}
+          {totalVisible === 0 && (
+            <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] italic">
+              {query
+                ? `No skills match "${search.trim()}".`
+                : filter === 'relevant'
+                  ? 'No trained skills yet — switch to All to add some.'
+                  : 'This system defines no skills.'}
+            </p>
+          )}
         </div>
       ) : (
         <SkillList

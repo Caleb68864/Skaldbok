@@ -1516,3 +1516,30 @@
   was dead code. It was deleted, not test-covered. A guard no mutation can kill
   is not a guard.
 - Commit: fix(traveller) — reduce the unskilled penalty by Jack of All Trades.
+
+## 2026-08-07 — 103 skills needed more than two filter chips
+- Symptom: `SkillsScreen` offered only Relevant/All. Adequate at 35 skills;
+  "All" is now one unbroken 103-row scroll with no search, and "All" is exactly
+  where you go to *add* a skill, so Edit Mode was the unusable case. Play Mode
+  was already fine — the relevant filter shows only the character's own rows.
+- Fix: collapsible category headings plus a name search. A category opens by
+  default when the character actually has something in it, so Edit Mode starts
+  as seven headings rather than a wall. An active query forces matching
+  categories open — a search must never be filtered behind a collapsed heading.
+  An explicit toggle beats both defaults.
+- Fix 2: extracted the rules to `features/characters/skillCategoryViews.ts`.
+  There is no DOM test setup, so logic left inline in the component is logic
+  that cannot be tested; the screen now only renders.
+- Surfaces: features/characters/skillCategoryViews.ts (+ test),
+  screens/SkillsScreen.tsx. Play dashboard untouched — `SkillModule` already
+  had its own "Other skills (N)" collapse.
+- Watch: the per-category empty state ("No trained skills in this category")
+  is gone. It could only ever render in All mode for a genuinely empty
+  category, where its text was a lie. One screen-level message replaces seven.
+- Watch also: mutation-checked. Search-forces-open and override-wins each
+  failed a test. Computing `relevantCount` from the visible rows instead of the
+  full list failed NOTHING and cannot be made to — the `query.length > 0`
+  clause already covers every case where the two differ. The code was kept (it
+  is the right base if that clause is relaxed) but the doc comment now says
+  outright that it is untested, rather than describing it as a guarantee.
+- Commit: feat(skills) — collapsible categories and a name search.
