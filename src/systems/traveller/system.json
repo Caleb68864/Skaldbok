@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 11,
+  "version": 13,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -108,8 +108,26 @@
           "linkedAttributeId": "dex"
         },
         {
+          "id": "gunCombatArchaic",
+          "name": "Gun Combat (Archaic)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
           "id": "meleeBlade",
           "name": "Melee (Blade)",
+          "baseChance": 0,
+          "linkedAttributeId": "str"
+        },
+        {
+          "id": "meleeBludgeon",
+          "name": "Melee (Bludgeon)",
+          "baseChance": 0,
+          "linkedAttributeId": "str"
+        },
+        {
+          "id": "meleeNatural",
+          "name": "Melee (Natural)",
           "baseChance": 0,
           "linkedAttributeId": "str"
         },
@@ -121,19 +139,55 @@
         },
         {
           "id": "heavyWeapons",
-          "name": "Heavy Weapons",
+          "name": "Heavy Weapons (Man Portable)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "heavyWeaponsArtillery",
+          "name": "Heavy Weapons (Artillery)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
+          "id": "heavyWeaponsVehicle",
+          "name": "Heavy Weapons (Vehicle)",
           "baseChance": 0,
           "linkedAttributeId": "dex"
         },
         {
           "id": "gunner",
-          "name": "Gunner",
+          "name": "Gunner (Turret)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "gunnerCapital",
+          "name": "Gunner (Capital)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
+          "id": "gunnerOrtillery",
+          "name": "Gunner (Ortillery)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
+          "id": "gunnerScreen",
+          "name": "Gunner (Screen)",
           "baseChance": 0,
           "linkedAttributeId": "int"
         },
         {
           "id": "tactics",
           "name": "Tactics (Military)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
+          "id": "tacticsNaval",
+          "name": "Tactics (Naval)",
           "baseChance": 0,
           "linkedAttributeId": "int"
         }
@@ -156,14 +210,44 @@
           "linkedAttributeId": "int"
         },
         {
+          "id": "electronicsComputers",
+          "name": "Electronics (Computers)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
+          "id": "electronicsRemoteOps",
+          "name": "Electronics (Remote Ops)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
+          "id": "electronicsSensors",
+          "name": "Electronics (Sensors)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
           "id": "engineer",
-          "name": "Engineer (Jump)",
+          "name": "Engineer (J-Drive)",
           "baseChance": 0,
           "linkedAttributeId": "edu"
         },
         {
-          "id": "science",
-          "name": "Science (Physics)",
+          "id": "engineerLifeSupport",
+          "name": "Engineer (Life Support)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "engineerMDrive",
+          "name": "Engineer (M-Drive)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "engineerPower",
+          "name": "Engineer (Power)",
           "baseChance": 0,
           "linkedAttributeId": "edu"
         },
@@ -176,8 +260,122 @@
       ]
     },
     {
+      "id": "science",
+      "name": "Science",
+      "skills": [
+        {
+          "id": "science",
+          "name": "Science (Physics)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceArchaeology",
+          "name": "Science (Archaeology)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceAstronomy",
+          "name": "Science (Astronomy)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceBiology",
+          "name": "Science (Biology)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceChemistry",
+          "name": "Science (Chemistry)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceCosmology",
+          "name": "Science (Cosmology)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceCybernetics",
+          "name": "Science (Cybernetics)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceEconomics",
+          "name": "Science (Economics)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceGenetics",
+          "name": "Science (Genetics)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceHistory",
+          "name": "Science (History)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceLinguistics",
+          "name": "Science (Linguistics)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "sciencePhilosophy",
+          "name": "Science (Philosophy)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "sciencePlanetology",
+          "name": "Science (Planetology)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "sciencePsionicology",
+          "name": "Science (Psionicology)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "sciencePsychology",
+          "name": "Science (Psychology)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceRobotics",
+          "name": "Science (Robotics)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceSophontology",
+          "name": "Science (Sophontology)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "scienceXenology",
+          "name": "Science (Xenology)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        }
+      ]
+    },
+    {
       "id": "space",
-      "name": "Space",
+      "name": "Space & Vehicles",
       "skills": [
         {
           "id": "pilot",
@@ -192,8 +390,8 @@
           "linkedAttributeId": "dex"
         },
         {
-          "id": "flyer",
-          "name": "Flyer (Grav)",
+          "id": "pilotCapitalShips",
+          "name": "Pilot (Capital Ships)",
           "baseChance": 0,
           "linkedAttributeId": "dex"
         },
@@ -204,8 +402,8 @@
           "linkedAttributeId": "edu"
         },
         {
-          "id": "sensors",
-          "name": "Sensors",
+          "id": "navigation",
+          "name": "Navigation",
           "baseChance": 0,
           "linkedAttributeId": "int"
         },
@@ -214,6 +412,96 @@
           "name": "Vacc Suit",
           "baseChance": 0,
           "linkedAttributeId": "dex"
+        },
+        {
+          "id": "flyer",
+          "name": "Flyer (Grav)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "flyerAirship",
+          "name": "Flyer (Airship)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "flyerOrnithopter",
+          "name": "Flyer (Ornithopter)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "flyerRotor",
+          "name": "Flyer (Rotor)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "flyerWing",
+          "name": "Flyer (Wing)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "drive",
+          "name": "Drive (Wheel)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "driveHovercraft",
+          "name": "Drive (Hovercraft)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "driveMole",
+          "name": "Drive (Mole)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "driveTrack",
+          "name": "Drive (Track)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "driveWalker",
+          "name": "Drive (Walker)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "seafarer",
+          "name": "Seafarer (Ocean Ships)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "seafarerPersonal",
+          "name": "Seafarer (Personal)",
+          "baseChance": 0,
+          "linkedAttributeId": "end"
+        },
+        {
+          "id": "seafarerSail",
+          "name": "Seafarer (Sail)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "seafarerSubmarine",
+          "name": "Seafarer (Submarine)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "sensors",
+          "name": "Sensors (legacy)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
         }
       ]
     },
@@ -246,16 +534,28 @@
           "linkedAttributeId": "soc"
         },
         {
-          "id": "streetwise",
-          "name": "Streetwise",
+          "id": "leadership",
+          "name": "Leadership",
           "baseChance": 0,
-          "linkedAttributeId": "int"
+          "linkedAttributeId": "soc"
         },
         {
           "id": "persuade",
           "name": "Persuade",
           "baseChance": 0,
           "linkedAttributeId": "soc"
+        },
+        {
+          "id": "steward",
+          "name": "Steward",
+          "baseChance": 0,
+          "linkedAttributeId": "soc"
+        },
+        {
+          "id": "streetwise",
+          "name": "Streetwise",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
         }
       ]
     },
@@ -268,6 +568,18 @@
           "name": "Athletics (Strength)",
           "baseChance": 0,
           "linkedAttributeId": "str"
+        },
+        {
+          "id": "athleticsDexterity",
+          "name": "Athletics (Dexterity)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "athleticsEndurance",
+          "name": "Athletics (Endurance)",
+          "baseChance": 0,
+          "linkedAttributeId": "end"
         },
         {
           "id": "stealth",
@@ -291,7 +603,7 @@
     },
     {
       "id": "knowledge",
-      "name": "Knowledge",
+      "name": "Knowledge & Trade",
       "skills": [
         {
           "id": "carouse",
@@ -318,9 +630,123 @@
           "linkedAttributeId": "dex"
         },
         {
+          "id": "gambler",
+          "name": "Gambler",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
           "id": "jackOfAllTrades",
           "name": "Jack of All Trades",
           "baseChance": 0
+        },
+        {
+          "id": "animals",
+          "name": "Animals (Handling)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
+          "id": "animalsTraining",
+          "name": "Animals (Training)",
+          "baseChance": 0,
+          "linkedAttributeId": "int"
+        },
+        {
+          "id": "animalsVeterinary",
+          "name": "Animals (Veterinary)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "art",
+          "name": "Art (Performer)",
+          "baseChance": 0,
+          "linkedAttributeId": "soc"
+        },
+        {
+          "id": "artHolography",
+          "name": "Art (Holography)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "artInstrument",
+          "name": "Art (Instrument)",
+          "baseChance": 0,
+          "linkedAttributeId": "dex"
+        },
+        {
+          "id": "artVisualMedia",
+          "name": "Art (Visual Media)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "artWrite",
+          "name": "Art (Write)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "language",
+          "name": "Language (Galanglic)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "languageVilani",
+          "name": "Language (Vilani)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "languageZdetl",
+          "name": "Language (Zdetl)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "languageOynprith",
+          "name": "Language (Oynprith)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "profession",
+          "name": "Profession (Belter)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "professionBiologicals",
+          "name": "Profession (Biologicals)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "professionCivilEngineering",
+          "name": "Profession (Civil Engineering)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "professionConstruction",
+          "name": "Profession (Construction)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "professionHydroponics",
+          "name": "Profession (Hydroponics)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
+        },
+        {
+          "id": "professionPolymers",
+          "name": "Profession (Polymers)",
+          "baseChance": 0,
+          "linkedAttributeId": "edu"
         }
       ]
     }
