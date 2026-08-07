@@ -4,6 +4,7 @@ import {
   migrateCharacterV1ToV2,
   migrateCharacterV2ToV3,
   migrateCharacterV3ToV4,
+  migrateCharacterV4ToV5,
   upgradeCharacter,
   CURRENT_SCHEMA_VERSION,
 } from './migrations';
@@ -282,6 +283,82 @@ describe('migrateCharacterV3ToV4 (unified abilities)', () => {
     delete (bare as Record<string, unknown>).heroicAbilities;
     const out = migrateCharacterV3ToV4(bare) as Record<string, unknown>;
     expect(out.abilities).toEqual([]);
+  });
+});
+
+describe('migrateCharacterV4ToV5', () => {
+  /** A v4 Traveller record whose skills bag is supplied by the caller. */
+  function v4Traveller(skills: Record<string, unknown>) {
+    return { ...v1Traveller(), schemaVersion: 4, skills };
+  }
+
+  it('moves a sensors level into electronicsSensors', () => {
+    const out = migrateCharacterV4ToV5(v4Traveller({ sensors: { value: 2, trained: true } })) as Record<string, unknown>;
+    const skills = out.skills as Record<string, { value: number; trained: boolean }>;
+    expect(skills.electronicsSensors).toMatchObject({ value: 2, trained: true });
+    expect(skills).not.toHaveProperty('sensors');
+  });
+
+  it('keeps the higher level when the character has both', () => {
+    // Merging must never cost a level, whichever entry is ahead.
+    const legacyAhead = migrateCharacterV4ToV5(v4Traveller({
+      sensors: { value: 3, trained: true },
+      electronicsSensors: { value: 1, trained: true },
+    })) as Record<string, unknown>;
+    const targetAhead = migrateCharacterV4ToV5(v4Traveller({
+      sensors: { value: 1, trained: true },
+      electronicsSensors: { value: 3, trained: true },
+    })) as Record<string, unknown>;
+    expect((legacyAhead.skills as Record<string, { value: number }>).electronicsSensors.value).toBe(3);
+    expect((targetAhead.skills as Record<string, { value: number }>).electronicsSensors.value).toBe(3);
+  });
+
+  it('stays trained if either entry was', () => {
+    const out = migrateCharacterV4ToV5(v4Traveller({
+      sensors: { value: 0, trained: true },
+      electronicsSensors: { value: 0, trained: false },
+    })) as Record<string, unknown>;
+    // Level 0 trained is a real skill in Traveller; dropping the flag would
+    // silently re-apply the -3 unskilled DM.
+    expect((out.skills as Record<string, { trained: boolean }>).electronicsSensors.trained).toBe(true);
+  });
+
+  it('leaves a non-Traveller character alone', () => {
+    // `sensors` is a plausible skill id in a user-authored sci-fi system.
+    const other = { ...v1Dragonbane(), schemaVersion: 4, skills: { sensors: { value: 5, trained: true } } };
+    const out = migrateCharacterV4ToV5(other) as Record<string, unknown>;
+    expect(out.skills).toEqual({ sensors: { value: 5, trained: true } });
+  });
+
+  it('leaves a Traveller character without the legacy skill untouched', () => {
+    const skills = { gunner: { value: 1, trained: true } };
+    const out = migrateCharacterV4ToV5(v4Traveller(skills)) as Record<string, unknown>;
+    expect(out.skills).toEqual(skills);
+  });
+
+  it('preserves unrelated skills and fields', () => {
+    const out = migrateCharacterV4ToV5(v4Traveller({
+      sensors: { value: 2, trained: true },
+      gunner: { value: 1, trained: true },
+    })) as Record<string, unknown>;
+    expect((out.skills as Record<string, unknown>).gunner).toEqual({ value: 1, trained: true });
+    expect(out.name).toBe('Kestrel');
+    expect(out.attributes).toEqual(v1Traveller().attributes);
+  });
+
+  it('is idempotent', () => {
+    const once = migrateCharacterV4ToV5(v4Traveller({ sensors: { value: 2, trained: true } }));
+    expect(migrateCharacterV4ToV5(once)).toEqual(once);
+  });
+
+  it('does not throw on a malformed skills bag', () => {
+    // The read path must not be stoppable by one bad field.
+    expect(() => migrateCharacterV4ToV5({ ...v1Traveller(), schemaVersion: 4, skills: 'nope' })).not.toThrow();
+  });
+
+  it('stamps schemaVersion 5 even when it changes nothing', () => {
+    const out = migrateCharacterV4ToV5(v4Traveller({})) as Record<string, unknown>;
+    expect(out.schemaVersion).toBe(5);
   });
 });
 

@@ -1,6 +1,6 @@
 import { characterRecordSchema } from '../../schemas/character.schema';
 import { systemDefinitionSchema } from '../../schemas/system.schema';
-import type { CharacterRecord } from '../types/character';
+import type { CharacterRecord, CharacterSkill } from '../types/character';
 import type { SystemDefinition } from '../types/system';
 import { isNamespaced, attrKey, armorKey, derivedKey } from './statKeys';
 
@@ -12,7 +12,7 @@ import { isNamespaced, attrKey, armorKey, derivedKey } from './statKeys';
  * and add tests in `migrations.test.ts`. A record's own `schemaVersion` is
  * compared against this to decide which migrations still need to run.
  */
-export const CURRENT_SCHEMA_VERSION = 4;
+export const CURRENT_SCHEMA_VERSION = 5;
 
 type MigrationFn = (data: unknown) => unknown;
 
@@ -195,10 +195,56 @@ export function migrateCharacterV3ToV4(data: unknown): unknown {
   return { ...rec, abilities, schemaVersion: 4 };
 }
 
+/**
+ * v4 → v5: retire Traveller's `sensors` skill into `electronicsSensors`.
+ *
+ * @remarks
+ * `sensors` was never a Mongoose 2022 core skill. The book's equivalent is
+ * Electronics (Sensors), which the definition now carries as
+ * `electronicsSensors`, so the old id has to go — but deleting a skill id from
+ * `system.json` does not delete it from any character. `SkillsScreen` iterates
+ * the definition, so the stored value would simply vanish from the UI while
+ * surviving on the record and reappearing as a raw-id row in the print sheet's
+ * secondary slots. The data has to move before the definition drops the id.
+ *
+ * Scoped to Traveller characters by `systemId`: `sensors` is a plausible skill
+ * name for a user-authored sci-fi system, and silently rewriting someone else's
+ * skill id would be worse than leaving it alone. This is a data migration, not
+ * engine behaviour, so naming a system here is not the banned `systemId ===`
+ * branch — that rule is about ruleset *behaviour* leaking into screens.
+ *
+ * Merge rather than overwrite: a character who has both keeps the higher level
+ * and stays trained if either entry was, so the migration cannot cost anyone a
+ * skill level. Idempotent — the key is gone after the first run.
+ */
+export function migrateCharacterV4ToV5(data: unknown): unknown {
+  const rec = { ...(data as Record<string, unknown>) };
+  const skills = rec.skills;
+
+  if (rec.systemId !== 'traveller' || !skills || typeof skills !== 'object') {
+    return { ...rec, schemaVersion: 5 };
+  }
+
+  const bag = { ...(skills as Record<string, CharacterSkill | undefined>) };
+  const legacy = bag['sensors'];
+  if (!legacy) return { ...rec, schemaVersion: 5 };
+
+  const target = bag['electronicsSensors'];
+  bag['electronicsSensors'] = {
+    ...target,
+    value: Math.max(legacy.value ?? 0, target?.value ?? 0),
+    trained: legacy.trained === true || target?.trained === true,
+  };
+  delete bag['sensors'];
+
+  return { ...rec, skills: bag, schemaVersion: 5 };
+}
+
 const characterMigrations: Record<number, MigrationFn> = {
   1: migrateCharacterV1ToV2,
   2: migrateCharacterV2ToV3,
   3: migrateCharacterV3ToV4,
+  4: migrateCharacterV4ToV5,
 };
 
 /**

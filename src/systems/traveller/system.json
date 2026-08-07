@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 13,
+  "version": 14,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -496,12 +496,6 @@
           "name": "Seafarer (Submarine)",
           "baseChance": 0,
           "linkedAttributeId": "dex"
-        },
-        {
-          "id": "sensors",
-          "name": "Sensors (legacy)",
-          "baseChance": 0,
-          "linkedAttributeId": "int"
         }
       ]
     },

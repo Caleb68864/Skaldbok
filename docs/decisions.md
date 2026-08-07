@@ -1543,3 +1543,30 @@
   is the right base if that clause is relaxed) but the doc comment now says
   outright that it is untested, rather than describing it as a guarantee.
 - Commit: feat(skills) — collapsible categories and a name search.
+
+## 2026-08-07 — Retiring `sensors` needed a migration, not a delete
+- Symptom: `sensors` was never a Mongoose 2022 core skill. The book's
+  equivalent, Electronics (Sensors), now ships as `electronicsSensors`, so the
+  old id had to go. Deleting it from `system.json` does not delete it from any
+  character: `SkillsScreen` iterates the definition, so a stored level would
+  vanish from the UI while surviving on the record and reappearing as a raw-id
+  row in the print sheet's secondary slots.
+- Fix: `migrateCharacterV4ToV5` moves the level into `electronicsSensors`,
+  `CURRENT_SCHEMA_VERSION` 4 -> 5, and only then is the id dropped from the
+  definition (version 13 -> 14). Order matters — the data moves first.
+- Fix 2: merge, don't overwrite. A character holding both keeps the higher
+  level and stays trained if either entry was, so the migration cannot cost
+  anyone a level. Trained matters independently of level here: trained-at-0 is
+  a real Traveller skill, and losing the flag silently re-applies the -3
+  unskilled DM.
+- Surfaces: utils/migrations.ts (+ test), systems/traveller/system.json.
+- Watch: scoped by `systemId === 'traveller'`. `sensors` is a plausible skill
+  id for a user-authored sci-fi system and rewriting someone else's data would
+  be worse than leaving it. Naming a system inside a *data migration* is not
+  the banned `systemId ===` branch — that rule is about ruleset behaviour
+  leaking into screens.
+- Watch also: mutation-checked, four mutations, all killed — overwrite instead
+  of merge, dropping the systemId guard, losing the trained OR, and forgetting
+  the `delete`. This is the ladder rung most likely to be copied for the next
+  retired skill; the merge semantics are the part worth copying.
+- Commit: fix(traveller) — migrate `sensors` into `electronicsSensors`.
