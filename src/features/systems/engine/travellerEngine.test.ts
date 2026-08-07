@@ -178,6 +178,56 @@ describe('damage feeds through to DMs', () => {
     expect(display(0, { character: c, linkedAttributeId: 'dex' })).toContain('Level 0');
   });
 
+  it('reduces the unskilled penalty by the character\'s Jack of All Trades level', () => {
+    const c = character({ skills: { jackOfAllTrades: { value: 2, trained: true } } } as Partial<CharacterRecord>);
+    const display = travellerEngine.skill.display;
+    const text = display(0, { character: c, linkedAttributeId: 'dex', trained: false });
+    // JoT 2 turns the -3 into -1; the label must say the penalty actually applied.
+    expect(text).toContain('Unskilled');
+    expect(text).toContain('-1 unskilled');
+    expect(text).not.toContain('-3');
+  });
+
+  it('cancels the unskilled penalty entirely at Jack of All Trades 3+', () => {
+    const c = character({ skills: { jackOfAllTrades: { value: 4, trained: true } } } as Partial<CharacterRecord>);
+    const display = travellerEngine.skill.display;
+    const untrained = display(0, { character: c, linkedAttributeId: 'dex', trained: false });
+    const trained = display(0, { character: c, linkedAttributeId: 'dex', trained: true });
+    const pct = (s: string) => Number(/(\d+)%/.exec(s)?.[1]);
+    // The penalty floors at 0 — JoT 4 must not become a *bonus* on unskilled rolls.
+    expect(untrained).toContain('no unskilled penalty');
+    expect(pct(untrained)).toBe(pct(trained));
+  });
+
+  it('leaves the penalty at -3 for a level-0 Jack of All Trades', () => {
+    // Having the skill at 0 is not the same as having levels in it; the
+    // reduction is by level, so a 0 reduces nothing.
+    const c = character({ skills: { jackOfAllTrades: { value: 0, trained: true } } } as Partial<CharacterRecord>);
+    const text = travellerEngine.skill.display(0, { character: c, linkedAttributeId: 'dex', trained: false });
+    expect(text).toContain('-3 unskilled');
+  });
+
+  it('reports the same reduced penalty through probability.chance as through display', () => {
+    // The two surfaces disagreed once before; JoT must not reintroduce the split.
+    const c = character({ skills: { jackOfAllTrades: { value: 2, trained: true } } } as Partial<CharacterRecord>);
+    const context = { character: c, linkedAttributeId: 'dex', trained: false };
+    const fromChance = Math.round(travellerEngine.probability.chance(0, 'none', context) * 100);
+    const fromDisplay = Number(/(\d+)%/.exec(travellerEngine.skill.display(0, context))?.[1]);
+    expect(fromDisplay).toBe(fromChance);
+  });
+
+  it('does not apply the unskilled penalty to Jack of All Trades itself', () => {
+    // JoT reduces the penalty on *other* skills; rolling it untrained is still -3.
+    const c = character({ skills: { jackOfAllTrades: { value: 2, trained: true } } } as Partial<CharacterRecord>);
+    const text = travellerEngine.skill.display(0, {
+      character: c,
+      linkedAttributeId: 'dex',
+      trained: false,
+      skillId: 'jackOfAllTrades',
+    });
+    expect(text).toContain('-3 unskilled');
+  });
+
   it('states the target the odds assume', () => {
     // The app shows eight difficulty targets in its own Quick Reference while
     // the odds are always computed against Average (8+). Unlabelled, an 83%

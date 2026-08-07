@@ -1466,3 +1466,53 @@
   load-bearing — every caller that forgets the second argument must get the safe
   behaviour, not the share-everything one. There is a test pinning exactly that.
 - Commit: test(export,storage) — cover the privacy boundary and the persistence grant.
+
+## 2026-08-07 — The full Traveller skill list, and what it exposed
+- Symptom: `system.json` shipped 35 skills against Mongoose 2022's 103. Every
+  speciality a character actually had — Gunner (Turret), Drive (Wheeled) — had
+  to be invented as a custom key, which made it invisible everywhere but the
+  print sheet's six "secondary" slots.
+- Fix: enumerated all 103 as flat ids across 7 categories. Parent ids now mean
+  their first speciality, following the pattern the file already used
+  (`gunCombat` = Slug, `science` = Physics), so `gunner` = Gunner (Turret) and
+  relinks INT -> DEX. Definition version 12 -> 13.
+- Surfaces: src/systems/traveller/system.json.
+- Watch: nothing caches a computed DM — every DM is derived at render from
+  `character.attributes` + `resources`. The only stale copy is the IndexedDB
+  system definition, and `useSystemDefinition` only refreshes on a strictly
+  higher `version`. The bump is the whole migration. `sheet.json` has its own
+  independent counter and was not touched, so it needed none.
+- Watch also: `sensors` is retained as "Sensors (legacy)" rather than deleted.
+  Deleting a skill id from the definition does not delete it from any character
+  — `SkillsScreen` iterates definitions, so the value would vanish from the UI
+  while surviving on the record and reappearing as a raw-id row in print.
+  Removing it needs a migration, not an edit.
+- Commit: feat(traveller) — expand to the full Mongoose 2022 core skill list.
+
+## 2026-08-07 — Jack of All Trades was decorative
+- Symptom: the -3 unskilled DM was a literal constant in both
+  `formatSkillDisplay` and `probability.chance`. Jack of All Trades' entire rule
+  is to reduce that penalty by its level, and nothing implemented it. Harmless
+  at 35 skills; at 103 it overstates the penalty on ~80 rows of a JoT
+  character's sheet.
+- Fix: `unskilledPenalty(character)` derives it once, floored at 0 so JoT 3+
+  cancels the penalty but never becomes a bonus. Both surfaces read it through
+  the existing `travellerRollContext` helper, which is what stops display and
+  chance disagreeing (they did once). The label now names the penalty actually
+  applied — "-1 unskilled", or "no unskilled penalty" — instead of printing a
+  -3 the character does not suffer.
+- Fix 2: `SkillDisplayContext` gains an optional `skillId`. JoT must not reduce
+  its own untrained penalty, or an untrained JoT roll bootstraps off a level it
+  does not have. Hardcoding the id in the *Traveller adapter* is correct — an
+  adapter owns ruleset facts; the banned `systemId ===` branch is a different
+  thing.
+- Surfaces: travellerEngine.ts, engine/types.ts, SkillsScreen.tsx,
+  playDashboard/SkillModule.tsx.
+- Watch: mutation-checked, and the third mutation is why this entry exists.
+  Removing the `Math.min` floor failed a test. Removing the JoT self-exclusion
+  failed a test. But changing `jot && (jot.trained || jot.value > 0)` to a bare
+  `jot` failed NOTHING — because `!trained && value <= 0` implies `value === 0`,
+  so the clause could not change any result. It read as a meaningful guard and
+  was dead code. It was deleted, not test-covered. A guard no mutation can kill
+  is not a guard.
+- Commit: fix(traveller) — reduce the unskilled penalty by Jack of All Trades.

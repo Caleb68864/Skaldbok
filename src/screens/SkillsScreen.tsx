@@ -161,12 +161,12 @@ export default function SkillsScreen() {
       // skill is trained so an untrained attempt shows the −3 unskilled odds.
       return engine.skill.display(
         value,
-        character ? { character, linkedAttributeId, boonBane: effective, trained } : undefined,
+        character ? { character, skillId, linkedAttributeId, boonBane: effective, trained } : undefined,
       );
     }
 
     // The engine owns the odds maths; the screen only decides which state applies.
-    const probContext = character ? { character, linkedAttributeId } : undefined;
+    const probContext = character ? { character, skillId, linkedAttributeId } : undefined;
     const chance = (state: BoonBaneState) => engine.probability.chance(value, state, probContext);
     const normalPct = formatProb(chance('none'));
     // Natural-1 auto-success is a roll-under convention; other resolutions never show it.

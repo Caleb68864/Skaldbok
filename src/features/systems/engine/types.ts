@@ -110,6 +110,16 @@ export interface TimeUnit {
  */
 export interface SkillDisplayContext {
   character: CharacterRecord;
+  /**
+   * Id of the skill being displayed.
+   *
+   * @remarks
+   * Optional, because most engines format a value without caring which skill it
+   * belongs to. Traveller needs it so Jack of All Trades — a skill whose whole
+   * rule is "reduce the unskilled penalty on *other* skills" — does not reduce
+   * its own untrained penalty.
+   */
+  skillId?: string;
   /** Attribute the skill is linked to, if any (e.g. `'end'` for Traveller). */
   linkedAttributeId?: string;
   /**

@@ -129,6 +129,37 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
  */
 export const TRAVELLER_DEFAULT_TARGET = 8;
 
+/** The book's penalty for attempting a skill the character does not have at all. */
+export const UNSKILLED_DM = -3;
+
+/**
+ * The skill whose entire rule is "reduce the unskilled penalty by your level".
+ *
+ * @remarks
+ * A ruleset fact, so it lives in this adapter rather than in a screen. It is a
+ * skill id from `system.json`, not a label, so renaming the skill's display name
+ * cannot break the rule.
+ */
+export const JACK_OF_ALL_TRADES_SKILL_ID = 'jackOfAllTrades';
+
+/**
+ * The unskilled DM this character actually suffers, after Jack of All Trades.
+ *
+ * @remarks
+ * Floors at 0: JoT cancels the penalty, it never becomes a bonus, so a JoT 4
+ * character rolls an unskilled task exactly as well as a level-0 one and no
+ * better.
+ *
+ * Reads the level alone and ignores the `trained` flag. A trained-at-0 JoT and
+ * an absent one both reduce the penalty by 0, so the two states are already
+ * indistinguishable here — an explicit `trained` check looked meaningful but
+ * could not change any result, which mutation-checking confirmed.
+ */
+export function unskilledPenalty(character: CharacterRecord): number {
+  const level = character.skills?.[JACK_OF_ALL_TRADES_SKILL_ID]?.value ?? 0;
+  return Math.min(0, UNSKILLED_DM + level);
+}
+
 /**
  * Formats a Traveller skill's level + linked-characteristic DM + 2d6 success
  * probability against {@link TRAVELLER_DEFAULT_TARGET}.
@@ -142,12 +173,14 @@ export function formatSkillDisplay(
   characteristicDM = 0,
   boonBane: 'boon' | 'none' | 'bane' = 'none',
   unskilled = false,
+  unskilledDM = UNSKILLED_DM,
 ): string {
   // Attempting a skill the character doesn't have is at DM −3 (Traveller's
-  // unskilled penalty). Folded into the odds so an untrained skill shows the
-  // honest chance, not its trained-at-0 baseline.
-  const unskilledDM = unskilled ? -3 : 0;
-  const effectiveModifier = value + characteristicDM + unskilledDM;
+  // unskilled penalty), reduced by Jack of All Trades — see
+  // {@link unskilledPenalty}. Folded into the odds so an untrained skill shows
+  // the honest chance, not its trained-at-0 baseline.
+  const penalty = unskilled ? unskilledDM : 0;
+  const effectiveModifier = value + characteristicDM + penalty;
   const target = TRAVELLER_DEFAULT_TARGET;
   const prob =
     boonBane === 'boon'
@@ -156,7 +189,13 @@ export function formatSkillDisplay(
         ? threeD6KeepTwoProbability(target, effectiveModifier, 'worst')
         : twoD6SuccessProbability(target, effectiveModifier);
   const dmLabel = characteristicDM !== 0 ? ` · DM ${formatDM(characteristicDM)}` : '';
-  const unskilledLabel = unskilled ? ' · -3 unskilled' : '';
+  // Names the penalty actually applied rather than the book's -3, so a Jack of
+  // All Trades character can see their training doing something.
+  const unskilledLabel = unskilled
+    ? penalty === 0
+      ? ' · no unskilled penalty'
+      : ` · ${formatDM(penalty)} unskilled`
+    : '';
   const levelLabel = unskilled ? 'Unskilled' : `Level ${value}`;
   const stateLabel = boonBane === 'boon' ? ' (boon)' : boonBane === 'bane' ? ' (bane)' : '';
   return `${levelLabel}${dmLabel}${unskilledLabel} · ${Math.round(prob * 100)}% vs ${target}+${stateLabel}`;
@@ -173,11 +212,18 @@ export function formatSkillDisplay(
 function travellerRollContext(
   value: number,
   context: SkillDisplayContext | undefined,
-): { dm: number; unskilled: boolean } {
+): { dm: number; unskilled: boolean; unskilledDM: number } {
   const linkedId = context?.linkedAttributeId;
   const dm = linkedId ? characteristicToDM(effectiveCharacteristic(context.character, linkedId)) : 0;
   const unskilled = context?.trained === false && value === 0;
-  return { dm, unskilled };
+  // Jack of All Trades reduces the penalty on every *other* skill. Applying it
+  // to itself would let an untrained JoT roll bootstrap off a level it does not
+  // have, so the skill under display is excluded from its own rule.
+  const unskilledDM =
+    context && context.skillId !== JACK_OF_ALL_TRADES_SKILL_ID
+      ? unskilledPenalty(context.character)
+      : UNSKILLED_DM;
+  return { dm, unskilled, unskilledDM };
 }
 
 /**
@@ -207,8 +253,8 @@ export const travellerEngine: SystemEngine = {
     advancementMax: 6,
     defaultValue: 0,
     display: (value, context) => {
-      const { dm, unskilled } = travellerRollContext(value, context);
-      return formatSkillDisplay(value, dm, context?.boonBane ?? 'none', unskilled);
+      const { dm, unskilled, unskilledDM } = travellerRollContext(value, context);
+      return formatSkillDisplay(value, dm, context?.boonBane ?? 'none', unskilled, unskilledDM);
     },
     supportsMarks: false,
     // Traveller level 0 is a real (trained) skill, so presence of the trained
@@ -333,8 +379,8 @@ export const travellerEngine: SystemEngine = {
     chance: (value, state, context) => {
       // Same DM + unskilled derivation as skill.display, via the shared helper,
       // so the two surfaces can't report different odds for the same roll.
-      const { dm, unskilled } = travellerRollContext(value, context);
-      const modifier = value + dm + (unskilled ? -3 : 0);
+      const { dm, unskilled, unskilledDM } = travellerRollContext(value, context);
+      const modifier = value + dm + (unskilled ? unskilledDM : 0);
       if (state === 'boon') return threeD6KeepTwoProbability(TRAVELLER_DEFAULT_TARGET, modifier, 'best');
       if (state === 'bane') return threeD6KeepTwoProbability(TRAVELLER_DEFAULT_TARGET, modifier, 'worst');
       return twoD6SuccessProbability(TRAVELLER_DEFAULT_TARGET, modifier);

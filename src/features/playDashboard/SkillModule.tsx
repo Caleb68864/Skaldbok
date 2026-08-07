@@ -70,6 +70,7 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
     const autoBane = conditionImposesBane(system, character, skill.linkedAttributeId);
     const displayContext = {
       character,
+      skillId: skill.id,
       linkedAttributeId: skill.linkedAttributeId,
       boonBane: (autoBane ? 'bane' : 'none') as 'boon' | 'none' | 'bane',
       trained,
