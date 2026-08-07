@@ -68,6 +68,21 @@ export function normalizeCharacter(character: CharacterRecord): CharacterRecord 
         clampNumber(amount, 0, 999999, 0),
       ]),
     ),
+    // Custom skill definitions are rendered as rows like any declared skill, so
+    // an entry missing its id or name would surface as a nameless, unfixable
+    // row. Dropping it loses the definition but never the stored value, which
+    // stays in `skills` and can be re-declared.
+    ...(character.customSkills
+      ? {
+          customSkills: character.customSkills.filter(
+            skill =>
+              !!skill &&
+              typeof skill.id === 'string' && skill.id.length > 0 &&
+              typeof skill.name === 'string' && skill.name.length > 0 &&
+              typeof skill.categoryId === 'string',
+          ),
+        }
+      : {}),
     derivedOverrides: character.derivedOverrides ?? {},
     uiState: character.uiState ?? { expandedSections: [] },
   };

@@ -1609,3 +1609,42 @@
   vacuous empty-group completeness, fresh-bag-on-no-op, and dropping the
   schema's group-membership check each fail a test.
 - Commit: feat(systems) — speciality groups and a level-0 group action.
+
+## 2026-08-07 — Custom skills existed only as a dead end
+- Symptom: Language, Profession, Art and Science are open-ended in Traveller —
+  the book prints some specialities and expects the table to invent the rest.
+  There was no path at all. No add-skill UI anywhere; `migrateSystem` validates
+  a user-supplied system.json but **is never called at runtime** (the only
+  `systemRepository.save` callers write bundled definitions), so importing an
+  edited system was not a path either. A key that did reach `character.skills`
+  rendered only in `PrintableSheet`'s six "secondary" slots, printing its raw
+  id as the name, while `SkillsScreen` and `SkillModule` never saw it.
+- Fix: `CharacterRecord.customSkills` — the *definition* on the character that
+  owns it, values still in `skills` under the same id.
+  `resolveSkillCategories` merges them into the system's categories on read, so
+  the skills screen, play dashboard and printed sheet all treat them like
+  declared skills without any of them knowing custom skills exist. Add/delete
+  live in Edit Mode on the skills screen.
+- Why per-character and not per-system: "Language (Zhodani)" belongs to one
+  Traveller. Editing the shared definition would put it on every character in
+  the library — and bump a version counter that force-refreshes everyone's
+  cached copy.
+- Surfaces: types/character.ts, schemas/character.schema.ts,
+  features/characters/customSkills.ts (+ test), screens/SkillsScreen.tsx,
+  playDashboard/SkillModule.tsx, components/PrintableSheet.tsx,
+  utils/characterNormalization.ts.
+- Watch: no migration rung. The field is optional and additive, every read path
+  goes through `?? []`, and a record without it is already correct — a rung
+  would only stamp a version. `CURRENT_SCHEMA_VERSION` stays 5.
+- Watch also: ids are generated, never derived from the name, so renaming a
+  skill cannot orphan its stored value. Deleting removes the definition *and*
+  the value in one patch — leaving the value behind recreates the exact
+  invisible state this fix removes. A custom skill whose `categoryId` no longer
+  resolves is filed into a trailing "Custom" category rather than dropped, for
+  the same reason: a skill you cannot see is one you cannot delete.
+- Watch also: the export path was checked, not assumed. `bundle.ts` types
+  characters as `z.array(z.record(z.any()))` and `characterRecordSchema` is
+  `.passthrough()`, so custom skills survive export/import. The schema
+  enumerates the field anyway — passthrough would let a malformed entry reach
+  the UI as a nameless row.
+- Commit: feat(characters) — player-authored custom skills.

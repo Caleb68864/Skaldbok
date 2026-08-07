@@ -9,6 +9,7 @@ import { cn } from '../../lib/utils';
 import type { CharacterSkill } from '../../types/character';
 import { clamp, type PlayModuleProps } from './types';
 import { getEngine, type SystemEngine, type SkillDisplayContext } from '../systems/engine';
+import { resolveSkillCategories } from '../characters/customSkills';
 
 /** Normal / boon / bane odds line, with the maths owned by the active engine. */
 function probability(engine: SystemEngine, value: number, context?: SkillDisplayContext): string {
@@ -33,7 +34,8 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
   // other resolutions let the engine format the whole thing into one string.
   const rollsUnder = engine.resolution === 'd20-roll-under';
 
-  const skillDefs: SkillRow[] = system.skillCategories.flatMap(category =>
+  // Merged so a player-authored skill appears here like any declared one.
+  const skillDefs: SkillRow[] = resolveSkillCategories(system, character).flatMap(category =>
     category.skills.map(skill => ({ ...skill, category: category.name })),
   );
   const pinned = character.uiState.pinnedSkills ?? [];

@@ -114,6 +114,19 @@ export const characterRecordSchema = z.object({
     .record(z.string(), z.unknown())
     .optional()
     .describe('Free-form data owned by the character game system'),
+  // Enumerated rather than left to passthrough: these definitions are merged
+  // into the system's categories and rendered like declared skills, so a
+  // malformed entry would reach the UI as a nameless row.
+  customSkills: z
+    .array(z.object({
+      id: z.string().min(1),
+      name: z.string().min(1),
+      categoryId: z.string().min(1),
+      linkedAttributeId: z.string().optional(),
+      groupId: z.string().optional(),
+    }))
+    .optional()
+    .describe('Player-authored skills not declared by the system definition'),
 })
   // passthrough so validation-on-import (migrateCharacter) never DROPS a field the
   // CharacterRecord type carries but this schema doesn't yet enumerate (portraitUri,

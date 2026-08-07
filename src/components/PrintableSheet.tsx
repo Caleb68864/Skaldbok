@@ -8,6 +8,7 @@ import type {
   Weapon,
 } from '../types/character';
 import type { SystemDefinition, SkillDefinition } from '../types/system';
+import { resolveSkillCategories } from '../features/characters/customSkills';
 import { compareSpellsByRankThenName, formatCastingTime, formatRequirements, getSpellRank } from '../utils/spells';
 import { toSpells, toHeroicAbilities } from '../utils/abilities';
 import type { SystemEngine } from '../features/systems/engine';
@@ -348,7 +349,10 @@ function SkillsSection({
   character: CharacterRecord;
   system: SystemDefinition | null;
 }): React.ReactElement {
-  const skillCategories = system?.skillCategories ?? [];
+  // The character's own custom skills are merged in, so they print inside their
+  // category like any declared skill instead of falling through to the
+  // write-in "Secondary Skills" slots as a bare id.
+  const skillCategories = resolveSkillCategories(system, character);
 
   // Find general (core) and weapon categories by id
   const generalCategory = skillCategories.find((cat) => cat.id === 'core');

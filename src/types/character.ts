@@ -505,4 +505,38 @@ export interface CharacterRecord extends Versioned, Timestamped {
    * own the shape; the schema validates only that values are JSON-serialisable.
    */
   systemData?: Record<string, unknown>;
+  /**
+   * Skills this character has that the system definition does not declare.
+   *
+   * @remarks
+   * Traveller's Language, Profession, Art and Science are open-ended: the book
+   * prints some specialities and expects players to invent the rest, so
+   * "Language (Zhodani)" belongs to one character, not to the ruleset. Editing
+   * the shared definition to add it would put it on every Traveller character
+   * in the library.
+   *
+   * Merged into the system's categories on read (see
+   * {@link features/characters/customSkills!resolveSkillCategories}), so every
+   * surface — the skills screen, the play dashboard, the printed sheet —
+   * treats them exactly like declared skills. Values still live in `skills`
+   * under the same id; this array only carries the *definition*.
+   */
+  customSkills?: CustomSkillDefinition[];
+}
+
+/**
+ * A player-authored skill, stored on the character that owns it.
+ *
+ * @remarks
+ * `categoryId` places it in one of the system's skill categories. A category
+ * that no longer exists does not lose the skill — the merge falls back to a
+ * trailing "Custom" group rather than dropping it, because a skill the user
+ * cannot see is a skill they cannot delete either.
+ */
+export interface CustomSkillDefinition {
+  id: string;
+  name: string;
+  categoryId: string;
+  linkedAttributeId?: string;
+  groupId?: string;
 }

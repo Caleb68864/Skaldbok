@@ -22,6 +22,13 @@ import * as characterRepository from '../storage/repositories/characterRepositor
 import { getEngine } from '../features/systems/engine';
 import { buildSkillCategoryViews, countVisibleSkills } from '../features/characters/skillCategoryViews';
 import { groupMembers, groupFor, trainGroupAtZero, groupHasEveryMember } from '../features/characters/skillGroups';
+import {
+  resolveSkillCategories,
+  isCustomSkill,
+  removeCustomSkill,
+  isSkillNameAvailable,
+} from '../features/characters/customSkills';
+import { generateId } from '../utils/ids';
 
 function clampSkillValue(value: number, range: { min: number; max: number }): number {
   if (!Number.isFinite(value)) return range.min;
@@ -78,6 +85,8 @@ export default function SkillsScreen() {
    * so the list keeps re-deciding sensibly as skills are trained or searched.
    */
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
+  /** Draft for the "add a skill" form; `null` when the form is closed. */
+  const [draft, setDraft] = useState<{ name: string; categoryId: string; linkedAttributeId: string } | null>(null);
   useAutosave(character, characterRepository.save, 1000);
   const engine = getEngine(system);
   const skillRange = engine.skill.range;
@@ -199,8 +208,12 @@ export default function SkillsScreen() {
   // Grouping/collapse/search rules live in a tested helper — see
   // {@link features/characters/skillCategoryViews!buildSkillCategoryViews}.
   const query = search.trim().toLowerCase();
+  // The character's own skills are merged in here, so everything downstream —
+  // grouping, search, the group action, the rows themselves — treats a custom
+  // skill exactly like a declared one.
+  const skillCategories = resolveSkillCategories(system, character);
   const categoryViews = buildSkillCategoryViews({
-    categories: system?.skillCategories ?? [],
+    categories: skillCategories,
     characterSkills: character.skills,
     isRelevant: engine.skill.isRelevant,
     filter,
@@ -223,10 +236,50 @@ export default function SkillsScreen() {
    */
   function trainWholeGroup(groupId: string) {
     if (!character || !system) return;
-    const members = groupMembers(system.skillCategories, groupId);
+    const members = groupMembers(skillCategories, groupId);
     const skills = trainGroupAtZero(character.skills, members);
     if (skills === character.skills) return;
     updateCharacter({ skills, updatedAt: nowISO() });
+  }
+
+  /**
+   * Adds the drafted skill to this character.
+   *
+   * @remarks
+   * The definition goes on the character, never on the shared system: Language
+   * (Zhodani) belongs to one Traveller, and editing `system.json` would put it
+   * on every character in the library. The id is generated rather than derived
+   * from the name so a later rename cannot orphan the stored value.
+   *
+   * Created trained at 0 — a skill you bothered to write down is one you have,
+   * and level 0 is exactly what cancels the unskilled penalty.
+   */
+  function addCustomSkill() {
+    if (!character || !draft) return;
+    const name = draft.name.trim();
+    if (!isSkillNameAvailable(system, character, name)) return;
+
+    const id = generateId();
+    updateCharacter({
+      customSkills: [
+        ...(character.customSkills ?? []),
+        {
+          id,
+          name,
+          categoryId: draft.categoryId,
+          ...(draft.linkedAttributeId ? { linkedAttributeId: draft.linkedAttributeId } : {}),
+        },
+      ],
+      skills: { ...character.skills, [id]: { value: 0, trained: true } },
+      updatedAt: nowISO(),
+    });
+    setDraft(null);
+  }
+
+  /** Deletes a custom skill's definition and its stored value together. */
+  function deleteCustomSkill(skillId: string) {
+    if (!character) return;
+    updateCharacter({ ...removeCustomSkill(character, skillId), updatedAt: nowISO() });
   }
 
   function getOverrideLabel(skillId: string): string {
@@ -299,6 +352,80 @@ export default function SkillsScreen() {
         </div>
       )}
 
+      {/* Add a skill the system does not declare — Language (Zhodani), a new
+          Profession. Edit Mode only; the definition lands on this character. */}
+      {system && skillsEditable && (
+        <div className="mt-[var(--space-sm)]">
+          {draft === null ? (
+            <button
+              type="button"
+              onClick={() => setDraft({ name: '', categoryId: system.skillCategories[0]?.id ?? '', linkedAttributeId: '' })}
+              className="min-h-[var(--touch-target-min)] px-[var(--space-md)] rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] font-semibold cursor-pointer"
+            >
+              + Add a skill
+            </button>
+          ) : (
+            <div className="flex flex-col gap-[var(--space-sm)] p-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
+              <input
+                type="text"
+                value={draft.name}
+                onChange={e => setDraft({ ...draft, name: e.target.value })}
+                placeholder="Skill name, e.g. Language (Zhodani)"
+                aria-label="New skill name"
+                autoFocus
+                className="min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+              />
+              <div className="flex gap-[var(--space-sm)] flex-wrap">
+                <select
+                  value={draft.categoryId}
+                  onChange={e => setDraft({ ...draft, categoryId: e.target.value })}
+                  aria-label="New skill category"
+                  className="flex-1 min-w-[8rem] min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+                >
+                  {system.skillCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <select
+                  value={draft.linkedAttributeId}
+                  onChange={e => setDraft({ ...draft, linkedAttributeId: e.target.value })}
+                  aria-label="New skill linked characteristic"
+                  className="flex-1 min-w-[8rem] min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
+                >
+                  <option value="">No characteristic</option>
+                  {system.attributes.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </div>
+              {draft.name.trim() !== '' && !isSkillNameAvailable(system, character, draft.name) && (
+                <p className="m-0 text-[length:var(--font-size-sm)] text-red-400">
+                  A skill called “{draft.name.trim()}” already exists.
+                </p>
+              )}
+              <div className="flex gap-[var(--space-sm)]">
+                <button
+                  type="button"
+                  onClick={addCustomSkill}
+                  disabled={!isSkillNameAvailable(system, character, draft.name)}
+                  className={cn(
+                    'min-h-[var(--touch-target-min)] px-[var(--space-md)] rounded-[var(--radius-sm)] border-none font-semibold',
+                    isSkillNameAvailable(system, character, draft.name)
+                      ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] cursor-pointer'
+                      : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] opacity-50 cursor-default',
+                  )}
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDraft(null)}
+                  className="min-h-[var(--touch-target-min)] px-[var(--space-md)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text)] cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Skill list with boon/bane overlays */}
       {system ? (
         <div className="mt-[var(--space-sm)]">
@@ -324,7 +451,7 @@ export default function SkillsScreen() {
                   // the boundary — no separate pass needed.
                   const group = groupFor(system.skillGroups, skill);
                   const startsGroup = !!group && visibleSkills[index - 1]?.groupId !== skill.groupId;
-                  const members = startsGroup ? groupMembers(system.skillCategories, group.id) : [];
+                  const members = startsGroup ? groupMembers(skillCategories, group.id) : [];
                   const groupComplete = startsGroup && groupHasEveryMember(character.skills, members);
                   const computedValue = engine.skill.computeValue(skill, character, cs?.trained ?? false);
                   const skillValue = cs?.value ?? computedValue;
@@ -451,6 +578,20 @@ export default function SkillsScreen() {
                       >
                         {overrideLabel}
                       </button>
+                      )}
+
+                      {/* Only a skill this character authored can be deleted;
+                          a declared one belongs to the system definition. */}
+                      {skillsEditable && isCustomSkill(character, skill.id) && (
+                        <button
+                          type="button"
+                          onClick={() => deleteCustomSkill(skill.id)}
+                          title={`Delete ${skill.name}`}
+                          aria-label={`Delete ${skill.name}`}
+                          className="min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] shrink-0 flex items-center justify-center rounded border-none bg-transparent text-[var(--color-text-muted)] cursor-pointer hover:text-red-400"
+                        >
+                          ✕
+                        </button>
                       )}
 
                       {/* Skill mark cycle: unmarked -> dragon -> demon -> clear (play mode only) */}
