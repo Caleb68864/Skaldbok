@@ -20,11 +20,14 @@ export interface AppStateContextValue {
   setGlobalBoonBane: (value: BoonBaneState) => void;
   /** Sets or clears (with `undefined`) a per-skill boon/bane override. */
   setSkillOverride: (skillId: string, value: 'boon' | 'bane' | undefined) => void;
+  /** Sets or clears (with `undefined`) a per-skill linked-characteristic swap. */
+  setSkillAttributeOverride: (skillId: string, attributeId: string | undefined) => void;
 }
 
 const INITIAL_SESSION_STATE: SessionState = {
   globalBoonBane: 'none',
   skillOverrides: {},
+  skillAttributeOverrides: {},
 };
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
@@ -84,6 +87,18 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     });
   }
 
+  function setSkillAttributeOverride(skillId: string, attributeId: string | undefined) {
+    setSessionState(prev => {
+      const overrides = { ...prev.skillAttributeOverrides };
+      if (attributeId === undefined) {
+        delete overrides[skillId];
+      } else {
+        overrides[skillId] = attributeId;
+      }
+      return { ...prev, skillAttributeOverrides: overrides };
+    });
+  }
+
   return (
     <AppStateContext.Provider
       value={{
@@ -95,6 +110,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
         sessionState,
         setGlobalBoonBane,
         setSkillOverride,
+        setSkillAttributeOverride,
       }}
     >
       {children}

@@ -78,6 +78,32 @@ export interface TravellerDerivedValues extends DerivedValues {
    */
   characteristicScores: Record<string, number>;
   initiativeDM: number;
+  /** Sum of every skill level the character holds. */
+  skillLevelTotal: number;
+  /** The creation budget those levels were meant to fit: 3 × (INT + EDU). */
+  creationSkillCap: number;
+}
+
+/**
+ * Total skill levels held, against the budget character creation allows.
+ *
+ * @remarks
+ * Mongoose caps total skill levels at creation to 3 × (INT + EDU). Nothing in
+ * the app surfaced it, so a hand-built character had no way to check the one
+ * arithmetic constraint creation imposes.
+ *
+ * Reads the *base* characteristics, not the damaged ones — the cap is a fact
+ * about how the character was built, and a hit in a firefight must not appear
+ * to retroactively overspend it.
+ *
+ * Counts levels only. A trained-at-0 speciality costs nothing, which is exactly
+ * why Traveller hands them out a group at a time.
+ */
+export function computeSkillBudget(character: CharacterRecord): { total: number; cap: number } {
+  const total = Object.values(character.skills ?? {}).reduce((sum, skill) => sum + (skill?.value ?? 0), 0);
+  const int = character.attributes?.['int'] ?? 0;
+  const edu = character.attributes?.['edu'] ?? 0;
+  return { total, cap: 3 * (int + edu) };
 }
 
 /** Computes the six characteristic DMs (and an initiative DM = DEX DM) for a Traveller character. */
@@ -90,6 +116,7 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
     characteristicDMs[id] = characteristicToDM(score);
   }
   const initiativeDM = characteristicDMs['dex'] ?? 0;
+  const budget = computeSkillBudget(character);
 
   // hpMax/wpMax/movement/damageBonus/aglDamageBonus are Dragonbane-shaped fields
   // the base DerivedValues type still mandates. Traveller has none of them — it
@@ -109,6 +136,8 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
     characteristicDMs,
     characteristicScores,
     initiativeDM,
+    skillLevelTotal: budget.total,
+    creationSkillCap: budget.cap,
   };
 }
 
@@ -394,6 +423,21 @@ export const travellerEngine: SystemEngine = {
       shortLabel: 'Carry',
       overridable: true,
       surfaces: ['dashboard', 'print'],
+    },
+    {
+      // Print only. It is a creation-time check, and a permanent sheet tile
+      // reading "18 / 51" is noise for the rest of a character's life — but it
+      // is exactly what you want on the sheet you build a character against.
+      key: 'skillLevelTotal',
+      label: 'Skill Levels Spent',
+      shortLabel: 'Skills',
+      surfaces: ['print'],
+    },
+    {
+      key: 'creationSkillCap',
+      label: 'Creation Cap (3 × INT+EDU)',
+      shortLabel: 'Cap',
+      surfaces: ['print'],
     },
   ],
   // Characteristics and damage-track resources share ids (str/dex/end), so the

@@ -6,6 +6,7 @@ import {
   TRAVELLER_DEFAULT_TARGET,
 } from './travellerEngine';
 import type { CharacterRecord, TempModifier } from '../../../types/character';
+import { attrKey } from '../../../utils/statKeys';
 
 /** A one-effect temp modifier targeting `stat`. */
 function modifier(stat: TempModifier['effects'][number]['stat'], delta: number): TempModifier {
@@ -254,6 +255,52 @@ describe('carry limit', () => {
     const field = travellerEngine.derivedFields.find(f => f.key === 'encumbranceLimit');
     expect(field?.surfaces).toEqual(['dashboard', 'print']);
     expect(field?.overridable).toBe(true);
+  });
+});
+
+describe('creation skill budget', () => {
+  it('caps total skill levels at 3 x (INT + EDU)', () => {
+    // INT 7 + EDU 7 = 14, x3 = 42.
+    expect(computeTravellerDerivedValues(character()).creationSkillCap).toBe(42);
+  });
+
+  it('sums every skill level held', () => {
+    const c = character({ skills: { gunner: { value: 2, trained: true }, medic: { value: 3, trained: true } } } as Partial<CharacterRecord>);
+    expect(computeTravellerDerivedValues(c).skillLevelTotal).toBe(5);
+  });
+
+  it('counts a trained level-0 speciality as free', () => {
+    // Which is exactly why Traveller grants them a whole group at a time.
+    const c = character({ skills: { gunner: { value: 0, trained: true }, gunnerCapital: { value: 0, trained: true } } } as Partial<CharacterRecord>);
+    expect(computeTravellerDerivedValues(c).skillLevelTotal).toBe(0);
+  });
+
+  it('reads base characteristics, so a temp buff cannot inflate the cap', () => {
+    // The cap is a fact about how the character was built. A drug that raises
+    // INT for a scene must not appear to grant retroactive creation budget.
+    const buffed = character({ tempModifiers: [modifier(attrKey('int'), 4)] } as Partial<CharacterRecord>);
+    expect(computeTravellerDerivedValues(buffed).creationSkillCap).toBe(42);
+    // ...while the DM that same buff feeds does move, proving the buff is live.
+    expect(computeTravellerDerivedValues(buffed).characteristicDMs['int']).toBe(1);
+  });
+
+  it('is print-only — a creation check does not belong on every screen', () => {
+    for (const key of ['skillLevelTotal', 'creationSkillCap']) {
+      expect(travellerEngine.derivedFields.find(f => f.key === key)?.surfaces).toEqual(['print']);
+    }
+  });
+
+  it('is not user-overridable', () => {
+    // It is arithmetic over the character's own data; an override would only
+    // ever be a way to hide going over.
+    for (const key of ['skillLevelTotal', 'creationSkillCap']) {
+      expect(travellerEngine.derivedFields.find(f => f.key === key)?.overridable).toBeFalsy();
+    }
+  });
+
+  it('handles a character with no skills at all', () => {
+    const bare = character({ skills: {} } as Partial<CharacterRecord>);
+    expect(computeTravellerDerivedValues(bare).skillLevelTotal).toBe(0);
   });
 });
 

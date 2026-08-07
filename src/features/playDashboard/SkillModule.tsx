@@ -10,6 +10,7 @@ import type { CharacterSkill } from '../../types/character';
 import { clamp, type PlayModuleProps } from './types';
 import { getEngine, type SystemEngine, type SkillDisplayContext } from '../systems/engine';
 import { resolveSkillCategories } from '../characters/customSkills';
+import { useAppState } from '../../context/AppStateContext';
 
 /** Normal / boon / bane odds line, with the maths owned by the active engine. */
 function probability(engine: SystemEngine, value: number, context?: SkillDisplayContext): string {
@@ -27,6 +28,7 @@ type SkillRow = {
 
 export function SkillModule({ character, system, updateCharacter }: PlayModuleProps) {
   const [showUntrained, setShowUntrained] = useState(false);
+  const { sessionState } = useAppState();
   if (!system) return null;
 
   const engine = getEngine(system);
@@ -69,11 +71,14 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
     const mark = stored?.dragonMarked ? 'Dragon' : stored?.demonMarked ? 'Demon' : 'Mark';
     // Fold in condition-imposed bane so the dashboard's odds match the Sheet's
     // (previously the Play line ignored an active condition's bane). E6.
-    const autoBane = conditionImposesBane(system, character, skill.linkedAttributeId);
+    // Honour the session's characteristic swap, so this line and the Skills
+    // screen cannot show different odds for the same roll.
+    const linkedAttributeId = sessionState.skillAttributeOverrides[skill.id] ?? skill.linkedAttributeId;
+    const autoBane = conditionImposesBane(system, character, linkedAttributeId);
     const displayContext = {
       character,
       skillId: skill.id,
-      linkedAttributeId: skill.linkedAttributeId,
+      linkedAttributeId,
       boonBane: (autoBane ? 'bane' : 'none') as 'boon' | 'none' | 'bane',
       trained,
     };

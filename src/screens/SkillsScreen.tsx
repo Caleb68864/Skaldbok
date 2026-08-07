@@ -73,6 +73,7 @@ export default function SkillsScreen() {
     sessionState,
     setGlobalBoonBane,
     setSkillOverride,
+    setSkillAttributeOverride,
     isLoading: settingsLoading,
     settings,
   } = useAppState();
@@ -455,9 +456,16 @@ export default function SkillsScreen() {
                   const groupComplete = startsGroup && groupHasEveryMember(character.skills, members);
                   const computedValue = engine.skill.computeValue(skill, character, cs?.trained ?? false);
                   const skillValue = cs?.value ?? computedValue;
-                  const attrAbbr = skill.linkedAttributeId ? (attrAbbrMap[skill.linkedAttributeId] ?? '') : '';
-                  const characteristicDM = skill.linkedAttributeId ? engine.attributeBadge(skill.linkedAttributeId, character) : null;
-                  const probDisplay = getProbDisplay(skill.id, skillValue, skill.linkedAttributeId, cs?.trained ?? false);
+                  // The rules routinely allow a different characteristic for the
+                  // situation (Persuade with INT, Athletics with STR/DEX/END).
+                  // The swap is session-scoped, so every number on this row —
+                  // abbreviation, DM badge and odds — comes from one resolved id.
+                  const linkedAttributeId =
+                    sessionState.skillAttributeOverrides[skill.id] ?? skill.linkedAttributeId;
+                  const isSwapped = linkedAttributeId !== skill.linkedAttributeId;
+                  const attrAbbr = linkedAttributeId ? (attrAbbrMap[linkedAttributeId] ?? '') : '';
+                  const characteristicDM = linkedAttributeId ? engine.attributeBadge(linkedAttributeId, character) : null;
+                  const probDisplay = getProbDisplay(skill.id, skillValue, linkedAttributeId, cs?.trained ?? false);
                   const overrideLabel = getOverrideLabel(skill.id);
                   const overrideTitle = getOverrideTitle(skill.id);
 
@@ -533,11 +541,37 @@ export default function SkillsScreen() {
                         isTrained ? "font-semibold" : "font-normal"
                       )}>
                         {skill.name}
-                        {attrAbbr && (
-                          <span className="ml-1.5 text-xs font-normal text-[var(--color-text-muted)] opacity-70" aria-label={`Linked attribute: ${attrAbbr}`}>
-                            {attrAbbr}
-                            {characteristicDM && ` ${characteristicDM}`}
-                          </span>
+                        {skill.linkedAttributeId && system.attributes.length > 0 && (
+                          // A select rather than a label: the characteristic a
+                          // skill rolls against is a per-situation call, and the
+                          // swap is session-scoped so it never rewrites the
+                          // character. Blank value = the skill's declared one.
+                          <select
+                            value={sessionState.skillAttributeOverrides[skill.id] ?? ''}
+                            onChange={e => setSkillAttributeOverride(skill.id, e.target.value || undefined)}
+                            aria-label={`Characteristic for ${skill.name}`}
+                            title={isSwapped
+                              ? `Rolling against ${attrAbbr} instead of ${attrAbbrMap[skill.linkedAttributeId] ?? ''} — for this session only`
+                              : `Rolling against ${attrAbbr}. Pick another for this session.`}
+                            className={cn(
+                              'ml-1.5 text-xs font-normal bg-transparent border-none cursor-pointer p-0',
+                              isSwapped
+                                ? 'text-[var(--color-accent)] opacity-100 font-semibold'
+                                : 'text-[var(--color-text-muted)] opacity-70',
+                            )}
+                          >
+                            <option value="">
+                              {attrAbbrMap[skill.linkedAttributeId] ?? ''}
+                              {!isSwapped && characteristicDM ? ` ${characteristicDM}` : ''}
+                            </option>
+                            {system.attributes
+                              .filter(a => a.id !== skill.linkedAttributeId)
+                              .map(a => (
+                                <option key={a.id} value={a.id}>
+                                  {a.abbreviation} {engine.attributeBadge(a.id, character) ?? ''}
+                                </option>
+                              ))}
+                          </select>
                         )}
                       </span>
 

@@ -1648,3 +1648,36 @@
   enumerates the field anyway — passthrough would let a malformed entry reach
   the UI as a nameless row.
 - Commit: feat(characters) — player-authored custom skills.
+
+## 2026-08-07 — Situational characteristics, and the creation cap
+- Symptom 1: every skill declares one `linkedAttributeId`, but the rules
+  routinely allow another for the circumstance — Persuade with INT when you are
+  reasoning rather than charming, Athletics with STR/DEX/END by feat. The
+  displayed DM and odds were simply wrong for those rolls, with no way to say
+  so.
+- Fix: `SessionState.skillAttributeOverrides`, a per-skill characteristic swap,
+  set from a select on the skill's own attribute tag. Session-scoped like
+  `skillOverrides` — it describes one moment at the table, and persisting it
+  would quietly change every future roll of that skill.
+- Watch: `SkillModule` now reads it too. It had no reason to care, but leaving
+  it out meant the dashboard and the skills screen would show different odds
+  for the same roll — the exact split that `travellerRollContext` exists to
+  prevent between display and chance. Both surfaces resolve the id once and
+  feed everything (abbreviation, DM badge, odds, condition-imposed bane) from
+  it.
+- Symptom 2: Mongoose caps total skill levels at creation to 3 × (INT + EDU).
+  Nothing surfaced the one arithmetic constraint creation imposes.
+- Fix: `skillLevelTotal` / `creationSkillCap` on the Traveller derived values,
+  declared `surfaces: ['print']`. It is a creation-time check — a permanent
+  sheet tile reading "18 / 51" is noise for the rest of a character's life, but
+  it is exactly what you want on the sheet you build against. Not overridable:
+  it is arithmetic over the character's own data, so an override could only
+  ever hide going over.
+- Watch: the cap reads *base* characteristics, deliberately. The first attempt
+  to mutation-test that failed to kill anything, because the test damaged END —
+  and INT/EDU have no damage track, so base and effective are identical there.
+  The observable difference is a **temp modifier**: a drug that raises INT for
+  a scene would otherwise appear to grant retroactive creation budget. The test
+  now buffs `attr:int` and asserts the cap holds while the INT DM moves, so it
+  proves the buff is live and the cap ignores it.
+- Commit: feat(skills) — situational characteristics and the creation cap.

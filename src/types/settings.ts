@@ -36,6 +36,22 @@ export interface SessionState {
    * Keyed by skill ID; `undefined` means "inherit from global".
    */
   skillOverrides: Record<string, 'boon' | 'bane' | undefined>;
+  /**
+   * Per-skill characteristic swaps for the situation at hand. Keyed by skill
+   * ID; `undefined` means "use the skill's declared linked attribute".
+   *
+   * @remarks
+   * Each skill declares one linked attribute, but the rules routinely allow a
+   * different one for the circumstance — Persuade with INT rather than SOC when
+   * you are reasoning rather than charming, Athletics with STR, DEX or END
+   * depending on the feat. Without this the displayed DM and odds are simply
+   * wrong for those rolls.
+   *
+   * Session-scoped, exactly like {@link skillOverrides}, because it describes
+   * one moment at the table and not a fact about the character. Persisting it
+   * would quietly change every future roll of that skill.
+   */
+  skillAttributeOverrides: Record<string, string | undefined>;
 }
 
 /**
