@@ -108,3 +108,25 @@ describe('bundled sheet templates list only panels their engine provides', () =>
     ).toEqual([]);
   });
 });
+
+describe('the advancement panel is gated on the engine model', () => {
+  /**
+   * @remarks
+   * `advancement` follows `rest`: a `null` model means the ruleset has no such
+   * procedure and the panel must not appear. Dragonbane declares one; Traveller
+   * and Savage Worlds do not, and their templates must not list it.
+   */
+  it.each(BUNDLED_SYSTEMS.map(s => [s.id, s] as const))('%s', (systemId, system) => {
+    const engine = getEngine(system);
+    const available = sheetPanelAvailability(engine, { ownsShip: true });
+    expect(available.advancement).toBe(engine.advancement !== null);
+
+    const template = templates.find(t => t.systemId === systemId);
+    const listed = keysOf(sheetTemplateSchema.parse(template!.raw).sheet).includes('advancement');
+    expect(
+      listed,
+      `${systemId}/sheet.json ${listed ? 'lists' : 'omits'} the advancement panel but its ` +
+        `engine ${engine.advancement ? 'has' : 'has no'} advancement model`,
+    ).toBe(engine.advancement !== null);
+  });
+});

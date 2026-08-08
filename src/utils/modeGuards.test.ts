@@ -85,3 +85,17 @@ describe('field paths are declared, not invented at the call site', () => {
     ).toEqual([]);
   });
 });
+
+describe('the advancement checklist during play', () => {
+  it('stays editable in play mode', () => {
+    // It records what happened this session - it earns marks, it does not
+    // spend them - so it is bookkeeping rather than a build change.
+    expect(isFieldEditableInPlayMode(FIELD_PATHS.advancementChecks)).toBe(true);
+  });
+
+  it('does not make skills editable along with it', () => {
+    // Applying an advancement raises a skill, which IS a build change. If this
+    // ever passes, a stray tap mid-session can permanently advance a character.
+    expect(isFieldEditableInPlayMode(FIELD_PATHS.skills)).toBe(false);
+  });
+});

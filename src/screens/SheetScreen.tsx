@@ -3,6 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
+import { AdvancementPanel } from '../components/fields/AdvancementPanel';
+import { resolveSkillCategories } from '../features/characters/customSkills';
+import {
+  advancementCandidates,
+  toggleSessionEvent,
+  applyAdvance,
+  clearMark,
+  resetAdvancementChecks,
+} from '../features/characters/advancement';
 import { useSheetTemplate } from '../features/systems/useSheetTemplate';
 import {
   resolveSheetPanelOrder,
@@ -163,6 +172,8 @@ export default function SheetScreen() {
   const attributesEditable = useFieldEditable(FIELD_PATHS.attributes);
   const resourceMaxEditable = useFieldEditable(FIELD_PATHS.resourceMax);
   const derivedEditable = useFieldEditable(FIELD_PATHS.derivedOverrides);
+  const skillsEditable = useFieldEditable(FIELD_PATHS.skills);
+  const advancementChecklistEditable = useFieldEditable(FIELD_PATHS.advancementChecks);
 
   // Reorder mode state
   const [reorderMode, setReorderMode] = useState(false);
@@ -1237,6 +1248,47 @@ export default function SheetScreen() {
   // `panelAvailability`; the system's declared panels select the subset. Keyed
   // by SheetPanelKey so a panel added here without a SHEET_PANEL_KEYS entry (or
   // vice versa) fails the build instead of silently never rendering.
+  // ── Advancement ────────────────────────────────────────────────
+  // Gated on `engine.advancement !== null`, the same way `rest` is: a ruleset
+  // with no end-of-session procedure gets no panel rather than an empty one.
+  const advancementModel = engine.advancement;
+
+  /**
+   * Marked skills to roll for.
+   *
+   * @remarks
+   * Reads the *resolved* categories so a player-authored custom skill can be
+   * marked and advanced like any declared one.
+   */
+  const advancementRows = advancementModel
+    ? advancementCandidates(resolveSkillCategories(system, character), character, advancementModel)
+    : [];
+
+  const advancementPanel = advancementModel ? (
+    <AdvancementPanel
+      advancement={advancementModel}
+      checks={character.advancementChecks ?? {}}
+      candidates={advancementRows}
+      checklistEditable={advancementChecklistEditable}
+      rollsEditable={skillsEditable}
+      onToggleEvent={eventId =>
+        updateCharacter({ ...toggleSessionEvent(character, eventId), updatedAt: nowISO() })
+      }
+      onAdvance={skillId => {
+        const patch = applyAdvance(character, skillId, advancementModel);
+        if (patch) updateCharacter({ ...patch, updatedAt: nowISO() });
+      }}
+      onDecline={skillId => {
+        const patch = clearMark(character, skillId);
+        if (patch) updateCharacter({ ...patch, updatedAt: nowISO() });
+      }}
+      onResetChecklist={() => {
+        const patch = resetAdvancementChecks(character);
+        if (patch) updateCharacter({ ...patch, updatedAt: nowISO() });
+      }}
+    />
+  ) : null;
+
   const allPanels: Record<SheetPanelKey, React.ReactNode> = {
     identity: identityPanel,
     attributes: attributesPanel,
@@ -1250,6 +1302,7 @@ export default function SheetScreen() {
     edges: edgesPanel,
     hindrances: hindrancesPanel,
     rest: restPanel,
+    advancement: advancementPanel,
     storyBank: storyBankPanel,
   };
 

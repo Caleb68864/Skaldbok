@@ -1,14 +1,23 @@
 {
-  "version": 6,
+  "version": 7,
   "play": {
     "layout": "three-column",
     "regions": [
       {
         "columns": "1fr minmax(200px, 1fr) 1fr",
         "cells": [
-          ["vitals"],
-          ["derived"],
-          [{ "card": "rest", "when": "hasRest" }]
+          [
+            "vitals"
+          ],
+          [
+            "derived"
+          ],
+          [
+            {
+              "card": "rest",
+              "when": "hasRest"
+            }
+          ]
         ]
       },
       [
@@ -17,8 +26,14 @@
       [
         "skills",
         "readyGear",
-        { "card": "abilities", "when": "hasMagic" },
-        { "card": "magic", "when": "hasMagic" },
+        {
+          "card": "abilities",
+          "when": "hasMagic"
+        },
+        {
+          "card": "magic",
+          "when": "hasMagic"
+        },
         "storyBank",
         "quickReference"
       ]
@@ -32,6 +47,7 @@
         "resources",
         "derived",
         "rest",
+        "advancement",
         "storyBank"
       ]
     ]

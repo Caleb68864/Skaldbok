@@ -23,6 +23,7 @@ export const SHEET_PANEL_KEYS = [
   'edges',
   'hindrances',
   'rest',
+  'advancement',
   'storyBank',
 ] as const;
 
@@ -108,6 +109,7 @@ export function sheetPanelAvailability(
   engine: {
     panels: readonly string[];
     rest: unknown;
+    advancement: unknown;
     derivedFields: readonly { overridable?: boolean; surfaces?: readonly string[] }[];
   },
   runtime: { ownsShip?: boolean } = {},
@@ -132,6 +134,8 @@ export function sheetPanelAvailability(
     ),
     // `null` means the ruleset has no rest procedure, which is how the panel hides.
     rest: engine.rest !== null,
+    // Same shape: a ruleset with no end-of-session advancement gets no panel.
+    advancement: engine.advancement !== null,
     ships: runtime.ownsShip ?? false,
   } as SheetPanelAvailability;
 }

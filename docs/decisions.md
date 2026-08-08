@@ -2184,3 +2184,45 @@
   rendered measurement and there is no DOM test setup); and per-skill modifier
   targets for custom skills (`modifiableStats` receives only the system).
 - Commit: docs — record the declared-capability rule.
+
+## 2026-08-08 — Advancement, built
+- Pass 13 found `engine.advancement` entirely dead — `sessionEvents`,
+  `usesMarks`, `maxSkillValue`, `rollPrompt`, and `CharacterRecord
+  .advancementChecks` — declared, populated for Dragonbane, consumed by nothing.
+  Flagged as a product call rather than deleted. The call was: build it.
+- Shape: a sheet panel gated on `engine.advancement !== null`, exactly as `rest`
+  is. Dragonbane gets it; Traveller and Savage Worlds declare `null` and get
+  nothing. Adding the key to `SHEET_PANEL_KEYS` made `tsc` demand the panel in
+  `allPanels` — the three-list typing doing its job.
+- **The app does not roll.** Each marked skill shows the system's own
+  `rollPrompt` ("Roll above 12 on a d20 to advance") and offers *Advanced* /
+  *No change*. The player rolls a real d20 and records what happened, matching
+  every other probability surface here, which shows odds and never resolves
+  them.
+- **The checklist is a tally, not a marking UI.** Each ticked box earns the
+  right to mark one skill, and marking already lives on the Skills screen where
+  the skills are. Duplicating it would give two places to do the same thing and
+  two chances to disagree about the count.
+- **Both marks advance.** A dragon (critical success) and a demon (critical
+  failure) are tracked as distinct states because they mean different things at
+  the moment they happen, but Dragonbane marks a skill for advancement on
+  either — you learn from a triumph and a disaster alike, and
+  `AdvancementModel` speaks of "marks" generically. `isMarkedForAdvancement` is
+  the single place to change this if a table plays dragons-only.
+- Two guards, not one: ticking the checklist stays editable in **play** mode
+  (it records what happened this session), while applying an advancement is
+  gated by `FIELD_PATHS.skills` like any other build change — a stray tap
+  mid-session must not permanently raise a skill. `advancementChecks` is the
+  first genuine addition to `PLAY_MODE_EDITABLE_PREFIXES` since it was pruned in
+  pass 5, and it follows that entry's own instruction: add the path *and* the
+  call that asks about it.
+- Watch: `applyAdvance` returns `null` for an unmarked skill, so a double-tap or
+  a stale render cannot advance twice. A skill at the ceiling keeps its value
+  but still loses its mark — leaving it would offer the same dead roll again
+  next session.
+- Watch also: candidates are read from *resolved* categories, so a
+  player-authored custom skill can be marked and advanced like any declared one.
+- classic-fantasy sheet.json 6 → 7. Mutation-checked: removing the ceiling cap,
+  dropping demon marks, removing the double-advance guard, and listing the panel
+  in a system without the model each fail.
+- Commit: feat(advancement) — end-of-session advancement.

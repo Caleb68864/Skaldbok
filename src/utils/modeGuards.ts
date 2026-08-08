@@ -28,6 +28,12 @@ import { useAppState } from '../context/AppStateContext';
 const PLAY_MODE_EDITABLE_PREFIXES = [
   'armor.equipped',
   'helmet.equipped',
+  // The end-of-session checklist records what *happened* — it earns marks, it
+  // does not spend them. Ticking "participated in combat" is bookkeeping of the
+  // session you are in, so it stays available without leaving play mode. The
+  // advancement rolls themselves raise skills and are guarded by
+  // `FIELD_PATHS.skills` like any other build change.
+  'advancementChecks',
 ];
 
 /**
@@ -63,6 +69,8 @@ export const FIELD_PATHS = {
   armorEquipped: 'armor.equipped',
   /** Equipping/unequipping a helmet — editable during play. */
   helmetEquipped: 'helmet.equipped',
+  /** The end-of-session advancement checklist — editable during play. */
+  advancementChecks: 'advancementChecks',
 } as const;
 
 /** Every declared field path, for tests and exhaustiveness checks. */

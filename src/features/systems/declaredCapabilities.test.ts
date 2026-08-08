@@ -83,13 +83,7 @@ const consumerSource = walk('src')
  * the codebase is knowingly not keeping; anything NOT here and unread is a bug.
  */
 const KNOWN_UNIMPLEMENTED: Record<string, string> = {
-  sessionEvents: 'engine.advancement is designed but unbuilt - decisions.md 2026-08-08 pass 13',
-  usesMarks: 'part of the unbuilt advancement model',
-  maxSkillValue: 'part of the unbuilt advancement model',
-  advancementMax: 'part of the unbuilt advancement model',
-  rollPrompt: 'part of the unbuilt advancement model',
-  advancement: 'the advancement checklist is designed but unbuilt',
-  advancementChecks: 'written by nothing until advancement is built',
+  advancementMax: 'engine.skill.advancementMax is the per-skill ceiling; advancement uses advancement.maxSkillValue',
   penaltyPerLevel: 'the number is single-sourced in savageWorldsEngine (pass 11); the FIELD still has no reader',
   defaultValue: 'read only through engine.skill.computeValue, never as a field',
   roleFallback: 'no surface shows a profession fallback yet; the library card now uses identityFields instead',
