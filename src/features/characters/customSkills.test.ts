@@ -145,3 +145,30 @@ describe('isSkillNameAvailable', () => {
     expect(isSkillNameAvailable(system, character(), '   ')).toBe(false);
   });
 });
+
+describe('a custom skill resolves like a declared one', () => {
+  /**
+   * @remarks
+   * Regression: `SkillsScreen.cycleSkillMark` looked the definition up in
+   * `system.skillCategories` rather than the merged list, so a player-authored
+   * skill returned `undefined` and its fallback was computed from
+   * `baseChance: 0` with no linked attribute. Silent, and only reachable by
+   * marking a custom skill in a roll-under system.
+   *
+   * The general rule this pins: anything that needs a skill *definition* must
+   * go through `resolveSkillCategories`, because the character's own skills
+   * exist nowhere else.
+   */
+  it('is found by an id lookup over the merged categories', () => {
+    const merged = resolveSkillCategories(system, character([zhodani]));
+    const found = merged.flatMap(c => c.skills).find(s => s.id === 'custom-1');
+    expect(found).toBeDefined();
+    expect(found?.linkedAttributeId).toBe('edu');
+  });
+
+  it('is NOT found by the same lookup over the system alone', () => {
+    // Pins why the merge is required rather than incidental.
+    const found = system.skillCategories.flatMap(c => c.skills).find(s => s.id === 'custom-1');
+    expect(found).toBeUndefined();
+  });
+});

@@ -124,7 +124,14 @@ export default function SkillsScreen() {
   function cycleSkillMark(skillId: string) {
     if (!character || skillsEditable || !engine.skill.supportsMarks) return;
     const cs = character.skills[skillId];
-    const def = system?.skillCategories.flatMap(c => c.skills).find(s => s.id === skillId);
+    // Merged categories, not the system's own: a player-authored skill has no
+    // entry in `system.skillCategories`, so looking it up there returned
+    // undefined and computed the fallback from `baseChance: 0` and no linked
+    // attribute — the wrong starting value for a roll-under system the moment
+    // someone marked a custom skill.
+    const def = resolveSkillCategories(system, character)
+      .flatMap(c => c.skills)
+      .find(s => s.id === skillId);
     const trained = cs?.trained ?? false;
     // The engine owns the "no stored entry" value for its resolution system.
     const fallbackValue = engine.skill.computeValue(

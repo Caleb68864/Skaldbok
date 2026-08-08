@@ -482,16 +482,23 @@ export interface CharacterRecord extends Versioned, Timestamped {
    * Advancement check flags — each becomes `true` once the trigger condition
    * for that track has been met during a session.
    */
-  advancementChecks?: {
-    /** Combat advancement track triggered. */
-    combat?: boolean;
-    /** Exploration advancement track triggered. */
-    explore?: boolean;
-    /** Weakness advancement track triggered. */
-    weakness?: boolean;
-    /** Heroic ability advancement track triggered. */
-    heroic?: boolean;
-  };
+  /**
+   * Keyed by `engine.advancement.sessionEvents[].id`.
+   *
+   * @remarks
+   * Was four literal optional booleans — `combat`, `explore`, `weakness`,
+   * `heroic` — which are Dragonbane's session events hardcoded into the
+   * system-neutral character record. A ruleset with different events (or more
+   * than four) could not be represented, and adding one would have been a
+   * schema change rather than a `system.json` edit.
+   *
+   * **No code reads or writes this yet.** `engine.advancement` is likewise
+   * declared, populated for Dragonbane, and consumed by nothing — the
+   * advancement checklist is designed but unbuilt. The shape is corrected here
+   * so that whoever builds it starts from a system-neutral one; see
+   * `docs/decisions.md` for the full finding.
+   */
+  advancementChecks?: Record<string, boolean>;
   /** ISO datetime when this character was soft-deleted; absent while active. */
   deletedAt?: string;
   /** Transaction UUID identifying the cascade that soft-deleted this character. */

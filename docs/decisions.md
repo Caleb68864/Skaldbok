@@ -1975,3 +1975,38 @@
 - Mutation-checked: disabling the decode fails 4 tests; un-extending the ladder
   fails 1.
 - Commit: feat(swade) — support d12+1 and d12+2 trait advances.
+
+## 2026-08-08 — Pass 13: sweeping for the rest of the declared-but-unread class
+- Four passes had each found one instance, so this swept every field on the
+  engine interface for readers instead of waiting to trip over the next.
+- Result: `attributeReadout`, `stabilizedLabel`, `triggerAtOrBelow`,
+  `clearsRestTracker` and all seven `*Panel` labels are **live** — the low
+  reference counts were declaration-plus-one-consumer, not deadness.
+- **`engine.advancement` is dead.** The whole `AdvancementModel` —
+  `sessionEvents`, `usesMarks`, `maxSkillValue`, `rollPrompt` — is declared,
+  populated for Dragonbane, and consumed by nothing. So is
+  `CharacterRecord.advancementChecks`. The advancement checklist is designed and
+  unbuilt.
+- **Not deleted, deliberately.** Passes 5 and 11 removed dead *config entries*;
+  this is a whole feature's scaffolding with real Dragonbane content someone
+  authored. Deleting a planned capability is a product call, not a hardening
+  one. Flagged for the user instead.
+- Fixed the part that is wrong regardless: `advancementChecks` was four literal
+  optional booleans (`combat`/`explore`/`weakness`/`heroic`) — Dragonbane's
+  session events hardcoded into the system-neutral character record, where a
+  ruleset with different or more events could not be represented and adding one
+  would have been a schema change rather than a `system.json` edit. Now
+  `Record<string, boolean>` keyed by `sessionEvents[].id`. Zero behaviour change
+  (nothing reads it), and whoever builds advancement starts system-neutral.
+- **Bug in my own pass-3 work.** `SkillsScreen.cycleSkillMark` looked the skill
+  definition up in `system.skillCategories` rather than the merged list, so a
+  player-authored skill resolved to `undefined` and its fallback came from
+  `baseChance: 0` with no linked attribute. Silent, and only reachable by
+  marking a custom skill in a roll-under system. Fixed, with a regression test
+  pinning the general rule: anything needing a skill *definition* goes through
+  `resolveSkillCategories`, because a character's own skills exist nowhere else.
+- Known limitation, documented not fixed: `modifiableStats(system)` receives
+  only the system, so Traveller's per-skill modifier targets cover declared
+  skills but not custom ones. Widening it to take the character would change the
+  interface for all three adapters.
+- Commit: fix(skills) — resolve custom skill definitions in the mark path.
