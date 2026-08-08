@@ -215,6 +215,7 @@ export function formatSkillDisplay(
   boonBane: 'boon' | 'none' | 'bane' = 'none',
   unskilled = false,
   unskilledDM = UNSKILLED_DM,
+  target = TRAVELLER_DEFAULT_TARGET,
 ): string {
   // Attempting a skill the character doesn't have is at DM −3 (Traveller's
   // unskilled penalty), reduced by Jack of All Trades — see
@@ -222,7 +223,6 @@ export function formatSkillDisplay(
   // the honest chance, not its trained-at-0 baseline.
   const penalty = unskilled ? unskilledDM : 0;
   const effectiveModifier = value + characteristicDM + penalty;
-  const target = TRAVELLER_DEFAULT_TARGET;
   const prob =
     boonBane === 'boon'
       ? threeD6KeepTwoProbability(target, effectiveModifier, 'best')
@@ -295,7 +295,10 @@ export const travellerEngine: SystemEngine = {
     defaultValue: 0,
     display: (value, context) => {
       const { dm, unskilled, unskilledDM } = travellerRollContext(value, context);
-      return formatSkillDisplay(value, dm, context?.boonBane ?? 'none', unskilled, unskilledDM);
+      return formatSkillDisplay(
+        value, dm, context?.boonBane ?? 'none', unskilled, unskilledDM,
+        context?.target ?? TRAVELLER_DEFAULT_TARGET,
+      );
     },
     supportsMarks: false,
     // Traveller level 0 is a real (trained) skill, so presence of the trained
@@ -416,15 +419,35 @@ export const travellerEngine: SystemEngine = {
   // Advancement is study/training time, not per-session rolls.
   advancement: null,
   probability: {
-    // Skill level + linked-characteristic DM vs the default 8+ target.
+    /**
+     * Mongoose's task difficulty ladder. Declared here rather than read from
+     * the Quick Reference card of the same name: that card is display copy a
+     * user may reword or delete, and the odds must not depend on prose.
+     */
+    difficulty: {
+      label: 'Difficulty',
+      defaultValue: TRAVELLER_DEFAULT_TARGET,
+      options: [
+        { value: 2, label: 'Simple' },
+        { value: 4, label: 'Easy' },
+        { value: 6, label: 'Routine' },
+        { value: 8, label: 'Average' },
+        { value: 10, label: 'Difficult' },
+        { value: 12, label: 'Very Difficult' },
+        { value: 14, label: 'Formidable' },
+        { value: 16, label: 'Impossible' },
+      ],
+    },
+    // Skill level + linked-characteristic DM vs the selected target.
     chance: (value, state, context) => {
       // Same DM + unskilled derivation as skill.display, via the shared helper,
       // so the two surfaces can't report different odds for the same roll.
       const { dm, unskilled, unskilledDM } = travellerRollContext(value, context);
       const modifier = value + dm + (unskilled ? unskilledDM : 0);
-      if (state === 'boon') return threeD6KeepTwoProbability(TRAVELLER_DEFAULT_TARGET, modifier, 'best');
-      if (state === 'bane') return threeD6KeepTwoProbability(TRAVELLER_DEFAULT_TARGET, modifier, 'worst');
-      return twoD6SuccessProbability(TRAVELLER_DEFAULT_TARGET, modifier);
+      const target = context?.target ?? TRAVELLER_DEFAULT_TARGET;
+      if (state === 'boon') return threeD6KeepTwoProbability(target, modifier, 'best');
+      if (state === 'bane') return threeD6KeepTwoProbability(target, modifier, 'worst');
+      return twoD6SuccessProbability(target, modifier);
     },
   },
   derivedFields: [

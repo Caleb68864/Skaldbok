@@ -22,12 +22,15 @@ export interface AppStateContextValue {
   setSkillOverride: (skillId: string, value: 'boon' | 'bane' | undefined) => void;
   /** Sets or clears (with `undefined`) a per-skill linked-characteristic swap. */
   setSkillAttributeOverride: (skillId: string, attributeId: string | undefined) => void;
+  /** Sets the task target all probabilities are shown against; `undefined` restores the system default. */
+  setRollTarget: (target: number | undefined) => void;
 }
 
 const INITIAL_SESSION_STATE: SessionState = {
   globalBoonBane: 'none',
   skillOverrides: {},
   skillAttributeOverrides: {},
+  rollTarget: undefined,
 };
 
 const AppStateContext = createContext<AppStateContextValue | null>(null);
@@ -87,6 +90,10 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     });
   }
 
+  function setRollTarget(target: number | undefined) {
+    setSessionState(prev => ({ ...prev, rollTarget: target }));
+  }
+
   function setSkillAttributeOverride(skillId: string, attributeId: string | undefined) {
     setSessionState(prev => {
       const overrides = { ...prev.skillAttributeOverrides };
@@ -111,6 +118,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
         setGlobalBoonBane,
         setSkillOverride,
         setSkillAttributeOverride,
+        setRollTarget,
       }}
     >
       {children}

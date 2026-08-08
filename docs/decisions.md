@@ -2262,3 +2262,38 @@
   collapsed-category view turns 102 skills into 7 headings with counts, and
   expanding one reveals the group header and its "All at 0" action.
 - Commit: feat(theme) — Traveller printed-sheet and black-book themes.
+
+## 2026-08-08 — Selectable task difficulty
+- Every Traveller probability was computed against a fixed 8+, and the display
+  said so ("83% vs 8+"). But Traveller sets a target per task, from Simple (2+)
+  to Impossible (16+), and the odds move by roughly one row per point — so the
+  one number shown was right for exactly one difficulty and misleading for the
+  other seven.
+- `TRAVELLER_DEFAULT_TARGET`'s own comment had said for months that the maths
+  already took the target as a parameter and a selector was "a UI change, not a
+  maths one". That turned out to be true.
+- Fix: `ProbabilityModel.difficulty` — an engine-declared ladder with a label,
+  a default and named options. Traveller declares Mongoose's eight; Dragonbane
+  declares none, because it is roll-under and the skill value *is* the target,
+  so no selector renders there at all. `SkillDisplayContext.target` threads the
+  choice through `skill.display` and `probability.chance` alike.
+- Session-scoped, like boon/bane: the GM calls a difficulty for *this* task, not
+  for the character. Every skill's odds move together, which is the point —
+  "what are my chances if this one is Difficult?" is a question about the whole
+  sheet at once.
+- Watch: the ladder is declared in the adapter, **not** read from the Quick
+  Reference card of the same name. That card is display copy a user may reword
+  or delete; the odds must not depend on prose.
+- Watch also: boon and bane recompute at the selected target, not the default.
+  Verified in a browser on real data — at Difficult (10+), normal 8% / boon 20%
+  / bane 2%, and the label reads "vs 10+" with no stale "vs 8+" anywhere.
+- A test asserting boon > normal at every target **failed correctly**: at Simple
+  (2+) a level-2 skill already succeeds on any roll, and a boon cannot beat
+  certainty. The assertion now requires monotonicity always and strict gaps only
+  where the roll is genuinely uncertain.
+- The pass-18 staleness guard fired too: `defaultValue` was listed as unread and
+  now has a reader (`difficulty.defaultValue`), so it left the allowlist. That
+  is the guard working, not a false alarm.
+- Mutation-checked: dropping the target from `chance` fails 4 tests, dropping it
+  from `display` fails 3.
+- Commit: feat(traveller) — selectable task difficulty.

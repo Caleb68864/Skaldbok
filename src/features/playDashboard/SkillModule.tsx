@@ -84,6 +84,9 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
       linkedAttributeId,
       boonBane: (autoBane ? 'bane' : 'none') as 'boon' | 'none' | 'bane',
       trained,
+      // Same target the Skills screen is showing, so the two surfaces cannot
+      // quote different odds for the same roll.
+      target: sessionState.rollTarget ?? engine.probability.difficulty?.defaultValue,
     };
     const displayValue = engine.skill.display(value, displayContext);
     return (

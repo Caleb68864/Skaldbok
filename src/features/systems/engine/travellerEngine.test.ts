@@ -338,3 +338,78 @@ describe('currency', () => {
     expect(travellerEngine.currency.denominations[0].step).toBe(100);
   });
 });
+
+describe('selectable task difficulty', () => {
+  const c = character();
+  const chance = travellerEngine.probability.chance;
+  const display = travellerEngine.skill.display;
+  const pct = (s: string) => Number(/(\d+)%/.exec(s)?.[1]);
+
+  it('declares Mongoose\'s full ladder, Simple through Impossible', () => {
+    const d = travellerEngine.probability.difficulty!;
+    expect(d.defaultValue).toBe(TRAVELLER_DEFAULT_TARGET);
+    expect(d.options.map(o => o.value)).toEqual([2, 4, 6, 8, 10, 12, 14, 16]);
+    expect(d.options.map(o => o.label)).toContain('Formidable');
+  });
+
+  it('gets harder as the target rises', () => {
+    const ctx = (target: number) => ({ character: c, linkedAttributeId: 'int', target });
+    const easy = chance(2, 'none', ctx(4));
+    const avg = chance(2, 'none', ctx(8));
+    const hard = chance(2, 'none', ctx(12));
+    expect(easy).toBeGreaterThan(avg);
+    expect(avg).toBeGreaterThan(hard);
+  });
+
+  it('says which target it assumed, so a bare percentage cannot mislead', () => {
+    const text = display(2, { character: c, linkedAttributeId: 'int', target: 10 });
+    expect(text).toContain('vs 10+');
+    expect(text).not.toContain('vs 8+');
+  });
+
+  it('falls back to the system default when no target is given', () => {
+    // Every caller predating the selector passes no target at all.
+    expect(display(2, { character: c, linkedAttributeId: 'int' })).toContain(`vs ${TRAVELLER_DEFAULT_TARGET}+`);
+    expect(chance(2, 'none', { character: c, linkedAttributeId: 'int' }))
+      .toBe(chance(2, 'none', { character: c, linkedAttributeId: 'int', target: TRAVELLER_DEFAULT_TARGET }));
+  });
+
+  it('applies boon and bane at the selected target, not the default', () => {
+    // Boon >= normal >= bane at every target. Not strict: at Simple (2+) a
+    // level-2 skill already succeeds on any roll, and a boon cannot beat
+    // certainty — asserting strict inequality there would be asserting that
+    // the maths is wrong.
+    for (const target of [2, 4, 8, 12, 16]) {
+      const ctx = { character: c, linkedAttributeId: 'int', target };
+      const boon = chance(2, 'boon', ctx);
+      const normal = chance(2, 'none', ctx);
+      const bane = chance(2, 'bane', ctx);
+      expect(boon, `boon < normal at ${target}+`).toBeGreaterThanOrEqual(normal);
+      expect(normal, `normal < bane at ${target}+`).toBeGreaterThanOrEqual(bane);
+      // Where the roll is genuinely uncertain, the gaps must be real.
+      if (normal > 0.02 && normal < 0.98) {
+        expect(boon, `boon should beat normal at ${target}+`).toBeGreaterThan(normal);
+        expect(normal, `normal should beat bane at ${target}+`).toBeGreaterThan(bane);
+      }
+    }
+  });
+
+  it('moves boon odds when the target moves', () => {
+    const boonAt = (target: number) =>
+      chance(2, 'boon', { character: c, linkedAttributeId: 'int', target });
+    expect(boonAt(6)).toBeGreaterThan(boonAt(14));
+  });
+
+  it('keeps display and chance agreeing at a non-default target', () => {
+    const ctx = { character: c, linkedAttributeId: 'int', target: 12, boonBane: 'bane' as const };
+    expect(pct(display(2, ctx))).toBe(Math.round(chance(2, 'bane', ctx) * 100));
+  });
+
+  it('folds the unskilled penalty in at the selected target', () => {
+    const ctx = { character: c, linkedAttributeId: 'int', target: 6, trained: false };
+    const text = display(0, ctx);
+    expect(text).toContain('Unskilled');
+    expect(text).toContain('vs 6+');
+    expect(pct(text)).toBe(Math.round(chance(0, 'none', ctx) * 100));
+  });
+});

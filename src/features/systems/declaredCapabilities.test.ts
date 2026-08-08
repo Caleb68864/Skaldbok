@@ -85,7 +85,6 @@ const consumerSource = walk('src')
 const KNOWN_UNIMPLEMENTED: Record<string, string> = {
   advancementMax: 'engine.skill.advancementMax is the per-skill ceiling; advancement uses advancement.maxSkillValue',
   penaltyPerLevel: 'the number is single-sourced in savageWorldsEngine (pass 11); the FIELD still has no reader',
-  defaultValue: 'read only through engine.skill.computeValue, never as a field',
   roleFallback: 'no surface shows a profession fallback yet; the library card now uses identityFields instead',
   sectionLayouts: 'sheet layout comes from sheet.json; this predates it',
   themesSupported: 'theming is app-level, not per-system',

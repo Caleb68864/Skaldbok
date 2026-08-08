@@ -128,6 +128,12 @@ export interface SkillDisplayContext {
    */
   boonBane?: 'boon' | 'none' | 'bane';
   /**
+   * The task target the odds are computed against. Omitted = the system's own
+   * default, which is what every caller did before the difficulty selector
+   * existed.
+   */
+  target?: number;
+  /**
    * Whether the character is trained in this skill. Systems where an untrained
    * attempt takes a penalty (Traveller's −3 unskilled DM) use this to show honest
    * odds for skills the character doesn't have. Undefined = treat as trained.
@@ -476,10 +482,41 @@ export interface AdvancementModel {
   rollPrompt: (value: number) => string;
 }
 
+/** One selectable difficulty on a system's target ladder. */
+export interface DifficultyOption {
+  /** The number the roll must meet or beat. */
+  value: number;
+  /** The ruleset's name for it — "Average", "Formidable". */
+  label: string;
+}
+
+/**
+ * A system's selectable task difficulties.
+ *
+ * @remarks
+ * Absent when the ruleset has no target the player picks. Dragonbane is
+ * roll-under: the skill value *is* the target, so there is nothing to choose.
+ * Traveller sets one per task, from Simple (2+) to Impossible (16+), and the
+ * odds move by roughly one row per point — which is exactly why showing a
+ * single fixed number was misleading.
+ */
+export interface DifficultyModel {
+  /** Control label, e.g. "Difficulty". */
+  label: string;
+  /** The target assumed when the player has not chosen one. */
+  defaultValue: number;
+  options: DifficultyOption[];
+}
+
 /** Success-chance maths for a system's resolution mechanic. */
 export interface ProbabilityModel {
   /** Chance of success at `value` under the given boon/bane state, as 0–1. */
   chance: (value: number, state: 'boon' | 'none' | 'bane', context?: SkillDisplayContext) => number;
+  /**
+   * Task difficulties the player may select. Absent = no selector is shown and
+   * every consumer falls back to the system's own default.
+   */
+  difficulty?: DifficultyModel;
 }
 
 /** Where a derived stat is surfaced. Different screens show different subsets. */

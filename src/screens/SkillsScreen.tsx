@@ -77,6 +77,7 @@ export default function SkillsScreen() {
     setGlobalBoonBane,
     setSkillOverride,
     setSkillAttributeOverride,
+    setRollTarget,
     isLoading: settingsLoading,
     settings,
   } = useAppState();
@@ -190,12 +191,14 @@ export default function SkillsScreen() {
       // skill is trained so an untrained attempt shows the −3 unskilled odds.
       return engine.skill.display(
         value,
-        character ? { character, skillId, linkedAttributeId, boonBane: effective, trained } : undefined,
+        character
+          ? { character, skillId, linkedAttributeId, boonBane: effective, trained, target: rollTarget }
+          : undefined,
       );
     }
 
     // The engine owns the odds maths; the screen only decides which state applies.
-    const probContext = character ? { character, skillId, linkedAttributeId } : undefined;
+    const probContext = character ? { character, skillId, linkedAttributeId, target: rollTarget } : undefined;
     const chance = (state: BoonBaneState) => engine.probability.chance(value, state, probContext);
     const normalPct = formatProb(chance('none'));
     // Natural-1 auto-success is a roll-under convention; other resolutions never show it.
@@ -218,6 +221,17 @@ export default function SkillsScreen() {
 
   // Grouping/collapse/search rules live in a tested helper — see
   // {@link features/characters/skillCategoryViews!buildSkillCategoryViews}.
+  /**
+   * The task target every probability on this screen is computed against.
+   *
+   * @remarks
+   * `difficulty` is absent for roll-under systems, where the skill value *is*
+   * the target and there is nothing to choose — so no selector renders and this
+   * stays undefined, which every engine reads as "use your own default".
+   */
+  const difficulty = engine.probability.difficulty;
+  const rollTarget = sessionState.rollTarget ?? difficulty?.defaultValue;
+
   const query = search.trim().toLowerCase();
   // The character's own skills are merged in here, so everything downstream —
   // grouping, search, the group action, the rows themselves — treats a custom
@@ -322,6 +336,41 @@ export default function SkillsScreen() {
       {engine.skill.supportsMarks && dragonMarkedCount > 0 && (
         <div className="dragon-count-badge" aria-label={`${dragonMarkedCount} skills dragon marked`}>
           🐉 {dragonMarkedCount} marked
+        </div>
+      )}
+
+      {/* Task difficulty — every skill's odds move together, which is the
+          point: "what are my chances if this one is Difficult?" is a question
+          about the whole sheet at once. */}
+      {difficulty && (
+        <div className="mt-[var(--space-sm)] flex items-center gap-[var(--space-sm)] flex-wrap">
+          <label
+            htmlFor="roll-target"
+            className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)] font-semibold"
+          >
+            {difficulty.label}
+          </label>
+          <select
+            id="roll-target"
+            value={rollTarget ?? difficulty.defaultValue}
+            onChange={e => setRollTarget(Number(e.target.value))}
+            className="flex-1 min-w-[10rem] min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
+          >
+            {difficulty.options.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label} ({opt.value}+)
+              </option>
+            ))}
+          </select>
+          {rollTarget !== difficulty.defaultValue && (
+            <button
+              type="button"
+              onClick={() => setRollTarget(undefined)}
+              className="shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] text-xs font-semibold cursor-pointer"
+            >
+              Reset
+            </button>
+          )}
         </div>
       )}
 

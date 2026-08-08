@@ -52,6 +52,17 @@ export interface SessionState {
    * would quietly change every future roll of that skill.
    */
   skillAttributeOverrides: Record<string, string | undefined>;
+  /**
+   * The task target every displayed probability is computed against.
+   * `undefined` = the system's own default.
+   *
+   * @remarks
+   * Session-scoped, like the boon/bane state: the GM calls a difficulty for
+   * *this* task, not for the character. Every skill's odds move together, which
+   * is the point — "what are my chances if this is Difficult?" is a question
+   * about the whole sheet at once.
+   */
+  rollTarget: number | undefined;
 }
 
 /**
