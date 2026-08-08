@@ -1819,3 +1819,25 @@
   (`armor.equipped` must not unlock `armor.rating`); tested both ways.
 - Verified by reintroducing a literal path: caught.
 - Commit: refactor(mode) — name the guarded field paths.
+
+## 2026-08-08 — Polish pass 6: SkillsScreen was doing five jobs
+- Symptom: 675 lines. The screen owned the add-a-skill form, the group header
+  and its bulk action, the row, the search box, the category collapse, and the
+  boon/bane selector — with the add-form's markup inlined in the middle of the
+  render, 70 lines before the list it sits above.
+- Fix: extracted `AddCustomSkillForm` and `SkillGroupHeader` into
+  `components/fields/`. Both are presentational, own no state, and make no
+  decisions — the name-collision check needs the character *and* the system, so
+  it arrives as a `nameAvailable` prop rather than being recomputed inside.
+  675 → 600 lines.
+- Deliberately NOT extracted: the skill row. It reads ~15 interdependent values
+  (resolved characteristic, DM badge, odds string, three override states, two
+  mark flags, editability, custom-skill-ness). A component with fifteen props
+  is not more readable than the loop that computes them, and threading them
+  costs the locality that makes the row easy to follow. Extraction is a means,
+  not a score.
+- Watch: no behaviour change, and no test could have proved that — there is no
+  DOM test setup. The safety here is that both extracted pieces are pure
+  presentational functions whose props are all directly derived from what the
+  inlined JSX already read, verified by `tsc` and by re-reading the diff.
+- Commit: refactor(skills) — extract the add-skill form and group header.

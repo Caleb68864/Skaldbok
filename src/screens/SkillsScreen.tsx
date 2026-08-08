@@ -9,6 +9,8 @@ import { useAutosave } from '../hooks/useAutosave';
 import { SkillList } from '../components/fields/SkillList';
 import { Chip } from '../components/primitives/Chip';
 import { GameIcon } from '../components/primitives/GameIcon';
+import { AddCustomSkillForm, type CustomSkillDraft } from '../components/fields/AddCustomSkillForm';
+import { SkillGroupHeader } from '../components/fields/SkillGroupHeader';
 import {
   resolveEffectiveBoonBane,
   formatProb,
@@ -87,7 +89,7 @@ export default function SkillsScreen() {
    */
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
   /** Draft for the "add a skill" form; `null` when the form is closed. */
-  const [draft, setDraft] = useState<{ name: string; categoryId: string; linkedAttributeId: string } | null>(null);
+  const [draft, setDraft] = useState<CustomSkillDraft | null>(null);
   useAutosave(character, characterRepository.save, 1000);
   const engine = getEngine(system);
   const skillRange = engine.skill.range;
@@ -357,73 +359,16 @@ export default function SkillsScreen() {
           Profession. Edit Mode only; the definition lands on this character. */}
       {system && skillsEditable && (
         <div className="mt-[var(--space-sm)]">
-          {draft === null ? (
-            <button
-              type="button"
-              onClick={() => setDraft({ name: '', categoryId: system.skillCategories[0]?.id ?? '', linkedAttributeId: '' })}
-              className="min-h-[var(--touch-target-min)] px-[var(--space-md)] rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] font-semibold cursor-pointer"
-            >
-              + Add a skill
-            </button>
-          ) : (
-            <div className="flex flex-col gap-[var(--space-sm)] p-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)]">
-              <input
-                type="text"
-                value={draft.name}
-                onChange={e => setDraft({ ...draft, name: e.target.value })}
-                placeholder="Skill name, e.g. Language (Zhodani)"
-                aria-label="New skill name"
-                autoFocus
-                className="min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
-              />
-              <div className="flex gap-[var(--space-sm)] flex-wrap">
-                <select
-                  value={draft.categoryId}
-                  onChange={e => setDraft({ ...draft, categoryId: e.target.value })}
-                  aria-label="New skill category"
-                  className="flex-1 min-w-[8rem] min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
-                >
-                  {system.skillCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <select
-                  value={draft.linkedAttributeId}
-                  onChange={e => setDraft({ ...draft, linkedAttributeId: e.target.value })}
-                  aria-label="New skill linked characteristic"
-                  className="flex-1 min-w-[8rem] min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)]"
-                >
-                  <option value="">No characteristic</option>
-                  {system.attributes.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-              </div>
-              {draft.name.trim() !== '' && !isSkillNameAvailable(system, character, draft.name) && (
-                <p className="m-0 text-[length:var(--font-size-sm)] text-red-400">
-                  A skill called “{draft.name.trim()}” already exists.
-                </p>
-              )}
-              <div className="flex gap-[var(--space-sm)]">
-                <button
-                  type="button"
-                  onClick={addCustomSkill}
-                  disabled={!isSkillNameAvailable(system, character, draft.name)}
-                  className={cn(
-                    'min-h-[var(--touch-target-min)] px-[var(--space-md)] rounded-[var(--radius-sm)] border-none font-semibold',
-                    isSkillNameAvailable(system, character, draft.name)
-                      ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] cursor-pointer'
-                      : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] opacity-50 cursor-default',
-                  )}
-                >
-                  Add
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDraft(null)}
-                  className="min-h-[var(--touch-target-min)] px-[var(--space-md)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text)] cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          <AddCustomSkillForm
+            draft={draft}
+            onDraftChange={setDraft}
+            onOpen={() => setDraft({ name: '', categoryId: system.skillCategories[0]?.id ?? '', linkedAttributeId: '' })}
+            onCancel={() => setDraft(null)}
+            onSubmit={addCustomSkill}
+            categories={system.skillCategories}
+            attributes={system.attributes}
+            nameAvailable={isSkillNameAvailable(system, character, draft?.name ?? '')}
+          />
         </div>
       )}
 
@@ -477,32 +422,12 @@ export default function SkillsScreen() {
                   return (
                     <React.Fragment key={skill.id}>
                     {startsGroup && group && (
-                      <div className="flex items-center justify-between gap-2 pt-[var(--space-sm)] pb-[var(--space-2xs,2px)]">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-muted)] opacity-70">
-                          {group.name}
-                        </span>
-                        {/* Traveller grants level 0 in every speciality of a
-                            group; without this it is one row per speciality,
-                            by hand. Edit Mode only — it writes to the record. */}
-                        {skillsEditable && (
-                          <button
-                            type="button"
-                            onClick={() => trainWholeGroup(group.id)}
-                            disabled={groupComplete}
-                            title={groupComplete
-                              ? `Every ${group.name} speciality is already on the sheet`
-                              : `Add every missing ${group.name} speciality at level 0`}
-                            className={cn(
-                              'shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] text-xs font-semibold',
-                              groupComplete
-                                ? 'bg-transparent text-[var(--color-text-muted)] opacity-40 cursor-default'
-                                : 'bg-[var(--color-surface-raised)] text-[var(--color-text)] cursor-pointer',
-                            )}
-                          >
-                            All at 0
-                          </button>
-                        )}
-                      </div>
+                      <SkillGroupHeader
+                        name={group.name}
+                        editable={skillsEditable}
+                        complete={groupComplete}
+                        onTrainAll={() => trainWholeGroup(group.id)}
+                      />
                     )}
                     <div className={cn(
                       // flex-wrap so a long boon/bane probability string wraps the
