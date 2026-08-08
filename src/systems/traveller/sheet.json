@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 8,
   "play": {
     "layout": "two-column",
     "regions": [
@@ -8,20 +8,32 @@
         "cells": [
           [
             "vitals",
-            { "card": "currency", "when": "hasCurrency" }
+            {
+              "card": "currency",
+              "when": "hasCurrency"
+            }
           ],
           [
             "derived",
             "conditions",
-            { "card": "damageHeal", "when": "hasDamageTrack" }
+            {
+              "card": "damageHeal",
+              "when": "hasDamageTrack"
+            }
           ]
         ]
       },
       [
         "skills",
         "readyGear",
-        { "card": "abilities", "when": "hasMagic" },
-        { "card": "magic", "when": "hasMagic" },
+        {
+          "card": "abilities",
+          "when": "hasMagic"
+        },
+        {
+          "card": "magic",
+          "when": "hasMagic"
+        },
         "storyBank",
         "quickReference"
       ]
@@ -31,15 +43,12 @@
     "regions": [
       [
         "identity",
-        "attributes",
         "characteristics",
         "resources",
-        "derived",
         "finances",
         "careers",
         "augments",
         "ships",
-        "rest",
         "storyBank"
       ]
     ]

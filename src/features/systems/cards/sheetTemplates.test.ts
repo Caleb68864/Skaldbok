@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { sheetTemplateSchema } from './schema';
 import { CARD_REGISTRY } from './registry';
-import { SHEET_PANEL_KEYS } from '../panelOrder';
+import { SHEET_PANEL_KEYS, sheetPanelAvailability, type SheetPanelKey } from '../panelOrder';
+import { BUNDLED_SYSTEMS } from '../../../systems/registry';
+import { getEngine } from '../engine';
 
 /**
  * Contract tests over every bundled `sheet.json`.
@@ -66,5 +68,43 @@ describe('bundled sheet templates', () => {
       );
       expect(unknown).toEqual([]);
     });
+  });
+});
+
+/**
+ * A `sheet.json` may only list panels its own engine can make available.
+ *
+ * @remarks
+ * The key-validity test above asks "is this a real panel key?". It cannot ask
+ * "can *this system* ever show it?", and the screen answers that question by
+ * silently dropping the panel behind a DEV-only info log — so a template could
+ * promise a section the app had never once rendered.
+ *
+ * Traveller's listed two: `attributes` (its engine declares `characteristics`,
+ * the same panel under the ruleset's own noun) and `rest` (its `rest` model is
+ * `null`, which is exactly how a ruleset with no rest procedure hides it).
+ *
+ * `ships` is exempt because it is gated on the character owning one at runtime,
+ * not on the engine, so a template may legitimately list it.
+ */
+describe('bundled sheet templates list only panels their engine provides', () => {
+  const RUNTIME_GATED = new Set(['ships']);
+
+  it.each(BUNDLED_SYSTEMS.map(s => [s.id, s] as const))('%s', (systemId, system) => {
+    const template = templates.find(t => t.systemId === systemId);
+    expect(template, `no bundled sheet.json for ${systemId}`).toBeDefined();
+
+    const parsed = sheetTemplateSchema.parse(template!.raw);
+    const available = sheetPanelAvailability(getEngine(system), { ownsShip: true });
+    const dead = keysOf(parsed.sheet).filter(
+      key => !RUNTIME_GATED.has(key) && !available[key as SheetPanelKey],
+    );
+
+    expect(
+      dead,
+      `${systemId}/sheet.json lists [${dead.join(', ')}] — its engine never makes ` +
+        `those available, so the screen skips them and the file promises sections ` +
+        `the app does not render`,
+    ).toEqual([]);
   });
 });

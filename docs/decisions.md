@@ -1894,3 +1894,30 @@
 - Verified by un-wiring the dashboard and blanking the fingerprint's skill list:
   caught (2 failures).
 - Commit: feat(modifiers) — per-skill temporary modifiers.
+
+## 2026-08-08 — Pass 10: sheet templates promised panels that never rendered
+- Symptom: `sheetTemplates.test.ts` validated that a `sheet.json` key is a
+  *real* panel key. It could not ask whether *that system* can ever show it, and
+  the screen answers that by silently dropping the panel behind a DEV-only info
+  log. So a template could promise a section the app had never once rendered.
+- Found four dead keys across two systems:
+  - Traveller `attributes` — its engine declares `characteristics`, the same
+    panel under the ruleset's own noun.
+  - Traveller `rest` — its `rest` model is `null`, which is exactly how a
+    ruleset with no rest procedure hides the panel.
+  - Traveller **and** Savage Worlds `derived` — the panel exists to *override*
+    derived stats, and both engines' only overridable field
+    (`encumbranceLimit`) is surfaced on dashboard+print, not sheet. Neither has
+    a sheet Derived panel. I did not spot this one; the test did.
+- Fix: `sheetPanelAvailability(engine, runtime)` extracted from `SheetScreen`
+  into `panelOrder.ts`, so the test asks the same question the screen answers
+  rather than restating it. Dead keys removed; traveller sheet.json 6 → 8,
+  savage-worlds 3 → 4.
+- Watch: `ships` is exempt from the check. It is gated on the character owning
+  one at runtime, not on the engine, so a template may legitimately list it —
+  the availability helper takes it as a flag with a permissive default.
+- Watch also: this checks the *sheet* surface only. The play surface's `derived`
+  is a card, not a panel, and is guarded by its own `when` expressions — the
+  Traveller template's `abilities`/`magic` cards are correctly gated behind
+  `when: hasMagic` and are inert by design, not dead.
+- Commit: fix(sheets) — drop panel keys the engine never provides.

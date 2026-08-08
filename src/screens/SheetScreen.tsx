@@ -7,6 +7,7 @@ import { useSheetTemplate } from '../features/systems/useSheetTemplate';
 import {
   resolveSheetPanelOrder,
   SHEET_PANEL_KEYS,
+  sheetPanelAvailability,
   type SheetPanelAvailability,
   type SheetPanelKey,
 } from '../features/systems/panelOrder';
@@ -281,22 +282,9 @@ export default function SheetScreen() {
    * Typed as {@link SheetPanelAvailability} so this object, `allPanels` below,
    * and `SHEET_PANEL_KEYS` cannot drift apart — see the note on that type.
    */
-  const panelAvailability: SheetPanelAvailability = {
-    identity: true,
-    attributes: engine.panels.includes('attributes'),
-    characteristics: engine.panels.includes('characteristics'),
-    resources: engine.panels.includes('resources'),
-    derived: sheetDerivedFields.some(f => f.overridable),
-    finances: engine.panels.includes('finances'),
-    careers: engine.panels.includes('careers'),
-    augments: engine.panels.includes('augments'),
-    // Shown only when the character actually owns a ship, regardless of system.
-    ships: ownedShips.length > 0,
-    edges: engine.panels.includes('edges'),
-    hindrances: engine.panels.includes('hindrances'),
-    rest: engine.rest !== null,
-    storyBank: true,
-  };
+  const panelAvailability: SheetPanelAvailability = sheetPanelAvailability(engine, {
+    ownsShip: ownedShips.length > 0,
+  });
 
   // Canonical head-to-toe fallback order; each system shows the subset it
   // declares. Lives in panelOrder.ts so the bundled-template test can check

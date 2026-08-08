@@ -87,3 +87,51 @@ export function resolveSheetPanelOrder(
   ];
   return { defaultOrder, panelOrder };
 }
+
+/**
+ * Which sheet panels a system can show, from its engine alone.
+ *
+ * @remarks
+ * Extracted from `SheetScreen` so the bundled-template test can ask the same
+ * question the screen answers. Without that, a `sheet.json` could list a panel
+ * its own engine never makes available and the screen would simply skip it —
+ * silently, behind a DEV-only info log. Traveller's template listed two:
+ * `attributes` (its engine declares `characteristics`) and `rest` (its engine's
+ * `rest` model is `null`), so an author reading the file saw a Rest panel the
+ * app had never rendered.
+ *
+ * `ships` depends on runtime data rather than the engine — a character shows it
+ * only while owning a ship — so it comes in as a flag with a permissive default,
+ * letting a template legitimately list it.
+ */
+export function sheetPanelAvailability(
+  engine: {
+    panels: readonly string[];
+    rest: unknown;
+    derivedFields: readonly { overridable?: boolean; surfaces?: readonly string[] }[];
+  },
+  runtime: { ownsShip?: boolean } = {},
+): SheetPanelAvailability {
+  const declares = (key: string) => engine.panels.includes(key);
+  return {
+    // Always present: every ruleset has a name, and the story bank is app-level.
+    identity: true,
+    storyBank: true,
+    attributes: declares('attributes'),
+    characteristics: declares('characteristics'),
+    resources: declares('resources'),
+    finances: declares('finances'),
+    careers: declares('careers'),
+    augments: declares('augments'),
+    edges: declares('edges'),
+    hindrances: declares('hindrances'),
+    // The Derived Values panel exists to override; a system whose sheet-surfaced
+    // fields are all computed-only gets no panel rather than a read-only list.
+    derived: engine.derivedFields.some(
+      f => f.overridable && (!f.surfaces || f.surfaces.includes('sheet')),
+    ),
+    // `null` means the ruleset has no rest procedure, which is how the panel hides.
+    rest: engine.rest !== null,
+    ships: runtime.ownsShip ?? false,
+  } as SheetPanelAvailability;
+}

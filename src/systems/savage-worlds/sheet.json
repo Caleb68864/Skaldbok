@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "play": {
     "layout": "two-column",
     "regions": [
@@ -9,12 +9,18 @@
           [
             "vitals",
             "bennies",
-            { "card": "currency", "when": "hasCurrency" }
+            {
+              "card": "currency",
+              "when": "hasCurrency"
+            }
           ],
           [
             "derived",
             "conditions",
-            { "card": "damageHeal", "when": "hasDamageTrack" }
+            {
+              "card": "damageHeal",
+              "when": "hasDamageTrack"
+            }
           ]
         ]
       },
@@ -32,7 +38,6 @@
         "identity",
         "attributes",
         "resources",
-        "derived",
         "edges",
         "hindrances",
         "storyBank"
