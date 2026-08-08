@@ -2036,3 +2036,27 @@
   *bundled* object; this one runs over the same data through the registry, so a
   registry/definition mismatch surfaces too.
 - Commit: feat(swade) — the full SWADE core skill list.
+
+## 2026-08-08 — Pass 15: a control I added was a 14px tap target
+- Symptom: the characteristic-swap `<select>` from pass 8 was rendered *inline
+  inside the skill name*, styled `p-0 text-xs` with no height. On the tablets
+  this app is built for that is roughly a third of `--touch-target-min`, sitting
+  flush against the skill's text. It reviewed fine and reads fine on a desktop
+  with a mouse.
+- Fix: moved it out of the name into its own control slot in the row, with
+  `min-h-[var(--touch-target-min)]`, padding, and a border that appears only
+  when the characteristic is actually swapped — so the default state stays
+  visually quiet while the hit area stays full size.
+- **A lint for this was written and then deleted.** It scanned `src/screens` and
+  `src/components/fields` for interactive elements without the token, and
+  reported dozens. Most were false: `GearScreen`'s inputs are sized through a
+  shared `inputClasses` constant using padding rather than `min-h`, and a source
+  scan cannot follow that indirection or evaluate whether the result clears
+  44px. A lint that reports mostly false positives gets suppressed rather than
+  fixed — the exact failure mode pass 4's entry warned about when scoping the
+  vocabulary guard narrowly. Shipping it would have been worse than shipping
+  nothing.
+- Open, not fixed: whether `inputClasses`' padding-based sizing actually clears
+  the minimum. That needs a rendered measurement, not a grep, and there is no
+  DOM test setup to do it in.
+- Commit: fix(skills) — give the characteristic picker a real tap target.

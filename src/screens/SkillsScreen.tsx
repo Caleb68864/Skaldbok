@@ -473,45 +473,51 @@ export default function SkillsScreen() {
                         </span>
                       )}
 
-                      {/* Name + attribute tag */}
+                      {/* Name */}
                       <span className={cn(
                         "flex-1 min-w-0 text-[var(--color-text)] text-[length:var(--font-size-md)]",
                         isTrained ? "font-semibold" : "font-normal"
                       )}>
                         {skill.name}
-                        {skill.linkedAttributeId && system.attributes.length > 0 && (
-                          // A select rather than a label: the characteristic a
-                          // skill rolls against is a per-situation call, and the
-                          // swap is session-scoped so it never rewrites the
-                          // character. Blank value = the skill's declared one.
-                          <select
-                            value={sessionState.skillAttributeOverrides[skill.id] ?? ''}
-                            onChange={e => setSkillAttributeOverride(skill.id, e.target.value || undefined)}
-                            aria-label={`Characteristic for ${skill.name}`}
-                            title={isSwapped
-                              ? `Rolling against ${attrAbbr} instead of ${attrAbbrMap[skill.linkedAttributeId] ?? ''} — for this session only`
-                              : `Rolling against ${attrAbbr}. Pick another for this session.`}
-                            className={cn(
-                              'ml-1.5 text-xs font-normal bg-transparent border-none cursor-pointer p-0',
-                              isSwapped
-                                ? 'text-[var(--color-accent)] opacity-100 font-semibold'
-                                : 'text-[var(--color-text-muted)] opacity-70',
-                            )}
-                          >
-                            <option value="">
-                              {attrAbbrMap[skill.linkedAttributeId] ?? ''}
-                              {!isSwapped && characteristicDM ? ` ${characteristicDM}` : ''}
-                            </option>
-                            {system.attributes
-                              .filter(a => a.id !== skill.linkedAttributeId)
-                              .map(a => (
-                                <option key={a.id} value={a.id}>
-                                  {a.abbreviation} {engine.attributeBadge(a.id, character) ?? ''}
-                                </option>
-                              ))}
-                          </select>
-                        )}
                       </span>
+
+                      {/* Characteristic chip. A select rather than a label: the
+                          characteristic a skill rolls against is a
+                          per-situation call, and the swap is session-scoped so
+                          it never rewrites the character. Blank = declared one.
+
+                          Its own control slot rather than inline in the name —
+                          inline it rendered as ~14px of tappable text, which is
+                          a third of --touch-target-min on the tablets this app
+                          is built for. */}
+                      {skill.linkedAttributeId && system.attributes.length > 0 && (
+                        <select
+                          value={sessionState.skillAttributeOverrides[skill.id] ?? ''}
+                          onChange={e => setSkillAttributeOverride(skill.id, e.target.value || undefined)}
+                          aria-label={`Characteristic for ${skill.name}`}
+                          title={isSwapped
+                            ? `Rolling against ${attrAbbr} instead of ${attrAbbrMap[skill.linkedAttributeId] ?? ''} — for this session only`
+                            : `Rolling against ${attrAbbr}. Pick another for this session.`}
+                          className={cn(
+                            'shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-xs)] text-xs rounded-[var(--radius-sm)] cursor-pointer bg-transparent',
+                            isSwapped
+                              ? 'text-[var(--color-accent)] font-semibold border border-[var(--color-accent)]'
+                              : 'text-[var(--color-text-muted)] border border-transparent',
+                          )}
+                        >
+                          <option value="">
+                            {attrAbbrMap[skill.linkedAttributeId] ?? ''}
+                            {!isSwapped && characteristicDM ? ` ${characteristicDM}` : ''}
+                          </option>
+                          {system.attributes
+                            .filter(a => a.id !== skill.linkedAttributeId)
+                            .map(a => (
+                              <option key={a.id} value={a.id}>
+                                {a.abbreviation} {engine.attributeBadge(a.id, character) ?? ''}
+                              </option>
+                            ))}
+                        </select>
+                      )}
 
                       {/* Probability display */}
                       <span className="text-xs text-[var(--color-text-muted)] whitespace-nowrap shrink-0">
