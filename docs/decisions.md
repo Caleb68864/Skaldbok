@@ -2109,3 +2109,33 @@
 - Mutation-checked: ignoring the refresh flag fails 2, always returning a patch
   fails 2, refilling to `defaultMax` fails 1.
 - Commit: feat(swade) — refresh Bennies at the start of a session.
+
+## 2026-08-08 — Pass 18: a guard for the class instead of the sixth instance
+- This sweep found the same bug five times in five unrelated places: `derived:`
+  / `armor:` / `res:` modifier targets, `hiddenBuiltIns.armor: ['weight']`,
+  `damageTrack.penaltyPerLevel`, `scale.allowsPlus`, and
+  `resource.refresh: 'session'`. Every one type-checked, validated, and did
+  nothing. Declaring a capability and consuming it are separate edits and only
+  the first was ever enforced.
+- Fix: `declaredCapabilities.test.ts` — every property declared on
+  `types/system.ts` or `engine/types.ts` must be *read* somewhere in `src`
+  (`.field` / `['field']`), or be listed in `KNOWN_UNIMPLEMENTED` with a reason.
+- It found seven more, all now documented rather than merely absent:
+  `advancementMax`, `valueLabel`, `defaultValue` (read only via
+  `computeValue`, never as a field), `roleFallback`, `sectionLayouts`,
+  `themesSupported`, and `penaltyPerLevel` — which pass 11 single-sourced the
+  *number* of without ever creating a reader for the *field*.
+- Watch: the allowlist has its own test asserting each entry is **still**
+  unread, so it cannot rot into a list of things fixed long ago. That check
+  fired immediately — on a doc comment I wrote in pass 13 mentioning
+  `sessionEvents[].id`, which the read-detector counted as a reader. Comments
+  are now stripped from the corpus.
+- Watch also: the first version filtered declaration files and adapters out of
+  the corpus by path, and the Windows path handling silently dropped files —
+  eight false positives. It excludes only tests now. It does not need to exclude
+  the others: a declaration is `field: Type` and a population is `field: value`,
+  neither of which matches `.field`. A guard whose own correctness is hard to
+  check is a guard that gets disabled.
+- Mutation-checked both directions: a new unread field fails, and wiring a
+  reader for an allowlisted field fails the staleness check.
+- Commit: test(systems) — fail when a declared capability has no reader.
