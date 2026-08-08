@@ -1,5 +1,5 @@
 import type { CharacterRecord } from '../../../types/character';
-import { resolveArmorRating, type DerivedValues } from '../../../utils/derivedValues';
+import { resolveArmorRating, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
 import { dieCode, traitChance } from '../../../systems/savage-worlds/savageMath';
 import { attrKey, resKey } from '../../../utils/statKeys';
 import type { SystemEngine } from './types';
@@ -90,8 +90,13 @@ export function savageTraitPenalty(character: CharacterRecord): number {
   // and Fatigue at −2 (a 3rd level is Incapacitation). The damage-track model
   // already bounds these, but clamp here so a hand-edited/imported over-max
   // value can't produce a runaway penalty.
-  mod -= Math.min(character.resources?.['wounds']?.current ?? 0, 3);
-  mod -= Math.min(character.resources?.['fatigue']?.current ?? 0, 2);
+  // Read through the shared resolver so a `res:wounds` / `res:fatigue` temp
+  // modifier reaches the penalty. Reading `.current` raw made both of those
+  // targets — which the modifier picker offers — completely inert.
+  const track = (id: string) =>
+    character.resources?.[id] ? Math.max(0, getEffectiveValue(resKey(id), character).effective) : 0;
+  mod -= Math.min(track('wounds'), 3);
+  mod -= Math.min(track('fatigue'), 2);
   if (character.conditions?.['distracted']) mod -= 2;
   if (character.conditions?.['entangled']) mod -= 2;
   return mod;
@@ -266,10 +271,16 @@ export const savageWorldsEngine: SystemEngine = {
       label: a.abbreviation,
       group: 'Attributes',
     })),
-    ...(system?.resources ?? []).map(r => ({
-      id: resKey(r.id),
-      label: r.name,
-      group: 'Tracks',
-    })),
+    // Only the tracks that feed `savageTraitPenalty`. Bennies are a pool you
+    // spend and refresh, not a stat anything derives from — a temporary
+    // modifier on them could never change a number the app shows, so offering
+    // one is a control that silently does nothing.
+    ...(system?.resources ?? [])
+      .filter(r => r.id === 'wounds' || r.id === 'fatigue')
+      .map(r => ({
+        id: resKey(r.id),
+        label: r.name,
+        group: 'Tracks',
+      })),
   ],
 };

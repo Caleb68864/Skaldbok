@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { BUNDLED_SYSTEMS } from '../../../systems/registry';
 import { getEngine, classicFantasyEngine, travellerEngine, savageWorldsEngine } from './index';
-import { getEffectiveValue } from '../../../utils/derivedValues';
+import { getEffectiveValue, resolveDerivedField, resolveArmorRating } from '../../../utils/derivedValues';
+import { parseStatKey, attrKey } from '../../../utils/statKeys';
 import type { SystemEngine } from './types';
 import type { SystemDefinition } from '../../../types/system';
 import type { CharacterRecord } from '../../../types/character';
@@ -168,6 +169,94 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
         expect(stat.id, `${stat.id} is not namespaced`).toMatch(/^[a-z]+:/);
         const resolved = getEffectiveValue(stat.id, character);
         expect(Number.isFinite(resolved.base), `${stat.id} did not resolve`).toBe(true);
+      }
+    });
+
+    it('every modifiableStats id points at something the system actually has', () => {
+      // `getEffectiveValue` returns 0 for a key it cannot resolve, so the
+      // finite-number check above passes for a target that names nothing. This
+      // one checks the id against the definition per namespace.
+      const attrIds = new Set(system.attributes.map(a => a.id));
+      const sysResIds = new Set(system.resources.map(r => r.id));
+      const derivedKeys = new Set(
+        Object.keys(engine.derivedStats(character, system) as unknown as Record<string, unknown>),
+      );
+
+      for (const stat of engine.modifiableStats(system)) {
+        const { namespace, id } = parseStatKey(stat.id);
+        expect(namespace, `${stat.id} has an unrecognised namespace`).not.toBeNull();
+        if (namespace === 'attr') {
+          expect(attrIds.has(id), `${stat.id} names no attribute in ${system.id}`).toBe(true);
+        } else if (namespace === 'res') {
+          expect(sysResIds.has(id), `${stat.id} names no resource in ${system.id}`).toBe(true);
+        } else if (namespace === 'derived') {
+          // A derived target whose key derivedStats never returns resolves to
+          // undefined in resolveDerivedField, so the modifier is inert.
+          expect(derivedKeys.has(id), `${stat.id} names no key derivedStats returns`).toBe(true);
+        } else if (namespace === 'armor') {
+          // The record has exactly two armour slots; any other id reads 0.
+          expect(['armor', 'helmet']).toContain(id);
+        }
+      }
+    });
+
+    it('every modifiableStats target changes something the app displays', () => {
+      // THE anti-regression test for the 2026-08-08 modifier bug. Every one of
+      // these targets was offered by the picker, written by the UI, listed in
+      // the buff bar — and read by nothing. They all "resolved" fine; they just
+      // never reached a consumer. So this asserts the only thing that matters:
+      // adding the modifier must move a number the user can see.
+      //
+      // Deliberately a fingerprint over the engine's whole visible output rather
+      // than a per-namespace probe. A new namespace, or a new consumer, is
+      // covered without editing this test — and a target that moves nothing
+      // fails loudly instead of shipping as decoration.
+      const equipped = {
+        ...character,
+        armor: { name: 'Test plate', rating: 3 },
+        helmet: { name: 'Test helm', rating: 2 },
+      } as CharacterRecord;
+
+      const fingerprint = (c: CharacterRecord): string => {
+        const derived = engine.derivedStats(c, system) as unknown as Record<string, unknown>;
+        return JSON.stringify({
+          derived,
+          badges: engine.attributeIds.map(id => engine.attributeBadge(id, c)),
+          fields: engine.derivedFields.map(f => resolveDerivedField(c, derived as Record<string, number | string | undefined>, f).display),
+          armor: resolveArmorRating(c, 'armor'),
+          helmet: resolveArmorRating(c, 'helmet'),
+          // Every attribute as the sheet reads it.
+          attrs: engine.attributeIds.map(id => getEffectiveValue(attrKey(id), c).effective),
+          // The skills screen's own line. Function-valued and previously never
+          // invoked here, so a state penalty that feeds only the roll display
+          // (SWADE's wound/fatigue penalty) was invisible to this suite.
+          skill: engine.attributeIds.map(id =>
+            engine.skill.display(engine.skill.defaultValue, { character: c, linkedAttributeId: id }),
+          ),
+        });
+      };
+
+      const before = fingerprint(equipped);
+
+      for (const stat of engine.modifiableStats(system)) {
+        const withModifier = {
+          ...equipped,
+          tempModifiers: [
+            {
+              id: `probe-${stat.id}`,
+              label: 'Probe',
+              effects: [{ stat: stat.id, delta: 3 }],
+              duration: 'scene',
+              createdAt: '2026-08-08T00:00:00.000Z',
+            },
+          ],
+        } as unknown as CharacterRecord;
+
+        expect(
+          fingerprint(withModifier),
+          `a +3 modifier on "${stat.id}" (${stat.label}) changes nothing the app displays — ` +
+            `it is offered by the modifier picker but no consumer reads it`,
+        ).not.toBe(before);
       }
     });
 

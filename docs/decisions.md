@@ -1738,3 +1738,36 @@
 - Mutation-checked: both floors, the empty-slot guard, and reverting the
   Traveller damage read each fail a test.
 - Commit: fix(modifiers) — apply armor: and res: temp modifiers.
+
+## 2026-08-08 — Hardening pass 3: the net that catches inert modifiers
+- Symptom: passes 1 and 2 fixed three instances of one bug — a modifier target
+  the picker offers that no consumer reads. Nothing stopped a fourth. The
+  existing contract test asserted `Number.isFinite(getEffectiveValue(id).base)`,
+  which passes for a key that resolves to nothing, because the resolver returns
+  0 for an unknown key. It could not have caught any of the three.
+- Fix: "every modifiableStats target changes something the app displays".
+  Fingerprints the engine's whole visible output — derivedStats, every
+  attributeBadge, every resolved derivedField, both armour ratings, every
+  attribute as the sheet reads it, and `skill.display` — then applies a +3
+  modifier to each offered target and asserts the fingerprint moves.
+- Why a fingerprint and not per-namespace probes: a new namespace or a new
+  consumer is covered without editing the test, and the failure message names
+  the target and its label. Per-namespace probes would need updating exactly
+  when someone adds the thing they are meant to catch.
+- Plus a static check that each target names something real for its namespace
+  (`attr:` in system.attributes, `res:` in system.resources, `derived:` in the
+  derivedStats output, `armor:` one of the two slots the record has).
+- **It caught one immediately**: SWADE's `savageTraitPenalty` read
+  `resources.wounds.current` and `.fatigue.current` raw, so `res:wounds` and
+  `res:fatigue` modifiers were inert — the same bug, in the adapter that
+  computes SWADE's core roll penalty. Both now read through the resolver.
+- Also: `res:bennies` is no longer offered. Bennies are a pool you spend and
+  refresh, not a stat anything derives from, so a temp modifier on them could
+  never change a displayed number. Offering a control that silently does
+  nothing is the thing this pass exists to stop.
+- Watch: `skill.display` was added to the fingerprint because SWADE's penalty
+  feeds only the roll line. The contract suite's own note says function-valued
+  engine fields were never invoked; that gap is why a penalty affecting every
+  trait roll in the system was invisible to it.
+- Verified by reverting each of the three fixes in turn: all three are caught.
+- Commit: test(engine) — fail when a modifier target changes nothing.
