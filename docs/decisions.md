@@ -2226,3 +2226,39 @@
   dropping demon marks, removing the double-advance guard, and listing the panel
   in a system without the model each fail.
 - Commit: feat(advancement) — end-of-session advancement.
+
+## 2026-08-08 — Traveller themes, drawn from the 2026 sheet
+- Two new themes, separate from `starfarers-cockpit` (which stays as it was):
+  **Traveller — Printed Sheet** (light) and **Traveller — Black Book** (dark).
+- Sampled from the Mongoose 2026 character sheet PDFs: slate header bars
+  (#565C6B) with white condensed caps, a diagonal chamfer on the right end of
+  every bar, white pages on a grey surround, near-black rules, and hard corners
+  throughout. The sheet carries **no colour at all**; the books supply it (black
+  covers, red titles), so red appears only on the seam under a header, active
+  state and focus — never as decoration.
+- Watch: fields are **ruled writing lines**, not boxes — the sheet's single most
+  recognisable feature. The faint side borders are dropped and the baseline
+  thickened. Selects keep their box: a control you tap open needs to look like
+  one.
+- Four iterations, each fixing something only visible on screen:
+  1. Themes did not apply at all — `settings.theme` in IndexedDB overrides
+     `localStorage`, so setting the attribute or the storage key is undone on
+     the next render. Themes must be switched through the Settings UI.
+  2. Panel interiors fell through to `--color-bg`, so the sheet read
+     inside-out: grey page, white boxes. `.section-panel` now paints
+     `--color-surface`.
+  3. The chamfer **sliced the collapse chevron in half** — a clip-path removes
+     real estate the header's own content still occupied. Fixed with matching
+     right padding. It looked like a rendering fault, not a design.
+  4. The ruled-field rule styled almost nothing: most inputs in this app render
+     with **no `type` attribute**, and `input[type="text"]` does not match those.
+     Now `input:not([type=checkbox])…`, excluding the native controls.
+- Two stable hooks added to `SectionPanel` (`section-panel`,
+  `section-panel-header`) so a theme can restyle a header without reaching
+  through Tailwind utilities. Purely additive.
+- Workflow walked end to end in a real browser: library → create → sheet →
+  skills (All view, search, category expand, group action) → gear → play
+  dashboard → print → settings → reference. **No console errors.** The
+  collapsed-category view turns 102 skills into 7 headings with counts, and
+  expanding one reveals the group header and its "All at 0" action.
+- Commit: feat(theme) — Traveller printed-sheet and black-book themes.

@@ -25,9 +25,13 @@ export function SectionPanel({ title, subtitle, icon, children, collapsible = fa
   const [open, setOpen] = useState(defaultOpen);
 
   return (
-    <div className="border border-border rounded-[var(--radius-md)] mb-0 overflow-hidden flex flex-col h-full">
+    <div className="section-panel border border-border rounded-[var(--radius-md)] mb-0 overflow-hidden flex flex-col h-full">
       <div
         className={cn(
+          // Stable hook so a theme can restyle the header without reaching
+          // through Tailwind utilities. Purely additive: no theme that ignores
+          // it is affected.
+          "section-panel-header",
           "flex items-center justify-between px-[var(--space-sm)] py-[var(--space-xs)]",
           "bg-gradient-to-r from-surface-alt to-surface border-b-2 border-b-gold",
           collapsible && "cursor-pointer min-h-[var(--touch-target-min)] focus-visible:outline-2 focus-visible:outline-gold",

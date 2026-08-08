@@ -46,6 +46,8 @@ const THEME_DESCRIPTIONS: Partial<Record<ThemeName, string>> = {
   'deep-space': 'Space-black and navy with amber + cyan accents',
   databank: 'Cool slate/white with electric blue accents',
   'neon-sprawl': 'Cyberpunk near-black with magenta + neon-cyan accents',
+  'traveller-dark': 'The little black book — slate bars, chamfered headers, spine red',
+  'traveller-light': 'The printed 2026 sheet — white page, slate headers, ruled lines',
 };
 
 // Derived from THEME_LIST (the source of truth) rather than a hand-maintained

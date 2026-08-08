@@ -489,6 +489,197 @@ select {
 }
 
 /* ============================================================
+   TRAVELLER — two themes drawn from the Mongoose 2026 character
+   sheet and the black-and-red book livery.
+
+   The printed sheet is almost entirely neutral: slate-grey header
+   bars with white condensed caps, white panels, thin near-black
+   rules, and a distinctive diagonal chamfer on the right end of
+   every header. It carries no colour at all. The books do: black
+   covers, red titles. So red appears here only where the app needs
+   an accent — active state, focus, the seam under a header — and
+   never as decoration. Greys carry the design; red marks what you
+   can act on.
+   ============================================================ */
+
+/* Traveller — Black Book (dark) */
+[data-theme="traveller-dark"] {
+  --color-bg: #0B0C0F;
+  --color-surface: #14161B;
+  --color-surface-alt: #1E212A;
+  --color-text: #E6E8EC;
+  --color-text-muted: #98A0AE;
+  --color-accent: #B4262F;        /* book-spine oxblood; large fills must not glare */
+  --color-accent-alt: #E0555E;    /* lifted, for text and thin marks on black */
+  --color-danger: #E5484D;
+  --color-border: #39414F;        /* the sheet's rule lines, as a visible seam */
+  --color-gold: #B4262F;          /* panel seams take the red, not a fantasy gold */
+  --color-success: #4CAF7D;
+  --color-warning: #D9A03C;
+  --color-info: #6F8FB5;
+
+  --color-mode-play: #1F6F4A;
+  --color-mode-edit: #2B4C8C;
+
+  /* The sheet is drawn with a ruler: hard corners everywhere. */
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+
+  --shadow-soft: 0 1px 0 rgba(255, 255, 255, 0.04), 0 2px 5px rgba(0, 0, 0, 0.6);
+  --shadow-medium: 0 1px 0 rgba(255, 255, 255, 0.05), 0 5px 14px rgba(0, 0, 0, 0.65);
+  --shadow-deep: 0 1px 0 rgba(255, 255, 255, 0.06), 0 10px 24px rgba(0, 0, 0, 0.75);
+  --shadow-inset-soft: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+
+  --font-display: 'Bahnschrift', 'DIN Alternate', 'Oswald', 'Arial Narrow', 'Source Sans 3', system-ui, sans-serif;
+  --font-ui: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+
+  --texture-grain-opacity: 0.03;
+  --texture-shadow-strength: 0.45;
+  --texture-highlight-strength: 0.1;
+
+  /* Traveller-only: the slate header bar and the text on it. */
+  --tvl-bar: #343B49;  /* lifted off the panel: at #2A2F3A the bar barely separated */
+  --tvl-bar-text: #F2F4F7;
+  --tvl-chamfer: 30px;
+}
+
+/* Traveller — Printed Sheet (light) */
+[data-theme="traveller-light"] {
+  --color-bg: #DFE2E7;            /* the grey band around the printed page */
+  --color-surface: #FFFFFF;       /* the page itself */
+  --color-surface-alt: #F1F3F5;
+  --color-text: #16181D;
+  --color-text-muted: #5A6070;
+  --color-accent: #A31D27;        /* book red, darkened to hold on white */
+  --color-accent-alt: #7C121A;
+  --color-danger: #A31D27;
+  --color-border: #3A3F4B;        /* the sheet's near-black rules */
+  --color-gold: #A31D27;
+  --color-success: #2E7D53;
+  --color-warning: #A76A15;
+  --color-info: #3C5A80;
+
+  --color-mode-play: #2E7D53;
+  --color-mode-edit: #2B4C8C;
+
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+
+  /* Ink on paper casts almost nothing. */
+  --shadow-soft: 0 1px 2px rgba(22, 24, 29, 0.12);
+  --shadow-medium: 0 2px 6px rgba(22, 24, 29, 0.16);
+  --shadow-deep: 0 6px 16px rgba(22, 24, 29, 0.2);
+  --shadow-inset-soft: inset 0 1px 2px rgba(22, 24, 29, 0.1);
+
+  --font-display: 'Bahnschrift', 'DIN Alternate', 'Oswald', 'Arial Narrow', 'Source Sans 3', system-ui, sans-serif;
+  --font-ui: 'Source Sans 3', 'Segoe UI', system-ui, sans-serif;
+
+  --texture-grain-opacity: 0;     /* print has no grain */
+  --texture-shadow-strength: 0.12;
+  --texture-highlight-strength: 0.04;
+
+  --tvl-bar: #565C6B;             /* the sheet's header slate, sampled */
+  --tvl-bar-text: #FFFFFF;
+  --tvl-chamfer: 30px;
+}
+
+/* ---- Shared Traveller styling ---------------------------------- */
+
+/* Ruler-drawn edges. The radius tokens only reach
+   `rounded-[var(--radius-*)]`; this also flattens Tailwind's own rounded
+   utilities. `rounded-full` is preserved for avatars and status dots. */
+[data-theme="traveller-dark"] [class*="rounded"]:not([class*="rounded-full"]),
+[data-theme="traveller-light"] [class*="rounded"]:not([class*="rounded-full"]) {
+  border-radius: 0 !important;
+}
+
+/* The panel is the printed page: its interior is the page colour, and the grey
+   only ever shows around the outside. Without this the body fell through to
+   --color-bg and the sheet read inside-out — grey page, white boxes. */
+[data-theme="traveller-dark"] .section-panel,
+[data-theme="traveller-light"] .section-panel {
+  background-color: var(--color-surface);
+}
+
+/* Section headers become the sheet's slate bars: solid fill (not the shared
+   gradient), white condensed caps, a red seam beneath, and the diagonal cut on
+   the right end that is the sheet's most recognisable mark. The chamfer is a
+   clip-path rather than a border trick so it survives any background. */
+[data-theme="traveller-dark"] .section-panel-header,
+[data-theme="traveller-light"] .section-panel-header {
+  background-image: none !important;
+  background-color: var(--tvl-bar) !important;
+  border-bottom: 2px solid var(--color-accent) !important;
+  clip-path: polygon(0 0, 100% 0, calc(100% - var(--tvl-chamfer)) 100%, 0 100%);
+  /* The cut removes real estate from the bottom-right, so the header's own
+     content has to clear it — without this the collapse chevron is sliced in
+     half by the chamfer, which looked like a rendering fault rather than a
+     design. */
+  padding-right: calc(var(--tvl-chamfer) + var(--space-sm)) !important;
+}
+
+[data-theme="traveller-dark"] .section-panel-header h3,
+[data-theme="traveller-light"] .section-panel-header h3,
+[data-theme="traveller-dark"] .section-panel-header h3 span,
+[data-theme="traveller-light"] .section-panel-header h3 span {
+  color: var(--tvl-bar-text) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* The collapse chevron and any count badge sit on the slate too. */
+[data-theme="traveller-dark"] .section-panel-header > span,
+[data-theme="traveller-light"] .section-panel-header > span {
+  color: var(--tvl-bar-text) !important;
+}
+
+/* Screen titles in the sheet's condensed caps. h2 is spared: it carries
+   character and campaign names, which are not the ruleset's vocabulary. */
+[data-theme="traveller-dark"] h1,
+[data-theme="traveller-light"] h1,
+[data-theme="traveller-dark"] h3,
+[data-theme="traveller-light"] h3,
+[data-theme="traveller-dark"] h4,
+[data-theme="traveller-light"] h4 {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Writing lines, not boxes. On the sheet a field is a rule you write on, so the
+   side and top borders drop away and the baseline thickens. The faint sides are
+   kept rather than removed outright: a control with no edge at all is hard to
+   find on a tablet, and this app is used at a table. */
+/* `input:not([type=...])` rather than `input[type="text"]`: most fields in this
+   app render with NO type attribute at all, and an attribute selector does not
+   match those — the first attempt styled almost nothing. Checkboxes, radios,
+   ranges, files and colours keep their native control. */
+[data-theme="traveller-dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+[data-theme="traveller-dark"] textarea,
+[data-theme="traveller-light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+[data-theme="traveller-light"] textarea {
+  /* Transparent, so the field reads as a line ruled across the page rather
+     than a tinted box sitting on it. */
+  background-color: transparent;
+  border-top-color: transparent;
+  border-left-color: transparent;
+  border-right-color: transparent;
+  border-bottom-width: 2px;
+  border-bottom-color: var(--color-border);
+}
+
+[data-theme="traveller-dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):focus,
+[data-theme="traveller-dark"] textarea:focus,
+[data-theme="traveller-light"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]):focus,
+[data-theme="traveller-light"] textarea:focus {
+  border-bottom-color: var(--color-accent);
+  outline: none;
+}
+
+/* ============================================================
    All component CSS below this point has been removed.
    Components are now styled with Tailwind CSS classes.
    Only design tokens (:root, [data-theme]), global base styles,
