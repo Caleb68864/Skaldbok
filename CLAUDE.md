@@ -114,6 +114,38 @@ damage-track resources share ids with its characteristics. Build keys with
 `attrKey()`/`resKey()`/etc., never by string concatenation. Unprefixed keys still
 resolve by the legacy precedence order so old data keeps working.
 
+### A modifier target must reach a consumer
+
+**Offering a target in `engine.modifiableStats` is only half the work.** The
+picker will happily write `derived:movement`; if nothing *reads* that key the
+modifier is inert — it shows in the buff bar and changes no number. Four of
+these shipped at once (every `derived:`, `armor:`, `res:` and `skill:` target),
+because "it resolves" and "it does something" are different questions and only
+the first was ever asked.
+
+Read every stat through the shared resolvers in `utils/derivedValues.ts`, never
+off the record:
+
+| Reading | Use | Not |
+|---|---|---|
+| A derived stat | `resolveDerivedField(character, derived, field)` | `derived[key]` + your own override fold |
+| Armour rating | `resolveArmorRating(character, slot)` | `character.armor.rating` |
+| A skill value | `resolveSkillValue(character, id, stored)` | `character.skills[id].value` |
+| An attribute | `getEffectiveValue(attrKey(id), character)` | `character.attributes[id]` |
+
+Order is fixed and tested: **computed → override → modifiers.** An override
+*replaces* the computed value; a modifier *adjusts* whatever the value then is.
+
+`engineContract.test.ts` fingerprints the engine's whole visible output, applies
+a +3 to every offered target, and fails if the fingerprint does not move. Add a
+target and forget the consumer and that test names it. Add a *new consumer* and
+extend the fingerprint, or it guards nothing.
+
+**Bind editable inputs to the stored value, never the effective one** — the
+skill input writes back what it displays, so binding it to `effective` bakes a
+scene-long buff in permanently. `resolveSkillValue` returns `base` and
+`effective` separately for exactly this reason.
+
 ### Adding or editing a system
 
 1. Add `src/systems/<id>/system.json` + `index.ts`, and register it in
@@ -340,6 +372,51 @@ explicitly.
   are separate concerns.
 - It does not make `hardDelete` safe to call from UI. `hardDelete` is
   irreversible; route all user deletes through `softDelete`.
+
+## Skills: groups, custom skills, and mode guards
+
+### Speciality groups
+
+A system may declare `skillGroups` and tag skills with `groupId`
+(`src/types/system.ts`). It is **membership, not hierarchy** — Gun Combat
+(Slug/Energy/Archaic) are three peer skills sharing a group; there is no parent
+row, because in Traveller there is no plain "Gun Combat". The bare id means the
+first speciality (`gunCombat` = Slug).
+
+`features/characters/skillGroups.ts` owns the rules. `trainGroupAtZero` is
+additive only and returns the *same* bag when nothing is missing, so a no-op
+cannot dirty the record or fire an autosave. It never touches a member that
+already has an entry — including an explicit untrained-at-0, which is a player
+saying "I do not have this".
+
+The schema validates that every `groupId` resolves and every declared group has
+members. Zod strips unknown keys, so a field added to the type but not the
+schema silently vanishes for *imported* systems while working for bundled ones —
+add both.
+
+### Custom skills
+
+`CharacterRecord.customSkills` holds skills the system definition does not
+declare (Traveller's Language/Profession/Art/Science are open-ended).
+`resolveSkillCategories(system, character)` merges them into the system's
+categories on read, so **every skill surface must go through it** — the skills
+screen, the play dashboard and the printed sheet all treat a custom skill like a
+declared one, and none of them knows custom skills exist.
+
+Ids are generated, never derived from the name, so a rename cannot orphan the
+stored value. Deleting removes the definition *and* the value together. A skill
+whose `categoryId` no longer resolves is filed into a trailing "Custom" group
+rather than dropped — one you cannot see is one you cannot delete.
+
+### Play-mode field guards
+
+Ask `useFieldEditable` with a constant from `FIELD_PATHS`
+(`src/utils/modeGuards.ts`), never a literal. The guard used to be asked about
+`'attributes.str'` and `'resources.hp.max'` — strings that look specific but
+mean "any attribute" and "any resource maximum", and that named Dragonbane ids
+in system-neutral code. A test fails on any `useFieldEditable('literal')`.
+
+The guard fails **closed**: an undeclared path is not editable.
 
 ## Configuration Over Hardcoding
 
