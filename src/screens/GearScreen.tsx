@@ -636,10 +636,15 @@ export default function GearScreen() {
               <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Rating / Protection</label>
               <input type="number" className={inputClasses} value={armorRating} min={0} onChange={e => setArmorRating(Number(e.target.value))} />
             </div>
-            <div className="flex-1">
-              <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Weight</label>
-              <input type="number" className={inputClasses} value={armorWeight} min={0} onChange={e => setArmorWeight(Number(e.target.value))} />
-            </div>
+            {/* `weight` is a hideable built-in like the two below. It was the
+                one the schema advertised and this drawer never checked, so a
+                system declaring it hidden still got the field. */}
+            {showsArmorField('weight') && (
+              <div className="flex-1">
+                <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Weight</label>
+                <input type="number" className={inputClasses} value={armorWeight} min={0} onChange={e => setArmorWeight(Number(e.target.value))} />
+              </div>
+            )}
           </div>
           {showsArmorField('bodyPart') && (
             <div>

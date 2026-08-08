@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { WEAPON_BUILT_IN_FIELD_IDS, ARMOR_BUILT_IN_FIELD_IDS } from '../src/types/system';
 
 const attributeDefinitionSchema = z.object({
   id: z.string().min(1).describe('Unique attribute identifier'),
@@ -101,8 +102,12 @@ export const systemDefinitionSchema = z.object({
     weapon: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
     armor: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
     hiddenBuiltIns: z.object({
-      weapon: z.array(z.string()).optional(),
-      armor: z.array(z.string()).optional(),
+      // Enumerated rather than z.string(): the hide-list is matched with
+      // `!includes(id)`, so a typo silently SHOWS a field the ruleset meant to
+      // drop, with nothing to indicate why. The valid ids live in types/system
+      // beside the components that check them.
+      weapon: z.array(z.enum(WEAPON_BUILT_IN_FIELD_IDS)).optional(),
+      armor: z.array(z.enum(ARMOR_BUILT_IN_FIELD_IDS)).optional(),
     }).optional(),
   }).optional().describe('Extra per-item fields, plus built-ins this system does not use'),
   // `resolution` and `currency` used to be declared here. Both had zero readers

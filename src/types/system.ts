@@ -124,6 +124,33 @@ export interface ItemFieldDef {
   type?: 'text' | 'number';
 }
 
+/**
+ * Built-in weapon fields a system may hide via `itemFields.hiddenBuiltIns`.
+ *
+ * @remarks
+ * The hide-list is matched with `!hiddenBuiltIns.includes(id)`, so a typo does
+ * not error — it silently shows a field the ruleset meant to drop. Traveller
+ * hides seven of these; a mistyped `"durabilty"` would leave Dragonbane's
+ * durability box on a sci-fi weapon card with nothing to indicate why.
+ *
+ * Exported so the schema validates against exactly the ids `WeaponCard` and
+ * `WeaponEditor` actually check, rather than a list restated in a doc comment.
+ */
+export const WEAPON_BUILT_IN_FIELD_IDS = [
+  'range',
+  'damage',
+  'features',
+  'grip',
+  'durability',
+  'damageType',
+  'strRequirement',
+  'isShield',
+  'damaged',
+] as const;
+
+/** Built-in armour fields a system may hide. See {@link WEAPON_BUILT_IN_FIELD_IDS}. */
+export const ARMOR_BUILT_IN_FIELD_IDS = ['bodyPart', 'weight', 'movementPenalty'] as const;
+
 export interface SectionLayout {
   id: string;
   label: string;
@@ -200,10 +227,9 @@ export interface SystemDefinition {
      * Grip and Durability instead of showing fantasy melee fields next to its
      * own Magazine and Tech Level.
      *
-     * Weapon ids: `range`, `damage`, `features`, `grip`, `durability`,
-     * `damageType`, `strRequirement`, `isShield`, `damaged`.
-     * Armour ids: `bodyPart`, `weight`, `movementPenalty`.
-     * `name` and the core rating/damage fields are not hideable.
+     * Valid ids are {@link WEAPON_BUILT_IN_FIELD_IDS} and
+     * {@link ARMOR_BUILT_IN_FIELD_IDS}. `name` and the core rating/damage
+     * fields are not hideable.
      */
     hiddenBuiltIns?: {
       weapon?: string[];

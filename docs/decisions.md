@@ -1841,3 +1841,28 @@
   presentational functions whose props are all directly derived from what the
   inlined JSX already read, verified by `tsc` and by re-reading the diff.
 - Commit: refactor(skills) — extract the add-skill form and group header.
+
+## 2026-08-08 — Hardening pass 7: `hiddenBuiltIns` failed open in both directions
+- Symptom: `itemFields.hiddenBuiltIns` is matched with
+  `!hiddenBuiltIns.includes(id)`. That fails **open** twice over. A mistyped id
+  (`"durabilty"`) silently leaves the field showing; and an id the schema
+  accepts but no component checks does nothing at all. Neither is a type error,
+  neither warns. The valid ids existed only as prose in a doc comment.
+- Fix 1 (author side): `WEAPON_BUILT_IN_FIELD_IDS` / `ARMOR_BUILT_IN_FIELD_IDS`
+  in `types/system.ts`, and the schema now uses `z.enum` over them instead of
+  `z.array(z.string())`. A typo is a load-time validation error.
+- **Fix 2 (consumer side), a real bug**: the schema advertised armour `weight`
+  as hideable and `GearScreen` never checked it, so a system declaring it
+  hidden still got the field. Now guarded like `bodyPart` and
+  `movementPenalty`. Traveller happens not to hide it, so nothing was visibly
+  broken — the contract was.
+- Watch: the test pins **both** directions. One half asserts the schema rejects
+  a typo; the other walks the three consumer files and asserts every id the
+  schema accepts is actually guarded somewhere. A capability that validates but
+  does nothing is the failure mode a schema-only test would have missed — it is
+  exactly what fix 2 was.
+- Watch also: the weapon-side check accepts either a direct `shows('id')` call
+  or membership of `WeaponEditor`'s filtered field array, because four of the
+  nine are guarded through that array rather than individually.
+- Verified by un-guarding armour weight again: caught.
+- Commit: fix(gear) — validate and honour hiddenBuiltIns.
