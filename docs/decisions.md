@@ -2161,3 +2161,26 @@
   pass-18 guard flags `valueLabel` as unread again, and correctly ignores the
   doc comment above the input that also mentions it.
 - Commit: fix(library) — describe characters by their own system's fields.
+
+## 2026-08-08 — Pass 20: closing the sweep
+- Final state: 707 tests across 45 files (from 483/39 at the start of the day),
+  `tsc -b` and `vite build` clean, everything on Production.
+- Version gates all consistent: traveller system v15 / sheet v8 (102 skills),
+  savage-worlds v5 / v4 (33 skills), classic-fantasy v3 / v6 (33 skills). Every
+  bundled-data edit this sweep bumped its own counter — the two are independent
+  and nothing cross-checks them, so this is worth eyeballing at the end of any
+  session that touches JSON.
+- The sweep's single finding, recorded in CLAUDE.md and AGENTS.md: **declaring a
+  capability and consuming it are separate edits, and only the first was ever
+  enforced.** Five instances, none of which any type check or schema could have
+  caught, all of which read as working configuration.
+- Two guards now hold that line: the modifier fingerprint (pass 3) proves an
+  offered target moves a number the user can see, and
+  `declaredCapabilities.test.ts` (pass 18) proves a declared field is read at
+  all.
+- Deliberately left undone, all recorded above: `engine.advancement` (designed,
+  unbuilt — a product call, not a hardening one); `refresh: 'rest'`; whether
+  `inputClasses`' padding-based sizing clears the touch-target minimum (needs a
+  rendered measurement and there is no DOM test setup); and per-skill modifier
+  targets for custom skills (`modifiableStats` receives only the system).
+- Commit: docs — record the declared-capability rule.

@@ -319,6 +319,21 @@ explicitly.
 - It does not make `hardDelete` safe to call from UI. `hardDelete` is
   irreversible; route all user deletes through `softDelete`.
 
+### Declaring a capability is half the work
+
+**Every field on the system/engine contract must have a reader.** This sweep
+found the same bug five times in five unrelated places — `derived:`/`armor:`/
+`res:` modifier targets, `hiddenBuiltIns.armor: ['weight']`,
+`damageTrack.penaltyPerLevel`, `scale.allowsPlus`, `resource.refresh:
+'session'`. Every one type-checked, passed schema validation, and did nothing.
+
+`declaredCapabilities.test.ts` enforces it: a property declared in
+`types/system.ts` or `engine/types.ts` must be read somewhere in `src`, or be
+listed in `KNOWN_UNIMPLEMENTED` with a reason. The allowlist has its own test
+asserting each entry is *still* unread, so it cannot rot.
+
+When adding a declarative field, write the consumer in the same change.
+
 ## Skills: groups, custom skills, and mode guards
 
 ### Speciality groups
