@@ -2010,3 +2010,29 @@
   skills but not custom ones. Widening it to take the character would change the
   interface for all three adapters.
 - Commit: fix(skills) — resolve custom skill definitions in the mark path.
+
+## 2026-08-08 — Pass 14: Savage Worlds shipped 13 of 33 core skills
+- Symptom: the same gap Traveller had at the start of this work. `system.json`
+  declared 13 skills against SWADE core's 33, so two thirds of a character's
+  sheet had nowhere to live.
+- Fix: full core list — 33 skills across 5 categories (Core, Combat & Physical,
+  Vehicles, Knowledge & Trades, Arcane). The five Core Skills every SWADE
+  character starts with at d4 keep their own category. Version 4 → 5. No
+  existing id was dropped or renamed, asserted in the migration script itself
+  before writing.
+- Arcane skills (Faith, Focus, Psionics, Spellcasting, Weird Science) are
+  included even though they require an Arcane Background. The app does not gate
+  skills on edges, and a GM running a magic campaign needs them present more
+  than a mundane one is inconvenienced by five extra rows in the All view —
+  which now collapses by category anyway (pass 6).
+- Watch: **`fighting` is load-bearing.** `computeSavageWorldsDerivedValues`
+  reads `skills['fighting']` by literal id, so renaming it in `system.json`
+  would silently drop every character's Parry to 2 with nothing failing — a
+  derived stat quietly wrong rather than absent. There is now a test pinning
+  both the id and the Parry it produces; mutation-checked by renaming it to
+  `melee`.
+- Watch also: a test asserts every skill links to a real attribute. The schema
+  already refuses an unknown `linkedAttributeId`, but that check runs on the
+  *bundled* object; this one runs over the same data through the registry, so a
+  registry/definition mismatch surfaces too.
+- Commit: feat(swade) — the full SWADE core skill list.

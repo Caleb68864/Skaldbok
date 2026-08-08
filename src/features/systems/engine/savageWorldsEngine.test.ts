@@ -8,6 +8,7 @@ import {
   formatSavageSkill,
 } from './savageWorldsEngine';
 import { decodeTraitDie, traitLadder, traitChance } from '../../../systems/savage-worlds/savageMath';
+import { BUNDLED_SYSTEMS } from '../../../systems/registry';
 
 /** Minimal SWADE-shaped character for the pure derived/damage math. */
 const swChar = (o: Partial<CharacterRecord> = {}) =>
@@ -154,5 +155,43 @@ describe('advancing past d12', () => {
 
   it('does not extend a ladder for a system that disallows it', () => {
     expect(traitLadder([4, 6, 8], false)).toEqual([4, 6, 8]);
+  });
+});
+
+describe('the SWADE skill list', () => {
+  const savage = BUNDLED_SYSTEMS.find(s => s.id === 'savage-worlds')!;
+  const ids = savage.skillCategories.flatMap(c => c.skills).map(s => s.id);
+
+  it('carries the five Core Skills every character starts with at d4', () => {
+    // These five are not optional in SWADE — every character has them.
+    for (const id of ['athletics', 'common-knowledge', 'notice', 'persuasion', 'stealth']) {
+      expect(ids, `Core Skill "${id}" is missing`).toContain(id);
+    }
+  });
+
+  it('declares the full core list rather than a sample', () => {
+    expect(ids.length).toBeGreaterThanOrEqual(33);
+  });
+
+  it('has no duplicate ids', () => {
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('keeps the "fighting" id, which Parry is computed from', () => {
+    // computeSavageWorldsDerivedValues reads skills['fighting'] by literal id.
+    // Renaming it in system.json would silently drop every character's Parry to
+    // 2 with nothing failing — the derived stat would just quietly be wrong.
+    expect(ids).toContain('fighting');
+    const c = { skills: { fighting: { value: 8, trained: true } }, attributes: {} } as unknown as CharacterRecord;
+    expect(computeSavageWorldsDerivedValues(c).parry).toBe(2 + 4);
+  });
+
+  it('links every skill to a real attribute', () => {
+    const attrs = new Set(savage.attributes.map(a => a.id));
+    for (const cat of savage.skillCategories) {
+      for (const skill of cat.skills) {
+        expect(attrs.has(skill.linkedAttributeId ?? ''), `${skill.id} -> ${skill.linkedAttributeId}`).toBe(true);
+      }
+    }
   });
 });

@@ -1,6 +1,6 @@
 {
   "id": "savage-worlds",
-  "version": 4,
+  "version": 5,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
   "attributes": [
@@ -259,6 +259,48 @@
           "name": "Taunt",
           "baseChance": 0,
           "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "battle",
+          "name": "Battle",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "thievery",
+          "name": "Thievery",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        }
+      ]
+    },
+    {
+      "id": "vehicles",
+      "name": "Vehicles",
+      "skills": [
+        {
+          "id": "driving",
+          "name": "Driving",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        },
+        {
+          "id": "boating",
+          "name": "Boating",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        },
+        {
+          "id": "piloting",
+          "name": "Piloting",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
+        },
+        {
+          "id": "riding",
+          "name": "Riding",
+          "baseChance": 0,
+          "linkedAttributeId": "agility"
         }
       ]
     },
@@ -285,10 +327,100 @@
           "linkedAttributeId": "smarts"
         },
         {
-          "id": "driving",
-          "name": "Driving",
+          "id": "academics",
+          "name": "Academics",
           "baseChance": 0,
-          "linkedAttributeId": "agility"
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "electronics",
+          "name": "Electronics",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "gambling",
+          "name": "Gambling",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "hacking",
+          "name": "Hacking",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "language",
+          "name": "Language",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "occult",
+          "name": "Occult",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "performance",
+          "name": "Performance",
+          "baseChance": 0,
+          "linkedAttributeId": "spirit"
+        },
+        {
+          "id": "research",
+          "name": "Research",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "science",
+          "name": "Science",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "streetwise",
+          "name": "Streetwise",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        }
+      ]
+    },
+    {
+      "id": "arcane",
+      "name": "Arcane",
+      "skills": [
+        {
+          "id": "faith",
+          "name": "Faith",
+          "baseChance": 0,
+          "linkedAttributeId": "spirit"
+        },
+        {
+          "id": "focus",
+          "name": "Focus",
+          "baseChance": 0,
+          "linkedAttributeId": "spirit"
+        },
+        {
+          "id": "psionics",
+          "name": "Psionics",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "spellcasting",
+          "name": "Spellcasting",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
+        },
+        {
+          "id": "weird-science",
+          "name": "Weird Science",
+          "baseChance": 0,
+          "linkedAttributeId": "smarts"
         }
       ]
     }
