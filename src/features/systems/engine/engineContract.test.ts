@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { BUNDLED_SYSTEMS } from '../../../systems/registry';
 import { getEngine, classicFantasyEngine, travellerEngine, savageWorldsEngine } from './index';
-import { getEffectiveValue, resolveDerivedField, resolveArmorRating } from '../../../utils/derivedValues';
+import { getEffectiveValue, resolveDerivedField, resolveArmorRating, resolveSkillValue } from '../../../utils/derivedValues';
 import { parseStatKey, attrKey } from '../../../utils/statKeys';
 import type { SystemEngine } from './types';
 import type { SystemDefinition } from '../../../types/system';
@@ -233,6 +233,11 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
           skill: engine.attributeIds.map(id =>
             engine.skill.display(engine.skill.defaultValue, { character: c, linkedAttributeId: id }),
           ),
+          // Every declared skill as the skills screen resolves it, so a
+          // `skill:` target is covered too.
+          skills: system.skillCategories
+            .flatMap(cat => cat.skills)
+            .map(s => resolveSkillValue(c, s.id, engine.skill.defaultValue).effective),
         });
       };
 

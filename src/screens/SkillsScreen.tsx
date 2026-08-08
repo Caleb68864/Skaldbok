@@ -31,6 +31,7 @@ import {
   isSkillNameAvailable,
 } from '../features/characters/customSkills';
 import { generateId } from '../utils/ids';
+import { resolveSkillValue } from '../utils/derivedValues';
 
 function clampSkillValue(value: number, range: { min: number; max: number }): number {
   if (!Number.isFinite(value)) return range.min;
@@ -400,7 +401,12 @@ export default function SkillsScreen() {
                   const members = startsGroup ? groupMembers(skillCategories, group.id) : [];
                   const groupComplete = startsGroup && groupHasEveryMember(character.skills, members);
                   const computedValue = engine.skill.computeValue(skill, character, cs?.trained ?? false);
-                  const skillValue = cs?.value ?? computedValue;
+                  // Temp modifiers aimed at this skill ("+1 Gun Combat while
+                  // the scope is on") fold in here, so the odds, the DM line
+                  // and the value input all come from one number.
+                  const storedValue = cs?.value ?? computedValue;
+                  const resolvedSkill = resolveSkillValue(character, skill.id, storedValue);
+                  const skillValue = resolvedSkill.effective;
                   // The rules routinely allow a different characteristic for the
                   // situation (Persuade with INT, Athletics with STR/DEX/END).
                   // The swap is session-scoped, so every number on this row —
@@ -505,10 +511,22 @@ export default function SkillsScreen() {
                         {probDisplay}
                       </span>
 
-                      {/* Value input */}
+                      {/* Value input — bound to the STORED level, never the
+                          modified one. Showing the buffed number here would
+                          write it back as the character's real level the moment
+                          the field was touched, baking a temporary buff in. The
+                          modifier is surfaced next to it instead. */}
+                      {resolvedSkill.isModified && (
+                        <span
+                          className="text-xs font-semibold text-[var(--color-accent)] shrink-0 tabular-nums"
+                          title={resolvedSkill.modifiers.map(m => `${m.label} ${m.delta >= 0 ? '+' : ''}${m.delta}`).join(', ')}
+                        >
+                          →{skillValue}
+                        </span>
+                      )}
                       <input
                         type="number"
-                        value={skillValue}
+                        value={storedValue}
                         min={skillRange.min}
                         max={skillRange.max}
                         disabled={!skillsEditable}

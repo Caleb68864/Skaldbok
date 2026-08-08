@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { resolveDerivedField, resolveArmorRating } from './derivedValues';
-import { derivedKey, attrKey, armorKey } from './statKeys';
+import { resolveDerivedField, resolveArmorRating, resolveSkillValue } from './derivedValues';
+import { derivedKey, attrKey, armorKey, skillKey } from './statKeys';
 import type { CharacterRecord, TempModifier } from '../types/character';
 
 function modifier(stat: string, delta: number, label = 'Buff'): TempModifier {
@@ -142,5 +142,46 @@ describe('resolveArmorRating', () => {
     // A buff on a slot wearing nothing must not produce a rating out of thin air.
     const bare = { armor: null, tempModifiers: [modifier(armorKey('armor'), 3)] } as unknown as CharacterRecord;
     expect(resolveArmorRating(bare, 'armor')).toBe(0);
+  });
+});
+
+describe('resolveSkillValue', () => {
+  function skilled(value: number, modifiers: TempModifier[] = []): CharacterRecord {
+    return { skills: { gunCombat: { value, trained: true } }, tempModifiers: modifiers } as unknown as CharacterRecord;
+  }
+
+  it('returns the stored value when nothing modifies it', () => {
+    const out = resolveSkillValue(skilled(2), 'gunCombat', 2);
+    expect(out.effective).toBe(2);
+    expect(out.isModified).toBe(false);
+  });
+
+  it('applies a skill: temp modifier', () => {
+    // "+1 Gun Combat while the scope is on".
+    const c = skilled(2, [modifier(skillKey('gunCombat'), 1)]);
+    expect(resolveSkillValue(c, 'gunCombat', 2).effective).toBe(3);
+  });
+
+  it('keeps skills distinct', () => {
+    const c = skilled(2, [modifier(skillKey('stealth'), 3)]);
+    expect(resolveSkillValue(c, 'gunCombat', 2).effective).toBe(2);
+  });
+
+  it('floors at 0 so a penalty cannot make a level negative', () => {
+    const c = skilled(1, [modifier(skillKey('gunCombat'), -5)]);
+    expect(resolveSkillValue(c, 'gunCombat', 1).effective).toBe(0);
+  });
+
+  it('reports the modifiers so the row can explain the change', () => {
+    const c = skilled(2, [modifier(skillKey('gunCombat'), 1, 'Scope')]);
+    expect(resolveSkillValue(c, 'gunCombat', 2).modifiers).toEqual([{ label: 'Scope', delta: 1 }]);
+  });
+
+  it('keeps base separate from effective, so the input can bind to the stored level', () => {
+    // Binding the input to `effective` would write a temporary buff back as the
+    // character's real level the moment the field was touched.
+    const out = resolveSkillValue(skilled(2, [modifier(skillKey('gunCombat'), 1)]), 'gunCombat', 2);
+    expect(out.base).toBe(2);
+    expect(out.effective).toBe(3);
   });
 });

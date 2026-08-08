@@ -1866,3 +1866,31 @@
   nine are guarded through that array rather than individually.
 - Verified by un-guarding armour weight again: caught.
 - Commit: fix(gear) — validate and honour hiddenBuiltIns.
+
+## 2026-08-08 — Pass 8: `skill:` was the last dead namespace
+- Symptom: `skill:<id>` was the one stat namespace with neither a producer nor a
+  consumer. "+1 Gun Combat while the scope is on" / "−2 Stealth in this armour"
+  is among the most common things a GM calls for mid-scene, and there was no way
+  to express it. Every surface read `character.skills[id].value` directly.
+- Fix: `resolveSkillValue(character, skillId, storedValue)`, wired into the
+  skills screen and the play dashboard. Traveller now offers every skill as a
+  modifier target, grouped by category.
+- **Savage Worlds deliberately does not offer them.** A SWADE trait value is
+  die *sides*, so a "+2" would silently mean a die step (d6 → d8), which is not
+  what a SWADE bonus is — those are flat modifiers on the roll, which the engine
+  already models through `savageTraitPenalty`. Offering the target would have
+  been a control whose meaning differs from what the ruleset means by a bonus.
+  Dragonbane is left out for now too: a roll-under target is unambiguous, but it
+  is a live ruleset and this change did not need to touch it.
+- Watch: **the value input binds to the STORED level, never the effective one.**
+  Binding it to `effective` would write a temporary buff back as the character's
+  real level the instant the field was touched — a scene-long +1 baked in
+  permanently. The modifier shows as a separate `→N` chip beside the input, with
+  the contributing labels in its title. `resolveSkillValue` keeps `base` and
+  `effective` separate specifically so the two bindings cannot be confused, and
+  there is a test pinning that.
+- Watch also: the contract-test fingerprint gained every declared skill, so the
+  new targets are covered by the pass-3 net rather than trusted.
+- Verified by un-wiring the dashboard and blanking the fingerprint's skill list:
+  caught (2 failures).
+- Commit: feat(modifiers) — per-skill temporary modifiers.

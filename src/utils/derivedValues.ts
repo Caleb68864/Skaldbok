@@ -277,6 +277,41 @@ export function resolveArmorRating(character: CharacterRecord, slot: 'armor' | '
   return Math.max(0, getEffectiveValue(statKey('armor', slot), character).effective);
 }
 
+/**
+ * A skill's value after temp modifiers.
+ *
+ * @remarks
+ * "+1 Gun Combat while the scope is on", "−2 Stealth in this armour" — a
+ * scene-long adjustment to one skill is among the most common things a GM calls
+ * for, and `skill:<id>` was the one stat namespace with no producer and no
+ * consumer. Every surface read `character.skills[id].value` directly.
+ *
+ * Takes the already-resolved stored value so the caller keeps whatever fallback
+ * it uses for a skill with no entry (`engine.skill.computeValue`), which differs
+ * per system and is not this function's business.
+ *
+ * Floors at 0: no ruleset here has a meaningful negative skill value, and a
+ * roll-under target below 0 is unrollable.
+ */
+export function resolveSkillValue(
+  character: CharacterRecord,
+  skillId: string,
+  storedValue: number,
+): EffectiveValueResult {
+  const active = character.tempModifiers ?? [];
+  const key = statKey('skill', skillId);
+  const modifiers = active.flatMap(m =>
+    m.effects.filter(e => e.stat === key).map(e => ({ label: m.label, delta: e.delta })),
+  );
+  const sum = modifiers.reduce((acc, m) => acc + m.delta, 0);
+  return {
+    base: storedValue,
+    modifiers,
+    effective: Math.max(0, storedValue + sum),
+    isModified: modifiers.length > 0,
+  };
+}
+
 /** One derived field resolved through override, then temp modifiers. */
 export interface ResolvedDerivedField extends EffectiveValueResult {
   /** Value the engine computed from the character's stats. */

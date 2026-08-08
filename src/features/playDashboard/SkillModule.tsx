@@ -10,6 +10,7 @@ import type { CharacterSkill } from '../../types/character';
 import { clamp, type PlayModuleProps } from './types';
 import { getEngine, type SystemEngine, type SkillDisplayContext } from '../systems/engine';
 import { resolveSkillCategories } from '../characters/customSkills';
+import { resolveSkillValue } from '../../utils/derivedValues';
 import { useAppState } from '../../context/AppStateContext';
 
 /** Normal / boon / bane odds line, with the maths owned by the active engine. */
@@ -65,7 +66,9 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
     const trained = stored?.trained ?? false;
     // The engine owns the value a skill takes when the character has no stored entry.
     const computedValue = engine.skill.computeValue(skill, character, trained);
-    const rawValue = stored?.value ?? computedValue;
+    // Fold in `skill:` temp modifiers before clamping, so this line agrees with
+    // the Skills screen rather than showing the unbuffed value.
+    const rawValue = resolveSkillValue(character, skill.id, stored?.value ?? computedValue).effective;
     const value = clamp(rawValue, engine.skill.range.min, engine.skill.range.max);
     const fallback = { value, trained };
     const mark = stored?.dragonMarked ? 'Dragon' : stored?.demonMarked ? 'Demon' : 'Mark';

@@ -5,7 +5,7 @@ import {
   twoD6SuccessProbability,
   threeD6KeepTwoProbability,
 } from '../../../systems/traveller/travellerMath';
-import { attrKey, resKey } from '../../../utils/statKeys';
+import { attrKey, resKey, skillKey } from '../../../utils/statKeys';
 import type { SystemEngine, SkillDisplayContext } from './types';
 
 export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'];
@@ -465,5 +465,17 @@ export const travellerEngine: SystemEngine = {
       label: r.name,
       group: 'Damage Track',
     })),
+    // A scene-long adjustment to one skill — a scope, a stim, a jammed hatch —
+    // is among the most common things called for at a Traveller table. Levels
+    // are plain integers here, so a +1 is unambiguous. (Savage Worlds
+    // deliberately does not offer these: a trait value is die *sides*, so "+2"
+    // would silently mean a die step, which is not what a SWADE bonus is.)
+    ...(system?.skillCategories ?? []).flatMap(category =>
+      category.skills.map(skill => ({
+        id: skillKey(skill.id),
+        label: skill.name,
+        group: `Skills — ${category.name}`,
+      })),
+    ),
   ],
 };
