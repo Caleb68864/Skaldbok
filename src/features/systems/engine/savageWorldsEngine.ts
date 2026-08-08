@@ -14,6 +14,24 @@ export const SAVAGE_WORLDS_ATTRIBUTE_IDS = ['agility', 'smarts', 'spirit', 'stre
  */
 const SAVAGE_UNSKILLED_DIE = 4;
 
+/**
+ * The trait-roll penalty per level of Wounds and of Fatigue, and the level each
+ * track caps at.
+ *
+ * @remarks
+ * One source for numbers that appeared twice: `savageTraitPenalty` applied them
+ * and `damageTrack` *declared* them, with nothing tying the two together.
+ * `damageTrack.penaltyPerLevel: -1` in particular was read by nothing at all —
+ * it stated the rule the penalty function separately hardcoded, so editing the
+ * declaration would have changed no behaviour while looking as though it had.
+ *
+ * SWADE caps the Wound penalty at −3 (a 4th wound is Incapacitation, not −4)
+ * and Fatigue at −2 (a 3rd level is Incapacitation).
+ */
+const SAVAGE_PENALTY_PER_LEVEL = -1;
+const SAVAGE_MAX_WOUND_LEVELS = 3;
+const SAVAGE_MAX_FATIGUE_LEVELS = 2;
+
 /** A trait die's sides for a character, defaulting to d4 when unset. */
 function dieSides(character: CharacterRecord, id: string): number {
   return character.attributes?.[id] ?? 4;
@@ -61,11 +79,17 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
     // 'hp'/'wp', so PrintableSheet.maxFor never reads hpMax/wpMax, and (b) these
     // keys are absent from `derivedFields`, so no dashboard/print tile surfaces
     // them. A system reusing this adapter must preserve both invariants, or these
-    // zeros will print as real values. `movement` is a dummy — Pace is the real
-    // SWADE stat and nothing reads `movement`.
+    // zeros will print as real values.
+    //
+    // `movement` was 6 — Pace's value, which reads as meaningful and is not.
+    // Pace is a declared derived field and the real SWADE stat; `movement` is
+    // the Dragonbane-shaped slot nothing here surfaces. A neutral 0 is what
+    // stops a system cloned from this adapter, which *did* declare `movement`
+    // in derivedFields, from printing a Pace it never computed. This is the
+    // same landmine as Traveller's old `hpMax: END`.
     hpMax: 0,
     wpMax: 0,
-    movement: 6,
+    movement: 0,
     damageBonus: '+0',
     aglDamageBonus: '+0',
     encumbranceLimit: strength * 5,
@@ -86,17 +110,15 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
  */
 export function savageTraitPenalty(character: CharacterRecord): number {
   let mod = 0;
-  // SWADE caps the wound penalty at −3 (a 4th wound is Incapacitation, not −4)
-  // and Fatigue at −2 (a 3rd level is Incapacitation). The damage-track model
-  // already bounds these, but clamp here so a hand-edited/imported over-max
-  // value can't produce a runaway penalty.
+  // The damage-track model already bounds these, but clamp here too so a
+  // hand-edited or imported over-max value can't produce a runaway penalty.
   // Read through the shared resolver so a `res:wounds` / `res:fatigue` temp
   // modifier reaches the penalty. Reading `.current` raw made both of those
   // targets — which the modifier picker offers — completely inert.
   const track = (id: string) =>
     character.resources?.[id] ? Math.max(0, getEffectiveValue(resKey(id), character).effective) : 0;
-  mod -= Math.min(track('wounds'), 3);
-  mod -= Math.min(track('fatigue'), 2);
+  mod += SAVAGE_PENALTY_PER_LEVEL * Math.min(track('wounds'), SAVAGE_MAX_WOUND_LEVELS);
+  mod += SAVAGE_PENALTY_PER_LEVEL * Math.min(track('fatigue'), SAVAGE_MAX_FATIGUE_LEVELS);
   if (character.conditions?.['distracted']) mod -= 2;
   if (character.conditions?.['entangled']) mod -= 2;
   return mod;
@@ -233,8 +255,8 @@ export const savageWorldsEngine: SystemEngine = {
   // later). Modelled as a level track; damage is applied as wounds, not points.
   damageTrack: {
     kind: 'levels',
-    levels: 3,
-    penaltyPerLevel: -1,
+    levels: SAVAGE_MAX_WOUND_LEVELS,
+    penaltyPerLevel: SAVAGE_PENALTY_PER_LEVEL,
     order: ['wounds'],
     overflowTo: [],
     downAtDepleted: 1,

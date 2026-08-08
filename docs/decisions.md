@@ -1921,3 +1921,29 @@
   Traveller template's `abilities`/`magic` cards are correctly gated behind
   `when: hasMagic` and are inert by design, not dead.
 - Commit: fix(sheets) — drop panel keys the engine never provides.
+
+## 2026-08-08 — Pass 11: Savage Worlds' declared-but-unread rule
+- Symptom 1: `damageTrack.penaltyPerLevel: -1` was read by **nothing**. It
+  stated the rule that `savageTraitPenalty` separately hardcoded, so editing the
+  declaration would have changed no behaviour while looking as though it had —
+  the same "config that reads as policy and decides nothing" removed from
+  `modeGuards` in pass 5. `levels: 3` and the penalty's own `Math.min(..., 3)`
+  were likewise the same number written twice.
+- Fix: `SAVAGE_PENALTY_PER_LEVEL` / `SAVAGE_MAX_WOUND_LEVELS` /
+  `SAVAGE_MAX_FATIGUE_LEVELS` as one source, consumed by both
+  `savageTraitPenalty` and `damageTrack`. The declaration is now the number the
+  penalty actually applies.
+- Symptom 2: SWADE returned `movement: 6` — Pace's value under Dragonbane's
+  name. Not read, because SWADE does not declare `movement` in `derivedFields`…
+  until a system cloned from this adapter does, at which point it prints a Pace
+  nobody computed. Exactly the landmine Traveller's old `hpMax: END` was, and
+  the Traveller adapter's comment already warns about it.
+- Fix: `movement: 0`, plus a contract test — a mandated `DerivedValues` key an
+  engine does **not** declare in `derivedFields` must be neutral (0 / '+0').
+  Declared keys are exempt, so Dragonbane's real `movement` is untouched.
+- Watch: the neutrality test is per-system *and* per-key, so a failure names
+  both ("Savage Worlds > movement") rather than pointing at a whole adapter.
+- Mutation-checked: restoring `movement: 6` fails exactly one test; flipping
+  `SAVAGE_PENALTY_PER_LEVEL` to +1 fails two existing SWADE penalty tests,
+  which is the proof the constant is genuinely wired rather than decorative.
+- Commit: refactor(swade) — wire the wound penalty, neutralise the placeholder.

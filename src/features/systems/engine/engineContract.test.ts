@@ -339,3 +339,48 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
     });
   },
 );
+
+/**
+ * The Dragonbane-shaped keys `DerivedValues` mandates but most rulesets do not
+ * use.
+ *
+ * @remarks
+ * Every adapter must return them to satisfy the shared type, so every
+ * non-Dragonbane adapter returns filler. Filler that *looks* like a real value
+ * is a landmine: Traveller once returned `hpMax: END`, and Savage Worlds
+ * returned `movement: 6` — Pace's value under Dragonbane's name. Neither was
+ * read, because neither adapter declares the key in `derivedFields`… until a
+ * system cloned from one of them does, at which point it silently prints a
+ * number nobody computed.
+ *
+ * So: a mandated key an engine does not *declare* must be neutral.
+ */
+const MANDATED_NUMERIC_KEYS = ['hpMax', 'wpMax', 'movement', 'encumbranceLimit'] as const;
+const MANDATED_STRING_KEYS = ['damageBonus', 'aglDamageBonus'] as const;
+
+describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
+  'undeclared derived placeholders are neutral: %s',
+  (_name, system) => {
+    const engine = getEngine(system);
+    const declared = new Set(engine.derivedFields.map(f => f.key));
+    const derived = engine.derivedStats(syntheticCharacter(system), system) as unknown as Record<
+      string,
+      unknown
+    >;
+
+    it.each(MANDATED_NUMERIC_KEYS)('%s', key => {
+      if (declared.has(key)) return; // A declared field is a real value.
+      expect(
+        derived[key],
+        `${system.id} does not declare "${key}" in derivedFields, so its value is ` +
+          `filler and must be 0 — a meaningful-looking placeholder prints as a ` +
+          `real stat the moment a system cloned from this adapter declares it`,
+      ).toBe(0);
+    });
+
+    it.each(MANDATED_STRING_KEYS)('%s', key => {
+      if (declared.has(key)) return;
+      expect(derived[key], `${system.id} filler for "${key}" must be neutral`).toBe('+0');
+    });
+  },
+);
