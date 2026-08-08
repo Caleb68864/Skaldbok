@@ -17,7 +17,7 @@ import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { remakeCurrency } from '../utils/currency';
 import { resolveDerivedField, resolveArmorRating } from '../utils/derivedValues';
-import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
+import { useIsEditMode, useFieldEditable, FIELD_PATHS } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
 import { useSystemEngine } from '../features/systems/engine';
@@ -123,9 +123,9 @@ export default function GearScreen() {
   const engine = useSystemEngine();
   const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
   const isEditMode = useIsEditMode();
-  const armorEquipEditable = useFieldEditable('armor.equipped');
-  const helmetEquipEditable = useFieldEditable('helmet.equipped');
-  const derivedEditable = useFieldEditable('derivedOverrides');
+  const armorEquipEditable = useFieldEditable(FIELD_PATHS.armorEquipped);
+  const helmetEquipEditable = useFieldEditable(FIELD_PATHS.helmetEquipped);
+  const derivedEditable = useFieldEditable(FIELD_PATHS.derivedOverrides);
   const { logToSession, logCoinChange } = useSessionLog();
 
   const [activeTab, setActiveTab] = useState<'mine' | 'party'>('mine');

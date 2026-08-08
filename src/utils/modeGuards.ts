@@ -21,15 +21,52 @@ import { useAppState } from '../context/AppStateContext';
  * surface ever *should* be gated, add the path here **and** the
  * `useFieldEditable` call that asks about it; the entry alone does nothing.
  *
- * Known gap: `SheetScreen` guards every system's resource maxima with the
- * literal path `resources.hp.max`, so Traveller's str/dex/end damage tracks are
- * unrepresented. That is correct by accident — maxima are locked everywhere in
- * play mode — but it is a Dragonbane id standing in for a general rule.
+ * Every path the app asks about is declared in {@link FIELD_PATHS}. Ask with one
+ * of those rather than an ad-hoc string, so the set of questions this guard can
+ * be asked stays enumerable.
  */
 const PLAY_MODE_EDITABLE_PREFIXES = [
   'armor.equipped',
   'helmet.equipped',
 ];
+
+/**
+ * The field paths the app actually guards.
+ *
+ * @remarks
+ * These are *categories of field*, not individual fields. They used to be
+ * written inline as `'attributes.str'` and `'resources.hp.max'` — strings that
+ * look specific but mean "any attribute score" and "any resource's maximum".
+ * Both named Dragonbane ids in shared, system-neutral code: STR is not an
+ * attribute in Savage Worlds, and Traveller's damage tracks are str/dex/end,
+ * so the guard read as though it were about one ruleset's fields when it is
+ * about a whole category in every ruleset.
+ *
+ * Behaviour is unchanged — none of these were ever in
+ * `PLAY_MODE_EDITABLE_PREFIXES`, so all of them lock in play mode, which is
+ * what play mode is for. What changes is that the strings now say what they
+ * mean, and `armorEquipped`/`helmetEquipped` are pinned to the exact literals
+ * the allowlist matches instead of being retyped at each call site.
+ */
+export const FIELD_PATHS = {
+  /** Name, kin/species, profession — the identity panel. */
+  identity: 'identity',
+  /** Any attribute or characteristic score. */
+  attributes: 'attributes',
+  /** Any resource's maximum. Current values are not gated here at all. */
+  resourceMax: 'resources.max',
+  /** Manual overrides of engine-derived stats. */
+  derivedOverrides: 'derivedOverrides',
+  /** Any skill's value or trained flag. */
+  skills: 'skills',
+  /** Equipping/unequipping body armour — editable during play. */
+  armorEquipped: 'armor.equipped',
+  /** Equipping/unequipping a helmet — editable during play. */
+  helmetEquipped: 'helmet.equipped',
+} as const;
+
+/** Every declared field path, for tests and exhaustiveness checks. */
+export type FieldPath = (typeof FIELD_PATHS)[keyof typeof FIELD_PATHS];
 
 /** Whether a dotted field path is one of the `PLAY_MODE_EDITABLE_PREFIXES` allowed during play. */
 export function isFieldEditableInPlayMode(fieldPath: string): boolean {

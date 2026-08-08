@@ -15,7 +15,7 @@ import { getEngine } from '../features/systems/engine';
 import type { RestDefinition } from '../features/systems/engine/types';
 import { useAutosave } from '../hooks/useAutosave';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
-import { useFieldEditable, useIsEditMode } from '../utils/modeGuards';
+import { useFieldEditable, useIsEditMode, FIELD_PATHS } from '../utils/modeGuards';
 import { AttributeField } from '../components/fields/AttributeField';
 import { RepeatableRows, type RepeatableColumn } from '../components/fields/RepeatableRows';
 import { CharacterPortrait } from '../components/fields/CharacterPortrait';
@@ -158,10 +158,10 @@ export default function SheetScreen() {
   const { logHPChange, logDeathRoll, logRest } = useSessionLog();
 
   const isEditMode = useIsEditMode();
-  const identityEditable = useFieldEditable('identity');
-  const attributesEditable = useFieldEditable('attributes.str');
-  const resourceMaxEditable = useFieldEditable('resources.hp.max');
-  const derivedEditable = useFieldEditable('derivedOverrides');
+  const identityEditable = useFieldEditable(FIELD_PATHS.identity);
+  const attributesEditable = useFieldEditable(FIELD_PATHS.attributes);
+  const resourceMaxEditable = useFieldEditable(FIELD_PATHS.resourceMax);
+  const derivedEditable = useFieldEditable(FIELD_PATHS.derivedOverrides);
 
   // Reorder mode state
   const [reorderMode, setReorderMode] = useState(false);

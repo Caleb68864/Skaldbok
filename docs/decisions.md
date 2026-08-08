@@ -1796,3 +1796,26 @@
   whose glob silently matches nothing is worse than no test.
 - Verified by reintroducing the hardcoded chip: caught.
 - Commit: fix(encounters) — read the health noun from the engine.
+
+## 2026-08-08 — Hardening pass 5: guard paths that named one ruleset's fields
+- Symptom: `useFieldEditable` was asked about `'attributes.str'` and
+  `'resources.hp.max'`. Both are strings that *look* specific but mean "any
+  attribute score" and "any resource's maximum" — and both name Dragonbane ids
+  in shared, system-neutral code. STR is not an attribute in Savage Worlds, and
+  Traveller's damage tracks are str/dex/end, so the guard read as though it were
+  about one ruleset when it governs a category in every ruleset. `'skills.any'`
+  was an invented path with no such field at all.
+- Fix: `FIELD_PATHS` in `utils/modeGuards.ts` names the five categories the app
+  actually guards, plus the two allowlist literals so they are not retyped at
+  each call site. Behaviour is unchanged — none of the five were ever in
+  `PLAY_MODE_EDITABLE_PREFIXES`, so they all lock in play mode, which is what
+  play mode is for.
+- Watch: `modeGuards.test.ts` now fails on any `useFieldEditable('literal')`
+  anywhere in `src`. Any string was a valid argument, which is why this drifted
+  silently; new questions now have to be added to `FIELD_PATHS` where they get
+  a name and a review.
+- Watch also: the guard fails *closed* — an undeclared path is not editable —
+  and there is a test for that. A prefix match must also not leak
+  (`armor.equipped` must not unlock `armor.rating`); tested both ways.
+- Verified by reintroducing a literal path: caught.
+- Commit: refactor(mode) — name the guarded field paths.

@@ -4,7 +4,7 @@ import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
-import { useFieldEditable } from '../utils/modeGuards';
+import { useFieldEditable, FIELD_PATHS } from '../utils/modeGuards';
 import { useAutosave } from '../hooks/useAutosave';
 import { SkillList } from '../components/fields/SkillList';
 import { Chip } from '../components/primitives/Chip';
@@ -77,7 +77,7 @@ export default function SkillsScreen() {
     isLoading: settingsLoading,
     settings,
   } = useAppState();
-  const skillsEditable = useFieldEditable('skills.any');
+  const skillsEditable = useFieldEditable(FIELD_PATHS.skills);
   const [filter, setFilter] = useState<'all' | 'relevant'>('relevant');
   const [search, setSearch] = useState('');
   /**
