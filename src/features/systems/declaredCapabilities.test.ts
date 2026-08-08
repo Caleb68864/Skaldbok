@@ -91,9 +91,8 @@ const KNOWN_UNIMPLEMENTED: Record<string, string> = {
   advancement: 'the advancement checklist is designed but unbuilt',
   advancementChecks: 'written by nothing until advancement is built',
   penaltyPerLevel: 'the number is single-sourced in savageWorldsEngine (pass 11); the FIELD still has no reader',
-  valueLabel: 'no surface shows a per-system label for the skill value column yet',
   defaultValue: 'read only through engine.skill.computeValue, never as a field',
-  roleFallback: 'no surface shows a profession fallback yet',
+  roleFallback: 'no surface shows a profession fallback yet; the library card now uses identityFields instead',
   sectionLayouts: 'sheet layout comes from sheet.json; this predates it',
   themesSupported: 'theming is app-level, not per-system',
 };

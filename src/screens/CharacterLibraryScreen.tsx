@@ -12,7 +12,30 @@ import { useToast } from '../context/ToastContext';
 import { cn } from '../lib/utils';
 import { useAppState } from '../context/AppStateContext';
 import { AppLogo } from '../components/primitives/AppLogo';
-import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../systems/registry';
+import { DEFAULT_SYSTEM_ID, getSelectableSystems, BUNDLED_SYSTEMS } from '../systems/registry';
+
+/**
+ * The first couple of identity values to show under a character's name.
+ *
+ * @remarks
+ * This card read `metadata.kin` and `metadata.profession` — Dragonbane's
+ * identity field ids, hardcoded in a screen that lists characters from every
+ * system. A Traveller character (callsign/species/homeworld) and a Savage
+ * Worlds one (concept/rank/ancestry) have neither, so their cards showed the
+ * system name and nothing else however much identity they had filled in.
+ *
+ * Reads the system's own `identityFields` in declaration order, so each ruleset
+ * volunteers what identifies a character. Returns nothing rather than guessing
+ * when the system is not bundled — a user-authored system should show its name,
+ * not two arbitrary metadata values.
+ */
+function summariseIdentity(character: CharacterRecord): string[] {
+  const system = BUNDLED_SYSTEMS.find(s => s.id === character.systemId);
+  return (system?.identityFields ?? [])
+    .map(field => character.metadata?.[field.id])
+    .filter((value): value is string => typeof value === 'string' && value.trim() !== '')
+    .slice(0, 2);
+}
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { createParty, addPartyMember } from '../storage/repositories/partyRepository';
 import { updateCampaign } from '../storage/repositories/campaignRepository';
@@ -272,8 +295,7 @@ export default function CharacterLibraryScreen() {
                   <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">
                     {[
                       getSelectableSystems().find(s => s.id === char.systemId)?.displayName ?? char.systemId,
-                      char.metadata.kin,
-                      char.metadata.profession,
+                      ...summariseIdentity(char),
                     ].filter(Boolean).join(' · ') || 'No details'}
                   </p>
                   <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mt-1">

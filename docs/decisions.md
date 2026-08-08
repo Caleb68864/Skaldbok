@@ -2139,3 +2139,25 @@
 - Mutation-checked both directions: a new unread field fails, and wiring a
   reader for an allowlisted field fails the staleness check.
 - Commit: test(systems) — fail when a declared capability has no reader.
+
+## 2026-08-08 — Pass 19: the library card only described Dragonbane characters
+- Symptom: `CharacterLibraryScreen` built each card's subtitle from
+  `metadata.kin` and `metadata.profession` — Dragonbane's identity field ids,
+  hardcoded in the one screen that lists characters from *every* system.
+  Traveller declares callsign/species/homeworld; Savage Worlds declares
+  concept/rank/ancestry. Both have neither of the hardcoded two, so their cards
+  showed the system name and nothing else no matter how much identity the
+  player had filled in.
+- Fix: `summariseIdentity` reads the system's own `identityFields` in
+  declaration order and takes the first two non-empty values, so each ruleset
+  volunteers what identifies a character. Returns nothing for a system this
+  build does not bundle, rather than guessing at arbitrary metadata keys.
+- Fix 2: the skill value input had **no accessible name at all** — every other
+  control in that row has one, and a screen reader announced a bare spinbutton
+  with a number. It now reads "Gun Combat (Slug) Level" / "Fighting Die" /
+  "Axes Value", which is exactly what `engine.skill.valueLabel` was declared
+  for and never used for. One fewer entry in `KNOWN_UNIMPLEMENTED`.
+- Watch: mutation-checked by replacing the label with a literal "Value" — the
+  pass-18 guard flags `valueLabel` as unread again, and correctly ignores the
+  doc comment above the input that also mentions it.
+- Commit: fix(library) — describe characters by their own system's fields.

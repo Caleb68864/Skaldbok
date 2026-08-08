@@ -539,6 +539,12 @@ export default function SkillsScreen() {
                       )}
                       <input
                         type="number"
+                        // The only control in this row with no accessible name:
+                        // a screen reader announced a bare spinbutton. The noun
+                        // is the ruleset's — "Level" in Traveller, "Die" in
+                        // Savage Worlds, "Value" in Dragonbane — which is what
+                        // engine.skill.valueLabel exists for.
+                        aria-label={`${skill.name} ${engine.skill.valueLabel}`}
                         value={storedValue}
                         min={skillRange.min}
                         max={skillRange.max}
