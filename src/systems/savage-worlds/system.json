@@ -1,6 +1,6 @@
 {
   "id": "savage-worlds",
-  "version": 3,
+  "version": 4,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
   "attributes": [
@@ -9,7 +9,7 @@
       "name": "Agility",
       "abbreviation": "AGI",
       "min": 4,
-      "max": 12,
+      "max": 14,
       "scale": {
         "kind": "die-ladder",
         "ladder": [
@@ -27,7 +27,7 @@
       "name": "Smarts",
       "abbreviation": "SMA",
       "min": 4,
-      "max": 12,
+      "max": 14,
       "scale": {
         "kind": "die-ladder",
         "ladder": [
@@ -45,7 +45,7 @@
       "name": "Spirit",
       "abbreviation": "SPI",
       "min": 4,
-      "max": 12,
+      "max": 14,
       "scale": {
         "kind": "die-ladder",
         "ladder": [
@@ -63,7 +63,7 @@
       "name": "Strength",
       "abbreviation": "STR",
       "min": 4,
-      "max": 12,
+      "max": 14,
       "scale": {
         "kind": "die-ladder",
         "ladder": [
@@ -81,7 +81,7 @@
       "name": "Vigor",
       "abbreviation": "VIG",
       "min": 4,
-      "max": 12,
+      "max": 14,
       "scale": {
         "kind": "die-ladder",
         "ladder": [
@@ -113,7 +113,7 @@
     {
       "id": "distracted",
       "name": "Distracted",
-      "description": "−2 to all trait rolls until the end of your next turn.",
+      "description": "\u22122 to all trait rolls until the end of your next turn.",
       "effect": {
         "scope": "all-traits",
         "modifier": -2
@@ -129,13 +129,13 @@
     {
       "id": "prone",
       "name": "Prone",
-      "description": "−2 to your attacks. Melee attackers get +2 to hit you; ranged attackers are at −2. Stand (costs movement) to clear.",
+      "description": "\u22122 to your attacks. Melee attackers get +2 to hit you; ranged attackers are at \u22122. Stand (costs movement) to clear.",
       "duration": "until-cleared"
     },
     {
       "id": "entangled",
       "name": "Entangled",
-      "description": "−2 to all actions. Break free to clear.",
+      "description": "\u22122 to all actions. Break free to clear.",
       "effect": {
         "scope": "all-traits",
         "modifier": -2
@@ -145,7 +145,7 @@
     {
       "id": "fatigued",
       "name": "Fatigued",
-      "description": "−1 to all trait rolls (first Fatigue level).",
+      "description": "\u22121 to all trait rolls (first Fatigue level).",
       "effect": {
         "scope": "all-traits",
         "modifier": -1
@@ -159,7 +159,7 @@
     {
       "id": "exhausted",
       "name": "Exhausted",
-      "description": "−2 to all trait rolls (second Fatigue level). One more level Incapacitates.",
+      "description": "\u22122 to all trait rolls (second Fatigue level). One more level Incapacitates.",
       "effect": {
         "scope": "all-traits",
         "modifier": -2
@@ -329,19 +329,19 @@
       "title": "Damage & Wounds",
       "rows": [
         [
-          "Damage total vs Toughness (2 + ½ Vigor + Armor)."
+          "Damage total vs Toughness (2 + \u00bd Vigor + Armor)."
         ],
         [
-          "≥ Toughness → Shaken; if already Shaken → +1 Wound; +1 Wound per +4 over Toughness."
+          "\u2265 Toughness \u2192 Shaken; if already Shaken \u2192 +1 Wound; +1 Wound per +4 over Toughness."
         ]
       ],
-      "note": "Each Wound: −1 to all trait rolls. 3 Wounds = Incapacitated (Extras drop at 1). Soak: spend a Benny, roll Vigor, each raise removes a Wound."
+      "note": "Each Wound: \u22121 to all trait rolls. 3 Wounds = Incapacitated (Extras drop at 1). Soak: spend a Benny, roll Vigor, each raise removes a Wound."
     },
     {
       "title": "Bennies",
       "rows": [
         [
-          "Reroll any trait test · Soak wounds (Vigor) · remove Shaken."
+          "Reroll any trait test \u00b7 Soak wounds (Vigor) \u00b7 remove Shaken."
         ]
       ],
       "note": "Refresh to 3 at the start of each session."

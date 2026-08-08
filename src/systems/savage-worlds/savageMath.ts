@@ -71,3 +71,51 @@ export function dieCode(sides: number, bonus = 0): string {
   const suffix = bonus > 0 ? `+${bonus}` : bonus < 0 ? `${bonus}` : '';
   return `d${sides}${suffix}`;
 }
+
+/** The top rung of the standard trait ladder; values above it are `d12+N`. */
+export const SAVAGE_TOP_DIE = 12;
+
+/** A trait die split into the die actually rolled and its flat bonus. */
+export interface TraitDie {
+  sides: number;
+  bonus: number;
+}
+
+/**
+ * Decodes a stored trait value into the die rolled and its flat bonus.
+ *
+ * @remarks
+ * SWADE advances past d12 by adding a flat bonus, not a bigger die: d12+1, then
+ * d12+2. Storing that as a single number (13, 14) keeps the record shape and the
+ * ladder stepper simple, but every *reader* has to know 13 means "d12, +1" —
+ * otherwise it rolls a d13 — a die that does not exist, with a distribution
+ * that is neither reliably better nor reliably worse than the rule's. A flat +1
+ * shifts the whole curve while a bigger die dilutes the probability per face,
+ * so at TN 8 a d12+1 beats the d13 it was rolled as, and at other targets it
+ * loses to it. That is what makes the error hard to notice: the displayed odds
+ * are always plausible and always for the wrong die.
+ *
+ * Values at or below the top rung pass through with no bonus, so every existing
+ * character is unaffected.
+ */
+export function decodeTraitDie(value: number): TraitDie {
+  if (!Number.isFinite(value) || value <= SAVAGE_TOP_DIE) {
+    return { sides: Number.isFinite(value) ? value : SAVAGE_TOP_DIE, bonus: 0 };
+  }
+  return { sides: SAVAGE_TOP_DIE, bonus: value - SAVAGE_TOP_DIE };
+}
+
+/**
+ * The ladder a system's trait stepper offers, extended past d12 when the
+ * definition allows it.
+ *
+ * @remarks
+ * Encoded as `12 + N` so the existing "snap to the nearest rung" logic keeps
+ * working — without the extra rungs a stored 13 snaps straight back to 12 the
+ * first time the field is touched, silently undoing a Legendary advance.
+ */
+export function traitLadder(base: number[], allowsPlus: boolean, maxPlus = 2): number[] {
+  if (!allowsPlus) return base;
+  const top = Math.max(...base);
+  return [...base, ...Array.from({ length: maxPlus }, (_, i) => top + i + 1)];
+}

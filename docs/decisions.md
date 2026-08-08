@@ -1947,3 +1947,31 @@
   `SAVAGE_PENALTY_PER_LEVEL` to +1 fails two existing SWADE penalty tests,
   which is the proof the constant is genuinely wired rather than decorative.
 - Commit: refactor(swade) — wire the wound penalty, neutralise the placeholder.
+
+## 2026-08-08 — Pass 12: `allowsPlus` promised d12+1 and delivered nothing
+- Symptom: `AttributeDefinition.scale.allowsPlus` is in the type, validated by
+  the schema, and set `true` on all five SWADE attributes — and read by
+  **nothing**. The fourth instance of this pass's recurring class. SWADE really
+  does advance past d12, and the app could not express it.
+- Fix: a stored value above the top rung means `d12+N`. `decodeTraitDie(value)`
+  splits it, and every SWADE read site goes through it — Toughness, Parry, Load
+  Limit, the die code, `formatSavageSkill`, and `probability.chance`.
+- Watch: the ladder now runs `[4,6,8,10,12,13,14]`. Without those rungs
+  `SkillsScreen`'s snap-to-nearest pulls a stored 13 straight back to 12 the
+  first time the field is touched — a Legendary advance silently undone by
+  opening the screen. Extending the ladder, rather than special-casing the snap,
+  is what keeps that one code path correct for every system.
+- Watch also: the flat bonus adds **whole** to Parry and Toughness (half the
+  *die*, plus the bonus), not halved with the die.
+- **A test corrected me.** I wrote that reading 13 as a d13 "always favours the
+  player". It does not: a flat +1 shifts the whole curve while a bigger die
+  dilutes probability per face, so at TN 8 a d12+1 (58%) *beats* the d13 (54%)
+  it was being rolled as, and at other targets it loses. That is what made the
+  bug hard to see — the odds shown were always plausible and always for a die
+  that does not exist. The comment in `savageMath` said the wrong thing until
+  the assertion failed; both are fixed.
+- Watch also: attribute `max` raised 12 → 14 in system.json (v4) so the stepper
+  permits the range the ladder now offers.
+- Mutation-checked: disabling the decode fails 4 tests; un-extending the ladder
+  fails 1.
+- Commit: feat(swade) — support d12+1 and d12+2 trait advances.

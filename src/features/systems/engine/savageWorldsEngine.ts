@@ -1,6 +1,6 @@
 import type { CharacterRecord } from '../../../types/character';
 import { resolveArmorRating, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
-import { dieCode, traitChance } from '../../../systems/savage-worlds/savageMath';
+import { dieCode, traitChance, decodeTraitDie, traitLadder, SAVAGE_TOP_DIE } from '../../../systems/savage-worlds/savageMath';
 import { attrKey, resKey } from '../../../utils/statKeys';
 import type { SystemEngine } from './types';
 
@@ -28,13 +28,29 @@ const SAVAGE_UNSKILLED_DIE = 4;
  * SWADE caps the Wound penalty at −3 (a 4th wound is Incapacitation, not −4)
  * and Fatigue at −2 (a 3rd level is Incapacitation).
  */
+/** How far past d12 a trait may advance: d12+1, d12+2. */
+const SAVAGE_MAX_DIE_BONUS = 2;
+
 const SAVAGE_PENALTY_PER_LEVEL = -1;
 const SAVAGE_MAX_WOUND_LEVELS = 3;
 const SAVAGE_MAX_FATIGUE_LEVELS = 2;
 
-/** A trait die's sides for a character, defaulting to d4 when unset. */
-function dieSides(character: CharacterRecord, id: string): number {
-  return character.attributes?.[id] ?? 4;
+/**
+ * A character's trait die, defaulting to d4 when unset.
+ *
+ * @remarks
+ * Returns sides *and* bonus because SWADE advances past d12 with a flat bonus
+ * rather than a bigger die. Reading the stored number as raw sides made a
+ * Legendary d12+1 roll as a d13 — a die that does not exist, and strictly
+ * better than the rule allows at every target.
+ */
+function traitDie(character: CharacterRecord, id: string) {
+  return decodeTraitDie(character.attributes?.[id] ?? SAVAGE_UNSKILLED_DIE);
+}
+
+/** Half a trait die, the step used by Parry and Toughness. The flat bonus adds whole. */
+function halfDie(die: { sides: number; bonus: number }): number {
+  return Math.floor(die.sides / 2) + die.bonus;
 }
 
 /** DerivedValues shape carrying Savage Worlds' Pace / Parry / Toughness. */
@@ -52,14 +68,14 @@ export interface SavageWorldsDerivedValues extends DerivedValues {
  * plain Toughness it always did.
  */
 export function computeToughness(character: CharacterRecord, ap = 0): number {
-  const vigor = dieSides(character, 'vigor');
+  const vigor = traitDie(character, 'vigor');
   // Through the shared resolver so an `armor:armor` temp modifier reaches
   // Toughness. Reading `character.armor.rating` raw made every such modifier
   // inert, including in this formula — the one place armour is arithmetic
   // rather than display.
   const armor = resolveArmorRating(character, 'armor');
   const effectiveArmor = Math.max(0, armor - Math.max(0, ap));
-  return 2 + Math.floor(vigor / 2) + effectiveArmor;
+  return 2 + halfDie(vigor) + effectiveArmor;
 }
 
 /**
@@ -70,7 +86,7 @@ export function computeToughness(character: CharacterRecord, ap = 0): number {
  * shared DerivedValues type (see the inline note).
  */
 export function computeSavageWorldsDerivedValues(character: CharacterRecord): SavageWorldsDerivedValues {
-  const strength = dieSides(character, 'strength');
+  const strength = traitDie(character, 'strength');
   const fighting = character.skills?.['fighting']?.value ?? 0;
   return {
     // E14: DerivedValues mandates hpMax/wpMax/movement/damageBonus/aglDamageBonus,
@@ -92,12 +108,13 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
     movement: 0,
     damageBonus: '+0',
     aglDamageBonus: '+0',
-    encumbranceLimit: strength * 5,
+    // Load Limit is Strength x5, and a d12+1 Strength carries as a 13 would.
+    encumbranceLimit: (strength.sides + strength.bonus) * 5,
     pace: 6,
     // Parry = 2 + ½ Fighting die. Fighting reads `.value ?? 0` (an unskilled
     // Fighting is effectively 0 → Parry 2), not dieSides(); the `>= 4` guard keeps
     // any stray sub-d4 value from contributing a half-step.
-    parry: 2 + (fighting >= 4 ? Math.floor(fighting / 2) : 0),
+    parry: 2 + (fighting >= SAVAGE_UNSKILLED_DIE ? halfDie(decodeTraitDie(fighting)) : 0),
     toughness: computeToughness(character),
   };
 }
@@ -126,9 +143,12 @@ export function savageTraitPenalty(character: CharacterRecord): number {
 
 /** Formats a trait die + its exploding-odds string, e.g. `d8 · 73%` (penalty folded in). */
 export function formatSavageSkill(value: number, penalty = 0, wild = true): string {
-  const pct = Math.round(traitChance(value, 4, { wild, bonus: penalty }) * 100);
+  // A stored 13 is d12+1, not a d13: the die bonus joins the situational
+  // penalty in the roll modifier, and the die code prints it.
+  const die = decodeTraitDie(value);
+  const pct = Math.round(traitChance(die.sides, 4, { wild, bonus: penalty + die.bonus }) * 100);
   const penLabel = penalty !== 0 ? ` (${penalty > 0 ? '+' : ''}${penalty})` : '';
-  return `${dieCode(value)} · ${pct}%${penLabel}`;
+  return `${dieCode(die.sides, die.bonus)} · ${pct}%${penLabel}`;
 }
 
 /**
@@ -150,7 +170,8 @@ export const savageWorldsEngine: SystemEngine = {
   attributeBadge: (attributeId, character) => {
     const sides = character.attributes?.[attributeId];
     if (sides === undefined || sides === null) return null;
-    return dieCode(sides);
+    const die = decodeTraitDie(sides);
+    return dieCode(die.sides, die.bonus);
   },
   attributeIds: SAVAGE_WORLDS_ATTRIBUTE_IDS,
   attributeReadout: {
@@ -159,10 +180,14 @@ export const savageWorldsEngine: SystemEngine = {
   },
   skill: {
     valueLabel: 'Die',
-    // Die sides, walked along the ladder rather than every integer.
-    range: { min: SAVAGE_UNSKILLED_DIE, max: 12 },
-    ladder: [SAVAGE_UNSKILLED_DIE, 6, 8, 10, 12],
-    advancementMax: 12,
+    // Die sides, walked along the ladder rather than every integer. The ladder
+    // runs past d12 as 13/14 (= d12+1, d12+2): SWADE advances beyond the top
+    // die with a flat bonus, and without those rungs the snap-to-nearest edit
+    // in SkillsScreen pulls a stored 13 straight back to 12, silently undoing a
+    // Legendary advance the first time the field is touched.
+    range: { min: SAVAGE_UNSKILLED_DIE, max: SAVAGE_TOP_DIE + SAVAGE_MAX_DIE_BONUS },
+    ladder: traitLadder([SAVAGE_UNSKILLED_DIE, 6, 8, 10, SAVAGE_TOP_DIE], true, SAVAGE_MAX_DIE_BONUS),
+    advancementMax: SAVAGE_TOP_DIE + SAVAGE_MAX_DIE_BONUS,
     defaultValue: SAVAGE_UNSKILLED_DIE,
     display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character) : 0),
     supportsMarks: false,
@@ -273,7 +298,10 @@ export const savageWorldsEngine: SystemEngine = {
     // Trait die + Wild Die vs TN 4 (PCs are Wild Cards), with the character's
     // current Wound/Fatigue/condition penalty folded in.
     chance: (value, _state, context) =>
-      traitChance(value, 4, { wild: true, bonus: context ? savageTraitPenalty(context.character) : 0 }),
+      ((die => traitChance(die.sides, 4, {
+        wild: true,
+        bonus: (context ? savageTraitPenalty(context.character) : 0) + die.bonus,
+      }))(decodeTraitDie(value))),
   },
   derivedFields: [
     { key: 'pace', label: 'Pace', shortLabel: 'Pace' },
