@@ -1,5 +1,5 @@
 import type { CharacterRecord, StatKey } from '../types/character';
-import { parseStatKey, type StatNamespace } from './statKeys';
+import { parseStatKey, statKey, type StatNamespace } from './statKeys';
 import type { SystemDefinition } from '../types/system';
 
 /**
@@ -253,6 +253,75 @@ export function getEffectiveValue(stat: StatKey, character: CharacterRecord): Ef
     base,
     modifiers,
     effective: base + sum,
+    isModified: modifiers.length > 0,
+  };
+}
+
+/** One derived field resolved through override, then temp modifiers. */
+export interface ResolvedDerivedField extends EffectiveValueResult {
+  /** Value the engine computed from the character's stats. */
+  computed: number | string | undefined;
+  /** User-entered override, or `null` when the computed value stands. */
+  override: number | null;
+  /**
+   * The value to display: `override` when set, otherwise `computed`, plus every
+   * temp modifier aimed at this field. A non-numeric field (a `+D6` damage
+   * bonus) is returned unchanged.
+   */
+  display: number | string | undefined;
+}
+
+/**
+ * Resolves one derived field the way every surface should: computed value,
+ * then a manual override, then any temporary modifiers aimed at it.
+ *
+ * @remarks
+ * Four surfaces render derived stats — the sheet's Derived Values panel, the
+ * play dashboard, the gear screen's encumbrance, and the printed sheet — and
+ * each had reimplemented the override fold slightly differently. **None of them
+ * folded temp modifiers.** `engine.modifiableStats` offers `derived:movement`,
+ * `derived:hpMax` and `derived:wpMax` as targets, the picker writes them, the
+ * buff bar lists them, and every one of those modifiers was inert: nothing in
+ * the app read a `derived:` key. Only `attr:` targets ever did anything.
+ *
+ * Order matters and is deliberate. An override *replaces* the computed value —
+ * it is the player saying "the rules say 10, mine is 12" — while a modifier
+ * *adjusts* whatever the current value is. So a +2 boots buff on an overridden
+ * Movement of 12 gives 14, not 12.
+ *
+ * Takes the already-computed derived map rather than the engine so the caller
+ * computes it once for the whole panel, and so this stays a pure function over
+ * plain data.
+ *
+ * A string-valued field (Dragonbane's `+D6` damage bonus) cannot take a numeric
+ * delta, so modifiers aimed at one are reported in `modifiers` but leave
+ * `display` untouched — visible to the user rather than silently dropped.
+ */
+export function resolveDerivedField(
+  character: CharacterRecord,
+  derived: Record<string, number | string | undefined>,
+  field: { key: string; overridable?: boolean },
+): ResolvedDerivedField {
+  const computed = derived[field.key];
+  const overrideRaw = character.derivedOverrides?.[field.key];
+  const override = field.overridable && typeof overrideRaw === 'number' ? overrideRaw : null;
+
+  const base = override ?? computed;
+  const active = character.tempModifiers ?? [];
+  const key = statKey('derived', field.key);
+  const modifiers = active.flatMap(m =>
+    m.effects.filter(e => e.stat === key).map(e => ({ label: m.label, delta: e.delta })),
+  );
+  const sum = modifiers.reduce((acc, m) => acc + m.delta, 0);
+
+  const numericBase = typeof base === 'number' ? base : null;
+  return {
+    computed,
+    override,
+    modifiers,
+    base: numericBase ?? 0,
+    effective: (numericBase ?? 0) + sum,
+    display: numericBase !== null ? numericBase + sum : base,
     isModified: modifiers.length > 0,
   };
 }

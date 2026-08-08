@@ -23,7 +23,7 @@ import { ConditionToggleGroup } from '../components/fields/ConditionToggleGroup'
 import { ResourceTracker } from '../components/fields/ResourceTracker';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { DerivedFieldDisplay } from '../components/fields/DerivedFieldDisplay';
-import { getEffectiveValue } from '../utils/derivedValues';
+import { getEffectiveValue, resolveDerivedField } from '../utils/derivedValues';
 import { attrKey } from '../utils/statKeys';
 import { damageStatus } from '../utils/damageTrack';
 import { BuffChipBar } from '../components/panels/BuffChipBar';
@@ -1127,16 +1127,15 @@ export default function SheetScreen() {
     <SectionPanel title="Derived Values" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col">
         {sheetDerivedFields.map(({ key, label, overridable }) => {
-          const computed = derivedStats[key] ?? 0;
-          const overrideRaw = character.derivedOverrides?.[key];
-          const override =
-            overridable && typeof overrideRaw === 'number' ? overrideRaw : null;
+          // Shared resolver: computed -> override -> temp modifiers. Previously
+          // this folded the override only, so a `derived:` modifier was inert.
+          const resolved = resolveDerivedField(character, derivedStats, { key, overridable });
           return (
             <DerivedFieldDisplay
               key={key}
               label={label}
-              computedValue={computed}
-              override={override}
+              computedValue={resolved.isModified ? (resolved.display ?? 0) : (resolved.computed ?? 0)}
+              override={resolved.override}
               onOverride={v => setDerivedOverride(key, v)}
               onReset={() => resetDerivedOverride(key)}
               editable={derivedEditable && !!overridable}

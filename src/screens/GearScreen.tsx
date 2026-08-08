@@ -16,6 +16,7 @@ import type { Weapon, InventoryItem, ArmorPiece } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { remakeCurrency } from '../utils/currency';
+import { resolveDerivedField } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
@@ -361,15 +362,20 @@ export default function GearScreen() {
     + (character.helmet?.weight ?? 0);
   // The carry limit is engine-computed (e.g. STR+END for Traveller, ceil(STR/2)
   // for classic-fantasy) but the user may hand-tune it through the same
-  // derivedOverrides channel the sheet uses. engine.derivedStats does not fold
-  // overrides in, so we apply it here on top of the computed value.
-  const computedEncumbranceLimit = engine.derivedStats(character, system ?? undefined).encumbranceLimit;
+  // derivedOverrides channel the sheet uses, and a temp modifier may adjust it
+  // (a grav harness, a strength augment). One shared resolver applies all three
+  // in the same order as every other derived surface.
+  const derivedStats = engine.derivedStats(character, system ?? undefined) as unknown as Record<
+    string,
+    number | string | undefined
+  >;
   const encumbranceField = engine.derivedFields.find(f => f.key === 'encumbranceLimit');
-  const encumbranceOverridable = !!encumbranceField?.overridable;
-  const encumbranceOverrideRaw = character.derivedOverrides?.encumbranceLimit;
-  const encumbranceOverride =
-    encumbranceOverridable && typeof encumbranceOverrideRaw === 'number' ? encumbranceOverrideRaw : null;
-  const encumbranceLimit = encumbranceOverride !== null ? encumbranceOverride : computedEncumbranceLimit;
+  const resolvedEncumbrance = resolveDerivedField(character, derivedStats, {
+    key: 'encumbranceLimit',
+    overridable: encumbranceField?.overridable,
+  });
+  const encumbranceOverride = resolvedEncumbrance.override;
+  const encumbranceLimit = typeof resolvedEncumbrance.display === 'number' ? resolvedEncumbrance.display : 0;
   // A falsy limit means the active system does not track encumbrance — never
   // flag the character as overloaded in that case.
   const tracksEncumbrance = encumbranceLimit > 0;
@@ -578,10 +584,14 @@ export default function GearScreen() {
             limit can be hand-tuned when a group plays encumbrance differently
             from the engine's default formula. Persisted to
             derivedOverrides.encumbranceLimit — the same channel the sheet uses. */}
-        {encumbranceOverridable && (
+        {!!encumbranceField?.overridable && (
           <DerivedFieldDisplay
             label={encumbranceField?.label ?? 'Carry Limit'}
-            computedValue={computedEncumbranceLimit}
+            computedValue={
+              resolvedEncumbrance.isModified
+                ? (resolvedEncumbrance.display ?? 0)
+                : (resolvedEncumbrance.computed ?? 0)
+            }
             override={encumbranceOverride}
             onOverride={v => setDerivedOverride('encumbranceLimit', v)}
             onReset={() => resetDerivedOverride('encumbranceLimit')}

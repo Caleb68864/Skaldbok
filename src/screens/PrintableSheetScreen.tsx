@@ -4,6 +4,7 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { getEngine } from '../features/systems/engine';
+import { resolveDerivedField } from '../utils/derivedValues';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../types/character';
 import PrintableSheet from '../components/PrintableSheet';
@@ -103,25 +104,28 @@ export default function PrintableSheetScreen() {
   const engine = getEngine(system);
   const engineDerived = engine.derivedStats(character, system ?? undefined);
 
-  // Manual per-character overrides still win, matching `getDerivedValue`.
-  const override = (key: keyof PrintDerivedValues): number | null =>
-    character.derivedOverrides?.[key] ?? null;
-
   // Spread the FULL engine-derived map first so any print-surfaced field the
   // engine declares survives (Savage Worlds' Pace/Parry/Toughness, Traveller's
   // Initiative DM) — previously these were silently dropped because this struct
-  // only carried the six Dragonbane keys. The override-adjusted known keys are
-  // overlaid on top. DerivedStatsRow only renders fields the engine declares
-  // with a print surface, so spreading inert dummies (hpMax/wpMax on SWADE) is
-  // harmless.
+  // only carried the six Dragonbane keys.
+  //
+  // The resolved values are then overlaid by looping over `engine.derivedFields`
+  // rather than naming six Dragonbane keys by hand. That hardcoded list was why
+  // a new overridable stat printed its computed value and ignored its override:
+  // it was only ever folded if it happened to be one of the six. The shared
+  // resolver also folds temp modifiers, which no surface previously did.
+  const resolvedEntries = engine.derivedFields.map(field => {
+    const resolved = resolveDerivedField(
+      character,
+      engineDerived as unknown as Record<string, string | number | undefined>,
+      field,
+    );
+    return [field.key, resolved.display] as const;
+  });
+
   const derived = {
     ...(engineDerived as unknown as Record<string, string | number | undefined>),
-    damageBonus: String(override('damageBonus') ?? engineDerived.damageBonus),
-    aglDamageBonus: String(override('aglDamageBonus') ?? engineDerived.aglDamageBonus),
-    movement: Number(override('movement') ?? engineDerived.movement),
-    encumbranceLimit: Number(override('encumbranceLimit') ?? engineDerived.encumbranceLimit),
-    hpMax: Number(override('hpMax') ?? engineDerived.hpMax),
-    wpMax: Number(override('wpMax') ?? engineDerived.wpMax),
+    ...Object.fromEntries(resolvedEntries.filter(([, value]) => value !== undefined)),
   } as unknown as PrintDerivedValues;
 
   return (

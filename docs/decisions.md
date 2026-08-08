@@ -1681,3 +1681,31 @@
   now buffs `attr:int` and asserts the cap holds while the INT DM moves, so it
   proves the buff is live and the cap ignores it.
 - Commit: feat(skills) — situational characteristics and the creation cap.
+
+## 2026-08-08 — Hardening pass 1: `derived:` modifiers were inert
+- Symptom: `engine.modifiableStats` offers `derived:movement`, `derived:hpMax`,
+  `derived:wpMax` (classic-fantasy) as temp-modifier targets. The picker wrote
+  them, the buff bar listed them, and **nothing read them**. `getEffectiveValue`
+  is the only consumer of `tempModifiers` in the whole app, and its three call
+  sites all pass `attrKey(...)`. Only `attr:` modifiers have ever done anything.
+- Root cause: four surfaces render derived stats — the sheet's Derived Values
+  panel, the play dashboard, the gear screen's carry limit, and the printed
+  sheet — and each reimplemented the override fold slightly differently. None
+  folded modifiers. The print sheet's fold also named six Dragonbane keys by
+  hand, so any *other* overridable field printed its computed value and ignored
+  its override entirely.
+- Fix: one `resolveDerivedField(character, derived, field)` in
+  `utils/derivedValues.ts`, used by all four. The print sheet now loops over
+  `engine.derivedFields` instead of the hardcoded six.
+- Watch: order is the rule and is tested. An override *replaces* the computed
+  value ("the rules say 10, mine is 12"); a modifier *adjusts* whatever the
+  value currently is. So +2 on an overridden 12 is 14, not 12.
+- Watch also: a string-valued field (Dragonbane's `+D6` damage bonus) cannot
+  take a numeric delta. Modifiers aimed at one are reported in `modifiers` but
+  leave `display` untouched — visible rather than silently dropped.
+- Watch also: `armor:`, `res:` and `skill:` modifiers are STILL inert. Same
+  root cause, different consumers (armour rating is read raw in three places;
+  Traveller's `res:*` damage-track targets have no reader at all). Next pass.
+- Mutation-checked: dropping modifiers, ignoring the override, ignoring the
+  `overridable` flag, and matching on a bare id each fail a test.
+- Commit: fix(derived) — apply temp modifiers to derived stats.

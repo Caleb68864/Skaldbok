@@ -1,5 +1,6 @@
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { getEngine } from '../systems/engine';
+import { resolveDerivedField } from '../../utils/derivedValues';
 import type { PlayModuleProps } from './types';
 
 type StatEntry = { label: string; value: string | number; note?: string };
@@ -56,13 +57,13 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
     // tile; skip it rather than show an empty box.
     .filter(field => derivedValues[field.key] !== undefined)
     .map(field => {
-      // Honour a manual override (e.g. a hand-tuned Carry limit set on the Gear
-      // screen) so the dashboard tile matches the sheet rather than showing the
-      // raw computed value. A cleared override is null → falls back to computed.
-      const override = field.overridable ? character.derivedOverrides?.[field.key] : undefined;
+      // Shared resolver: computed -> manual override (a hand-tuned Carry limit
+      // set on the Gear screen) -> temp modifiers, so this tile matches the
+      // sheet instead of each surface folding its own subset.
+      const resolved = resolveDerivedField(character, derivedValues, field);
       return {
         label: field.shortLabel ?? field.label,
-        value: override ?? derivedValues[field.key] ?? '—',
+        value: resolved.display ?? '—',
       };
     });
 
