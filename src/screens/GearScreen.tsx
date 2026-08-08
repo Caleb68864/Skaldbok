@@ -16,7 +16,7 @@ import type { Weapon, InventoryItem, ArmorPiece } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { remakeCurrency } from '../utils/currency';
-import { resolveDerivedField } from '../utils/derivedValues';
+import { resolveDerivedField, resolveArmorRating } from '../utils/derivedValues';
 import { useIsEditMode, useFieldEditable } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
@@ -456,7 +456,7 @@ export default function GearScreen() {
                 )}
                 onClick={() => { if (isEditMode) setArmorDrawerOpen(true); }}
               >
-                Armor: {character.armor.name} (rating {character.armor.rating}){character.armor.weight ? `, ${character.armor.weight} wt` : ''}
+                Armor: {character.armor.name} (rating {resolveArmorRating(character, 'armor')}){character.armor.weight ? `, ${character.armor.weight} wt` : ''}
               </button>
               {armorEquipEditable && (
                 <Button size="sm" variant={character.armor.equipped ? 'primary' : 'secondary'} onClick={() => {
@@ -482,7 +482,7 @@ export default function GearScreen() {
                 )}
                 onClick={() => { if (isEditMode) setHelmetDrawerOpen(true); }}
               >
-                Helmet: {character.helmet.name} (rating {character.helmet.rating}){character.helmet.weight ? `, ${character.helmet.weight} wt` : ''}
+                Helmet: {character.helmet.name} (rating {resolveArmorRating(character, 'helmet')}){character.helmet.weight ? `, ${character.helmet.weight} wt` : ''}
               </button>
               {helmetEquipEditable && (
                 <Button size="sm" variant={character.helmet.equipped ? 'primary' : 'secondary'} onClick={() => {

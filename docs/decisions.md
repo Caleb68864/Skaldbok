@@ -1709,3 +1709,32 @@
 - Mutation-checked: dropping modifiers, ignoring the override, ignoring the
   `overridable` flag, and matching on a bare id each fail a test.
 - Commit: fix(derived) — apply temp modifiers to derived stats.
+
+## 2026-08-08 — Hardening pass 2: `armor:` and `res:` modifiers were inert too
+- Symptom: same root cause as pass 1, different readers. Armour rating was read
+  raw in three places — the gear screen, the printed sheet, and Savage Worlds'
+  `computeToughness`, where it is real arithmetic and not display. Traveller's
+  `effectiveCharacteristic` read `resources[id].current` raw, so every
+  damage-track target `modifiableStats` offers did nothing.
+- Fix: `resolveArmorRating(character, slot)` for the three armour readers, and
+  `effectiveCharacteristic` now reads damage through `getEffectiveValue` under
+  `res:<id>` — the same resolver it already used for the score.
+- **Behaviour change, deliberate.** A test asserted `effectiveCharacteristic`
+  stayed 7 under a `res:dex +2` modifier. That was pinning the bug. The
+  namespace exists so `attr:dex` and `res:dex` are *distinct* targets — the
+  score versus the damage against it — not so one of them is inert. A
+  "Radiation: +2 END damage for the scene" modifier has to reach the END DM or
+  the target is decorative. The test now asserts DEX reads 5 while
+  `attributes.dex` is still 7, which pins distinctness the way that is actually
+  true.
+- Watch: both resolvers floor at 0. Negative armour would turn a penalty into a
+  bonus for the attacker; negative damage would inflate a characteristic above
+  its own score.
+- Watch also: a modifier on an *empty* armour slot resolves to 0 rather than
+  conjuring a rating from nothing — the slot is checked before the fold.
+- Remaining from this class: `skill:` targets. No engine currently offers one
+  in `modifiableStats`, so nothing is being written; the resolver supports it
+  whenever one does.
+- Mutation-checked: both floors, the empty-slot guard, and reverting the
+  Traveller damage read each fail a test.
+- Commit: fix(modifiers) — apply armor: and res: temp modifiers.

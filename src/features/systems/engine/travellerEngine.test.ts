@@ -6,7 +6,7 @@ import {
   TRAVELLER_DEFAULT_TARGET,
 } from './travellerEngine';
 import type { CharacterRecord, TempModifier } from '../../../types/character';
-import { attrKey } from '../../../utils/statKeys';
+import { attrKey, resKey } from '../../../utils/statKeys';
 
 /** A one-effect temp modifier targeting `stat`. */
 function modifier(stat: TempModifier['effects'][number]['stat'], delta: number): TempModifier {
@@ -51,6 +51,28 @@ describe('effectiveCharacteristic', () => {
     expect(effectiveCharacteristic(downed, 'end')).toBe(0);
   });
 
+  it('applies a res: temp modifier to the damage track', () => {
+    // Traveller's modifiableStats offers the damage tracks as targets; nothing
+    // read them, so every one was inert.
+    const c = character({ tempModifiers: [modifier(resKey('end'), 3)] } as Partial<CharacterRecord>);
+    expect(effectiveCharacteristic(c, 'end')).toBe(4);
+  });
+
+  it('does not let a negative damage modifier inflate a characteristic', () => {
+    // Damage floors at 0: a -5 on an undamaged track must not read as END 12.
+    const c = character({ tempModifiers: [modifier(resKey('end'), -5)] } as Partial<CharacterRecord>);
+    expect(effectiveCharacteristic(c, 'end')).toBe(7);
+  });
+
+  it('keeps attr: and res: modifiers on the same id distinct', () => {
+    // attr:end raises the score, res:end is damage against it. Both apply, and
+    // neither is mistaken for the other.
+    const c = character({
+      tempModifiers: [modifier(attrKey('end'), 2), modifier(resKey('end'), 1)],
+    } as Partial<CharacterRecord>);
+    expect(effectiveCharacteristic(c, 'end')).toBe(8);
+  });
+
   it('leaves characteristics without a damage track untouched', () => {
     // INT/EDU/SOC have no matching resource; a same-named resource must not leak in.
     expect(effectiveCharacteristic(character(), 'int')).toBe(7);
@@ -79,10 +101,16 @@ describe('effectiveCharacteristic', () => {
     expect(effectiveCharacteristic(c, 'str')).toBe(5);
   });
 
-  it('ignores a modifier aimed at the same-named resource', () => {
-    // res:dex is the damage track, not the characteristic. Distinct targets.
+  it('treats a modifier on the same-named resource as damage, not as the score', () => {
+    // res:dex is the damage track, attr:dex is the characteristic — still
+    // distinct targets, which is what the namespace exists for. But distinct
+    // does not mean inert: this previously asserted DEX stayed 7, pinning the
+    // bug that every `res:` modifier did nothing. A "Radiation: +2 END damage"
+    // buff has to reach the DM or the target is decorative.
     const c = character({ tempModifiers: [modifier('res:dex', 2)] });
-    expect(effectiveCharacteristic(c, 'dex')).toBe(7);
+    expect(effectiveCharacteristic(c, 'dex')).toBe(5);
+    // The score itself is untouched — only the damage moved.
+    expect(c.attributes['dex']).toBe(7);
   });
 
   it('ignores an unnamespaced legacy key so it cannot hit twice', () => {

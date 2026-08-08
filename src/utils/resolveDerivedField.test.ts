@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { resolveDerivedField } from './derivedValues';
-import { derivedKey, attrKey } from './statKeys';
+import { resolveDerivedField, resolveArmorRating } from './derivedValues';
+import { derivedKey, attrKey, armorKey } from './statKeys';
 import type { CharacterRecord, TempModifier } from '../types/character';
 
 function modifier(stat: string, delta: number, label = 'Buff'): TempModifier {
@@ -107,5 +107,40 @@ describe('resolveDerivedField', () => {
   it('survives a character with no modifiers or overrides at all', () => {
     const bare = {} as CharacterRecord;
     expect(resolveDerivedField(bare, derived, movement).display).toBe(10);
+  });
+});
+
+describe('resolveArmorRating', () => {
+  function armored(rating: number, modifiers: TempModifier[] = []): CharacterRecord {
+    return { armor: { name: 'Plate', rating }, tempModifiers: modifiers } as unknown as CharacterRecord;
+  }
+
+  it('returns the raw rating when nothing modifies it', () => {
+    expect(resolveArmorRating(armored(4), 'armor')).toBe(4);
+  });
+
+  it('applies an armor: temp modifier', () => {
+    // These were offered by the picker and read by nothing.
+    expect(resolveArmorRating(armored(4, [modifier(armorKey('armor'), 2)]), 'armor')).toBe(6);
+  });
+
+  it('floors at 0 so a big penalty cannot make armour help the attacker', () => {
+    expect(resolveArmorRating(armored(2, [modifier(armorKey('armor'), -5)]), 'armor')).toBe(0);
+  });
+
+  it('keeps the two slots distinct', () => {
+    const c = {
+      armor: { name: 'Plate', rating: 4 },
+      helmet: { name: 'Great helm', rating: 2 },
+      tempModifiers: [modifier(armorKey('helmet'), 3)],
+    } as unknown as CharacterRecord;
+    expect(resolveArmorRating(c, 'armor')).toBe(4);
+    expect(resolveArmorRating(c, 'helmet')).toBe(5);
+  });
+
+  it('is 0 for an empty slot, and a modifier cannot conjure armour', () => {
+    // A buff on a slot wearing nothing must not produce a rating out of thin air.
+    const bare = { armor: null, tempModifiers: [modifier(armorKey('armor'), 3)] } as unknown as CharacterRecord;
+    expect(resolveArmorRating(bare, 'armor')).toBe(0);
   });
 });

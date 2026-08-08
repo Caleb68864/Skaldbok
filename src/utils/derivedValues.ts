@@ -257,6 +257,26 @@ export function getEffectiveValue(stat: StatKey, character: CharacterRecord): Ef
   };
 }
 
+/**
+ * An armour slot's rating after temp modifiers.
+ *
+ * @remarks
+ * `engine.modifiableStats` offers `armor:armor` and `armor:helmet` as targets —
+ * a shield spell, a damaged plate, a powered exoskeleton — but every reader took
+ * `character.armor.rating` raw, so those modifiers did nothing. Three surfaces
+ * read the rating (the gear screen, the printed sheet, and Savage Worlds'
+ * Toughness formula, which is a real calculation rather than a display), so the
+ * fold belongs in one place.
+ *
+ * Floors at 0: a penalty large enough to invert the rating would otherwise turn
+ * armour into a bonus to incoming damage.
+ */
+export function resolveArmorRating(character: CharacterRecord, slot: 'armor' | 'helmet'): number {
+  const piece = slot === 'armor' ? character.armor : character.helmet;
+  if (!piece) return 0;
+  return Math.max(0, getEffectiveValue(statKey('armor', slot), character).effective);
+}
+
 /** One derived field resolved through override, then temp modifiers. */
 export interface ResolvedDerivedField extends EffectiveValueResult {
   /** Value the engine computed from the character's stats. */

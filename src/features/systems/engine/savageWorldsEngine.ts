@@ -1,5 +1,5 @@
 import type { CharacterRecord } from '../../../types/character';
-import type { DerivedValues } from '../../../utils/derivedValues';
+import { resolveArmorRating, type DerivedValues } from '../../../utils/derivedValues';
 import { dieCode, traitChance } from '../../../systems/savage-worlds/savageMath';
 import { attrKey, resKey } from '../../../utils/statKeys';
 import type { SystemEngine } from './types';
@@ -35,7 +35,11 @@ export interface SavageWorldsDerivedValues extends DerivedValues {
  */
 export function computeToughness(character: CharacterRecord, ap = 0): number {
   const vigor = dieSides(character, 'vigor');
-  const armor = character.armor?.rating ?? 0;
+  // Through the shared resolver so an `armor:armor` temp modifier reaches
+  // Toughness. Reading `character.armor.rating` raw made every such modifier
+  // inert, including in this formula — the one place armour is arithmetic
+  // rather than display.
+  const armor = resolveArmorRating(character, 'armor');
   const effectiveArmor = Math.max(0, armor - Math.max(0, ap));
   return 2 + Math.floor(vigor / 2) + effectiveArmor;
 }

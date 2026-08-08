@@ -9,6 +9,7 @@ import type {
 } from '../types/character';
 import type { SystemDefinition, SkillDefinition } from '../types/system';
 import { resolveSkillCategories } from '../features/characters/customSkills';
+import { resolveArmorRating } from '../utils/derivedValues';
 import { compareSpellsByRankThenName, formatCastingTime, formatRequirements, getSpellRank } from '../utils/spells';
 import { toSpells, toHeroicAbilities } from '../utils/abilities';
 import type { SystemEngine } from '../features/systems/engine';
@@ -515,7 +516,8 @@ function ArmorHelmet({ character, engine }: { character: CharacterRecord; engine
           </div>
           <div className="sheet-equipment-field sheet-equipment-rating">
             <span className="sheet-field-label">Rating</span>
-            <span className="sheet-field-value">{character.armor?.rating ?? ''}</span>
+            {/* Resolved, so a temp modifier on the rating prints too. */}
+            <span className="sheet-field-value">{character.armor ? resolveArmorRating(character, 'armor') : ''}</span>
           </div>
           <div className="sheet-equipment-field sheet-equipment-features">
             <span className="sheet-field-label">{engine.labels.armorFeatures}</span>
@@ -534,7 +536,7 @@ function ArmorHelmet({ character, engine }: { character: CharacterRecord; engine
           </div>
           <div className="sheet-equipment-field sheet-equipment-rating">
             <span className="sheet-field-label">Rating</span>
-            <span className="sheet-field-value">{character.helmet?.rating ?? ''}</span>
+            <span className="sheet-field-value">{character.helmet ? resolveArmorRating(character, 'helmet') : ''}</span>
           </div>
           <div className="sheet-equipment-field sheet-equipment-features">
             <span className="sheet-field-label">{engine.labels.armorFeatures}</span>
