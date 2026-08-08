@@ -36,8 +36,15 @@ const actionBtnClass = 'min-h-11 min-w-11 px-4 py-2 bg-[var(--color-surface)] bo
  * unreferenced.)
  */
 export function CombatEncounterView({ encounter: initialEncounter, onClose }: CombatEncounterViewProps) {
-  const { activeParty } = useCampaignContext();
+  const { activeParty, activeCampaign } = useCampaignContext();
   const { showToast } = useToast();
+  // The participant health noun is the ruleset's ("HP" vs "END"). This view
+  // wrote a literal "HP" into the session log and the participant chip while
+  // ParticipantDrawer — opened from this very list — already read the engine
+  // label, so a Traveller encounter contradicted itself between the row and
+  // the drawer it opens.
+  const engine = useSystemEngineFor(activeCampaign?.system);
+  const healthNoun = engine.labels.creatureHealth;
   const [encounter, setEncounter] = useState<Encounter>(initialEncounter);
   const [selectedParticipant, setSelectedParticipant] = useState<EncounterParticipant | null>(null);
   const [templateCache, setTemplateCache] = useState<Record<string, CreatureTemplate>>({});
@@ -170,9 +177,9 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       const newHp = patch.currentHp;
       if (typeof oldHp === 'number' && typeof newHp === 'number') {
         const diff = newHp - oldHp;
-        const suffix = typeof maxHp === 'number' ? ` (${newHp}/${maxHp})` : ` (${newHp} HP)`;
+        const suffix = typeof maxHp === 'number' ? ` (${newHp}/${maxHp})` : ` (${newHp} ${healthNoun})`;
         const title = diff > 0
-          ? `${participant.name}: Healed ${diff} HP${suffix}`
+          ? `${participant.name}: Healed ${diff} ${healthNoun}${suffix}`
           : `${participant.name}: Took ${Math.abs(diff)} damage${suffix}`;
         notePromises.push(
           logToSession(title, 'generic', { participant: participant.name, oldHp, newHp, maxHp }, { targetEncounterId: encounter.id }),
@@ -353,7 +360,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
                               : 'text-[var(--color-text)]'
                           )}
                         >
-                          HP {p.instanceState.currentHp}
+                          {healthNoun} {p.instanceState.currentHp}
                         </span>
                       )}
                     </div>
@@ -433,6 +440,11 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
         <QuickCreateParticipantFlow
           onSubmit={handleQuickCreate}
           onCancel={() => setShowQuickCreate(false)}
+          labels={{
+            health: engine.labels.creatureHealth,
+            armor: engine.labels.creatureArmor,
+            movement: engine.labels.creatureMovement,
+          }}
         />
       )}
     </div>

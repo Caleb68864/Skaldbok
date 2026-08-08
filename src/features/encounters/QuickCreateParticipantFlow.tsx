@@ -5,7 +5,22 @@ import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 export interface QuickCreateParticipantFlowProps {
   onSubmit: (name: string, stats: { hp?: number; armor?: number; movement?: number }) => Promise<void>;
   onCancel: () => void;
+  /**
+   * Field headings for the three creature stats, from the active system's
+   * engine labels.
+   *
+   * @remarks
+   * Passed in rather than read here: this file is a presentational form, and
+   * the engine belongs to the feature that owns the encounter. Defaults keep
+   * the Dragonbane wording for any caller that has no engine to hand.
+   *
+   * The stat *keys* stay `hp`/`armor`/`movement` — `creatureTemplate.stats` is
+   * a fixed shape. Only the words the user reads are system-driven.
+   */
+  labels?: { health: string; armor: string; movement: string };
 }
+
+const DEFAULT_LABELS = { health: 'HP', armor: 'Armor', movement: 'Movement' };
 
 const inputClass = 'w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm box-border';
 
@@ -13,7 +28,11 @@ const inputClass = 'w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] b
  * Inline quick-create form for adding a participant with minimal stats.
  * Creates a creature template + encounter participant in one operation.
  */
-export function QuickCreateParticipantFlow({ onSubmit, onCancel }: QuickCreateParticipantFlowProps) {
+export function QuickCreateParticipantFlow({
+  onSubmit,
+  onCancel,
+  labels = DEFAULT_LABELS,
+}: QuickCreateParticipantFlowProps) {
   const [name, setName] = useState('');
   const [hp, setHp] = useState('');
   const [armor, setArmor] = useState('');
@@ -70,10 +89,10 @@ export function QuickCreateParticipantFlow({ onSubmit, onCancel }: QuickCreatePa
           </label>
           <div className="grid grid-cols-3 gap-3">
             <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-              HP
+              {labels.health}
               <input
                 type="number"
-                placeholder="HP"
+                placeholder={labels.health}
                 value={hp}
                 onChange={(e) => setHp(e.target.value)}
                 className={inputClass}
@@ -81,10 +100,10 @@ export function QuickCreateParticipantFlow({ onSubmit, onCancel }: QuickCreatePa
               />
             </label>
             <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-              Armor
+              {labels.armor}
               <input
                 type="number"
-                placeholder="Armor"
+                placeholder={labels.armor}
                 value={armor}
                 onChange={(e) => setArmor(e.target.value)}
                 className={inputClass}
@@ -92,10 +111,10 @@ export function QuickCreateParticipantFlow({ onSubmit, onCancel }: QuickCreatePa
               />
             </label>
             <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-              Movement
+              {labels.movement}
               <input
                 type="number"
-                placeholder="Movement"
+                placeholder={labels.movement}
                 value={movement}
                 onChange={(e) => setMovement(e.target.value)}
                 className={inputClass}

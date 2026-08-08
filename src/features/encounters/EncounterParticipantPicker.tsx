@@ -3,6 +3,7 @@ import * as creatureTemplateRepository from '../../storage/repositories/creature
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { CharacterRecord } from '../../types/character';
 import { useCampaignContext } from '../campaign/CampaignContext';
+import { useSystemEngineFor } from '../systems/engine';
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 
 export interface EncounterParticipantPickerProps {
@@ -22,6 +23,9 @@ export function EncounterParticipantPicker({
   onClose,
 }: EncounterParticipantPickerProps) {
   const { activeCampaign, activeParty } = useCampaignContext();
+  // The creature health noun is the ruleset's; this form said "HP" while the
+  // drawer that opens the same participant said "END".
+  const engine = useSystemEngineFor(activeCampaign?.system);
   const [mode, setMode] = useState<Mode>('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CreatureTemplate[]>([]);
@@ -142,7 +146,7 @@ export function EncounterParticipantPicker({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          HP (optional)
+          {engine.labels.creatureHealth} (optional)
           <input
             type="number"
             value={newHp}

@@ -1771,3 +1771,28 @@
   trait roll in the system was invisible to it.
 - Verified by reverting each of the three fixes in turn: all three are caught.
 - Commit: test(engine) — fail when a modifier target changes nothing.
+
+## 2026-08-08 — Hardening pass 4: "HP" in a Traveller encounter
+- Symptom: `CombatEncounterView` wrote a literal "HP" into the session log line
+  and the participant chip, and both participant-creation forms
+  (`EncounterParticipantPicker`, `QuickCreateParticipantFlow`) labelled their
+  fields HP/Armor/Movement. `ParticipantDrawer` — opened by tapping a row in
+  that very list — already read `engine.labels`, so a Traveller encounter
+  contradicted itself between the row and the drawer.
+- Fix: the two views read `engine.labels.creatureHealth`.
+  `QuickCreateParticipantFlow` stays presentational and takes the three
+  headings as a `labels` prop with Dragonbane defaults, since the engine
+  belongs to the feature that owns the encounter, not to a form component.
+- Watch: only the *words* moved. `creatureTemplate.stats` keys stay
+  `hp`/`armor`/`movement` — a fixed shape, and deriving a storage key from a
+  label is the thing this project explicitly forbids.
+- Fix 2: `vocabularyLeaks.test.ts` scans the encounter and play-dashboard
+  surfaces for standalone health nouns in user-visible lines. Deliberately
+  narrow — engine adapters are entitled to their own ruleset's words, and a
+  broader sweep would drown in false positives and get suppressed rather than
+  fixed. The regex requires a word boundary, so `currentHp`, `maxHp` and
+  `stats.hp` (deliberately fixed field names) do not match.
+- Watch: the guard asserts it scanned more than five files. A lint-style test
+  whose glob silently matches nothing is worse than no test.
+- Verified by reintroducing the hardcoded chip: caught.
+- Commit: fix(encounters) — read the health noun from the engine.
