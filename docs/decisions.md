@@ -2060,3 +2060,24 @@
   the minimum. That needs a rendered measurement, not a grep, and there is no
   DOM test setup to do it in.
 - Commit: fix(skills) — give the characteristic picker a real tap target.
+
+## 2026-08-08 — Pass 16: the damage log claimed wounds the character never took
+- Symptom: `resolveDamage` returns the true rules outcome unbounded — a big
+  enough hit really is 7 wounds — while the wounds *track* caps at 3.
+  `DamageHealModule` clamped correctly when writing the resource, then built its
+  log line from the **unclamped** figure, so a character who took 3 wounds and
+  went Incapacitated was logged as "+7 Wounds". The sheet and the session log
+  disagreed about the same hit.
+- Fix: compute what actually lands *before* applying it, from the current
+  character, and use that one number for both the resource update and the
+  message.
+- Watch: the engine deliberately still returns the unbounded figure. Pre-clamping
+  in `resolveDamage` would throw away the difference between "exactly dead" and
+  "obliterated", which a consumer may legitimately want; the cap belongs to the
+  track, and there is now a test pinning that split.
+- Added the boundary cases the suite was missing: exactly at Toughness (Shaken,
+  no wound), one under (bounce), 3 over vs exactly 4 over (the raise boundary),
+  and an unshaken target taking wounds without the already-Shaken bonus.
+- Mutation-checked: `floor` → `ceil` on the raise division fails 2 tests;
+  dropping the already-Shaken bonus wound fails 1.
+- Commit: fix(swade) — log the wounds that actually landed.

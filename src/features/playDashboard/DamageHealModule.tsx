@@ -96,22 +96,35 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
     // than subtracting points. E3.
     if (engine.resolveDamage && track.kind === 'levels') {
       const r = engine.resolveDamage(character, { total: n });
+
+      // Work out what actually LANDS before applying it, so the log reports the
+      // same thing the sheet shows. `resolveDamage` returns the rules outcome
+      // unbounded — a big enough hit yields 7 wounds — while the track caps at
+      // its own max, so the message used to claim "+7 Wounds" for a character
+      // who took 3 and is Incapacitated.
+      const applied: Record<string, number> = {};
+      for (const [id, add] of Object.entries(r.levels)) {
+        const existing = character.resources?.[id];
+        // The engine may name a track the character record lacks (older/imported
+        // data): don't fabricate a maxless resource — skip it. Cap at the track's
+        // own max, falling back to the model's level count, never a magic 99.
+        if (!existing) continue;
+        const max = existing.max ?? track.levels ?? add;
+        applied[id] = Math.min((existing.current ?? 0) + add, max) - (existing.current ?? 0);
+      }
+
       updateCharacter(prev => {
         const resources = { ...prev.resources };
-        for (const [id, add] of Object.entries(r.levels)) {
+        for (const [id, add] of Object.entries(applied)) {
           const existing = resources[id];
-          // The engine may name a track the character record lacks (older/imported
-          // data): don't fabricate a maxless resource — skip it. Cap at the track's
-          // own max, falling back to the model's level count, never a magic 99.
           if (!existing) continue;
-          const max = existing.max ?? track.levels ?? add;
-          resources[id] = { ...existing, current: Math.min((existing.current ?? 0) + add, max) };
+          resources[id] = { ...existing, current: (existing.current ?? 0) + add };
         }
         const conditions = { ...prev.conditions };
         for (const c of r.setsConditions) conditions[c] = true;
         return { resources, conditions, updatedAt: nowISO() };
       });
-      const woundsAdded = Object.values(r.levels).reduce((a, b) => a + b, 0);
+      const woundsAdded = Object.values(applied).reduce((a, b) => a + b, 0);
       const parts: string[] = [];
       if (r.noEffect) parts.push(`Damage ${n} — no effect (under Toughness).`);
       else {

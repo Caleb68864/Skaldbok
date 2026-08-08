@@ -195,3 +195,43 @@ describe('the SWADE skill list', () => {
     }
   });
 });
+
+describe('savageWorldsEngine.resolveDamage boundaries', () => {
+  // Tough = 2 + floor(6/2) + 4 = 9 for swChar().
+  it('Shakes at exactly Toughness, with no wound', () => {
+    const r = savageWorldsEngine.resolveDamage!(swChar(), { total: 9 });
+    expect(r.noEffect).toBeFalsy();
+    expect(r.setsConditions).toEqual(['shaken']);
+    expect(r.levels).toEqual({});
+  });
+
+  it('bounces one point under Toughness', () => {
+    expect(savageWorldsEngine.resolveDamage!(swChar(), { total: 8 }).noEffect).toBe(true);
+  });
+
+  it('gives no wound at 3 over and one at exactly 4 over', () => {
+    // The raise boundary: wounds are per *full* 4 points over Toughness.
+    expect(savageWorldsEngine.resolveDamage!(swChar(), { total: 12 }).levels).toEqual({});
+    expect(savageWorldsEngine.resolveDamage!(swChar(), { total: 13 }).levels).toEqual({ wounds: 1 });
+  });
+
+  it('wounds an unshaken target without the already-Shaken bonus wound', () => {
+    // 9 + 8 = two raises → 2 wounds, and no +1 because they were not Shaken.
+    expect(savageWorldsEngine.resolveDamage!(swChar(), { total: 17 }).levels).toEqual({ wounds: 2 });
+  });
+
+  it('reports the true rules outcome unbounded, leaving the cap to the track', () => {
+    // A huge hit really is more than 3 wounds by the rules; the damage track
+    // clamps for storage and DamageHealModule reports what actually landed.
+    // The engine must not pre-clamp, or a consumer cannot tell "exactly dead"
+    // from "obliterated".
+    const r = savageWorldsEngine.resolveDamage!(swChar(), { total: 41 });
+    expect(r.levels.wounds).toBeGreaterThan(3);
+  });
+
+  it('sets Shaken alongside wounds, not instead of them', () => {
+    const r = savageWorldsEngine.resolveDamage!(swChar(), { total: 13 });
+    expect(r.setsConditions).toContain('shaken');
+    expect(r.levels.wounds).toBe(1);
+  });
+});
