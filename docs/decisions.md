@@ -2081,3 +2081,31 @@
 - Mutation-checked: `floor` → `ceil` on the raise division fails 2 tests;
   dropping the already-Shaken bonus wound fails 1.
 - Commit: fix(swade) — log the wounds that actually landed.
+
+## 2026-08-08 — Pass 17: Bennies never refreshed
+- Symptom: `ResourceDefinition.refresh: 'session'` — declared on SWADE's
+  Bennies, documented on the type ("refreshed at the start of each session
+  (Savage Worlds Bennies)"), validated by the schema — and **read by nothing.**
+  The fifth instance of this sweep's recurring class. A SWADE table reset three
+  counters by hand every week.
+- Fix: `sessionRefreshPatch(system, character)` as a pure rule, wired into
+  `startSession` for every character in the active party.
+- Watch: resolved against **each character's own system**, not the campaign's. A
+  party may legitimately mix systems, and refreshing against the wrong
+  definition would reset the wrong resource.
+- Watch also: it refills to the *character's* `max`, not the definition's
+  `defaultMax`. An edge or house rule may raise the pool, and refreshing to the
+  default would silently cap it back down every single week — the kind of bug
+  that looks like the player mis-remembering.
+- Watch also: returns `null` when nothing changed, so a session start does not
+  bump `updatedAt` on every party member for no reason. Polarity is read from
+  `direction`, so a session-refreshing *accumulating* track empties rather than
+  fills.
+- Watch also: the refresh runs after the session is created and its failures are
+  swallowed per character. Failing to top up a benny must not cost the group
+  their session, and one unreadable character must not stop the others.
+- `refresh: 'rest'` is still unimplemented, deliberately — that fires on a rest
+  action, which belongs to the rest model, not a session boundary.
+- Mutation-checked: ignoring the refresh flag fails 2, always returning a patch
+  fails 2, refilling to `defaultMax` fails 1.
+- Commit: feat(swade) — refresh Bennies at the start of a session.

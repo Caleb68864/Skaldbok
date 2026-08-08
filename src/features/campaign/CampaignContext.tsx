@@ -9,6 +9,8 @@ import type { Encounter } from '../../types/encounter';
 import { db } from '../../storage/db/client';
 import * as metadataRepository from '../../storage/repositories/metadataRepository';
 import * as characterRepository from '../../storage/repositories/characterRepository';
+import * as systemRepository from '../../storage/repositories/systemRepository';
+import { sessionRefreshPatch } from '../characters/sessionRefresh';
 import * as campaignRepository from '../../storage/repositories/campaignRepository';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useAppState } from '../../context/AppStateContext';
@@ -366,6 +368,34 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
   }, [activeSession]);
 
+  /**
+   * Tops up session-refreshing resources for every character in the active
+   * party, using each character's *own* system rather than the campaign's — a
+   * party may legitimately mix systems, and refreshing against the wrong
+   * definition would reset the wrong resource.
+   *
+   * Best-effort and non-blocking: one unreadable character must not stop the
+   * others, and none of it should delay the session actually starting.
+   */
+  const refreshPartyResources = useCallback(async () => {
+    const memberIds = (activeParty?.members ?? [])
+      .map(m => m.linkedCharacterId)
+      .filter((id): id is string => Boolean(id));
+
+    for (const id of memberIds) {
+      try {
+        const character = await characterRepository.getById(id);
+        if (!character) continue;
+        const system = await systemRepository.getById(character.systemId);
+        const patch = sessionRefreshPatch(system, character);
+        if (!patch) continue;
+        await characterRepository.save({ ...character, ...patch, updatedAt: nowISO() });
+      } catch (e) {
+        console.error('session resource refresh failed for', id, e);
+      }
+    }
+  }, [activeParty]);
+
   const startSession = useCallback(async () => {
     if (!activeCampaign) {
       showToast('No active campaign');
@@ -396,11 +426,22 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
 
       await db.sessions.add(newSession);
       setActiveSession_(newSession);
+
+      // Refill every party character's session-refreshing resources — Savage
+      // Worlds Bennies. `ResourceDefinition.refresh: 'session'` was declared,
+      // documented and schema-validated with no reader, so a SWADE table reset
+      // three counters by hand every week.
+      //
+      // Deliberately after the session is created and outside the try that
+      // guards it: failing to top up a benny must not leave the group without a
+      // session, and a character that cannot be read is skipped rather than
+      // aborting the rest.
+      void refreshPartyResources();
     } catch (e) {
       showToast('Failed to start session');
       console.error('startSession failed:', e);
     }
-  }, [activeCampaign, activeSession, showToast]);
+  }, [activeCampaign, activeSession, showToast, refreshPartyResources]);
 
   const endSession = useCallback(async () => {
     if (!activeSession) return;
