@@ -3072,3 +3072,29 @@
   The ship link (`SheetScreen:1030`) is the same one-token swap but was not
   brought on screen — it needs a ship linked to the character.
 - Commit: fix(ui) — remaining uppercase labels to 12px.
+
+## 2026-08-09 — the timeline axis to 12px, and the crowding worry was wrong
+- Symptom: the last sub-12px text in the app was on the timeline axis. I had
+  twice advised leaving it, on the theory that widening a ruler label would
+  crowd the ticks. That theory was never measured.
+- Fix: both axis labels to `--size-xs` (12px) — the scale-unit caption and the
+  major tick labels. Measured afterwards: at the densest scale that renders
+  (Minutes, 24 ticks) the tightest gap between neighbouring labels is **171px**,
+  and at the default scale it is 221px, identical in portrait and landscape.
+  There was never any crowding to worry about.
+- Surfaces: `components/timeline/TimelineHeaderAxis.tsx`.
+- Watch: **the audit that found "hour @11px" was blind to the actual ticks.** It
+  scanned `span, p, td, th, label, li`; the tick labels are `div`s, so the only
+  thing it ever reported was the scale-unit caption. Both were 11px, so the fix
+  is the same, but the audit was measuring the smaller of two problems and would
+  have declared victory after fixing only the caption.
+- Watch also: the first version of the crowding check printed **"ALL CHECKS
+  PASSED" having run zero checks** — the scale control is a dropdown, not
+  buttons, so every selection silently failed and no tick was ever measured. It
+  now fails when no scale produced labels. This is the fifth instance in this
+  codebase of a check passing because the command found nothing to look at.
+- Watch also: Weeks and Months render no tick labels at all with a single
+  session's span, so those two scales are unmeasured rather than verified.
+  Remaining sub-12px text: the axis marker pill and the now-marker, both 10px,
+  and `TimelineItemBar`'s subtitle at 11px.
+- Commit: fix(timeline) — axis labels to 12px.

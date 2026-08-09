@@ -30,7 +30,7 @@ export function TimelineHeaderAxis({
         <CalendarDays className="h-4 w-4 text-text-muted" />
         <div>
           <p className="text-sm font-semibold text-text">Timeline</p>
-          <p className="text-[11px] uppercase tracking-[0.18em] text-text-muted">{scaleUnit}</p>
+          <p className="text-[length:var(--size-xs)] uppercase tracking-[0.18em] text-text-muted">{scaleUnit}</p>
         </div>
       </div>
       <div className="relative h-[80px] min-h-[80px] bg-[linear-gradient(180deg,rgba(255,255,255,0.03),transparent_50%,rgba(0,0,0,0.05))]">
@@ -38,7 +38,12 @@ export function TimelineHeaderAxis({
         {majorTicks.map((tick) => (
           <div
             key={`label-${tick.valueMs}`}
-            className="absolute top-3 -translate-x-1/2 px-2 text-[11px] font-medium text-text-muted"
+            // 12px like every other label in the app. These are absolutely
+            // positioned and centred on their tick, so widening the type eats
+            // into the gap between neighbouring ticks — `majorTicks` is already
+            // a thinned subset chosen for the current scale, which is what keeps
+            // them from colliding. Verified at both tablet orientations.
+            className="absolute top-3 -translate-x-1/2 px-2 text-[length:var(--size-xs)] font-medium text-text-muted"
             style={{ left: `${tick.leftPercent}%` }}
           >
             {tick.label}
