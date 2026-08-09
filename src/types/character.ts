@@ -1,4 +1,5 @@
 import type { ID, Timestamped, Versioned } from './common';
+import type { Debt } from '../features/characters/debts';
 
 /**
  * Biographical and flavour metadata for a character.
@@ -529,6 +530,15 @@ export interface CharacterRecord extends Versioned, Timestamped {
    * under the same id; this array only carries the *definition*.
    */
   customSkills?: CustomSkillDefinition[];
+  /**
+   * Money owed, in either direction. See
+   * {@link features/characters/debts!Debt | Debt}.
+   *
+   * @remarks
+   * Optional and additive, so every existing record is already valid and no
+   * migration rung is needed — every read path goes through `?? []`.
+   */
+  debts?: Debt[];
 }
 
 /**

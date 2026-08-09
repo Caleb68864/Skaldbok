@@ -4,6 +4,8 @@ import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { AdvancementPanel } from '../components/fields/AdvancementPanel';
+import { DebtList } from '../components/fields/DebtList';
+import { addDebt, settleDebt, reopenDebt, removeDebt } from '../features/characters/debts';
 import { resolveSkillCategories } from '../features/characters/customSkills';
 import {
   advancementCandidates,
@@ -868,6 +870,26 @@ export default function SheetScreen() {
             owed capital. Both mirror the Book's Finances block. */}
         {financeField('shipShares', 'Ship Shares')}
         {financeField('debt', 'Debt (Cr)')}
+
+        {/* Itemised debts, distinct from the Book's single Debt total above:
+            that line is a mortgage figure and cannot say who you owe or why. */}
+        <DebtList
+          debts={character.debts ?? []}
+          abbr={engine.currency.denominations[0]?.abbr ?? ''}
+          editable={identityEditable}
+          onAdd={debt => updateCharacter({
+            ...addDebt(character, debt, generateId(), nowISO()), updatedAt: nowISO(),
+          })}
+          onSettle={id => {
+            const patch = settleDebt(character, id, nowISO());
+            if (patch) updateCharacter({ ...patch, updatedAt: nowISO() });
+          }}
+          onReopen={id => {
+            const patch = reopenDebt(character, id);
+            if (patch) updateCharacter({ ...patch, updatedAt: nowISO() });
+          }}
+          onRemove={id => updateCharacter({ ...removeDebt(character, id), updatedAt: nowISO() })}
+        />
 
         {/* Monthly / annual cash flow — the recurring lines from the Book's
             Finances block. Cost of Living is the Book's "Living Costs". */}

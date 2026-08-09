@@ -2297,3 +2297,27 @@
 - Mutation-checked: dropping the target from `chance` fails 4 tests, dropping it
   from `display` fails 3.
 - Commit: feat(traveller) — selectable task difficulty.
+
+## 2026-08-08 — First live Traveller session: debts, and the S Pen panel
+- Symptom 1: the Book's Finances block has one `Debt (Cr)` line. It is a total
+  — a mortgage figure — and cannot say *who* you owe or *what for*. A crewmate
+  fronting 10,000 Cr for a vacc suit is the real case: nobody writes it down,
+  everybody half-remembers it, and it resurfaces three sessions later as an
+  argument.
+- Fix: `CharacterRecord.debts`, itemised — counterparty, amount, direction,
+  note — rendered under the existing total, which stays because it is the
+  Book's own line and holds existing data.
+- Watch: `direction` (`'owed'` / `'due'`) carries the sign rather than a
+  negative `amount`. A debt of -10,000 reads as "they owe me" only if you
+  already know the convention, and eventually someone types the wrong sign.
+- Watch also: settling **keeps the row** and marks it, behind a "Settled (n)"
+  toggle, with Reopen to undo a mis-tap. "Did I ever pay that back?" is asked
+  months later, and a deleted row answers with silence.
+- No migration rung: the field is optional and additive, every read goes
+  through `?? []`, and a record without it is already correct.
+- Symptom 2: `PenHelpPanel` persisted its expanded state. That sounds helpful
+  and is not — you open it once to read the device checks, and it then eats the
+  top of the session log in every session afterwards. Troubleshooting is a
+  one-off; the writing area is what you came for. It now always starts
+  collapsed, and the localStorage plumbing is gone.
+- Commit: feat(traveller) — itemised debts, and stop the S Pen panel re-opening.

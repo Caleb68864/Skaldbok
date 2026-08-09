@@ -1,44 +1,23 @@
 import { useState } from 'react';
 
-/** localStorage key persisting whether the S Pen help panel is expanded. */
-const STORAGE_KEY = 'skaldbok-pen-help-expanded';
-
-/** Reads the persisted expanded state, tolerating absent or unavailable storage. */
-function readExpanded(): boolean {
-  try {
-    return localStorage.getItem(STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-/** Persists the expanded state, tolerating a private-mode or full storage. */
-function writeExpanded(expanded: boolean): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, expanded ? 'true' : 'false');
-  } catch {
-    // A storage failure must not break capture — the state simply resets
-    // to collapsed on the next mount.
-  }
-}
-
 /**
  * Collapsible help panel for "S Pen writing isn't working".
  *
  * @remarks
  * Handwriting failing is almost always device configuration, which the app
  * cannot detect or fix. This surfaces the ordered checks instead of failing
- * silently, collapsed to a single-line affordance by default so it costs no
- * writing area on the session log.
+ * silently, collapsed to a single-line affordance so it costs no writing area
+ * on the session log.
+ *
+ * **Always starts collapsed.** It used to persist its expanded state, which
+ * sounds helpful and is not: you open it once to read the checks, and it then
+ * eats the top of the session log in every session afterwards. Troubleshooting
+ * is a one-off; the writing area is what you came for.
  */
 export function PenHelpPanel() {
-  const [expanded, setExpanded] = useState(readExpanded);
+  const [expanded, setExpanded] = useState(false);
 
-  const toggle = () => {
-    const next = !expanded;
-    setExpanded(next);
-    writeExpanded(next);
-  };
+  const toggle = () => setExpanded(o => !o);
 
   return (
     <div className="shrink-0 border-t border-[var(--color-border,#ddd)] px-4 text-sm">
