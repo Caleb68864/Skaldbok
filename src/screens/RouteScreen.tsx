@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { Navigate } from 'react-router-dom';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
-import { useSystemDefinition } from '../features/systems/useSystemDefinition';
-import * as routeRepository from '../storage/repositories/routeRepository';
-import { readNumericField, totalDistance, reorder } from '../utils/routeMath';
+import { useRoute } from '../features/route/useRoute';
+import { readNumericField } from '../utils/routeMath';
 import type { RouteStop } from '../types/routeStop';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { Button } from '../components/primitives/Button';
@@ -21,10 +21,11 @@ const moveBtn =
  *
  * @remarks
  * Every field on a stop — including its labels — comes from the active system's
- * `routePlanner` declaration, so this screen contains no ruleset vocabulary.
- * Traveller declares name/UWP/hex/jump/notes and gets a jump route; a system
- * that declares nothing does not get this screen at all, and navigating here
- * directly redirects rather than showing an empty shell.
+ * `routePlanner` declaration, so this screen contains no ruleset vocabulary at
+ * all, not even in a comment: a system declares its own world fields and their
+ * names, and this file renders whatever it is given. A system that declares
+ * nothing does not get this screen, and navigating here directly redirects
+ * rather than showing an empty shell or an error page.
  *
  * Reordering uses explicit up/down controls rather than drag: the app is used
  * on a tablet with a stylus, where drag is unreliable and there is no existing
@@ -32,72 +33,36 @@ const moveBtn =
  */
 export default function RouteScreen() {
   const { activeCampaign } = useCampaignContext();
-  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const route = useRoute();
   const { showToast } = useToast();
   const { exportRoute } = useExportActions();
-  const [stops, setStops] = useState<RouteStop[]>([]);
   const [newName, setNewName] = useState('');
-
-  const campaignId = activeCampaign?.id;
-  const planner = system?.routePlanner;
-
-  const reload = useCallback(async () => {
-    if (!campaignId) return;
-    setStops(await routeRepository.listByCampaign(campaignId));
-  }, [campaignId]);
-
-  useEffect(() => {
-    reload().catch(console.error);
-  }, [reload]);
 
   if (!activeCampaign) return <NoCampaignPrompt />;
 
-  // A system that declares no route fields has no route screen. Rendering an
-  // empty shell would imply the feature exists and is merely unconfigured.
-  if (system && !planner) {
-    return (
-      <div className="p-[var(--space-md)]">
-        <SectionPanel title="Not available">
-          <p className="text-[var(--color-text-muted)]">
-            {system.displayName} does not use a route planner.
-          </p>
-        </SectionPanel>
-      </div>
-    );
-  }
+  const { stops, planner, valueFields, nameField, distanceLabel, total } = route;
+
+  // A ruleset that declares no route fields has no route screen — so this is a
+  // redirect, not an error page. Telling someone "not available" implies the
+  // feature exists and is merely unconfigured; for their ruleset it does not
+  // exist at all. Matches the catch-all convention in `routes/index.tsx`.
+  //
+  // Gated on the *system* having resolved, not on the stops query: those race,
+  // and stops win, so gating on the wrong one redirects a Traveller crew away
+  // from their own route before the declaration has loaded.
+  if (route.systemResolved && !planner) return <Navigate to="/session" replace />;
+
+  // Still resolving the system definition — render nothing rather than flashing
+  // a redirect at someone whose ruleset does declare a planner.
   if (!planner) return null;
 
-  // `name` is a real column; every other declared field lives in `values`.
-  const valueFields = planner.fields.filter(f => f.id !== 'name');
-  const nameField = planner.fields.find(f => f.id === 'name');
-  const total = totalDistance(stops, planner.distanceFieldId);
-  const distanceLabel = planner.distanceFieldId
-    ? planner.fields.find(f => f.id === planner.distanceFieldId)?.label
-    : undefined;
-
   async function handleAdd() {
-    const name = newName.trim();
-    if (!name || !campaignId) return;
-    await routeRepository.create({ campaignId, name });
+    await route.addStop(newName);
     setNewName('');
-    await reload();
-  }
-
-  async function patch(stop: RouteStop, changes: Partial<Pick<RouteStop, 'name' | 'values'>>) {
-    await routeRepository.update(stop.id, changes);
-    setStops(prev => prev.map(s => (s.id === stop.id ? { ...s, ...changes } : s)));
-  }
-
-  async function move(index: number, delta: number) {
-    if (!campaignId) return;
-    const next = reorder(stops, index, index + delta);
-    setStops(next);
-    await routeRepository.reorder(campaignId, next.map(s => s.id));
   }
 
   async function handleDelete(stop: RouteStop) {
-    await routeRepository.softDelete(stop.id);
-    await reload();
+    await route.removeStop(stop.id);
     showToast(`${stop.name} removed from the route`, 'success');
   }
 
@@ -111,7 +76,7 @@ export default function RouteScreen() {
             : undefined
         }
       >
-        <div className="flex gap-[var(--space-sm)] items-center">
+        <div className="flex gap-[var(--space-sm)] items-center flex-wrap">
           <input
             className={inputClass}
             value={newName}
@@ -148,7 +113,7 @@ export default function RouteScreen() {
                 className={moveBtn}
                 aria-label={`Move ${stop.name} earlier`}
                 disabled={index === 0}
-                onClick={() => void move(index, -1)}
+                onClick={() => void route.moveStop(index, -1)}
               >
                 ↑
               </button>
@@ -156,11 +121,12 @@ export default function RouteScreen() {
                 className={moveBtn}
                 aria-label={`Move ${stop.name} later`}
                 disabled={index === stops.length - 1}
-                onClick={() => void move(index, 1)}
+                onClick={() => void route.moveStop(index, 1)}
               >
                 ↓
               </button>
             </div>
+
             <label className="flex flex-col gap-1">
               <span className="text-sm text-[var(--color-text-muted)]">
                 {nameField?.label ?? 'Name'}
@@ -168,7 +134,7 @@ export default function RouteScreen() {
               <input
                 className={inputClass}
                 value={stop.name}
-                onChange={e => void patch(stop, { name: e.target.value })}
+                onChange={e => void route.updateStop(stop, { name: e.target.value })}
               />
             </label>
 
@@ -180,7 +146,9 @@ export default function RouteScreen() {
                     className={`${inputClass} min-h-[88px] py-2`}
                     value={stop.values[field.id] ?? ''}
                     onChange={e =>
-                      void patch(stop, { values: { ...stop.values, [field.id]: e.target.value } })
+                      void route.updateStop(stop, {
+                        values: { ...stop.values, [field.id]: e.target.value },
+                      })
                     }
                   />
                 ) : (
@@ -191,7 +159,9 @@ export default function RouteScreen() {
                     inputMode={field.type === 'number' ? 'decimal' : undefined}
                     value={stop.values[field.id] ?? ''}
                     onChange={e =>
-                      void patch(stop, { values: { ...stop.values, [field.id]: e.target.value } })
+                      void route.updateStop(stop, {
+                        values: { ...stop.values, [field.id]: e.target.value },
+                      })
                     }
                   />
                 )}

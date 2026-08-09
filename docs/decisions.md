@@ -2522,3 +2522,40 @@
   note on Play, confirmed the stored body is a real ProseMirror doc, and read
   the text back in `/session/log`.
 - Commit: fix(session) — quick-logged notes now reach the log they were written for.
+
+## 2026-08-09 — Converging the ledger back onto its own spec
+- Symptom: a spec-vs-codebase convergence run over
+  `docs/specs/2026-08-08-campaign-ledger-and-route-planner.md` found 15 gaps in
+  shipped, tested, already-pushed code. Three mattered.
+- **A test the spec named was never written.** SS-09 lists
+  `src/utils/export/renderLedger.test.ts` under `Files (new)`. It did not exist.
+  The renderer's output — the exported cashbook, the artifact the whole feature
+  exists to produce — had no test at all. Fixed: 14 tests.
+- **`/route` rendered an error page the spec explicitly forbade.** SS-08's
+  Decisions say a ruleset with no `routePlanner` gets a *redirect*, and "do not
+  render an error page". It rendered "Not available". Telling someone a feature
+  is unavailable implies it exists and is unconfigured; for their ruleset it
+  does not exist. Now `<Navigate to="/session" replace />`.
+- **An invariant breach showed as inline text, not a toast.** Both the SS-07
+  criterion and the edge-case table say toast. Inline text in a modal is easy to
+  miss at a table mid-session, which is the only moment this fires.
+- Surfaces: `screens/RouteScreen.tsx`, new `features/route/useRoute.ts`,
+  `features/ledger/DistributeModal.tsx`, `utils/export/renderLedger.ts`,
+  `renderRoute.ts`, and three new test files.
+- Watch: **fixing the redirect introduced a worse bug, caught only by running
+  the app.** The guard was gated on the hook's `isLoading`, which tracks the
+  *stops* query — but `planner` comes from the *system definition* load. They
+  race, stops win, and the redirect fired before the declaration arrived,
+  bouncing a Traveller crew off their own route screen. Now gated on
+  `systemResolved`. This is the second guard in this feature to key on the wrong
+  async source; the first was `useSystemEngine` (active *character*) where
+  `useSystemDefinition` (active *campaign*) was needed. When a screen depends on
+  two independent async loads, name which one the guard means.
+- Watch also: `yamlValue` is now privately duplicated across **six** renderers.
+  Extracting it touches four files unrelated to any gap, so it was escalated
+  rather than folded in — see `docs/converge/2026-08-09-*/pass-1.md`.
+- Watch also: the spec's `Must-Not: push to any remote` is recorded as violated.
+  It was written before the instruction to push to prod; a later explicit
+  instruction overrides a spec constraint. Recorded rather than suppressed so
+  the divergence is visible.
+- Commit: converge(pass-1) — close 12 spec gaps in the ledger and route planner.

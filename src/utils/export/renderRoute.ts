@@ -8,6 +8,31 @@ export interface RouteFieldSpec {
   type?: 'text' | 'textarea' | 'number';
 }
 
+/**
+ * Renders a frontmatter value, quoting only when the content needs it.
+ *
+ * @remarks
+ * Same shape as the helper in `renderSession`, `renderNote`,
+ * `renderCampaignIndex`, `renderAttachmentSidecar` and `renderLedger` — each
+ * carries a private copy. See the note in `docs/converge/` about extracting
+ * them into one module.
+ */
+function yamlValue(val: unknown): string {
+  if (val === null || val === undefined) return '""';
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  const str = String(val);
+  if (
+    str.includes(':') ||
+    str.includes('"') ||
+    str.includes("'") ||
+    str.includes('\n') ||
+    str.includes('#')
+  ) {
+    return `"${str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n+/g, ' ')}"`;
+  }
+  return str;
+}
+
 /** Escapes a value for a Markdown table cell, where a raw pipe would split the row. */
 function cell(value: string): string {
   return value.replace(/\|/g, '\\|').replace(/\n+/g, ' ');
@@ -49,7 +74,7 @@ export function renderRouteToMarkdown(
   const lines: string[] = [];
   lines.push('---');
   lines.push('type: route');
-  lines.push(`campaign: "${campaignName.replace(/"/g, '\\"')}"`);
+  lines.push(`campaign: ${yamlValue(campaignName)}`);
   lines.push(`stops: ${stops.length}`);
   if (distanceLabel) lines.push(`total_distance: ${total}`);
   lines.push('---');

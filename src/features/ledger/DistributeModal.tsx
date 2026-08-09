@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button } from '../../components/primitives/Button';
+import { useToast } from '../../context/ToastContext';
 import { computeDistribution } from '../../utils/ledgerMath';
 import type { DistributionResult } from '../../utils/ledgerMath';
 import type { SplitSnapshot } from '../../types/ledger';
@@ -48,6 +49,7 @@ export function DistributeModal({
   onCancel,
   onConfirm,
 }: DistributeModalProps) {
+  const { showToast } = useToast();
   const [grossText, setGrossText] = useState('');
   const [memo, setMemo] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -76,22 +78,31 @@ export function DistributeModal({
         : previewError;
 
   async function handleConfirm() {
-    if (!preview) return;
     setIsSaving(true);
     setError(null);
     try {
+      // Recomputed rather than trusting the memoised preview: this is the write
+      // path, and the invariants must hold against the values actually being
+      // committed. If they do not, `computeDistribution` throws.
+      const result = computeDistribution(gross, snapshot);
       await onConfirm({
         date,
         memo: memo.trim() || 'Payout',
         gross,
-        net: preview.net,
-        legs: preview.legs,
+        net: result.net,
+        legs: result.legs,
         // Frozen here, not referenced: editing the split afterwards must not
         // reach into an entry that has already been written.
         splitSnapshot: structuredClone(snapshot),
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not record the payout.');
+      // A toast, not just inline text. An invariant breach surfaces mid-session
+      // at the table, and an unhandled throw in a React event handler blanks the
+      // screen — refusing the action loudly is the only acceptable failure here.
+      // Nothing is written: `computeDistribution` throws before `onConfirm`.
+      const message = err instanceof Error ? err.message : 'Could not record the payout.';
+      showToast(message, 'error');
+      setError(message);
       setIsSaving(false);
     }
   }
