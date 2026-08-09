@@ -2714,3 +2714,34 @@
   Cr4,000, saw Cr6,000 outstanding with the original still shown, then used All
   to clear it and watched the row move into Settled.
 - Commit: feat(debts) — pay a debt down in instalments.
+
+## 2026-08-09 — Import a route planned somewhere else
+- Symptom: planning a jump route is exactly the kind of arithmetic worth handing
+  to an AI in a chat — but the result then had to be retyped stop by stop.
+- Fix: an Import action on the route screen. Paste JSON or pick a file, see a
+  preview, then either replace the route or append to it.
+- Surfaces: `utils/route/parseRouteImport.ts`, `features/route/RouteImportModal.tsx`,
+  `routeRepository.importStops`, `useRoute.importStops`.
+- Watch: **forgiving about shape, strict about fields.** Whatever produced the
+  file has not read `routePlanner`, so a bare array, `{stops:[]}`, `{route:[]}`,
+  `{worlds:[]}` and `{legs:[]}` are all accepted, keys match on id *or* label,
+  and case and separators are ignored — `UWP`, `uwp` and `U_W_P` all land. But a
+  key matching no declared field is **dropped and reported**. Keeping it would
+  put data in the record that no screen renders and no export prints, which is
+  worse than losing it visibly.
+- Watch also: the preview is not decoration. It is the only place the user sees
+  what was *ignored*, and finding that out after the import is how a route ends
+  up quietly missing half its data. Nothing is written until it has been shown.
+- Watch also: `importStops` does the whole file in one transaction, and
+  `replace` soft-deletes the old stops inside it. A half-imported route reads as
+  a successful one; and replacing must never leave the route empty if the write
+  fails partway.
+- Watch also: values are stored as strings whatever the JSON says, matching the
+  record — `"jump": 2` becomes `"2"`. `readNumericField` remains the only place
+  anything parses them back.
+- Verified in a browser with the real Feast Contract route: five stops imported
+  with UWP, hex, parsecs and notes intact, a 27-parsec total, an unknown
+  `population` field reported rather than swallowed, a nameless sixth entry
+  skipped by position, and Replace leaving exactly the new route with the old
+  five soft-deleted rather than destroyed.
+- Commit: feat(route) — import a route from JSON.

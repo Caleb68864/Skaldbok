@@ -9,6 +9,7 @@ import { SectionPanel } from '../components/primitives/SectionPanel';
 import { Button } from '../components/primitives/Button';
 import { useToast } from '../context/ToastContext';
 import { useExportActions } from '../features/export/useExportActions';
+import { RouteImportModal } from '../features/route/RouteImportModal';
 
 const inputClass =
   'w-full min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]';
@@ -37,6 +38,7 @@ export default function RouteScreen() {
   const { showToast } = useToast();
   const { exportRoute } = useExportActions();
   const [newName, setNewName] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
 
   if (!activeCampaign) return <NoCampaignPrompt />;
 
@@ -89,6 +91,9 @@ export default function RouteScreen() {
           <Button onClick={() => void handleAdd()} disabled={!newName.trim()}>
             Add
           </Button>
+          <Button variant="secondary" onClick={() => setIsImporting(true)}>
+            Import…
+          </Button>
           {stops.length > 0 && (
             <Button variant="secondary" onClick={() => void exportRoute()}>
               Export
@@ -103,6 +108,19 @@ export default function RouteScreen() {
             Add the first place on the route above.
           </p>
         </SectionPanel>
+      )}
+
+      {isImporting && (
+        <RouteImportModal
+          fields={planner.fields}
+          existingCount={stops.length}
+          onCancel={() => setIsImporting(false)}
+          onImport={async (parsed, replace) => {
+            const count = await route.importStops(parsed, replace);
+            setIsImporting(false);
+            showToast(`Imported ${count} stop${count === 1 ? '' : 's'}`, 'success');
+          }}
+        />
       )}
 
       {stops.map((stop, index) => (

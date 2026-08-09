@@ -101,6 +101,27 @@ export function useRoute() {
     [campaignId, stops],
   );
 
+  /**
+   * Imports a parsed route, appending or replacing.
+   *
+   * @remarks
+   * The whole file lands in one transaction — see `routeRepository.importStops`.
+   * A half-imported route reads as a successful one, which is the failure worth
+   * preventing.
+   */
+  const importStops = useCallback(
+    async (
+      parsed: Array<{ name: string; values?: Record<string, string> }>,
+      replace: boolean,
+    ) => {
+      if (!campaignId) return 0;
+      const count = await routeRepository.importStops(campaignId, parsed, { replace });
+      await reload();
+      return count;
+    },
+    [campaignId, reload],
+  );
+
   const removeStop = useCallback(
     async (id: string) => {
       await routeRepository.softDelete(id);
@@ -129,6 +150,7 @@ export function useRoute() {
     distanceLabel,
     total,
     addStop,
+    importStops,
     updateStop,
     moveStop,
     removeStop,

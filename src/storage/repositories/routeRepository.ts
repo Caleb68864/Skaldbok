@@ -78,6 +78,55 @@ export async function update(
 }
 
 /**
+ * Adds many stops at once, appending them in the order given.
+ *
+ * @remarks
+ * One transaction for the whole file: a half-imported route is worse than a
+ * failed import, because it looks like it worked. `replace` soft-deletes the
+ * existing stops in the same transaction, so the route is never briefly empty
+ * and an interrupted import cannot lose the old route without adding the new.
+ *
+ * @param replace - Clear the campaign's current route first. Importing a route
+ * planned elsewhere usually means "this is the route now", but appending is the
+ * right call when adding a leg, so the caller chooses.
+ */
+export async function importStops(
+  campaignId: string,
+  stops: Array<{ name: string; values?: Record<string, string> }>,
+  options?: { replace?: boolean },
+): Promise<number> {
+  return db.transaction('rw', db.routeStops, async () => {
+    const existing = excludeDeleted(
+      await db.routeStops.where('campaignId').equals(campaignId).toArray(),
+    );
+    const now = nowISO();
+
+    let base = existing.length;
+    if (options?.replace && existing.length > 0) {
+      const txId = generateId();
+      await db.routeStops.bulkUpdate(
+        existing.map(s => ({ key: s.id, changes: { deletedAt: now, softDeletedBy: txId } })),
+      );
+      base = 0;
+    }
+
+    await db.routeStops.bulkAdd(
+      stops.map((stop, i) => ({
+        id: generateId(),
+        campaignId,
+        name: stop.name,
+        order: base + i,
+        values: stop.values ?? {},
+        schemaVersion: CURRENT_ROUTE_STOP_SCHEMA_VERSION,
+        createdAt: now,
+        updatedAt: now,
+      })),
+    );
+    return stops.length;
+  });
+}
+
+/**
  * Persists a whole new route order.
  *
  * @remarks
