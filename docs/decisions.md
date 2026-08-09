@@ -2487,3 +2487,38 @@
   afterwards left the written entry byte-identical. Full evidence:
   `docs/specs/ss10-ledger-route-integration-evidence.md`.
 - Commit: feat(ledger) — mirror movements into the session log and export.
+
+## 2026-08-09 — Quick-logged notes never reached the session log
+- Symptom: a note typed into `QuickLogBar` on the Play tab saved fine and then
+  **never appeared in `/session/log`**. Not blank — absent. The composer said
+  "Saved", the row existed in `notes` with the right `sessionId`, and the log
+  read "No log entries yet."
+- Two separate faults stacked, which is why it looked like it worked:
+  1. **Wrong type.** `listLogEntriesBySession` filters `type === 'log'`;
+     `QuickLogBar` wrote `'generic'`, so the entry was filtered out before
+     anything tried to render it.
+  2. **No body.** `SessionLog` renders `docToText(entry.body)` and the timeline
+     derives a log item's label from the body too — never the title. So even
+     once it was listed, it arrived as a row holding nothing but a timestamp.
+- Fix: `logToSession(title, 'log', {}, { body: title })`. `'log'` is documented
+  as exactly this — a freeform entry captured during play. `LogToSessionOptions`
+  gained `body`, converted to a ProseMirror doc inside the hook because a raw
+  string round-trips to nothing through `docToText`.
+- Surfaces: `features/playDashboard/QuickLogBar.tsx`,
+  `features/session/useSessionLog.ts`.
+- Watch: both `log` and `generic` are timeline tracks, so retyping does not
+  remove the entry from the timeline — it moves it to the `log` track, where the
+  adapter labels it from the body it now has.
+- Watch also: **the other title-only `logToSession` callers still pass no body**
+  — `DamageHealModule`, `GearScreen` (acquire/remove), `CombatEncounterView`.
+  Those log `'generic'`, so they were never listed by the session log either and
+  are unaffected by this change; but if any is ever retyped to `'log'` it will
+  need a body in the same edit or it will land as a bare timestamp.
+- Watch also: the QuickLogBar entry (2026-08-08) recorded that the
+  `/session/log` **display** was not exercised by its harness. This is what that
+  gap was hiding — the feature was verified as far as the database and no
+  further.
+- Verified in a browser on real imported data (Milo Aer, Traveller): typed a
+  note on Play, confirmed the stored body is a real ProseMirror doc, and read
+  the text back in `/session/log`.
+- Commit: fix(session) — quick-logged notes now reach the log they were written for.

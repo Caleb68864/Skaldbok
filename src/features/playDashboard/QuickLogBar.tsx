@@ -38,7 +38,16 @@ export function QuickLogBar() {
     if (title === '' || saving) return;
     setSaving(true);
     try {
-      await logToSession(title, 'generic');
+      // `'log'`, not `'generic'`: `listLogEntriesBySession` filters on
+      // `type === 'log'`, so a generic note was saved and then never listed by
+      // the session log at all. `'log'` is documented as exactly this — a
+      // freeform entry captured during play.
+      //
+      // Body as well as title, because both surfaces read the body rather than
+      // the title: the log renders `docToText(entry.body)`, and the timeline
+      // derives a log item's label from it. Without one the entry arrived as a
+      // row holding nothing but a timestamp.
+      await logToSession(title, 'log', {}, { body: title });
       setText('');
       // Confirm without stealing focus: the next note usually follows straight
       // after, and a toast that moves focus would cost a tap to get back.
