@@ -2453,3 +2453,37 @@
   campaign sees it. That is a pre-existing wart, left alone here rather than
   copied.
 - Commit: feat(traveller) — the crew's cashbook and their jump route.
+
+## 2026-08-08 — Ledger movements belong in the session log too
+- Symptom: the ledger and the session log were two separate records of the same
+  evening. "When did we pay for that?" gets asked of the log as often as of the
+  book, and the log had no idea money had moved.
+- Fix: every ledger movement — money in, money out, a distribution, a removal —
+  mirrors into the active session as a `log` note carrying
+  `typeData.ledgerEntryId` back to the row. A distribution's line names **every
+  share**, because by the time anyone re-reads it the split will have changed,
+  so the numbers have to be written down at the moment they were true. Session
+  Markdown export appends the cashbook; the session ZIP ships it as `ledger.md`.
+- Surfaces: `features/ledger/useLedger.ts`, `features/session/useSessionLog.ts`,
+  `features/export/useExportActions.ts`.
+- Watch: **the mirror is best-effort and never blocks the ledger write.** The
+  ledger entry is the load-bearing record; a log failure must not lose it. With
+  no active session there is nowhere for the note to go and the ledger still
+  works — the money still gets recorded.
+- Watch also: found while verifying this — **`logToSession` never wrote a note
+  body.** `SessionLog` renders `docToText(entry.body)`, *not* the title, so
+  every note logged with a title alone appeared in the log as a row containing
+  nothing but a timestamp. `LogToSessionOptions` gained an optional `body`,
+  converted to a ProseMirror doc inside the hook because a raw string
+  round-trips to nothing through `docToText`.
+- Watch also: **`QuickLogBar` still logs title-only and is still affected.** The
+  fix is now one argument away but was left alone as out of scope. Its own
+  decisions entry (2026-08-08) notes the `/session/log` display "was not
+  exercised by the harness" — this is what that gap was hiding.
+- Verified in a browser against the real Session 1 numbers from *Pirates of the
+  Spinward Main*: the Cr819,000 hold split 50% ship / 36/36/18/10 produced
+  Cr409,500 retained and Cr147,420 / Cr147,420 / Cr73,710 / Cr40,950 paid, with
+  the balance falling by Cr409,500 and not Cr819,000. Renegotiating the split
+  afterwards left the written entry byte-identical. Full evidence:
+  `docs/specs/ss10-ledger-route-integration-evidence.md`.
+- Commit: feat(ledger) — mirror movements into the session log and export.

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { SectionPanel } from '../components/primitives/SectionPanel';
@@ -127,8 +127,10 @@ export default function LedgerScreen() {
                 {[...rows].reverse().map(row => {
                   const isIn = row.amount >= 0;
                   return (
-                    <>
-                      <tr key={row.id} className="border-t border-[var(--color-border)]">
+                    // An entry renders as its own row plus one per leg, so the
+                    // key belongs on the fragment, not the first <tr>.
+                    <Fragment key={row.id}>
+                      <tr className="border-t border-[var(--color-border)]">
                         <td className="py-2 pr-2 whitespace-nowrap">{row.date}</td>
                         <td className="py-2 pr-2">{row.memo || '—'}</td>
                         <td className="py-2 pr-2 text-right whitespace-nowrap">
@@ -174,7 +176,7 @@ export default function LedgerScreen() {
                           <td />
                         </tr>
                       ))}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>

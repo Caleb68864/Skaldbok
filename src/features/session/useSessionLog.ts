@@ -11,6 +11,7 @@ import {
   persistCanonicalNoteLinks,
   resolveEncounterAttachmentTarget,
 } from '../notes/noteCreationService';
+import { textToDoc } from '../notes/textToDoc';
 
 // Lazy import to avoid circular dependency and keep note saves resilient if
 // KB sync fails for any reason.
@@ -43,6 +44,17 @@ export interface LogToSessionOptions {
    * in the right place rather than being dropped.
    */
   session?: { id: string; campaignId: string } | null;
+  /**
+   * Text body for the note, when the entry needs to be *readable* in the log.
+   *
+   * @remarks
+   * `SessionLog` renders `docToText(entry.body)`, not the title — so a note
+   * logged with a title alone appears as a row bearing nothing but a timestamp.
+   * Callers whose entry is meant to be read in the log (rather than merely
+   * recorded and surfaced by the timeline, which does read titles) must pass
+   * this.
+   */
+  body?: string;
 }
 
 /**
@@ -210,6 +222,10 @@ export function useSessionLog() {
         campaignId: target.campaignId,
         sessionId: target.id,
         title,
+        // Converted here rather than by the caller: `body` is stored as a
+        // ProseMirror doc and read back through `docToText`, so a raw string
+        // would round-trip to nothing and render as a blank log row.
+        body: options?.body !== undefined ? textToDoc(options.body) : undefined,
         type,
         typeData,
         status: 'active',

@@ -24,6 +24,7 @@ import { applyPrivacyFilter, excludePrivateNotes } from '../../utils/export/priv
 import { serializeBundle, deliverBundle } from '../../utils/export/bundleSerializer';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
+import type { Campaign } from '../../types/campaign';
 
 /**
  * Hook that provides all note and session export actions for the active campaign.
@@ -46,6 +47,24 @@ import type { EntityLink } from '../../types/entityLink';
  * <button onClick={() => exportNote(note.id)}>Export</button>
  * ```
  */
+/**
+ * Renders the campaign's cashbook as Markdown, or `null` when it is empty.
+ *
+ * @remarks
+ * Shared by the standalone ledger export and by both session exports, so the
+ * books read identically wherever they surface. Returns `null` rather than an
+ * empty document — a session bundle should not carry a `ledger.md` that only
+ * says "no entries yet".
+ */
+async function buildLedgerMarkdown(campaign: Campaign): Promise<string | null> {
+  const entries = await ledgerRepository.listByCampaign(campaign.id);
+  if (entries.length === 0) return null;
+  const system = await systemRepository.getById(campaign.system);
+  const engine = system ? getEngine(system) : null;
+  const formatMoney = engine?.currency.formatAmount ?? ((baseUnits: number) => String(baseUnits));
+  return renderLedgerToMarkdown(campaign.name, entries, formatMoney);
+}
+
 export function useExportActions() {
   const { activeCampaign } = useCampaignContext();
   const { showToast } = useToast();
@@ -146,7 +165,15 @@ export function useExportActions() {
       // Export just the session index
       const sessionFilename = generateFilename({ title: session.title, id: session.id });
       const sessionMarkdown = filesMap.get(sessionFilename) ?? filesMap.values().next().value ?? '';
-      const blob = new Blob([sessionMarkdown], { type: 'text/markdown' });
+
+      // This path is a single file, so the cashbook is appended rather than
+      // shipped alongside — the zip path gets its own `ledger.md` instead.
+      const ledger = await buildLedgerMarkdown(activeCampaign);
+      const combined = ledger
+        ? `${sessionMarkdown}\n\n---\n\n${ledger.replace(/^---\n[\s\S]*?\n---\n/, '')}`
+        : sessionMarkdown;
+
+      const blob = new Blob([combined], { type: 'text/markdown' });
       await shareFile(blob, sessionFilename);
     } catch (e) {
       showToast('Export failed');
@@ -203,6 +230,13 @@ export function useExportActions() {
       const textFilesMap = renderSessionBundle(session, shareableNotes, allEntityLinks);
       const filesMap = new Map<string, string | Blob>(textFilesMap);
       const sessionSlug = session.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-+$/, '');
+
+      // The cashbook ships with the session it was written during. A session
+      // bundle is the record of an evening at the table, and "what did this
+      // cost us" is part of that record — asking the reader to fetch a second
+      // export to answer it defeats the point of a bundle.
+      const ledger = await buildLedgerMarkdown(activeCampaign);
+      if (ledger) filesMap.set('ledger.md', ledger);
 
       for (const note of linkedNotes) {
         const attachments = await getAttachmentsByNote(note.id);
@@ -413,12 +447,11 @@ export function useExportActions() {
       return;
     }
     try {
-      const entries = await ledgerRepository.listByCampaign(activeCampaign.id);
-      const system = await systemRepository.getById(activeCampaign.system);
-      const engine = system ? getEngine(system) : null;
-      const formatMoney =
-        engine?.currency.formatAmount ?? ((baseUnits: number) => String(baseUnits));
-      const markdown = renderLedgerToMarkdown(activeCampaign.name, entries, formatMoney);
+      const markdown = await buildLedgerMarkdown(activeCampaign);
+      if (!markdown) {
+        showToast('The ledger is empty');
+        return;
+      }
       const blob = new Blob([markdown], { type: 'text/markdown' });
       await shareFile(
         blob,
