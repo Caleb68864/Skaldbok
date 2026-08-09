@@ -9,9 +9,16 @@ campaign, using the actual financial profile and route from Session 1
 
 ## Gates
 
+> **Updated 2026-08-09** after the convergence run over this spec
+> (`docs/converge/2026-08-09-campaign-ledger-and-route-planner/`). The gate
+> numbers below are current; the original figures at the time this file was
+> first written were 819 tests / 50 files. Three passes of scanning added
+> `renderLedger.test.ts`, `ledgerSplitRepository.test.ts`,
+> `routeRepository.test.ts` and two `routePlanner` schema pins.
+
 | Gate | Result |
 |---|---|
-| `npm test` | **819 passed / 50 files** (baseline was 763 / 47) |
+| `npm test` | **854 passed / 53 files** (baseline was 763 / 47) |
 | `npm run build` | clean (`tsc -b && vite build`) |
 | `declaredCapabilities.test.ts` | passes, no new `KNOWN_UNIMPLEMENTED` entries |
 | `systemDefinitionSchema.test.ts` | passes, asserts Traveller's 5 route fields survive Zod |

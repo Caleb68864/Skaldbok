@@ -2480,6 +2480,15 @@
   fix is now one argument away but was left alone as out of scope. Its own
   decisions entry (2026-08-08) notes the `/session/log` display "was not
   exercised by the harness" — this is what that gap was hiding.
+- Watch also: **the ledger and route exports are deliberately unfiltered.** The
+  note export paths call `excludePrivateNotes` (`useExportActions.ts:131,189`),
+  and a comment there records that they were once unfiltered *by mistake*. These
+  two are not the same case: a campaign cashbook and a jump route are shared
+  crew data by definition, and neither entity carries a private flag to filter
+  on. Adding one would be new scope, not a bug fix. This is recorded because
+  `useExportActions.ts` points at this entry by date — without it the code cites
+  a decision that does not exist, and the next reader re-litigates it or
+  "fixes" it.
 - Verified in a browser against the real Session 1 numbers from *Pirates of the
   Spinward Main*: the Cr819,000 hold split 50% ship / 36/36/18/10 produced
   Cr409,500 retained and Cr147,420 / Cr147,420 / Cr73,710 / Cr40,950 paid, with
