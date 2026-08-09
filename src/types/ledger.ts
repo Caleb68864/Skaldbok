@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { payoutSplitRowSchema } from './payoutSplit';
 
 /**
  * One leg of a ledger entry's distribution — where a slice of the entry's
@@ -17,8 +18,33 @@ export const ledgerLegSchema = z.object({
   payeeName: z.string().optional(),
   /** Non-negative magnitude. */
   amount: z.number().int().nonnegative(),
+  /**
+   * The percentage this leg was computed from, kept for audit.
+   *
+   * @remarks
+   * Redundant with `splitSnapshot` for payee legs, and deliberately so — the
+   * exported cashbook renders one line per leg, and a reader asking "why did
+   * Milo get 15,000?" should not have to cross-reference a separate object.
+   * For a `shipFund` leg this is the off-the-top percentage; for
+   * `unallocated` it is the shortfall the split failed to assign.
+   */
+  pct: z.number().nonnegative().optional(),
 });
 export type LedgerLeg = z.infer<typeof ledgerLegSchema>;
+
+/**
+ * The split as it stood when a distribution was written.
+ *
+ * @remarks
+ * Deliberately *not* a reference to the live `PayoutSplit` row: it holds only
+ * the numbers that produced the legs, with none of the identity or audit
+ * fields, because it is a historical fact rather than a record you can edit.
+ */
+export const splitSnapshotSchema = z.object({
+  shipFundPct: z.number().nonnegative(),
+  rows: z.array(payoutSplitRowSchema),
+});
+export type SplitSnapshot = z.infer<typeof splitSnapshotSchema>;
 
 /**
  * A single row in a campaign's shared cashbook.
@@ -44,7 +70,7 @@ export const ledgerEntrySchema = z.object({
   /** Present only for a Distribute-generated entry: where the money went. */
   legs: z.array(ledgerLegSchema).optional(),
   /** Deep-copied snapshot of the split used to produce `legs`, frozen at write time. */
-  splitSnapshot: z.unknown().optional(),
+  splitSnapshot: splitSnapshotSchema.optional(),
 
   schemaVersion: z.number(),
   createdAt: z.string(),

@@ -2371,3 +2371,47 @@
   times in this repo. If the ledger screen is abandoned, this member must come
   out rather than be added to `KNOWN_UNIMPLEMENTED`.
 - Commit: feat(engine) — render money without a character.
+
+## 2026-08-08 — The ship fund is retained, not paid out
+- Symptom: caught in design review, before any code. The first schema for a
+  crew payout stored one signed `amount` equal to the whole sum distributed.
+  But the crew's agreement takes 50% off the top for the *ship fund* — fuel,
+  mortgage, maintenance — and that money never leaves the crew's account. Only
+  the remainder reaches anybody's pocket.
+- Storing the gross as the outflow would have drifted the running balance
+  downward-wrong by the fund's share of **every** payout. Silent, compounding,
+  and undetectable until the book disagreed with the table by a wide margin —
+  months later, with no way to reconstruct which entry was wrong.
+- Fix: `gross` and `amount` are separate fields. `gross` is the sum being
+  divided and the legs sum to it; `amount` is the **net** cash movement and
+  excludes anything retained. Two invariants, asserted in code rather than
+  assumed:
+  - **I1** `sum(legs.amount) === gross` — every credit is accounted for.
+  - **I2** `net === -(gross - shipFundLeg.amount)` — only money that left is
+    subtracted.
+  A breach throws instead of writing a plausible wrong row.
+- Surfaces: `utils/ledgerMath.ts` (`computeDistribution`, `computeRunningBalance`,
+  `validateSplit`, `evenSplit`), `types/ledger.ts`, and the three repositories.
+- Watch: **the ledger stores a signed integer, deliberately diverging from the
+  itemised-debts convention.** That feature carries direction in a
+  `direction: 'owed' | 'due'` field, and its own Watch line predicted somebody
+  would eventually type the wrong sign. A cashbook whose balance is a plain sum
+  of signed integers cannot have that bug. The user still sees In and Out
+  columns and never types a sign — the Out path negates on write.
+- Watch also: the running balance is **never persisted**. It is folded on read,
+  so an edited, restored or soft-deleted row cannot leave a stale total behind.
+  Fold order is `date`, then `createdAt`, then `id`; the `id` tiebreak is what
+  stops two entries logged in the same millisecond reshuffling between reloads.
+- Watch also: a split totalling under 100% still distributes, and the shortfall
+  becomes a visible `unallocated` leg. It is never spread across the payees —
+  a hand-entered percentage error should show up in the books, not silently
+  inflate somebody's cut. Over 100% refuses outright.
+- Watch also: rounding residue folds into the ship fund, which is the residual
+  pot by nature. `-(0)` is `-0` in JavaScript, so the net is normalised — it
+  would otherwise render as "-0" on a fully-retained payout.
+- Mutation-checked, all three restored afterwards: inverting the residual fold
+  fails *"holds both invariants across inputs chosen to force rounding"*;
+  removing the ship-fund exclusion from the net fails *"retains the ship fund
+  and pays out only the rest"* plus three others; flipping `evenSplit`'s
+  remainder fails *"puts the remainder on the leading rows"*.
+- Commit: feat(ledger) — distribution arithmetic, repositories and route ordering.
