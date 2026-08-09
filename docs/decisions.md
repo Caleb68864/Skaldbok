@@ -2644,3 +2644,38 @@
   character row is unchanged and no session tab leaks into it; neither screen
   appears in the overflow sheet any more.
 - Commit: feat(nav) — surface the ledger and the route as session tabs.
+
+## 2026-08-09 — Tests for the module that writes the money, and a one-step payout
+- Symptom 1: `ledgerRepository` was the only one of the three new repositories
+  with no test file, and it is the one that persists every credit.
+- Fix: 28 tests. The load-bearing ones cover the split snapshot being frozen at
+  write time and the fold order reads come back in.
+- Watch: **two of the first drafts could not fail.** Mutation-checking caught
+  both, and the reasons are worth keeping:
+  - Asserting the snapshot deep-copy by reading the row back proves nothing.
+    IndexedDB structured-clones every value on write, so `getById` returns a
+    fresh object whether or not the repository copied anything — the test passed
+    identically with `structuredClone` deleted. The assertion has to be against
+    the object `create` **returns**, which is what callers hold and what the
+    repository is actually responsible for.
+  - The `id` tiebreak in `inFoldOrder` cannot be exercised through
+    `listByCampaign` at all: Dexie's `where('campaignId').equals()` already
+    returns primary-key order, so removing the tiebreak changes nothing. The
+    tiebreak that matters is in `computeRunningBalance`, which folds an
+    arbitrarily-ordered array and is mutation-proven in `ledgerMath.test.ts`.
+    The repository's is defence in depth, and the test now says so instead of
+    pretending to guard it.
+  - A third draft passed for a subtler reason: the two fixture ids sorted in the
+    same direction as their timestamps, so dropping the `createdAt` comparison
+    fell through to the id tiebreak and produced the same answer. The ids now
+    sort *against* the timestamps.
+- Symptom 2: Distribute records only the outflow. Nothing said so, and "we got
+  paid, split it now" is one act at the table — so hitting Distribute without
+  first entering the fee sent the book negative for no visible reason.
+- Fix: an opt-in "Record the payment coming in as well" checkbox writing the
+  income line immediately before the payout, and the red-balance warning now
+  names the likely cause rather than just stating the fact.
+- Watch: two entries, not one. They are two events, and folding them together
+  would hide the income from the In column — the balance would be right and the
+  book would be unreadable.
+- Commit: feat(ledger) — test the repository that writes the money, and offer a one-step payout.

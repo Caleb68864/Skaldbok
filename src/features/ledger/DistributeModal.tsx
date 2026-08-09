@@ -24,6 +24,16 @@ export interface DistributeModalProps {
     net: number;
     legs: DistributionResult['legs'];
     splitSnapshot: SplitSnapshot;
+    /**
+     * Record the money coming in as well, immediately before the payout.
+     *
+     * @remarks
+     * Distributing only ever writes the *outflow*. If the payment itself was
+     * never entered, the book goes negative for no visible reason — which is the
+     * mistake this option removes, because "we got paid, split it now" is a
+     * single act at the table, not two.
+     */
+    alsoRecordIncome: boolean;
   }) => Promise<void>;
 }
 
@@ -50,6 +60,7 @@ export function DistributeModal({
   onConfirm,
 }: DistributeModalProps) {
   const { showToast } = useToast();
+  const [alsoRecordIncome, setAlsoRecordIncome] = useState(false);
   const [grossText, setGrossText] = useState('');
   const [memo, setMemo] = useState('');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -94,6 +105,7 @@ export function DistributeModal({
         // Frozen here, not referenced: editing the split afterwards must not
         // reach into an entry that has already been written.
         splitSnapshot: structuredClone(snapshot),
+        alsoRecordIncome,
       });
     } catch (err) {
       // A toast, not just inline text. An invariant breach surfaces mid-session
@@ -147,6 +159,22 @@ export function DistributeModal({
           />
         </label>
 
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4"
+            checked={alsoRecordIncome}
+            onChange={e => setAlsoRecordIncome(e.target.checked)}
+          />
+          <span className="text-sm">
+            Record the payment coming in as well
+            <span className="block text-[var(--color-text-muted)]">
+              Tick this if the job's fee is not already in the book. Distributing
+              only records money going <em>out</em>.
+            </span>
+          </span>
+        </label>
+
         {preview && (
           <div className="border border-[var(--color-border)] rounded-[var(--radius-sm)] p-[var(--space-sm)] flex flex-col gap-1">
             {preview.legs.map((leg, i) => (
@@ -174,16 +202,18 @@ export function DistributeModal({
             </div>
             <div className="flex justify-between gap-2 text-[var(--color-text-muted)]">
               <span>Balance after</span>
-              <span>{formatMoney(balance + preview.net)}</span>
+              <span>{formatMoney(balance + (alsoRecordIncome ? gross : 0) + preview.net)}</span>
             </div>
             {retained > 0 && (
               <p className="text-[var(--color-text-muted)] text-sm">
                 {formatMoney(retained)} stays in the crew's account for the ship.
               </p>
             )}
-            {balance + preview.net < 0 && (
+            {balance + (alsoRecordIncome ? gross : 0) + preview.net < 0 && (
               <p className="text-sm" style={{ color: 'var(--color-warning, #8a6d00)' }}>
-                This takes the book into the red.
+                {alsoRecordIncome
+                  ? 'This takes the book into the red.'
+                  : 'This takes the book into the red — was the fee recorded as Money in? Tick the box above if not.'}
               </p>
             )}
           </div>

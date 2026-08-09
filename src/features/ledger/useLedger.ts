@@ -124,8 +124,26 @@ export function useLedger() {
       net: number;
       legs: LedgerLeg[];
       splitSnapshot: SplitSnapshot;
+      alsoRecordIncome?: boolean;
     }) => {
       if (!campaignId) return;
+      // Written first so the book reads in the order it happened: the fee
+      // arrives, then it is split. Two entries, because they are two events —
+      // folding them into one would hide the income from the In column.
+      if (input.alsoRecordIncome) {
+        const income = await ledgerRepository.create({
+          campaignId,
+          date: input.date,
+          memo: input.memo,
+          amount: input.gross,
+        });
+        const money = engine?.currency.formatAmount(input.gross) ?? String(input.gross);
+        await mirrorToLog(
+          `Ledger: received ${money} — ${input.memo}`,
+          income.id,
+          'entry',
+        );
+      }
       const entry = await ledgerRepository.create({
         campaignId,
         date: input.date,
