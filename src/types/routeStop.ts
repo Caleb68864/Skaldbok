@@ -22,6 +22,23 @@ export const routeStopSchema = z.object({
   /** Values for every other `routePlanner`-declared field, keyed by field id, always stored as strings. */
   values: z.record(z.string(), z.string()).default({}),
 
+  /**
+   * Estimated days for the leg *to* this stop. Ignored on the first stop —
+   * you do not travel to where you already are.
+   */
+  estimatedDays: z.number().nonnegative().optional(),
+  /**
+   * Arrival that actually happened, written in the ruleset's own dating.
+   *
+   * @remarks
+   * Stored as the user typed it rather than as a day number: the calendar is a
+   * per-system declaration, and a stored integer would be unreadable if a
+   * campaign ever changed ruleset. `utils/route/calendar` parses it on read.
+   */
+  arrivedOn: z.string().optional(),
+  /** Departure that actually happened, same dating as {@link arrivedOn}. */
+  departedOn: z.string().optional(),
+
   schemaVersion: z.number(),
   createdAt: z.string(),
   updatedAt: z.string(),

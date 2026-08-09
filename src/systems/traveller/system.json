@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 17,
+  "version": 18,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -1181,6 +1181,11 @@
         "label": "Notes",
         "type": "textarea"
       }
-    ]
+    ],
+    "calendar": {
+      "kind": "day-of-year",
+      "daysInYear": 365,
+      "example": "097-1105"
+    }
   }
 }

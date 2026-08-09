@@ -72,7 +72,7 @@ export async function create(data: {
 /** Patches a stop's name and/or declared field values. */
 export async function update(
   id: string,
-  patch: Partial<Pick<RouteStop, 'name' | 'values'>>,
+  patch: Partial<Pick<RouteStop, 'name' | 'values' | 'estimatedDays' | 'arrivedOn' | 'departedOn'>>,
 ): Promise<void> {
   await db.routeStops.update(id, { ...patch, updatedAt: nowISO() });
 }

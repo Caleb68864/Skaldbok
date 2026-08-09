@@ -17,6 +17,7 @@ import type { ReferenceGroup, ReferenceSection } from '../../types/reference';
 import type { LedgerEntry } from '../../types/ledger';
 import type { PayoutSplit } from '../../types/payoutSplit';
 import type { RouteStop } from '../../types/routeStop';
+import type { RoutePlan } from '../../types/routePlan';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
@@ -155,6 +156,7 @@ export class SkaldbokDatabase extends Dexie {
   ledgerEntries!: Table<LedgerEntry, string>;
   ledgerSplits!: Table<PayoutSplit, string>;
   routeStops!: Table<RouteStop, string>;
+  routePlans!: Table<RoutePlan, string>;
 
   constructor() {
     super('skaldbok-db');
@@ -576,6 +578,16 @@ export class SkaldbokDatabase extends Dexie {
       ledgerEntries: 'id, campaignId, date, deletedAt',
       ledgerSplits: 'id, campaignId, deletedAt',
       routeStops: 'id, campaignId, order, deletedAt',
+    });
+
+    // --- Version 16: the journey-level schedule for a route ---
+    // Start date and deadline belong to the journey, not to any one world, so
+    // they get their own row rather than riding on the first stop where a
+    // reorder would lose them. The per-stop scheduling fields (estimatedDays,
+    // arrivedOn, departedOn) are additive on `routeStops` and need no index, so
+    // that table's declaration is unchanged.
+    this.version(16).stores({
+      routePlans: 'id, campaignId, deletedAt',
     });
   }
 }

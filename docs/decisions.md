@@ -2745,3 +2745,44 @@
   skipped by position, and Replace leaving exactly the new route with the old
   five soft-deleted rather than destroyed.
 - Commit: feat(route) — import a route from JSON.
+
+## 2026-08-09 — The jump route knows what day it is
+- Symptom, straight from Session 1: the trake fruit has to reach Regina by
+  235-1105, the Zila round trip is most of a 26-week budget, and nobody at the
+  table could tell whether it fit. The route planner held distances and no time.
+- Fix: a Schedule panel — journey start, deadline, and what the deadline is for
+  — plus per-stop estimated days and recorded arrival/departure. It projects each
+  arrival, totals the travel, and says how much slack is left.
+- Surfaces: `utils/route/calendar.ts`, `utils/route/schedule.ts`,
+  `types/routePlan.ts`, `routePlanRepository`, `version(16)`, `useRoute`,
+  `RouteScreen`, and a `routePlanner.calendar` declaration on Traveller.
+- Watch: **dates are the ruleset's, not the player's.** Traveller declares
+  `{ kind: 'day-of-year', daysInYear: 365, example: '097-1105' }` and the schedule
+  reads in the same form as the campaign's own notes. A system declaring no
+  calendar still schedules — dates fall back to plain day numbers — so this is a
+  formatting declaration, not a feature gate.
+- Watch also: **the projection re-bases on the latest recorded arrival.** Once a
+  leg has run long, every date after it moves; projecting from the original start
+  would keep showing a plan that stopped being true at the first delay. Time in
+  port counts too — the next leg departs from `departedOn` when it is recorded,
+  because a week sat at a starport is a week the rest of the route loses.
+- Watch also: **variance is measured against the original plan, not the re-based
+  projection.** Comparing an actual against a projection that already contains
+  the delay would always read zero. Mutation-checked: making variance use the
+  re-based value fails three tests.
+- Watch also: dates are stored as typed, not as day numbers. The calendar is a
+  per-system declaration, and a stored integer would be unreadable if a campaign
+  ever changed ruleset. `parseRouteDate` returns `null` rather than guessing at a
+  half-typed date, so the schedule does not lurch while somebody types.
+- Watch also: the schedule is derived on every read, never stored — the same
+  reasoning as the ledger's running balance. A stored projection goes stale the
+  moment a leg runs long.
+- Verified in a browser on the real Feast Contract route: 14 weeks of travel
+  estimated, arriving 195-1105 against a 279-1105 deadline with 12 weeks to
+  spare; recording an arrival at Extolay of 160-1105 reported 8 weeks late,
+  pushed the finish to 251-1105, and flipped the slack.
+- **Caveat worth carrying:** the parsec figures those estimates rest on are, per
+  the campaign notes, "column-distance arithmetic, not a real hex count". The
+  schedule totals whatever it is given. It can say the route is 40 days over; it
+  cannot say the distances were guesses.
+- Commit: feat(route) — schedule the journey, not just the stops.

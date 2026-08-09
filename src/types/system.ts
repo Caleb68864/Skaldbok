@@ -281,6 +281,16 @@ export interface SystemDefinition {
    * running total (Traveller: jump distance per leg).
    */
   routePlanner?: {
+    /**
+     * How this ruleset writes dates, for the route schedule.
+     *
+     * @remarks
+     * Omitting it does not disable scheduling — dates fall back to plain day
+     * numbers, which still totals and compares correctly. It only decides how
+     * they are written down. Traveller declares Imperial dating so the schedule
+     * reads in the same form as the campaign's own notes.
+     */
+    calendar?: { kind: 'day-of-year'; daysInYear: number; example?: string };
     label: string;
     distanceFieldId?: string;
     fields: Array<{

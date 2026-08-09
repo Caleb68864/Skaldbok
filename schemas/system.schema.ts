@@ -162,6 +162,13 @@ export const systemDefinitionSchema = z.object({
   rollModifiers: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).optional(),
   timeUnits: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), abbrev: z.string().min(1) })).optional(),
   routePlanner: z.object({
+    calendar: z
+      .object({
+        kind: z.literal('day-of-year'),
+        daysInYear: z.number().int().positive(),
+        example: z.string().optional(),
+      })
+      .optional(),
     label: z.string().min(1),
     distanceFieldId: z.string().min(1).optional(),
     // id and label are required on every route planner field; type is optional.

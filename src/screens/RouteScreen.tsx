@@ -4,6 +4,7 @@ import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { useRoute } from '../features/route/useRoute';
 import { readNumericField } from '../utils/routeMath';
+import { formatRouteDate, isRouteDateValid, describeDuration } from '../utils/route/calendar';
 import type { RouteStop } from '../types/routeStop';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { Button } from '../components/primitives/Button';
@@ -42,7 +43,9 @@ export default function RouteScreen() {
 
   if (!activeCampaign) return <NoCampaignPrompt />;
 
-  const { stops, planner, valueFields, nameField, distanceLabel, total } = route;
+  const { stops, planner, valueFields, nameField, distanceLabel, total, schedule, plan, calendar } = route;
+  const dateHint = calendar?.example ?? 'day number';
+  const fmtDate = (d: number | null) => (d === null ? '—' : formatRouteDate(d, calendar));
 
   // A ruleset that declares no route fields has no route screen — so this is a
   // redirect, not an error page. Telling someone "not available" implies the
@@ -98,6 +101,92 @@ export default function RouteScreen() {
             <Button variant="secondary" onClick={() => void exportRoute()}>
               Export
             </Button>
+          )}
+        </div>
+      </SectionPanel>
+
+      <SectionPanel
+        title="Schedule"
+        subtitle={
+          schedule.totalEstimatedDays > 0
+            ? `${describeDuration(schedule.totalEstimatedDays)} of travel estimated`
+            : 'Add an estimate to each leg to project the journey'
+        }
+        collapsible
+        defaultOpen={stops.length > 0}
+      >
+        <div className="flex flex-col gap-[var(--space-sm)]">
+          <div className="flex gap-[var(--space-sm)] flex-wrap">
+            <label className="flex flex-col gap-1">
+              <span className="text-sm text-[var(--color-text-muted)]">Departs</span>
+              <input
+                className={`${inputClass} max-w-[10rem]`}
+                value={plan?.startDate ?? ''}
+                placeholder={dateHint}
+                aria-label="Journey start date"
+                onChange={e => void route.updatePlan({ startDate: e.target.value })}
+                style={
+                  isRouteDateValid(plan?.startDate, calendar)
+                    ? undefined
+                    : { borderColor: 'var(--color-danger, #b3261e)' }
+                }
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm text-[var(--color-text-muted)]">Must arrive by</span>
+              <input
+                className={`${inputClass} max-w-[10rem]`}
+                value={plan?.targetDate ?? ''}
+                placeholder={dateHint}
+                aria-label="Target date"
+                onChange={e => void route.updatePlan({ targetDate: e.target.value })}
+                style={
+                  isRouteDateValid(plan?.targetDate, calendar)
+                    ? undefined
+                    : { borderColor: 'var(--color-danger, #b3261e)' }
+                }
+              />
+            </label>
+            <label className="flex flex-col gap-1 flex-1 min-w-[10rem]">
+              <span className="text-sm text-[var(--color-text-muted)]">What for</span>
+              <input
+                className={inputClass}
+                value={plan?.targetNote ?? ''}
+                placeholder="Deliver the trake fruit"
+                aria-label="What the deadline is for"
+                onChange={e => void route.updatePlan({ targetNote: e.target.value })}
+              />
+            </label>
+          </div>
+
+          {schedule.projectedEnd !== null && (
+            <p className="text-[var(--color-text)]">
+              Arrives <strong>{fmtDate(schedule.projectedEnd)}</strong>
+              {schedule.lastActual && (
+                <span className="text-[var(--color-text-muted)]">
+                  {' '}— projected from the last recorded arrival
+                </span>
+              )}
+            </p>
+          )}
+
+          {schedule.slack !== null && (
+            <p
+              className="font-semibold"
+              style={{
+                color:
+                  schedule.slack < 0
+                    ? 'var(--color-danger, #b3261e)'
+                    : 'var(--color-success, #2e7d32)',
+              }}
+            >
+              {schedule.slack < 0
+                ? `${describeDuration(schedule.slack)} late`
+                : schedule.slack === 0
+                  ? 'Arrives exactly on the deadline'
+                  : `${describeDuration(schedule.slack)} to spare`}
+              {plan?.targetNote ? ` — ${plan.targetNote}` : ''}
+            </p>
           )}
         </div>
       </SectionPanel>
@@ -191,6 +280,91 @@ export default function RouteScreen() {
                   )}
               </label>
             ))}
+
+            {(() => {
+              const row = schedule.stops[index];
+              if (!row) return null;
+              return (
+                <div className="flex flex-col gap-[var(--space-sm)] border-t border-[var(--color-border)] pt-[var(--space-sm)]">
+                  <div className="flex gap-[var(--space-sm)] flex-wrap">
+                    {index > 0 && (
+                      <label className="flex flex-col gap-1">
+                        <span className="text-sm text-[var(--color-text-muted)]">
+                          Days to get here
+                        </span>
+                        <input
+                          className={`${inputClass} max-w-[8rem]`}
+                          inputMode="numeric"
+                          value={stop.estimatedDays ?? ''}
+                          aria-label={`Estimated days to ${stop.name}`}
+                          onChange={e => {
+                            const n = Number(e.target.value);
+                            void route.setStopSchedule(stop, {
+                              estimatedDays:
+                                e.target.value.trim() === '' || !Number.isFinite(n) || n < 0
+                                  ? undefined
+                                  : n,
+                            });
+                          }}
+                        />
+                      </label>
+                    )}
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm text-[var(--color-text-muted)]">Arrived</span>
+                      <input
+                        className={`${inputClass} max-w-[9rem]`}
+                        value={stop.arrivedOn ?? ''}
+                        placeholder={dateHint}
+                        aria-label={`Arrived at ${stop.name}`}
+                        onChange={e => void route.setStopSchedule(stop, { arrivedOn: e.target.value })}
+                        style={
+                          isRouteDateValid(stop.arrivedOn, calendar)
+                            ? undefined
+                            : { borderColor: 'var(--color-danger, #b3261e)' }
+                        }
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1">
+                      <span className="text-sm text-[var(--color-text-muted)]">Departed</span>
+                      <input
+                        className={`${inputClass} max-w-[9rem]`}
+                        value={stop.departedOn ?? ''}
+                        placeholder={dateHint}
+                        aria-label={`Departed ${stop.name}`}
+                        onChange={e => void route.setStopSchedule(stop, { departedOn: e.target.value })}
+                        style={
+                          isRouteDateValid(stop.departedOn, calendar)
+                            ? undefined
+                            : { borderColor: 'var(--color-danger, #b3261e)' }
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  <p className="text-sm text-[var(--color-text-muted)]">
+                    {row.actualArrival !== null ? 'Arrived' : 'Due'}{' '}
+                    <strong className="text-[var(--color-text)]">
+                      {fmtDate(row.projectedArrival)}
+                    </strong>
+                    {row.variance !== null && row.variance !== 0 && (
+                      <span
+                        style={{
+                          color:
+                            row.variance > 0
+                              ? 'var(--color-danger, #b3261e)'
+                              : 'var(--color-success, #2e7d32)',
+                        }}
+                      >
+                        {' '}· {describeDuration(row.variance)} {row.variance > 0 ? 'late' : 'early'}
+                      </span>
+                    )}
+                    {row.daysInPort !== null && row.daysInPort > 0 && (
+                      <span> · {describeDuration(row.daysInPort)} in port</span>
+                    )}
+                  </p>
+                </div>
+              );
+            })()}
 
             <div>
               <Button variant="danger" onClick={() => void handleDelete(stop)}>

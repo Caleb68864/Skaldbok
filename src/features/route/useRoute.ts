@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
 import * as routeRepository from '../../storage/repositories/routeRepository';
+import * as routePlanRepository from '../../storage/repositories/routePlanRepository';
+import { buildSchedule } from '../../utils/route/schedule';
+import type { RoutePlan } from '../../types/routePlan';
 import { reorder, totalDistance } from '../../utils/routeMath';
 import type { RouteStop } from '../../types/routeStop';
 
@@ -25,6 +28,7 @@ export function useRoute() {
   const { activeCampaign } = useCampaignContext();
   const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
   const [stops, setStops] = useState<RouteStop[]>([]);
+  const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const campaignId = activeCampaign?.id;
@@ -37,6 +41,7 @@ export function useRoute() {
       return;
     }
     setStops(await routeRepository.listByCampaign(campaignId));
+    setPlan(await routePlanRepository.getOrCreateForCampaign(campaignId));
     setIsLoading(false);
   }, [campaignId]);
 
@@ -63,6 +68,45 @@ export function useRoute() {
   const total = useMemo(
     () => totalDistance(stops, planner?.distanceFieldId),
     [stops, planner],
+  );
+
+  /**
+   * The route as a schedule: projected dates, recorded actuals, and slack
+   * against the deadline. Recomputed on every change rather than stored — the
+   * same reasoning as the ledger's running balance, and for the same reason:
+   * a stored projection goes stale the moment a leg runs long.
+   */
+  const schedule = useMemo(
+    () =>
+      buildSchedule({
+        stops,
+        startDate: plan?.startDate,
+        targetDate: plan?.targetDate,
+        calendar: planner?.calendar,
+      }),
+    [stops, plan, planner],
+  );
+
+  /** Patches the journey's start date, deadline, or note. */
+  const updatePlan = useCallback(
+    async (patch: Partial<Pick<RoutePlan, 'startDate' | 'targetDate' | 'targetNote'>>) => {
+      if (!plan) return;
+      setPlan({ ...plan, ...patch });
+      await routePlanRepository.update(plan.id, patch);
+    },
+    [plan],
+  );
+
+  /** Records an estimate or an actual date against one stop. */
+  const setStopSchedule = useCallback(
+    async (
+      stop: RouteStop,
+      patch: Partial<Pick<RouteStop, 'estimatedDays' | 'arrivedOn' | 'departedOn'>>,
+    ) => {
+      await routeRepository.update(stop.id, patch);
+      setStops(prev => prev.map(s => (s.id === stop.id ? { ...s, ...patch } : s)));
+    },
+    [],
   );
 
   const addStop = useCallback(
@@ -149,6 +193,11 @@ export function useRoute() {
     nameField,
     distanceLabel,
     total,
+    plan,
+    schedule,
+    calendar: planner?.calendar,
+    updatePlan,
+    setStopSchedule,
     addStop,
     importStops,
     updateStop,
