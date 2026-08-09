@@ -56,7 +56,7 @@ export function RepeatableRows({ columns, rows, onChange, editable, addLabel, em
           {columns.map(col => (
             <label
               key={col.key}
-              className="flex min-w-0 flex-col gap-1 text-[length:0.7rem] uppercase tracking-wide text-[var(--color-text-muted)]"
+              className="flex min-w-0 flex-col gap-1 text-[length:var(--size-xs)] uppercase tracking-wide text-[var(--color-text-muted)]"
               style={{ flex: col.flex ?? '1 1 120px' }}
             >
               {col.label}

@@ -971,7 +971,7 @@ export default function SheetScreen() {
           <div className="flex flex-col gap-[var(--space-md)]">
             {CONNECTION_GROUPS.map(group => (
               <div key={group.key}>
-                <p className="m-0 mb-[var(--space-xs)] text-[length:0.7rem] uppercase tracking-wide text-[var(--color-text-muted)]">
+                <p className="m-0 mb-[var(--space-xs)] text-[length:var(--size-xs)] uppercase tracking-wide text-[var(--color-text-muted)]">
                   {group.label}
                 </p>
                 <RepeatableRows
@@ -1027,7 +1027,7 @@ export default function SheetScreen() {
                 Hull {ship.hullCurrent}/{ship.hullMax} · Cargo {ship.cargoCurrent}/{ship.cargoMax}t · Fuel{' '}
                 {ship.fuelCurrent}/{ship.fuelMax}
               </span>
-              <span className="text-[length:0.7rem] uppercase tracking-wide text-[var(--color-primary)]">
+              <span className="text-[length:var(--size-xs)] uppercase tracking-wide text-[var(--color-primary)]">
                 Open in Ships →
               </span>
             </button>

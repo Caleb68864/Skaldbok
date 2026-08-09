@@ -3049,3 +3049,26 @@
   Session reports no sub-12px text on Ledger or Jump Route, where four subtitles
   previously failed.
 - Commit: fix(ui) — panel subtitles to 12px.
+
+## 2026-08-09 — the remaining uppercase labels to 12px
+- Symptom: three `0.7rem` (11.2px) labels survived the subtitle pass, all
+  **uppercase tracking-wide** — `RepeatableRows` column headers, the Connections
+  group headings, and "Open in Ships ->". Uppercase at 11.2px is harder to read
+  than sentence case at the same size, and all three live on the character
+  sheet, which is open for most of a session.
+- Fix: `text-[length:var(--size-xs)]` (12px), the same token the panel subtitle
+  now uses. No `0.7rem` remains in `src`.
+- Surfaces: `components/fields/RepeatableRows.tsx`,
+  `screens/SheetScreen.tsx` (Connections headings, ship link).
+- Watch: **`RepeatableRows` draws its column labels per row, so an empty sheet
+  renders none of them.** A verification that only loads a fresh character
+  measures nothing and passes — the labels have to be brought into existence by
+  adding a row first. The same trap as every other check in this codebase that
+  passed because the command found nothing to look at.
+- Watch also: a `+ ` text match hits the characteristic steppers as well; the
+  add-row buttons need naming exactly (`+ Ally`, `+ Contact`, ...).
+- Verified: with a character and one row in each connection group, the sheet
+  reports 12 uppercase labels, all at 12px, and nothing at all under 12px.
+  The ship link (`SheetScreen:1030`) is the same one-token swap but was not
+  brought on screen — it needs a ship linked to the character.
+- Commit: fix(ui) — remaining uppercase labels to 12px.
