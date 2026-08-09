@@ -46,9 +46,17 @@ export function useLedger() {
       return;
     }
     const loaded = await ledgerRepository.listByCampaign(campaignId);
+    // Accounts first: the running balance folds cash on hand, so it needs to
+    // know which accounts are assets before it can fold anything.
+    const loadedAccounts = await ledgerAccountRepository.ensureForCampaign(campaignId);
     setEntries(loaded);
-    setRows(computeRunningBalance(loaded));
-    setAccounts(await ledgerAccountRepository.ensureForCampaign(campaignId));
+    setRows(
+      computeRunningBalance(loaded, {
+        accountIds: new Set(loadedAccounts.filter(a => a.kind === 'asset').map(a => a.id)),
+        primaryId: loadedAccounts.find(a => a.isPrimary)?.id,
+      }),
+    );
+    setAccounts(loadedAccounts);
     setBills(await recurringBillRepository.listByCampaign(campaignId));
     setIsLoading(false);
   }, [campaignId]);

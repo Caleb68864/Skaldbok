@@ -39,8 +39,23 @@ export type EntryWithBalance = LedgerEntry & { balance: number };
  * Only `amount` is summed. On a distribution that is the *net* movement, which
  * already excludes money retained in the ship fund — see
  * {@link computeDistribution}.
+ *
+ * Pass `cash` to fold **cash on hand** instead of every account. Without it the
+ * column sums the mortgage's opening balance alongside a fuel purchase and
+ * reports a number that is not any quantity the crew has: a book with a
+ * Cr40,000,000 loan in it reads -Cr 44,936,045 while there is Cr500,000 in the
+ * strongbox. With it, the final row equals the asset accounts' total, so the
+ * headline figure and the last line of the table agree by construction.
  */
-export function computeRunningBalance(entries: LedgerEntry[]): EntryWithBalance[] {
+export function computeRunningBalance(
+  entries: LedgerEntry[],
+  cash?: {
+    /** Ids of the accounts that count as cash — the asset accounts. */
+    accountIds: ReadonlySet<string>;
+    /** Where an entry with no `accountId` lands. */
+    primaryId?: string;
+  },
+): EntryWithBalance[] {
   const ordered = [...entries].sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||
@@ -49,7 +64,18 @@ export function computeRunningBalance(entries: LedgerEntry[]): EntryWithBalance[
   );
   let running = 0;
   return ordered.map(entry => {
-    running += entry.amount;
+    if (cash === undefined) {
+      running += entry.amount;
+      return { ...entry, balance: running };
+    }
+    // Both sides, and the counter side with the opposite sign — the same rule
+    // `computeAccountBalances` uses, so a cash→savings transfer nets to zero
+    // rather than looking like the money left.
+    const near = entry.accountId ?? cash.primaryId;
+    if (near !== undefined && cash.accountIds.has(near)) running += entry.amount;
+    if (entry.counterAccountId !== undefined && cash.accountIds.has(entry.counterAccountId)) {
+      running -= entry.amount;
+    }
     return { ...entry, balance: running };
   });
 }

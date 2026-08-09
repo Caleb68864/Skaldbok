@@ -106,7 +106,7 @@ export default function LedgerScreen() {
 
   return (
     <div className="p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
-      <SectionPanel title={currencyLabel} subtitle={`Balance ${formatMoney(balance)}`}>
+      <SectionPanel title={currencyLabel} subtitle={`Cash on hand ${formatMoney(balance)}`}>
         <div className="flex flex-col gap-[var(--space-sm)]">
           <div className="flex gap-[var(--space-sm)] flex-wrap">
             <input
@@ -229,7 +229,7 @@ export default function LedgerScreen() {
                   <th className="py-1 pr-2">Description</th>
                   <th className="py-1 pr-2 text-right">In</th>
                   <th className="py-1 pr-2 text-right">Out</th>
-                  <th className="py-1 pr-2 text-right">Balance</th>
+                  <th className="py-1 pr-2 text-right">Cash</th>
                   <th className="py-1" />
                 </tr>
               </thead>

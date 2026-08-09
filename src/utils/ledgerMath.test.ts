@@ -26,6 +26,79 @@ function split(shipFundPct: number, pcts: number[]): SplitSnapshot {
   };
 }
 
+describe('computeRunningBalance — cash on hand', () => {
+  // 'cash' and 'savings' are assets; 'loan' is the mortgage.
+  const CASH = { accountIds: new Set(['cash', 'savings']), primaryId: 'cash' };
+
+  it("ignores an entry booked against an account that is not cash", () => {
+    // The mortgage's opening balance is a real Cr40,000,000 obligation and
+    // moves the strongbox by nothing. Folding it in was what made the headline
+    // read -Cr 44,936,045 while there was Cr500,000 on the ship.
+    const rows = computeRunningBalance(
+      [
+        entry({ id: 'a', amount: 500_000, accountId: 'cash' }),
+        entry({ id: 'b', amount: -40_000_000, accountId: 'loan' }),
+      ],
+      CASH,
+    );
+    expect(rows.map(r => r.balance)).toEqual([500_000, 500_000]);
+  });
+
+  it('treats an entry with no account as the primary one', () => {
+    const rows = computeRunningBalance([entry({ id: 'a', amount: 1_000 })], CASH);
+    expect(rows[0].balance).toBe(1_000);
+  });
+
+  it('nets a transfer between two cash accounts to zero', () => {
+    // Money moved from cash to savings has not left the crew.
+    const rows = computeRunningBalance(
+      [entry({ id: 'a', amount: -5_000, accountId: 'cash', counterAccountId: 'savings' })],
+      CASH,
+    );
+    expect(rows[0].balance).toBe(0);
+  });
+
+  it('counts a mortgage payment as cash leaving', () => {
+    // Near side is cash, counter side is the loan: cash falls, and the fact
+    // that the loan falls too is the accounts panel's business, not this fold's.
+    const rows = computeRunningBalance(
+      [entry({ id: 'a', amount: -201_335, accountId: 'cash', counterAccountId: 'loan' })],
+      CASH,
+    );
+    expect(rows[0].balance).toBe(-201_335);
+  });
+
+  it('counts cash arriving from a non-cash account', () => {
+    const rows = computeRunningBalance(
+      [entry({ id: 'a', amount: -10_000, accountId: 'loan', counterAccountId: 'cash' })],
+      CASH,
+    );
+    expect(rows[0].balance).toBe(10_000);
+  });
+
+  it('ends on the same total the asset accounts report', () => {
+    // The property the screen depends on: the headline figure and the last row
+    // of the table are the same number, so they cannot disagree on screen.
+    const entries = [
+      entry({ id: 'a', amount: 500_000, accountId: 'cash' }),
+      entry({ id: 'b', amount: -40_000_000, accountId: 'loan' }),
+      entry({ id: 'c', amount: -201_335, accountId: 'cash', counterAccountId: 'loan' }),
+      entry({ id: 'd', amount: -5_436_045, accountId: 'escrow' }),
+    ];
+    const rows = computeRunningBalance(entries, CASH);
+    expect(rows[rows.length - 1].balance).toBe(500_000 - 201_335);
+  });
+
+  it('folds every account when no cash set is given', () => {
+    // The default is unchanged, which is what keeps the exporter honest.
+    const rows = computeRunningBalance([
+      entry({ id: 'a', amount: 500_000, accountId: 'cash' }),
+      entry({ id: 'b', amount: -40_000_000, accountId: 'loan' }),
+    ]);
+    expect(rows[1].balance).toBe(-39_500_000);
+  });
+});
+
 describe('computeRunningBalance', () => {
   it('folds a mixed in/out sequence into a running total', () => {
     const rows = computeRunningBalance([

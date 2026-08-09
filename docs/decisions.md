@@ -2920,12 +2920,18 @@
   lives in `AccountsPanel`, deliberately next to the input that creates the
   ambiguity. `useLedger.addAccount` takes an already-signed number so the JSON
   importer and the form cannot disagree about it.
-- Watch also: **the headline "Balance" folds every entry regardless of account.**
-  With one cash account that was the cashbook balance; now that a mortgage can be
-  opened it reads -Cr 44,936,045 while cash is Cr 500,000 and net position is
-  -Cr 39,500,000 — three numbers, one of them meaning nothing. Pre-existing, not
-  introduced here, but opening balances make it easy to hit. Not changed:
-  redefining a displayed money figure is the user's call.
+- Watch also: **the headline "Balance" folded every entry regardless of account.**
+  With one cash account that was the cashbook balance; once a mortgage could be
+  opened it read -Cr 44,936,045 while cash was Cr 500,000 and net position was
+  -Cr 39,500,000 — three numbers, one of them meaning nothing. Pre-existing, but
+  opening balances made it trivial to hit. Now fixed: `computeRunningBalance`
+  takes an optional `cash` set and folds **cash on hand**, counting the near side
+  and the counter side with the opposite sign — the same rule
+  `computeAccountBalances` uses, so a cash→savings transfer nets to zero instead
+  of looking like the money left. The headline reads "Cash on hand", the column
+  reads "Cash", and the final row equals the asset total *by construction* rather
+  than by coincidence, so the two cannot disagree on screen. Omitting the set
+  keeps the old whole-book fold, which is what the exporter still wants.
 - Verified in a browser: Cr40,000,000 liability and Cr5,436,045 contingent both
   store negative and display as magnitudes; contingent stays out of net position
   (-Cr 39,500,000, not -Cr 44,936,045); a Cr500,000 asset stays positive; the
