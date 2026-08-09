@@ -21,9 +21,14 @@ specifically to hunt for criteria that pass **for the wrong reason**.
 cites it.**
 
 The criterion requires `docs/decisions.md` to carry Watch lines on three topics.
-Two were present (the signed-amount divergence from the debts feature's
-`direction` field; why `gross` and `amount` differ). The third — that the ledger
-export is deliberately unfiltered — was absent.
+The signed-amount divergence from the debts feature's `direction` field was
+present. The unfiltered-export line was absent.
+
+> **Corrected in pass 6.** This report originally claimed *two* of the three
+> topics were already present, counting the gross-vs-amount rationale. That
+> rationale existed, but under a `Fix:` bullet — **not as a `Watch:` line**,
+> which is what the criterion asks for. SS-10 c7 was therefore still `Partial`
+> after this pass, not `Met`. A proper Watch line was added in pass 6.
 
 That alone is a documentation gap. What makes it worth the pass is that
 `useExportActions.ts:441-443` already contains:
@@ -89,7 +94,7 @@ have produced a false gap and burned a pass — or, worse, a false *clean*.
 | `npx vitest run …/engineContract.test.ts` | 82 passed |
 | `npx vitest run …/systemDefinitionSchema.test.ts` | 15 passed |
 | `npx vitest run …/currencyFormat.test.ts` | 10 passed |
-| `npx vitest run src/utils/ledgerMath.test.ts` | 32 passed |
+| `npx vitest run src/utils/ledgerMath.test.ts` | 24 passed *(corrected in pass 6 — originally recorded as 32, a scanner's figure copied without checking; the file has 24 tests and has not changed since 83b981b)* |
 | `npx vitest run src/utils/routeMath.test.ts` | 19 passed |
 | `npx vitest run …/renderLedger.test.ts` | 14 passed |
 | `npx vitest run …/ledgerSplitRepository.test.ts` | 8 passed |

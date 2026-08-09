@@ -2392,8 +2392,15 @@
   A breach throws instead of writing a plausible wrong row.
 - Surfaces: `utils/ledgerMath.ts` (`computeDistribution`, `computeRunningBalance`,
   `validateSplit`, `evenSplit`), `types/ledger.ts`, and the three repositories.
-- Watch: **the ledger stores a signed integer, deliberately diverging from the
-  itemised-debts convention.** That feature carries direction in a
+- Watch: **`gross` and `amount` are different numbers and must stay different.**
+  `gross` is the whole sum being divided; `amount` is only the cash that left the
+  book. On a 50% ship-fund payout they differ by half. Anything that folds the
+  balance must read `amount` and nothing else — summing `gross` re-creates the
+  original bug exactly, and the legs sum to `gross`, so a leg-based total is
+  wrong too. If a future change makes them equal for a distribution, that is the
+  regression, not a simplification.
+- Watch also: **the ledger stores a signed integer, deliberately diverging from
+  the itemised-debts convention.** That feature carries direction in a
   `direction: 'owed' | 'due'` field, and its own Watch line predicted somebody
   would eventually type the wrong sign. A cashbook whose balance is a plain sum
   of signed integers cannot have that bug. The user still sees In and Out

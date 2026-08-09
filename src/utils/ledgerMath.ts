@@ -161,8 +161,8 @@ export function computeDistribution(gross: number, split: SplitSnapshot): Distri
     legs.push({ kind: 'unallocated', amount: unallocated, pct: unallocatedPct });
   }
 
-  // `|| 0` normalises negative zero: `-(0)` is `-0`, which folds harmlessly but
-  // renders as "-0" and compares unequal to 0 under Object.is.
+  // The ternary normalises negative zero: `-(0)` is `-0`, which folds harmlessly
+  // but renders as "-0" and compares unequal to 0 under Object.is.
   const paidOut = paidToPayees + unallocated;
   const net = paidOut === 0 ? 0 : -paidOut;
 
