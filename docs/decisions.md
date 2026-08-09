@@ -2974,3 +2974,32 @@
   (escrow accrued exactly Cr 5,436,045, the real campaign figure), and three
   consecutive reloads post nothing further.
 - Commit: fix(ledger) — recurring charges reach the session log.
+
+## 2026-08-09 — a standing notice when cash goes negative
+- Symptom: a played-through session ended at -Cr 244,100 and nothing said so.
+  `DistributeModal` warned when a payout would overdraw the book, but that was
+  the only guard; recurring charges could take the crew under in silence, which
+  is the way it will actually happen at a table.
+- Fix: a banner in the Credits panel whenever cash on hand is negative, naming
+  the shortfall as a positive figure ("Overdrawn by Cr 39,000"). Bill posting
+  additionally raises an **error** toast rather than the success one — "Posted 12
+  recurring charges" in green is a reassuring message to show someone whose ship
+  has just run out of money, and those charges are the reason it happened.
+- Surfaces: `LedgerScreen` (banner + toast severity), `useLedger.reload` (now
+  returns the cash balance it computed), `useLedger.postDueBills` (returns
+  `cashAfter`).
+- Watch: **the caller could not read `balance` off the hook to decide this.**
+  Bill posting has just written entries; the new balance lands on the next
+  render, so the closure sees the figure from *before* the charges and would
+  report a solvent crew. `reload` returning the value it computed is what makes
+  the check see the book it just wrote.
+- Watch also: the banner is a standing notice, not a toast, because being unable
+  to pay is a standing condition. A toast is gone by the time anyone reaches for
+  the book.
+- Watch also: zero is not overdrawn. The test pins `Cr 0` as clean and `-Cr 1` as
+  warned, because `< 0` and `<= 0` are one character apart and the wrong one
+  cries wolf at every fully-spent book.
+- Verified in a browser across the whole range: positive clean, exactly zero
+  clean, one credit under warns, Cr 50,000 under states the shortfall, recovery
+  clears it, recurring charges trigger it, and it survives a reload.
+- Commit: feat(ledger) — warn when cash goes negative.

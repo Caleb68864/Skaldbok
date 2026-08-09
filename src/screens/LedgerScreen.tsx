@@ -64,11 +64,18 @@ export default function LedgerScreen() {
       .postDueBills()
       .then(result => {
         if (result.count === 0) return;
+        // Overdrawn wins the toast. "Posted 12 charges" in success green is a
+        // reassuring message to show someone whose ship just ran out of money,
+        // and the charges are the reason it happened.
+        const overdrawn = result.cashAfter < 0;
         showToast(
           `Posted ${result.count} recurring charge${result.count === 1 ? '' : 's'}` +
             ` — ${formatMoneyRef.current(result.total)}` +
-            (result.truncated ? '. More still due; reopen to post them.' : ''),
-          'success',
+            (result.truncated ? '. More still due; reopen to post them.' : '') +
+            (overdrawn
+              ? `. Cash is overdrawn by ${formatMoneyRef.current(-result.cashAfter)}.`
+              : ''),
+          overdrawn ? 'error' : 'success',
         );
       })
       .finally(() => {
@@ -108,6 +115,22 @@ export default function LedgerScreen() {
     <div className="p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
       <SectionPanel title={currencyLabel} subtitle={`Cash on hand ${formatMoney(balance)}`}>
         <div className="flex flex-col gap-[var(--space-sm)]">
+          {/* A toast is gone by the time anyone reaches for the book. The crew
+              being unable to pay is a standing condition, so it gets a standing
+              notice rather than a message that has already scrolled away. */}
+          {balance < 0 && (
+            <div
+              role="status"
+              className="flex flex-wrap items-baseline gap-x-2 px-[var(--space-sm)] py-[var(--space-sm)] rounded-[var(--radius-sm)] bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
+            >
+              <span className="font-semibold">
+                Overdrawn by {formatMoney(-balance)}
+              </span>
+              <span className="text-sm">
+                Cash on hand is negative — the crew owes more than it holds.
+              </span>
+            </div>
+          )}
           <div className="flex gap-[var(--space-sm)] flex-wrap">
             <input
               className={`${inputClass} max-w-[10rem]`}

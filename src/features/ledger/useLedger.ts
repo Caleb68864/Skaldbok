@@ -39,26 +39,36 @@ export function useLedger() {
   const calendar = system?.calendar ?? system?.routePlanner?.calendar;
   const campaignDate = activeCampaign?.campaignDate ?? '';
 
+  /**
+   * Re-reads the book.
+   *
+   * @remarks
+   * Returns the cash balance it just computed. A caller that has *just* written
+   * entries cannot read `balance` off this hook — that state lands on the next
+   * render, so the closure would see the figure from before the write. Returning
+   * it is what lets bill posting tell whether it is the thing that overdrew the
+   * crew.
+   */
   const reload = useCallback(async () => {
     if (!campaignId) {
       setRows([]);
       setIsLoading(false);
-      return;
+      return 0;
     }
     const loaded = await ledgerRepository.listByCampaign(campaignId);
     // Accounts first: the running balance folds cash on hand, so it needs to
     // know which accounts are assets before it can fold anything.
     const loadedAccounts = await ledgerAccountRepository.ensureForCampaign(campaignId);
+    const computed = computeRunningBalance(loaded, {
+      accountIds: new Set(loadedAccounts.filter(a => a.kind === 'asset').map(a => a.id)),
+      primaryId: loadedAccounts.find(a => a.isPrimary)?.id,
+    });
     setEntries(loaded);
-    setRows(
-      computeRunningBalance(loaded, {
-        accountIds: new Set(loadedAccounts.filter(a => a.kind === 'asset').map(a => a.id)),
-        primaryId: loadedAccounts.find(a => a.isPrimary)?.id,
-      }),
-    );
+    setRows(computed);
     setAccounts(loadedAccounts);
     setBills(await recurringBillRepository.listByCampaign(campaignId));
     setIsLoading(false);
+    return computed.length > 0 ? computed[computed.length - 1].balance : 0;
   }, [campaignId]);
 
   useEffect(() => {
@@ -333,11 +343,11 @@ export function useLedger() {
    * would be indistinguishable from a bug.
    */
   const postDueBills = useCallback(async () => {
-    if (!campaignId || campaignDate.trim() === '') return { count: 0, total: 0, truncated: false };
+    if (!campaignId || campaignDate.trim() === '') return { count: 0, total: 0, truncated: false, cashAfter: balance };
 
     const live = await recurringBillRepository.listByCampaign(campaignId);
     const result = accrueBills({ bills: live, campaignDate, calendar });
-    if (result.charges.length === 0) return { count: 0, total: 0, truncated: false };
+    if (result.charges.length === 0) return { count: 0, total: 0, truncated: false, cashAfter: balance };
 
     for (const charge of result.charges) {
       await ledgerRepository.create({
@@ -384,8 +394,14 @@ export function useLedger() {
       'bills',
     );
 
-    await reload();
-    return { count: result.charges.length, total: result.total, truncated: result.truncated };
+    const cashAfter = await reload();
+    return {
+      count: result.charges.length,
+      total: result.total,
+      truncated: result.truncated,
+      /** Cash on hand once these charges landed. Negative means overdrawn. */
+      cashAfter,
+    };
   }, [campaignId, campaignDate, calendar, reload, engine, mirrorToLog]);
 
   /** Sets the campaign's in-world date. Bills catch up on the next post. */
