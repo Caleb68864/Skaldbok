@@ -7,6 +7,8 @@ import { useLedger } from '../features/ledger/useLedger';
 import { useLedgerSplit } from '../features/ledger/useLedgerSplit';
 import { SplitEditor } from '../features/ledger/SplitEditor';
 import { DistributeModal } from '../features/ledger/DistributeModal';
+import { AccountsPanel } from '../features/ledger/AccountsPanel';
+import { LedgerImportModal } from '../features/ledger/LedgerImportModal';
 import { useExportActions } from '../features/export/useExportActions';
 import { useToast } from '../context/ToastContext';
 
@@ -41,17 +43,31 @@ export default function LedgerScreen() {
   const [memo, setMemo] = useState('');
   const [amountText, setAmountText] = useState('');
   const [isDistributing, setIsDistributing] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [accountId, setAccountId] = useState<string>('');
+  const [counterAccountId, setCounterAccountId] = useState<string>('');
 
   if (!activeCampaign) return <NoCampaignPrompt />;
 
-  const { rows, balance, formatMoney, baseDenomination, currencyLabel } = ledger;
+  const { rows, balance, formatMoney, baseDenomination, currencyLabel, accounts, summary } = ledger;
   const abbr = baseDenomination?.abbr ?? '';
   const amount = Math.trunc(Number(amountText));
   const amountIsUsable = amountText.trim() !== '' && Number.isFinite(amount) && amount !== 0;
 
   async function record(direction: 'in' | 'out') {
     if (!amountIsUsable) return;
-    await ledger.addEntry({ date, memo: memo.trim(), amount, direction });
+    await ledger.addEntry({
+      date,
+      memo: memo.trim(),
+      amount,
+      direction,
+      accountId: accountId || undefined,
+      // A transfer only makes sense between two different accounts; naming the
+      // same one both sides nets to nothing, so it is treated as no transfer.
+      counterAccountId: counterAccountId && counterAccountId !== accountId
+        ? counterAccountId
+        : undefined,
+    });
     setAmountText('');
     setMemo('');
   }
@@ -92,8 +108,47 @@ export default function LedgerScreen() {
               Money out
             </Button>
           </div>
+          {accounts.length > 1 && (
+            <div className="flex gap-[var(--space-sm)] flex-wrap items-center">
+              <label className="flex items-center gap-1 text-sm text-[var(--color-text-muted)]">
+                From
+                <select
+                  className={`${inputClass} max-w-[11rem]`}
+                  value={accountId}
+                  aria-label="Account"
+                  onChange={e => setAccountId(e.target.value)}
+                >
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.isPrimary ? '' : a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-1 text-sm text-[var(--color-text-muted)]">
+                To
+                <select
+                  className={`${inputClass} max-w-[11rem]`}
+                  value={counterAccountId}
+                  aria-label="Transfer to account"
+                  onChange={e => setCounterAccountId(e.target.value)}
+                >
+                  <option value="">— nowhere (money leaves the books) —</option>
+                  {accounts.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
           <div className="flex gap-[var(--space-sm)] flex-wrap">
             <Button onClick={() => setIsDistributing(true)}>Distribute…</Button>
+            <Button variant="secondary" onClick={() => setIsImporting(true)}>
+              Import…
+            </Button>
             {rows.length > 0 && (
               <Button variant="secondary" onClick={() => void exportLedger()}>
                 Export
@@ -102,6 +157,17 @@ export default function LedgerScreen() {
           </div>
         </div>
       </SectionPanel>
+
+      <AccountsPanel
+        summary={summary}
+        formatMoney={formatMoney}
+        onAdd={(name, kind, note) => ledger.addAccount(name, kind, note)}
+        onRemove={async id => {
+          const removed = await ledger.removeAccount(id);
+          if (!removed) showToast('The default account cannot be removed', 'error');
+          return removed;
+        }}
+      />
 
       <SplitEditor split={split} />
 
@@ -184,6 +250,22 @@ export default function LedgerScreen() {
           </div>
         )}
       </SectionPanel>
+
+      {isImporting && (
+        <LedgerImportModal
+          formatMoney={formatMoney}
+          onCancel={() => setIsImporting(false)}
+          onImport={async parsed => {
+            const result = await ledger.importLedger(parsed);
+            setIsImporting(false);
+            showToast(
+              `Imported ${result.entries} entr${result.entries === 1 ? 'y' : 'ies'}` +
+                (result.accounts > 0 ? ` and ${result.accounts} account(s)` : ''),
+              'success',
+            );
+          }}
+        />
+      )}
 
       {isDistributing && (
         <DistributeModal

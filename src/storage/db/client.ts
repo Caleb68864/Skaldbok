@@ -18,6 +18,7 @@ import type { LedgerEntry } from '../../types/ledger';
 import type { PayoutSplit } from '../../types/payoutSplit';
 import type { RouteStop } from '../../types/routeStop';
 import type { RoutePlan } from '../../types/routePlan';
+import type { LedgerAccount } from '../../types/ledgerAccount';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
@@ -155,6 +156,7 @@ export class SkaldbokDatabase extends Dexie {
   ships!: Table<Ship, string>;
   ledgerEntries!: Table<LedgerEntry, string>;
   ledgerSplits!: Table<PayoutSplit, string>;
+  ledgerAccounts!: Table<LedgerAccount, string>;
   routeStops!: Table<RouteStop, string>;
   routePlans!: Table<RoutePlan, string>;
 
@@ -588,6 +590,17 @@ export class SkaldbokDatabase extends Dexie {
     // that table's declaration is unchanged.
     this.version(16).stores({
       routePlans: 'id, campaignId, deletedAt',
+    });
+
+    // --- Version 17: named ledger accounts ---
+    // A cashbook cannot hold a liability, so the ship's mortgage could be paid
+    // but never seen to shrink. Accounts let an entry name what it moved out of
+    // and what it moved into. The new `accountId`/`counterAccountId` fields on
+    // `ledgerEntries` are additive and unindexed — an entry naming no account
+    // belongs to the campaign's primary one, so every row written before this
+    // still counts.
+    this.version(17).stores({
+      ledgerAccounts: 'id, campaignId, isPrimary, deletedAt',
     });
   }
 }

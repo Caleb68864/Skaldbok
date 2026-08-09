@@ -65,6 +65,38 @@ export const ledgerEntrySchema = z.object({
   memo: z.string().default(''),
   /** Signed integer count of the base currency denomination. Positive is in, negative is out. */
   amount: z.number().int(),
+  /**
+   * The account this entry moves money in or out of.
+   *
+   * @remarks
+   * Absent means the campaign's primary account. Every entry written before
+   * accounts existed therefore still counts, and the common case — the crew's
+   * cash — needs no choosing.
+   */
+  accountId: z.string().optional(),
+  /**
+   * The account the money moved to or from, when the entry is a transfer.
+   *
+   * @remarks
+   * The counter side receives the **opposite** sign. A mortgage payment is
+   * `amount: -201335` against Cash with `counterAccountId` on the Ship Loan, so
+   * cash falls and the debt rises toward zero in one write. Without it the
+   * payment leaves the book and the loan never moves.
+   */
+  counterAccountId: z.string().optional(),
+  /**
+   * Marks an entry that establishes a starting balance rather than recording a
+   * movement.
+   *
+   * @remarks
+   * Only `'opening'` is meaningful. A distribution is still identified by
+   * carrying `gross`, and an ordinary line by carrying neither — so this stays
+   * optional and nothing written before it needs migrating. Opening balances are
+   * separated because "what did we start with" and "what have we done since" are
+   * different questions, and a starting figure buried among transactions reads
+   * like income the crew earned.
+   */
+  kind: z.enum(['opening']).optional(),
   /** Present only for a Distribute-generated entry: the pre-split total. */
   gross: z.number().int().nonnegative().optional(),
   /** Present only for a Distribute-generated entry: where the money went. */

@@ -65,6 +65,9 @@ export async function create(data: {
   gross?: number;
   legs?: LedgerLeg[];
   splitSnapshot?: SplitSnapshot;
+  accountId?: string;
+  counterAccountId?: string;
+  kind?: 'opening';
 }): Promise<LedgerEntry> {
   const now = nowISO();
   const entry: LedgerEntry = {
@@ -73,6 +76,9 @@ export async function create(data: {
     date: data.date,
     memo: data.memo ?? '',
     amount: data.amount,
+    ...(data.accountId ? { accountId: data.accountId } : {}),
+    ...(data.counterAccountId ? { counterAccountId: data.counterAccountId } : {}),
+    ...(data.kind ? { kind: data.kind } : {}),
     ...(data.gross !== undefined ? { gross: data.gross } : {}),
     ...(data.legs ? { legs: data.legs } : {}),
     // Deep-copied by the caller before it gets here; copied again so a later

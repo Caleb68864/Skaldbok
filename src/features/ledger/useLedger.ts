@@ -4,9 +4,12 @@ import { useSystemDefinition } from '../systems/useSystemDefinition';
 import { useSessionLog } from '../session/useSessionLog';
 import { getEngine } from '../systems/engine';
 import * as ledgerRepository from '../../storage/repositories/ledgerRepository';
+import * as ledgerAccountRepository from '../../storage/repositories/ledgerAccountRepository';
+import { computeAccountBalances } from '../../utils/ledgerAccounts';
+import type { LedgerAccount } from '../../types/ledgerAccount';
 import { computeRunningBalance } from '../../utils/ledgerMath';
 import type { EntryWithBalance } from '../../utils/ledgerMath';
-import type { LedgerLeg, SplitSnapshot } from '../../types/ledger';
+import type { LedgerEntry, LedgerLeg, SplitSnapshot } from '../../types/ledger';
 
 /**
  * The active campaign's cashbook, with running balances folded on read.
@@ -22,6 +25,8 @@ export function useLedger() {
   const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
   const { logToSession, hasActiveSession } = useSessionLog();
   const [rows, setRows] = useState<EntryWithBalance[]>([]);
+  const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
+  const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const campaignId = activeCampaign?.id;
@@ -33,8 +38,10 @@ export function useLedger() {
       setIsLoading(false);
       return;
     }
-    const entries = await ledgerRepository.listByCampaign(campaignId);
-    setRows(computeRunningBalance(entries));
+    const loaded = await ledgerRepository.listByCampaign(campaignId);
+    setEntries(loaded);
+    setRows(computeRunningBalance(loaded));
+    setAccounts(await ledgerAccountRepository.ensureForCampaign(campaignId));
     setIsLoading(false);
   }, [campaignId]);
 
@@ -43,6 +50,19 @@ export function useLedger() {
   }, [reload]);
 
   const balance = rows.length > 0 ? rows[rows.length - 1].balance : 0;
+
+  /**
+   * Per-account balances, derived like the running balance.
+   *
+   * @remarks
+   * A stored balance goes stale the moment an entry is edited, restored or
+   * reassigned — and this one has more ways to go stale than the single total
+   * does, because a transfer touches two accounts at once.
+   */
+  const summary = useMemo(
+    () => computeAccountBalances(accounts, entries),
+    [accounts, entries],
+  );
 
   /** Formats a signed base-unit integer using the campaign system's currency. */
   const formatMoney = useCallback(
@@ -93,7 +113,15 @@ export function useLedger() {
 
   /** Records a movement. `direction` decides the sign so the user never types one. */
   const addEntry = useCallback(
-    async (input: { date: string; memo: string; amount: number; direction: 'in' | 'out' }) => {
+    async (input: {
+      date: string;
+      memo: string;
+      amount: number;
+      direction: 'in' | 'out';
+      accountId?: string;
+      counterAccountId?: string;
+      kind?: 'opening';
+    }) => {
       if (!campaignId) return;
       const magnitude = Math.abs(Math.trunc(input.amount));
       if (magnitude === 0) return;
@@ -102,6 +130,9 @@ export function useLedger() {
         date: input.date,
         memo: input.memo,
         amount: input.direction === 'out' ? -magnitude : magnitude,
+        accountId: input.accountId,
+        counterAccountId: input.counterAccountId,
+        kind: input.kind,
       });
       const money = engine?.currency.formatAmount(magnitude) ?? String(magnitude);
       const what = input.memo.trim() || 'unlabelled';
@@ -176,6 +207,89 @@ export function useLedger() {
     [campaignId, reload, engine, mirrorToLog],
   );
 
+  /**
+   * Imports parsed accounts and entries in one go.
+   *
+   * @remarks
+   * Accounts are created first so entries can name them. An entry naming an
+   * account that neither existed nor appeared in the file is left unassigned —
+   * it then counts against the primary rather than being dropped, because
+   * losing a transaction is worse than filing it in the obvious place.
+   *
+   * Opening balances are written as their own entries rather than as a field on
+   * the account: "what did we start with" is a fact with a date, and burying it
+   * in the account record would leave it out of the book it belongs in.
+   */
+  const importLedger = useCallback(
+    async (parsed: {
+      accounts: Array<{ name: string; kind: 'asset' | 'liability'; opening?: number; note?: string }>;
+      entries: Array<{
+        date: string;
+        memo: string;
+        amount: number;
+        accountName?: string;
+        counterAccountName?: string;
+      }>;
+    }) => {
+      if (!campaignId) return { accounts: 0, entries: 0 };
+
+      const existing = await ledgerAccountRepository.ensureForCampaign(campaignId);
+      const byName = new Map(existing.map(a => [a.name.toLowerCase(), a]));
+
+      let created = 0;
+      for (const account of parsed.accounts) {
+        const key = account.name.toLowerCase();
+        if (byName.has(key)) continue;
+        const made = await ledgerAccountRepository.create({
+          campaignId,
+          name: account.name,
+          kind: account.kind,
+          note: account.note,
+        });
+        byName.set(key, made);
+        created += 1;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      // Openings first, so the book reads in the order it happened.
+      for (const account of parsed.accounts) {
+        if (account.opening === undefined || account.opening === 0) continue;
+        const target = byName.get(account.name.toLowerCase());
+        if (!target) continue;
+        await ledgerRepository.create({
+          campaignId,
+          date: today,
+          memo: `Opening balance — ${account.name}`,
+          amount: account.opening,
+          accountId: target.id,
+          kind: 'opening',
+        });
+      }
+
+      let written = 0;
+      for (const entry of parsed.entries) {
+        const near = entry.accountName ? byName.get(entry.accountName.toLowerCase()) : undefined;
+        const far = entry.counterAccountName
+          ? byName.get(entry.counterAccountName.toLowerCase())
+          : undefined;
+        await ledgerRepository.create({
+          campaignId,
+          date: entry.date || today,
+          memo: entry.memo,
+          amount: entry.amount,
+          accountId: near?.id,
+          counterAccountId: far?.id,
+        });
+        written += 1;
+      }
+
+      await reload();
+      return { accounts: created, entries: written };
+    },
+    [campaignId, reload],
+  );
+
   const removeEntry = useCallback(
     async (id: string) => {
       const entry = await ledgerRepository.getById(id);
@@ -197,6 +311,23 @@ export function useLedger() {
     rows,
     balance,
     isLoading,
+    accounts,
+    summary,
+    importLedger,
+    addAccount: async (name: string, kind: LedgerAccount['kind'], note?: string) => {
+      if (!campaignId) return;
+      await ledgerAccountRepository.create({ campaignId, name, kind, note });
+      await reload();
+    },
+    updateAccount: async (id: string, patch: { name?: string; kind?: LedgerAccount['kind']; note?: string }) => {
+      await ledgerAccountRepository.update(id, patch);
+      await reload();
+    },
+    removeAccount: async (id: string) => {
+      const removed = await ledgerAccountRepository.softDelete(id);
+      await reload();
+      return removed;
+    },
     formatMoney,
     baseDenomination,
     currencyLabel: engine?.currency.label ?? 'Money',

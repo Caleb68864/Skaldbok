@@ -2786,3 +2786,58 @@
   schedule totals whatever it is given. It can say the route is 40 days over; it
   cannot say the distances were guesses.
 - Commit: feat(route) — schedule the journey, not just the stops.
+
+## 2026-08-09 — The ledger grows accounts, so the ship's debt can be seen
+- Symptom: the cashbook could record Cr201,335 leaving every month and could
+  never show the mortgage shrinking. A liability is not cash, and single-entry
+  has nowhere to put one — so "how much do we still owe on the *Leap*?" was a
+  question the books could not answer.
+- Fix: named accounts. An entry names the account it moved money out of and,
+  optionally, the account it moved into. A mortgage payment is one entry that
+  takes Cr201,335 out of Cash and puts it against the Ship Loan, so the debt
+  falls toward zero on screen. Plus opening balances, and a JSON import for
+  lifting a campaign's starting position out of session notes.
+- Surfaces: `types/ledgerAccount.ts`, `utils/ledgerAccounts.ts`,
+  `utils/ledger/parseLedgerImport.ts`, `ledgerAccountRepository`,
+  `version(17)`, `AccountsPanel`, `LedgerImportModal`, `useLedger`.
+- Watch: **the sign convention is the whole design.** A liability holds what you
+  owe as a *negative* number, and that falls out of one rule rather than a
+  special case: the counter side of an entry receives the opposite sign. So
+  `-201,335` against Cash adds `+201,335` to the loan. There is no branch on
+  account kind anywhere in the arithmetic — `kind` only decides whether the UI
+  writes "owed" instead of a minus sign. Mutation-checked: flipping the counter
+  sign fails three tests.
+- Watch also: an entry naming **no** account counts against the primary. That is
+  what makes this additive — every entry written before accounts existed still
+  lands in the right place, and the common case needs no choosing. An entry
+  naming an account that has since been deleted also falls back to the primary:
+  showing money in the wrong pot beats losing it from the books.
+- Watch also: the primary account cannot be deleted, and `ensureForCampaign`
+  repairs a campaign that somehow has none by promoting the oldest. Two
+  primaries would make "the account an entry belongs to" ambiguous, so it
+  demotes the extras.
+- Watch also: **the importer refuses to guess a sign.** Amount, `direction`, and
+  separate `in`/`out` columns are all accepted, but an entry carrying both an in
+  and an out figure is skipped rather than resolved — guessing would be wrong
+  half the time, and an expense read as income leaves a balance wrong by twice
+  the figure and entirely plausible. `parseMoney` returns `null`, never a silent
+  zero, for the same reason.
+- Watch also: a debt written as a positive "we owe 40,000,000" is flipped and
+  the flip is **reported**. It is the natural way to say it and the opposite of
+  how it is stored.
+- Watch also: when nothing in a file can be imported, the error carries the
+  warnings explaining why. They are the only account the user gets of what is
+  wrong, and swallowing them leaves them with a file that fails for no stated
+  reason.
+- Watch also: opening balances are written as their own dated entries, not as a
+  field on the account. "What did we start with" is a fact with a date, and
+  burying it in the account record would keep it out of the book it belongs in.
+- Verified in a browser on the real ship: importing Cr40,000,000 owed plus the
+  Session 1 spends and a Cr201,335 mortgage payment gives
+  **Cr592,565 held · Cr39,798,665 owed**, with the debt shown as owed rather
+  than as a negative number.
+- Note on scope: the original spec excluded double-entry pending research. This
+  is double-entry in substance — two accounts, opposite signs — without the
+  debit/credit vocabulary, which is what was actually asked for later. Recorded
+  so the divergence from that exclusion is visible rather than quietly absorbed.
+- Commit: feat(ledger) — accounts, opening balances, and a JSON import.
