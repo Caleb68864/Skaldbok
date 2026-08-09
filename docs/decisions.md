@@ -3003,3 +3003,29 @@
   clean, one credit under warns, Cr 50,000 under states the shortfall, recovery
   clears it, recurring charges trigger it, and it survives a reload.
 - Commit: feat(ledger) — warn when cash goes negative.
+
+## 2026-08-09 — the two undersized touch targets on the timeline
+- Symptom: an emulated tablet pass at 800x1280 and 1280x800 found two controls
+  under the project's own `--touch-target-min: 44px` — the track expand chevron
+  at 24x24 and "Open Knowledge Base ->" at 165x20.
+- Fix: the KB link gets `min-h-[var(--touch-target-min)]` and centres its label,
+  so the control grows without the type growing. The chevron keeps its 24px box
+  and grows only its **hit area**, via a transparent `before:-inset-[10px]`
+  pseudo-element: 24 + 10 either side = 44.
+- Surfaces: `components/timeline/TimelineTrackRow.tsx`, `features/kb/VaultBrowser.tsx`.
+- Watch: **do not "fix" the chevron by making it `h-11 w-11`.** A 44px chevron
+  dominates a track row that is only 72px tall (`useTimelineLayout` floors
+  `rowHeight` at 72) and pushes the label off its baseline. The inset
+  pseudo-element is deliberate. It is safe precisely because rows are >= 72px and
+  the chevron sits under 16px of padding, so the taller target cannot reach the
+  row above or below.
+- Watch also: **a rect-based audit cannot verify this and will keep reporting the
+  chevron as 24x24.** `getBoundingClientRect` measures the box, not the hit area.
+  The honest check is `document.elementFromPoint` at each corner of the intended
+  44x44 square — and it must scroll the element into view first, because
+  `elementFromPoint` returns `null` outside the viewport, which reads as "not
+  tappable" for anything below the fold and manufactures failures.
+- Verified: every corner of the 44px box resolves to the control in both
+  orientations, and a tap 20px off-centre — outside the visible chevron —
+  actually toggles the track (`aria-expanded` false -> true).
+- Commit: fix(timeline) — 44px touch targets for the chevron and the KB link.

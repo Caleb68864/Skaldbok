@@ -118,7 +118,13 @@ export function TimelineTrackRow({
                 onToggleCollapsed?.();
               }
             }}
-            className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-surface-alt cursor-pointer"
+            // The chevron stays 24px because a 44px one would dominate a track
+            // row that is only 72px tall. The *hit area* grows instead, via a
+            // transparent inset pseudo-element: 24 + 10 either side = 44, the
+            // project's `--touch-target-min`. Rows are at least 72px and the
+            // chevron sits under 16px of padding, so the taller target cannot
+            // reach the row above or below it.
+            className="relative mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded hover:bg-surface-alt cursor-pointer before:absolute before:-inset-[10px] before:content-['']"
           >
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4 text-text-muted" />

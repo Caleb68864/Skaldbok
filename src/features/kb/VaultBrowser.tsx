@@ -319,9 +319,12 @@ export function VaultBrowser({
       {/* Open Knowledge Base link (compact mode only) */}
       {compact && (
         <div className="px-1">
+          {/* Inline-styled as a link but tapped like a button: the text is only
+              20px tall, so the control gets the project's minimum touch height
+              and centres the label inside it rather than growing the type. */}
           <button
             onClick={() => navigate('/kb')}
-            className="text-sm text-[var(--color-accent)] cursor-pointer bg-transparent border-none font-medium"
+            className="inline-flex min-h-[var(--touch-target-min)] items-center text-sm text-[var(--color-accent)] cursor-pointer bg-transparent border-none font-medium"
           >
             Open Knowledge Base &rarr;
           </button>
