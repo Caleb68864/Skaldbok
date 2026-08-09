@@ -14,6 +14,9 @@ import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { Encounter } from '../../types/encounter';
 import type { InventoryContainer } from '../../types/inventoryContainer';
 import type { ReferenceGroup, ReferenceSection } from '../../types/reference';
+import type { LedgerEntry } from '../../types/ledger';
+import type { PayoutSplit } from '../../types/payoutSplit';
+import type { RouteStop } from '../../types/routeStop';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
@@ -149,6 +152,9 @@ export class SkaldbokDatabase extends Dexie {
   kb_edges!: Table<KBEdge, string>;
   inventoryContainers!: Table<InventoryContainer, string>;
   ships!: Table<Ship, string>;
+  ledgerEntries!: Table<LedgerEntry, string>;
+  ledgerSplits!: Table<PayoutSplit, string>;
+  routeStops!: Table<RouteStop, string>;
 
   constructor() {
     super('skaldbok-db');
@@ -560,6 +566,17 @@ export class SkaldbokDatabase extends Dexie {
       referenceSections: 'id, category, groupId, order, updatedAt, deletedAt',
       referenceGroups: 'id, title, order, updatedAt, deletedAt',
     }).upgrade(upgradeReferenceGroupsToV14);
+
+    // --- Version 15: Campaign ledger and route planner ---
+    // Ledger entries (with optional distribution legs), the campaign's current
+    // payout split (one row per campaign, created lazily), and route stops
+    // (dense-ordered per campaign). All three tables are new; no data migration
+    // needed.
+    this.version(15).stores({
+      ledgerEntries: 'id, campaignId, date, deletedAt',
+      ledgerSplits: 'id, campaignId, deletedAt',
+      routeStops: 'id, campaignId, order, deletedAt',
+    });
   }
 }
 
