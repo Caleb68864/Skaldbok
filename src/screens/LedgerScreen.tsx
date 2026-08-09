@@ -106,7 +106,7 @@ export default function LedgerScreen() {
 
   return (
     <div className="p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
-      <SectionPanel title={currencyLabel} subtitle={`Balance ${formatMoney(balance)}`}>
+      <SectionPanel title={currencyLabel} subtitle={`Cash on hand ${formatMoney(balance)}`}>
         <div className="flex flex-col gap-[var(--space-sm)]">
           <div className="flex gap-[var(--space-sm)] flex-wrap">
             <input
@@ -165,7 +165,7 @@ export default function LedgerScreen() {
                   aria-label="Transfer to account"
                   onChange={e => setCounterAccountId(e.target.value)}
                 >
-                  <option value="">— nowhere (money leaves the books) —</option>
+                  <option value="">None — income or expense</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>
                       {a.name}
@@ -193,7 +193,7 @@ export default function LedgerScreen() {
       <AccountsPanel
         summary={summary}
         formatMoney={formatMoney}
-        onAdd={(name, kind, note, contingent) => ledger.addAccount(name, kind, note, contingent)}
+        onAdd={input => ledger.addAccount(input)}
         onRemove={async id => {
           const removed = await ledger.removeAccount(id);
           if (!removed) showToast('The default account cannot be removed', 'error');
@@ -229,7 +229,7 @@ export default function LedgerScreen() {
                   <th className="py-1 pr-2">Description</th>
                   <th className="py-1 pr-2 text-right">In</th>
                   <th className="py-1 pr-2 text-right">Out</th>
-                  <th className="py-1 pr-2 text-right">Balance</th>
+                  <th className="py-1 pr-2 text-right">Cash</th>
                   <th className="py-1" />
                 </tr>
               </thead>

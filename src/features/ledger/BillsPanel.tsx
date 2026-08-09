@@ -78,11 +78,11 @@ export function BillsPanel({
 
   return (
     <SectionPanel
-      title="Recurring costs"
+      title="Recurring charges"
       subtitle={
         campaignDate.trim() === ''
-          ? 'Set the campaign date to start accruing'
-          : `Campaign date ${campaignDate}`
+          ? 'Set a campaign date to begin accruing'
+          : `Accrued through ${campaignDate}`
       }
       collapsible
       // Open even with nothing in it. This panel holds the campaign date — the
@@ -95,7 +95,7 @@ export function BillsPanel({
       <div className="flex flex-col gap-[var(--space-sm)]">
         <label className="flex flex-col gap-1 max-w-[14rem]">
           <span className="text-sm text-[var(--color-text-muted)]">
-            Campaign date — advance it as time passes
+            Campaign date
           </span>
           <input
             className={inputClass}
@@ -109,7 +109,7 @@ export function BillsPanel({
 
         {bills.length === 0 && (
           <p className="text-[var(--color-text-muted)]">
-            Nothing recurring yet. The mortgage, life support and berthing all belong here.
+            No recurring charges. Mortgage, life support and berthing belong here.
           </p>
         )}
 
@@ -124,30 +124,30 @@ export function BillsPanel({
               <span className="flex-1 min-w-[8rem]">
                 {bill.name}
                 <span className="block text-sm text-[var(--color-text-muted)]">
-                  every {bill.everyDays} days · from {accountName(bill.accountId)}
+                  Every {bill.everyDays} days · {accountName(bill.accountId)}
                   {bill.counterAccountId && ` → ${accountName(bill.counterAccountId)}`}
-                  {left !== null && ` · ${left} left`}
+                  {left !== null && ` · ${left} of ${bill.occurrenceLimit} remaining`}
                 </span>
               </span>
               <span className="shrink-0 tabular-nums font-semibold text-right">
                 {formatMoney(bill.amount)}
                 <span className="block text-sm font-normal text-[var(--color-text-muted)]">
                   {!bill.active
-                    ? 'paused'
+                    ? 'Suspended'
                     : due
-                      ? `next ${due}`
+                      ? `Next ${due}`
                       : left === 0
-                        ? 'finished'
-                        : 'no start date'}
+                        ? 'Term complete'
+                        : 'No start date'}
                 </span>
               </span>
               <button
                 type="button"
                 onClick={() => void onToggle(bill.id, !bill.active)}
-                aria-label={`${bill.active ? 'Pause' : 'Resume'} ${bill.name}`}
+                aria-label={`${bill.active ? 'Suspend' : 'Resume'} ${bill.name}`}
                 className="shrink-0 min-h-[44px] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text)] text-xs font-semibold cursor-pointer"
               >
-                {bill.active ? 'Pause' : 'Resume'}
+                {bill.active ? 'Suspend' : 'Resume'}
               </button>
               <button
                 type="button"
@@ -164,7 +164,7 @@ export function BillsPanel({
         {draft === null ? (
           <div>
             <Button variant="secondary" onClick={() => setDraft({ ...EMPTY, startDate: campaignDate })}>
-              Add a recurring cost
+              New recurring charge
             </Button>
           </div>
         ) : (
@@ -173,8 +173,8 @@ export function BillsPanel({
               <input
                 className={`${inputClass} flex-1 min-w-[10rem]`}
                 value={draft.name}
-                placeholder="Mortgage"
-                aria-label="Cost name"
+                placeholder="Ship mortgage"
+                aria-label="Charge description"
                 autoFocus
                 onChange={e => setDraft({ ...draft, name: e.target.value })}
               />
@@ -183,13 +183,13 @@ export function BillsPanel({
                 inputMode="numeric"
                 value={draft.amount}
                 placeholder="Amount"
-                aria-label="Cost amount"
+                aria-label="Charge amount"
                 onChange={e => setDraft({ ...draft, amount: e.target.value })}
               />
             </div>
             <div className="flex gap-[var(--space-sm)] flex-wrap">
               <label className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--color-text-muted)]">Every (days)</span>
+                <span className="text-sm text-[var(--color-text-muted)]">Interval (days)</span>
                 <input
                   className={`${inputClass} max-w-[7rem]`}
                   inputMode="numeric"
@@ -199,34 +199,34 @@ export function BillsPanel({
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--color-text-muted)]">Starting</span>
+                <span className="text-sm text-[var(--color-text-muted)]">First charge</span>
                 <input
                   className={`${inputClass} max-w-[9rem]`}
                   value={draft.startDate}
                   placeholder={dateHint}
-                  aria-label="Cost start date"
+                  aria-label="First charge date"
                   onChange={e => setDraft({ ...draft, startDate: e.target.value })}
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--color-text-muted)]">Times (blank = forever)</span>
+                <span className="text-sm text-[var(--color-text-muted)]">Term (blank = open-ended)</span>
                 <input
                   className={`${inputClass} max-w-[8rem]`}
                   inputMode="numeric"
                   value={draft.occurrenceLimit}
                   placeholder="27"
-                  aria-label="Number of charges"
+                  aria-label="Term"
                   onChange={e => setDraft({ ...draft, occurrenceLimit: e.target.value })}
                 />
               </label>
             </div>
             <div className="flex gap-[var(--space-sm)] flex-wrap">
               <label className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--color-text-muted)]">Comes out of</span>
+                <span className="text-sm text-[var(--color-text-muted)]">Charge to</span>
                 <select
                   className={`${inputClass} max-w-[12rem]`}
                   value={draft.accountId}
-                  aria-label="Source account"
+                  aria-label="Charge to account"
                   onChange={e => setDraft({ ...draft, accountId: e.target.value })}
                 >
                   {accounts.map(a => (
@@ -237,14 +237,14 @@ export function BillsPanel({
                 </select>
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--color-text-muted)]">Pays down</span>
+                <span className="text-sm text-[var(--color-text-muted)]">Applied against</span>
                 <select
                   className={`${inputClass} max-w-[12rem]`}
                   value={draft.counterAccountId}
-                  aria-label="Account it pays down"
+                  aria-label="Applied against account"
                   onChange={e => setDraft({ ...draft, counterAccountId: e.target.value })}
                 >
-                  <option value="">— nothing (it is just a cost) —</option>
+                  <option value="">None — expense</option>
                   {accounts.map(a => (
                     <option key={a.id} value={a.id}>
                       {a.name}
@@ -273,7 +273,7 @@ export function BillsPanel({
                   setDraft(null);
                 }}
               >
-                Add
+                Create
               </Button>
               <Button variant="secondary" onClick={() => setDraft(null)}>
                 Cancel

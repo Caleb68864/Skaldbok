@@ -46,9 +46,17 @@ export function useLedger() {
       return;
     }
     const loaded = await ledgerRepository.listByCampaign(campaignId);
+    // Accounts first: the running balance folds cash on hand, so it needs to
+    // know which accounts are assets before it can fold anything.
+    const loadedAccounts = await ledgerAccountRepository.ensureForCampaign(campaignId);
     setEntries(loaded);
-    setRows(computeRunningBalance(loaded));
-    setAccounts(await ledgerAccountRepository.ensureForCampaign(campaignId));
+    setRows(
+      computeRunningBalance(loaded, {
+        accountIds: new Set(loadedAccounts.filter(a => a.kind === 'asset').map(a => a.id)),
+        primaryId: loadedAccounts.find(a => a.isPrimary)?.id,
+      }),
+    );
+    setAccounts(loadedAccounts);
     setBills(await recurringBillRepository.listByCampaign(campaignId));
     setIsLoading(false);
   }, [campaignId]);
@@ -407,14 +415,52 @@ export function useLedger() {
       await recurringBillRepository.softDelete(id);
       await reload();
     },
-    addAccount: async (
-      name: string,
-      kind: LedgerAccount['kind'],
-      note?: string,
-      contingent?: boolean,
-    ) => {
+    /**
+     * Opens an account, booking any opening balance as a dated entry.
+     *
+     * @remarks
+     * The opening is an entry rather than a column on the account, for the same
+     * reason it is one on import: "what did this start at" is a fact with a
+     * date, and keeping it in the book means it shows up in the running
+     * balance, the export and the session log like every other movement. An
+     * opening stored on the account would be a second, invisible source of
+     * truth that the arithmetic would have to remember to add.
+     *
+     * `opening` is signed — the caller has already decided that a liability's
+     * is negative.
+     */
+    addAccount: async (input: {
+      name: string;
+      kind: LedgerAccount['kind'];
+      note?: string;
+      contingent?: boolean;
+      opening?: number;
+    }) => {
       if (!campaignId) return;
-      await ledgerAccountRepository.create({ campaignId, name, kind, note, contingent });
+      const account = await ledgerAccountRepository.create({
+        campaignId,
+        name: input.name,
+        kind: input.kind,
+        note: input.note,
+        contingent: input.contingent,
+      });
+      const opening = Math.trunc(input.opening ?? 0);
+      if (opening !== 0) {
+        const entry = await ledgerRepository.create({
+          campaignId,
+          date: new Date().toISOString().slice(0, 10),
+          memo: `Opening balance — ${input.name}`,
+          amount: opening,
+          accountId: account.id,
+          kind: 'opening',
+        });
+        const money = engine?.currency.formatAmount(Math.abs(opening)) ?? String(opening);
+        await mirrorToLog(
+          `Ledger: opened ${input.name} at ${money}`,
+          entry.id,
+          'entry',
+        );
+      }
       await reload();
     },
     updateAccount: async (id: string, patch: { name?: string; kind?: LedgerAccount['kind']; note?: string }) => {
