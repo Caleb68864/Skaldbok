@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 15,
+  "version": 16,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -1151,5 +1151,16 @@
       "id": "profession",
       "name": "Profession"
     }
-  ]
+  ],
+  "routePlanner": {
+    "label": "Jump Route",
+    "distanceFieldId": "jump",
+    "fields": [
+      { "id": "name", "label": "Name", "type": "text" },
+      { "id": "uwp", "label": "UWP", "type": "text" },
+      { "id": "hex", "label": "Hex", "type": "text" },
+      { "id": "jump", "label": "Jump", "type": "number" },
+      { "id": "notes", "label": "Notes", "type": "textarea" }
+    ]
+  }
 }

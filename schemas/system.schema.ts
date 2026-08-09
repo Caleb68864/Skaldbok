@@ -161,6 +161,16 @@ export const systemDefinitionSchema = z.object({
   })).optional(),
   rollModifiers: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).optional(),
   timeUnits: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), abbrev: z.string().min(1) })).optional(),
+  routePlanner: z.object({
+    label: z.string().min(1),
+    distanceFieldId: z.string().min(1).optional(),
+    // id and label are required on every route planner field; type is optional.
+    fields: z.array(z.object({
+      id: z.string().min(1),
+      label: z.string().min(1),
+      type: z.enum(['text', 'textarea', 'number']).optional(),
+    })),
+  }).optional().describe('Per-system route/travel planner (e.g. Traveller Jump Route)'),
 }).superRefine((def, ctx) => {
   // Cross-reference integrity: without these, a typo'd id (e.g. a skill linked
   // to a non-existent attribute) passes validation and then silently misbehaves

@@ -271,4 +271,22 @@ export interface SystemDefinition {
   outcomes?: Array<{ id: string; label: string; tone?: 'success' | 'failure' | 'critical' | 'fumble' }>;
   rollModifiers?: Array<{ id: string; label: string }>;
   timeUnits?: Array<{ id: string; label: string; abbrev: string }>;
+  /**
+   * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
+   * a table of legs with system-specific fields. Absent = no route planner
+   * panel for this system.
+   *
+   * @remarks
+   * `distanceFieldId` optionally names one of `fields` whose values sum into a
+   * running total (Traveller: jump distance per leg).
+   */
+  routePlanner?: {
+    label: string;
+    distanceFieldId?: string;
+    fields: Array<{
+      id: string;
+      label: string;
+      type?: 'text' | 'textarea' | 'number';
+    }>;
+  };
 }
