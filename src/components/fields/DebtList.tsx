@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
-import { openDebts, netDebt, totalByDirection, type Debt } from '../../features/characters/debts';
+import {
+  openDebts, netDebt, totalByDirection, outstanding, paidSoFar, type Debt,
+} from '../../features/characters/debts';
 
 export interface DebtListProps {
   debts: Debt[];
@@ -9,6 +11,8 @@ export interface DebtListProps {
   editable: boolean;
   onAdd: (debt: Omit<Debt, 'id' | 'createdAt'>) => void;
   onSettle: (id: string) => void;
+  /** Records a part-payment. The debt settles itself when the balance clears. */
+  onPay: (id: string, amount: number) => void;
   onReopen: (id: string) => void;
   onRemove: (id: string) => void;
 }
@@ -29,14 +33,24 @@ const EMPTY = { counterparty: '', amount: '', direction: 'owed' as Debt['directi
  * question asked months later is "did I ever pay that back?", and a deleted row
  * answers it with silence.
  */
-export function DebtList({ debts, abbr, editable, onAdd, onSettle, onReopen, onRemove }: DebtListProps) {
+export function DebtList({ debts, abbr, editable, onAdd, onSettle, onPay, onReopen, onRemove }: DebtListProps) {
   const [draft, setDraft] = useState<typeof EMPTY | null>(null);
   const [showSettled, setShowSettled] = useState(false);
+  /** Which debt has its part-payment field open, and what has been typed. */
+  const [paying, setPaying] = useState<{ id: string; amount: string } | null>(null);
 
   const open = openDebts(debts);
   const settled = debts.filter(d => d.settledAt);
   const net = netDebt(debts);
   const fmt = (n: number) => `${n.toLocaleString()} ${abbr}`;
+
+  /** Records the typed part-payment and closes the field. */
+  function commitPayment(debt: Debt) {
+    const value = Number(paying?.amount);
+    if (!Number.isFinite(value) || value <= 0) return;
+    onPay(debt.id, value);
+    setPaying(null);
+  }
 
   const amount = Number(draft?.amount ?? 0);
   const canAdd = !!draft && draft.counterparty.trim() !== '' && Number.isFinite(amount) && amount > 0;
@@ -69,9 +83,24 @@ export function DebtList({ debts, abbr, editable, onAdd, onSettle, onReopen, onR
             {debt.counterparty}
             {debt.note && <span className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]"> — {debt.note}</span>}
           </span>
-          <span className="shrink-0 tabular-nums font-semibold text-[var(--color-text)]">{fmt(debt.amount)}</span>
+          <span className="shrink-0 tabular-nums font-semibold text-[var(--color-text)]">
+            {fmt(outstanding(debt))}
+            {paidSoFar(debt) > 0 && (
+              /* Both numbers, always: "you said 10,000 and you've given me 4"
+                 needs the original as much as the balance. */
+              <span className="block text-[length:var(--font-size-sm)] font-normal text-[var(--color-text-muted)]">
+                {fmt(paidSoFar(debt))} paid of {fmt(debt.amount)}
+              </span>
+            )}
+          </span>
           {editable && (
             <>
+              <button type="button"
+                onClick={() => setPaying(p => (p?.id === debt.id ? null : { id: debt.id, amount: '' }))}
+                aria-expanded={paying?.id === debt.id}
+                className="shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text)] text-xs font-semibold cursor-pointer">
+                Pay
+              </button>
               <button type="button" onClick={() => onSettle(debt.id)}
                 className="shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text)] text-xs font-semibold cursor-pointer">
                 Settle
@@ -81,6 +110,32 @@ export function DebtList({ debts, abbr, editable, onAdd, onSettle, onReopen, onR
                 ✕
               </button>
             </>
+          )}
+          {editable && paying?.id === debt.id && (
+            <div className="basis-full flex items-center gap-[var(--space-sm)] pb-[var(--space-xs)]">
+              <input
+                type="number" min={0} autoFocus
+                value={paying.amount}
+                placeholder={`Amount (${abbr})`}
+                aria-label={`Part-payment to ${debt.counterparty}`}
+                onChange={e => setPaying({ id: debt.id, amount: e.target.value })}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { commitPayment(debt); }
+                  if (e.key === 'Escape') setPaying(null);
+                }}
+                className="flex-1 min-w-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
+              />
+              <button type="button"
+                onClick={() => setPaying({ id: debt.id, amount: String(outstanding(debt)) })}
+                className="shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text-muted)] text-xs cursor-pointer">
+                All
+              </button>
+              <button type="button" onClick={() => commitPayment(debt)}
+                disabled={!(Number(paying.amount) > 0)}
+                className="shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text)] text-xs font-semibold cursor-pointer disabled:opacity-40">
+                Record
+              </button>
+            </div>
           )}
         </div>
       ))}

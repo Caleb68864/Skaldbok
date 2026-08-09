@@ -5,7 +5,7 @@ import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { AdvancementPanel } from '../components/fields/AdvancementPanel';
 import { DebtList } from '../components/fields/DebtList';
-import { addDebt, settleDebt, reopenDebt, removeDebt } from '../features/characters/debts';
+import { addDebt, settleDebt, payDebt, reopenDebt, removeDebt } from '../features/characters/debts';
 import { resolveSkillCategories } from '../features/characters/customSkills';
 import {
   advancementCandidates,
@@ -880,6 +880,13 @@ export default function SheetScreen() {
           onAdd={debt => updateCharacter({
             ...addDebt(character, debt, generateId(), nowISO()), updatedAt: nowISO(),
           })}
+          onPay={(id, amount) => {
+            // Returns null for a mis-tap (zero, negative, already settled) —
+            // writing nothing beats writing a meaningless row into a history
+            // people read months later.
+            const patch = payDebt(character, id, amount, generateId(), nowISO());
+            if (patch) updateCharacter({ ...patch, updatedAt: nowISO() });
+          }}
           onSettle={id => {
             const patch = settleDebt(character, id, nowISO());
             if (patch) updateCharacter({ ...patch, updatedAt: nowISO() });

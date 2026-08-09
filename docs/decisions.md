@@ -2679,3 +2679,38 @@
   would hide the income from the In column — the balance would be right and the
   book would be unreadable.
 - Commit: feat(ledger) — test the repository that writes the money, and offer a one-step payout.
+
+## 2026-08-09 — Debts can be paid down, not just settled outright
+- Symptom: a debt could only be Settled — all or nothing. Real repayment is
+  partial: Milo owes Johnathan Cr10,000 for the vacc suit and hands over Cr4,000
+  when the first job pays. The sheet had nowhere to put that, so the debt stayed
+  at its full figure and the totals lied.
+- Fix: `payments: DebtPayment[]` on the debt, with `outstanding()` = amount minus
+  paid. `netDebt` and `totalByDirection` count what remains, so a repayment
+  actually moves the numbers. The row shows the balance with "4,000 Cr paid of
+  10,000 Cr" underneath. A Pay button opens an inline field with an All shortcut.
+- Watch: **`amount` is never reduced.** Payments accumulate as their own rows, so
+  the sheet keeps both the original figure and the balance. "You said you'd pay
+  me back 10,000 and you've given me 4" needs both numbers, and writing the
+  balance back over the original destroys the one that gets argued about.
+- Watch also: a payment that clears the balance settles the debt in the same
+  write, and sets `autoSettled: true`. That flag exists because removing a
+  mis-typed payment must reopen a debt that closed *because* of that payment,
+  but must **not** override someone who deliberately marked a debt square after
+  forgiving the remainder. Without it the code cannot tell the two intentions
+  apart — the first version guessed, and its test caught it.
+- Watch also: `outstanding` clamps at zero. An overpayment is a data-entry slip,
+  not a debt that runs negative and starts counting the other way in `netDebt`.
+  Overpaying is accepted rather than refused, because rejecting a repayment
+  mid-session over a rounding difference is worse than recording what was
+  actually handed over.
+- Watch also: additive and backward-compatible — `payments` is optional, every
+  read goes through `?? []`, and a debt without it already behaves correctly. No
+  migration rung. The 14 pre-existing debt tests passed unchanged.
+- Mutation-checked, all restored: making the totals use `amount` instead of
+  `outstanding` fails the totals tests; removing the zero clamp fails two; and
+  dropping the auto-settle fails four.
+- Verified in a browser on the real Session 1 debt: recorded Cr10,000, paid
+  Cr4,000, saw Cr6,000 outstanding with the original still shown, then used All
+  to clear it and watched the row move into Settled.
+- Commit: feat(debts) — pay a debt down in instalments.
