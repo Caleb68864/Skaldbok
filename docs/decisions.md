@@ -3029,3 +3029,23 @@
   orientations, and a tap 20px off-centre — outside the visible chevron —
   actually toggles the track (`aria-expanded` false -> true).
 - Commit: fix(timeline) — 44px touch targets for the chevron and the KB link.
+
+## 2026-08-09 — panel subtitles were below the readable floor
+- Symptom: every `SectionPanel` subtitle rendered at **11.2px** (`0.7rem`). On the
+  Ledger that is the line carrying "Assets Cr 500,000 - Liabilities Cr
+  40,000,000", and on a tablet at arm's length — which is how this app is
+  actually read — it is under the readable floor.
+- Fix: `text-[length:var(--size-xs)]` (12px). The token rather than a literal, so
+  the subtitle tracks the type scale instead of drifting from it the way an
+  arbitrary `0.7rem` already had.
+- Surfaces: `components/primitives/SectionPanel.tsx`.
+- Watch: three other `0.7rem` labels remain, all **uppercase tracking-wide**, in
+  `RepeatableRows` and `SheetScreen` (x2). Uppercase at 11.2px is harder to read
+  than sentence case at 11.2px, so these are the worse offenders — left alone
+  only because the request was scoped to panel subtitles.
+- Watch also: the remaining sub-12px hit is the timeline's `hour` axis tick at
+  11px, which is a dense axis label rather than content.
+- Verified: a tablet pass at 800x1280 and 1280x800 over Ledger, Jump Route and
+  Session reports no sub-12px text on Ledger or Jump Route, where four subtitles
+  previously failed.
+- Commit: fix(ui) — panel subtitles to 12px.

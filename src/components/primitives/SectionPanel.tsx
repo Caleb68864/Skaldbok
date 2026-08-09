@@ -55,7 +55,11 @@ export function SectionPanel({ title, subtitle, icon, children, collapsible = fa
           {icon && <span className="text-gold drop-shadow-sm">{icon}</span>}
           {title}
           {subtitle && (
-            <span className="text-[length:0.7rem] font-normal text-text-muted ml-[var(--space-xs)] whitespace-nowrap">
+            // `--size-xs` (12px) rather than the 0.7rem it used to be: 11.2px is
+            // under the readable floor at arm's length on a tablet, which is how
+            // this panel is actually read at the table. The token also means the
+            // subtitle tracks the scale instead of drifting from it.
+            <span className="text-[length:var(--size-xs)] font-normal text-text-muted ml-[var(--space-xs)] whitespace-nowrap">
               {subtitle}
             </span>
           )}
