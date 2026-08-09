@@ -234,3 +234,25 @@ describe('parseLedgerImport — the real Session 1 position', () => {
     expect(r.entries[3].counterAccountName).toBe('Ship Loan');
   });
 });
+
+describe('parseLedgerImport — contingent accounts', () => {
+  it('reads an explicit contingent flag', () => {
+    const r = ok(parseLedgerImport(JSON.stringify({
+      accounts: [{ name: 'Escrow', kind: 'debt', contingent: true }],
+    })));
+    expect(r.accounts[0]).toMatchObject({ kind: 'liability', contingent: true });
+  });
+
+  it('recognises the words for a conditional obligation', () => {
+    for (const kind of ['contingent', 'escrow', 'conditional']) {
+      const r = ok(parseLedgerImport(JSON.stringify({ accounts: [{ name: 'X', kind }] })));
+      expect(r.accounts[0].contingent).toBe(true);
+      expect(r.accounts[0].kind).toBe('liability');
+    }
+  });
+
+  it('leaves an ordinary debt uncontingent', () => {
+    const r = ok(parseLedgerImport(JSON.stringify({ accounts: [{ name: 'Ship Loan', kind: 'debt' }] })));
+    expect(r.accounts[0].contingent).toBeUndefined();
+  });
+});

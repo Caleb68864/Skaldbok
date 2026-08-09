@@ -19,6 +19,7 @@ import type { PayoutSplit } from '../../types/payoutSplit';
 import type { RouteStop } from '../../types/routeStop';
 import type { RoutePlan } from '../../types/routePlan';
 import type { LedgerAccount } from '../../types/ledgerAccount';
+import type { RecurringBill } from '../../types/recurringBill';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
@@ -157,6 +158,7 @@ export class SkaldbokDatabase extends Dexie {
   ledgerEntries!: Table<LedgerEntry, string>;
   ledgerSplits!: Table<PayoutSplit, string>;
   ledgerAccounts!: Table<LedgerAccount, string>;
+  recurringBills!: Table<RecurringBill, string>;
   routeStops!: Table<RouteStop, string>;
   routePlans!: Table<RoutePlan, string>;
 
@@ -601,6 +603,15 @@ export class SkaldbokDatabase extends Dexie {
     // still counts.
     this.version(17).stores({
       ledgerAccounts: 'id, campaignId, isPrimary, deletedAt',
+    });
+
+    // --- Version 18: recurring ship costs ---
+    // The mortgage and the nut come round every in-world month whether anyone
+    // remembers them or not. Bills are templates plus a watermark; the charges
+    // they produce are ordinary ledger entries. `Campaign.campaignDate` and
+    // `LedgerAccount.contingent` are additive object fields needing no index.
+    this.version(18).stores({
+      recurringBills: 'id, campaignId, active, deletedAt',
     });
   }
 }

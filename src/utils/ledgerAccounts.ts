@@ -39,8 +39,18 @@ export interface AccountSummary {
   netWorth: number;
   /** Total of the asset accounts alone. */
   totalAssets: number;
-  /** Total still owed, as a positive number for display. */
+  /** Total still owed, as a positive number for display. Excludes contingent debt. */
   totalOwed: number;
+  /**
+   * Debt owed only if something goes wrong, as a positive number.
+   *
+   * @remarks
+   * Reported separately and kept out of {@link netWorth}. Real accounting
+   * discloses a contingent liability rather than booking it, and booking the
+   * benefactor's mortgage cover would make the crew look bankrupt for money they
+   * will probably never pay.
+   */
+  totalAtRisk: number;
 }
 
 /** The account an entry belongs to when it names none. */
@@ -101,15 +111,24 @@ export function computeAccountBalances(
     .reduce((sum, b) => sum + b.balance, 0);
   // Liabilities are held negative; report the debt as a positive figure so the
   // UI never has to print "owed -39,798,665".
-  const totalOwed = -balances
-    .filter(b => b.account.kind === 'liability')
-    .reduce((sum, b) => sum + b.balance, 0);
+  // `|| 0` on each: negating a zero total yields -0, which renders as "-0" and
+  // compares unequal to 0 under Object.is. Third time this has bitten in this
+  // codebase — see `ledgerMath.computeDistribution`.
+  const totalOwed =
+    -balances
+      .filter(b => b.account.kind === 'liability' && !b.account.contingent)
+      .reduce((sum, b) => sum + b.balance, 0) || 0;
+  const totalAtRisk =
+    -balances
+      .filter(b => b.account.kind === 'liability' && b.account.contingent)
+      .reduce((sum, b) => sum + b.balance, 0) || 0;
 
   return {
     balances,
     primary,
     totalAssets,
     totalOwed,
+    totalAtRisk,
     netWorth: totalAssets - totalOwed,
   };
 }

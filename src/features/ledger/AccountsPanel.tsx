@@ -11,7 +11,7 @@ const inputClass =
 export interface AccountsPanelProps {
   summary: AccountSummary;
   formatMoney: (baseUnits: number) => string;
-  onAdd: (name: string, kind: LedgerAccount['kind'], note?: string) => Promise<void>;
+  onAdd: (name: string, kind: LedgerAccount['kind'], note?: string, contingent?: boolean) => Promise<void>;
   onRemove: (id: string) => Promise<boolean>;
 }
 
@@ -30,17 +30,23 @@ export interface AccountsPanelProps {
  * accounts shows the difference.
  */
 export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: AccountsPanelProps) {
-  const [draft, setDraft] = useState<{ name: string; kind: LedgerAccount['kind'] } | null>(null);
+  const [draft, setDraft] = useState<
+    { name: string; kind: LedgerAccount['kind'] | 'contingent' } | null
+  >(null);
 
-  const hasDebt = summary.totalOwed !== 0;
+  const hasDebt = summary.totalOwed !== 0 || summary.totalAtRisk !== 0;
 
   return (
     <SectionPanel
       title="Accounts"
       subtitle={
-        hasDebt
-          ? `${formatMoney(summary.totalAssets)} held · ${formatMoney(summary.totalOwed)} owed`
-          : formatMoney(summary.totalAssets)
+        [
+          `${formatMoney(summary.totalAssets)} held`,
+          summary.totalOwed !== 0 ? `${formatMoney(summary.totalOwed)} owed` : null,
+          summary.totalAtRisk !== 0 ? `${formatMoney(summary.totalAtRisk)} at risk` : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
       }
       collapsible
       defaultOpen
@@ -65,7 +71,7 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
                 <>
                   {formatMoney(Math.abs(balance))}
                   <span className="block text-sm font-normal text-[var(--color-text-muted)]">
-                    {balance === 0 ? 'cleared' : 'owed'}
+                    {balance === 0 ? 'cleared' : account.contingent ? 'at risk' : 'owed'}
                   </span>
                 </>
               ) : (
@@ -127,15 +133,22 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
               className={`${inputClass} max-w-[10rem]`}
               value={draft.kind}
               aria-label="Account kind"
-              onChange={e => setDraft({ ...draft, kind: e.target.value as LedgerAccount['kind'] })}
+              onChange={e => setDraft({ ...draft, kind: e.target.value as typeof draft.kind })}
             >
               <option value="asset">Money we have</option>
               <option value="liability">Money we owe</option>
+              <option value="contingent">Owed only if something fails</option>
             </select>
             <Button
               disabled={draft.name.trim() === ''}
               onClick={() => {
-                void onAdd(draft.name.trim(), draft.kind);
+                const contingent = draft.kind === 'contingent';
+                void onAdd(
+                  draft.name.trim(),
+                  contingent ? 'liability' : (draft.kind as LedgerAccount['kind']),
+                  undefined,
+                  contingent,
+                );
                 setDraft(null);
               }}
             >

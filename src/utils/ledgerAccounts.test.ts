@@ -8,6 +8,7 @@ function account(over: Partial<LedgerAccount> & { id: string; name: string }): L
     campaignId: 'c1',
     kind: 'asset',
     isPrimary: false,
+    contingent: false,
     note: '',
     schemaVersion: 1,
     createdAt: '2026-08-08T00:00:00.000Z',
@@ -191,5 +192,50 @@ describe('entriesForAccount', () => {
 
   it('returns nothing for an account no entry touches', () => {
     expect(entriesForAccount('escrow', false, entries)).toEqual([]);
+  });
+});
+
+describe('computeAccountBalances — contingent liabilities', () => {
+  const ESCROW = account({
+    id: 'escrow',
+    name: 'Escrow — mortgage cover',
+    kind: 'liability',
+    contingent: true,
+  });
+
+  const books = [
+    entry({ id: 'o1', amount: 500_000, accountId: 'cash', kind: 'opening' }),
+    entry({ id: 'o2', amount: -40_000_000, accountId: 'loan', kind: 'opening' }),
+    // The benefactor pays: no crew cash moves, the loan falls, the obligation
+    // accrues against escrow.
+    entry({ id: 'covered', amount: -201_335, accountId: 'escrow', counterAccountId: 'loan' }),
+  ];
+
+  it('accrues against escrow without touching cash', () => {
+    const s = computeAccountBalances([CASH, LOAN, ESCROW], books);
+    expect(s.balances.find(b => b.account.id === 'cash')!.balance).toBe(500_000);
+    expect(s.balances.find(b => b.account.id === 'escrow')!.balance).toBe(-201_335);
+  });
+
+  it('still pays the mortgage down', () => {
+    const s = computeAccountBalances([CASH, LOAN, ESCROW], books);
+    expect(s.balances.find(b => b.account.id === 'loan')!.balance).toBe(-39_798_665);
+  });
+
+  it('reports contingent debt separately from what is actually owed', () => {
+    const s = computeAccountBalances([CASH, LOAN, ESCROW], books);
+    expect(s.totalOwed).toBe(39_798_665);
+    expect(s.totalAtRisk).toBe(201_335);
+  });
+
+  it('keeps contingent debt out of net worth', () => {
+    // Booking it would make the crew look bankrupt for money they will probably
+    // never pay. Disclosed, not booked.
+    const s = computeAccountBalances([CASH, LOAN, ESCROW], books);
+    expect(s.netWorth).toBe(500_000 - 39_798_665);
+  });
+
+  it('is zero at risk when no account is contingent', () => {
+    expect(computeAccountBalances([CASH, LOAN], books).totalAtRisk).toBe(0);
   });
 });

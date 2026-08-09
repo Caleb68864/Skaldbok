@@ -2841,3 +2841,57 @@
   debit/credit vocabulary, which is what was actually asked for later. Recorded
   so the divergence from that exclusion is visible rather than quietly absorbed.
 - Commit: feat(ledger) — accounts, opening balances, and a JSON import.
+
+## 2026-08-09 — Ship costs that come round on their own, in campaign time
+- Symptom: the mortgage and the monthly nut had to be typed in by hand every
+  time the fiction moved on, and nobody remembers. Worse, there was no clock to
+  hang them on — the ledger dated entries in real time while the ship charges
+  per in-world month.
+- Fix: recurring bills that accrue against a **campaign date**. Advance the date
+  and everything due posts as ordinary ledger entries. Plus contingent accounts,
+  which is how the benefactor's mortgage cover is modelled.
+- Surfaces: `types/recurringBill.ts`, `utils/ledger/accrual.ts`,
+  `recurringBillRepository`, `version(18)`, `BillsPanel`, `Campaign.campaignDate`,
+  `LedgerAccount.contingent`, and a top-level `SystemDefinition.calendar`.
+- Watch: **campaign time, not real time.** A journey played across three
+  Saturdays still costs six months of mortgage. Posting against the real
+  calendar would make the ship cheaper the longer the group takes to play, which
+  is exactly backwards. Nothing accrues while the campaign date sits still —
+  advancing it is the act that costs money.
+- Watch also: **posting is idempotent, and everything rests on that.** Each bill
+  carries `postedThrough`; a charge falls due only strictly after it, and the
+  watermark advances with the charges. That is what makes it safe to run on
+  every screen open. Mutation-checked: ignoring the watermark, or counting the
+  occurrence limit from zero instead of from `postedCount`, both fail.
+- Watch also: the first charge falls **on** the start date, not a period after
+  it. "The mortgage starts on 097" means a payment on 097. Nine tests fail if
+  that shifts.
+- Watch also: watermarks are written **after** the entries, not before. If the
+  entry writes fail partway the bill still shows the charges as outstanding,
+  rather than marking them done and swallowing the money.
+- Watch also: a per-run cap stops a start date set years ago from dumping
+  hundreds of rows at once, and `truncated` says so. Silently stopping would
+  read as "all caught up".
+- Watch also: **the benefactor's mortgage cover is a contingent liability, and
+  is disclosed rather than booked.** The bill draws on an escrow account instead
+  of cash, so the crew's money is untouched, the ship's debt still falls, and
+  the obligation accrues where it belongs. It is reported as "at risk" and kept
+  out of net worth — booking it would make the crew look bankrupt for money they
+  will probably never pay. Twenty-seven months is an `occurrenceLimit`; after
+  that the arrangement lapses and the bill stops on its own.
+- Watch also: the effect that posts on open is guarded by a ref. React
+  double-invokes effects in development, and two runs racing the same watermark
+  would write every charge twice.
+- Watch also: **`BillsPanel` opens by default even when empty.** It was gated on
+  `bills.length > 0`, which hid the campaign-date field and the only way to add
+  a first bill — a collapsed `SectionPanel` still renders its children, so they
+  sat in the DOM unreachable. Found by a browser run, not by a test.
+- Watch also: negative zero, for the third time in this codebase — negating an
+  empty total yields `-0`, which renders as "-0". See also
+  `ledgerMath.computeDistribution`.
+- Verified in a browser on the real arrangement: importing Cr40,000,000 owed
+  with an escrow account, then a Cr201,335 bill drawn on escrow paying down the
+  loan 27 times, then advancing 097-1105 → 187-1105, gives
+  **Cr500,000 held · Cr39,194,660 owed · Cr805,340 at risk** with cash untouched
+  and the bill counting down "23 left". Reloading does not double-post.
+- Commit: feat(ledger) — recurring ship costs that accrue in campaign time.

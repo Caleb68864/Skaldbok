@@ -161,6 +161,13 @@ export const systemDefinitionSchema = z.object({
   })).optional(),
   rollModifiers: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).optional(),
   timeUnits: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), abbrev: z.string().min(1) })).optional(),
+  calendar: z
+    .object({
+      kind: z.literal('day-of-year'),
+      daysInYear: z.number().int().positive(),
+      example: z.string().optional(),
+    })
+    .optional(),
   routePlanner: z.object({
     calendar: z
       .object({

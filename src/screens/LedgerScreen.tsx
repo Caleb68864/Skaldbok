@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { SectionPanel } from '../components/primitives/SectionPanel';
@@ -8,6 +8,7 @@ import { useLedgerSplit } from '../features/ledger/useLedgerSplit';
 import { SplitEditor } from '../features/ledger/SplitEditor';
 import { DistributeModal } from '../features/ledger/DistributeModal';
 import { AccountsPanel } from '../features/ledger/AccountsPanel';
+import { BillsPanel } from '../features/ledger/BillsPanel';
 import { LedgerImportModal } from '../features/ledger/LedgerImportModal';
 import { useExportActions } from '../features/export/useExportActions';
 import { useToast } from '../context/ToastContext';
@@ -43,9 +44,40 @@ export default function LedgerScreen() {
   const [memo, setMemo] = useState('');
   const [amountText, setAmountText] = useState('');
   const [isDistributing, setIsDistributing] = useState(false);
+  const formatMoneyRef = useRef(ledger.formatMoney);
+  formatMoneyRef.current = ledger.formatMoney;
   const [isImporting, setIsImporting] = useState(false);
   const [accountId, setAccountId] = useState<string>('');
   const [counterAccountId, setCounterAccountId] = useState<string>('');
+
+  // Post anything the campaign date has made due. Runs on open and whenever the
+  // date moves; `accrueBills` is idempotent, so a repeat finds nothing.
+  //
+  // The ref guards against React's double-invoked effects in development, which
+  // would otherwise race two posting runs against the same watermark and write
+  // every charge twice.
+  const postingRef = useRef(false);
+  useEffect(() => {
+    if (ledger.isLoading || postingRef.current) return;
+    postingRef.current = true;
+    void ledger
+      .postDueBills()
+      .then(result => {
+        if (result.count === 0) return;
+        showToast(
+          `Posted ${result.count} recurring charge${result.count === 1 ? '' : 's'}` +
+            ` — ${formatMoneyRef.current(result.total)}` +
+            (result.truncated ? '. More still due; reopen to post them.' : ''),
+          'success',
+        );
+      })
+      .finally(() => {
+        postingRef.current = false;
+      });
+    // Deliberately keyed on the campaign date and load state alone: re-running
+    // whenever `ledger` changes identity would fire on every entry written.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ledger.campaignDate, ledger.isLoading]);
 
   if (!activeCampaign) return <NoCampaignPrompt />;
 
@@ -161,12 +193,24 @@ export default function LedgerScreen() {
       <AccountsPanel
         summary={summary}
         formatMoney={formatMoney}
-        onAdd={(name, kind, note) => ledger.addAccount(name, kind, note)}
+        onAdd={(name, kind, note, contingent) => ledger.addAccount(name, kind, note, contingent)}
         onRemove={async id => {
           const removed = await ledger.removeAccount(id);
           if (!removed) showToast('The default account cannot be removed', 'error');
           return removed;
         }}
+      />
+
+      <BillsPanel
+        bills={ledger.bills}
+        accounts={accounts}
+        calendar={ledger.calendar}
+        campaignDate={ledger.campaignDate}
+        formatMoney={formatMoney}
+        onSetCampaignDate={date => ledger.setCampaignDate(date)}
+        onAdd={data => ledger.addBill(data)}
+        onToggle={(id, active) => ledger.updateBill(id, { active })}
+        onRemove={id => ledger.removeBill(id)}
       />
 
       <SplitEditor split={split} />

@@ -20,6 +20,8 @@
 export interface ParsedLedgerAccount {
   name: string;
   kind: 'asset' | 'liability';
+  /** Owed only if something fails — disclosed, not booked. */
+  contingent?: boolean;
   /** Starting balance, signed. A liability's opening is negative. */
   opening?: number;
   note?: string;
@@ -208,9 +210,16 @@ export function parseLedgerImport(text_: string, maxEntries = 1000): LedgerImpor
       opening = -opening;
     }
 
+    const contingent =
+      obj.contingent === true ||
+      ['contingent', 'escrow', 'at risk', 'conditional'].includes(
+        text(obj.kind ?? obj.type).toLowerCase(),
+      );
+
     accounts.push({
       name,
-      kind,
+      kind: contingent ? 'liability' : kind,
+      ...(contingent ? { contingent: true } : {}),
       ...(opening !== null ? { opening } : {}),
       ...(text(obj.note) ? { note: text(obj.note) } : {}),
     });

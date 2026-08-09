@@ -5,6 +5,10 @@ import { useSessionLog } from '../session/useSessionLog';
 import { getEngine } from '../systems/engine';
 import * as ledgerRepository from '../../storage/repositories/ledgerRepository';
 import * as ledgerAccountRepository from '../../storage/repositories/ledgerAccountRepository';
+import * as recurringBillRepository from '../../storage/repositories/recurringBillRepository';
+import * as campaignRepository from '../../storage/repositories/campaignRepository';
+import { accrueBills } from '../../utils/ledger/accrual';
+import type { RecurringBill } from '../../types/recurringBill';
 import { computeAccountBalances } from '../../utils/ledgerAccounts';
 import type { LedgerAccount } from '../../types/ledgerAccount';
 import { computeRunningBalance } from '../../utils/ledgerMath';
@@ -21,16 +25,19 @@ import type { LedgerEntry, LedgerLeg, SplitSnapshot } from '../../types/ledger';
  * door. This mirrors `ParticipantDrawer`.
  */
 export function useLedger() {
-  const { activeCampaign } = useCampaignContext();
+  const { activeCampaign, setActiveCampaign } = useCampaignContext();
   const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
   const { logToSession, hasActiveSession } = useSessionLog();
   const [rows, setRows] = useState<EntryWithBalance[]>([]);
   const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
+  const [bills, setBills] = useState<RecurringBill[]>([]);
   const [entries, setEntries] = useState<LedgerEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const campaignId = activeCampaign?.id;
   const engine = useMemo(() => (system ? getEngine(system) : null), [system]);
+  const calendar = system?.calendar ?? system?.routePlanner?.calendar;
+  const campaignDate = activeCampaign?.campaignDate ?? '';
 
   const reload = useCallback(async () => {
     if (!campaignId) {
@@ -42,6 +49,7 @@ export function useLedger() {
     setEntries(loaded);
     setRows(computeRunningBalance(loaded));
     setAccounts(await ledgerAccountRepository.ensureForCampaign(campaignId));
+    setBills(await recurringBillRepository.listByCampaign(campaignId));
     setIsLoading(false);
   }, [campaignId]);
 
@@ -222,7 +230,13 @@ export function useLedger() {
    */
   const importLedger = useCallback(
     async (parsed: {
-      accounts: Array<{ name: string; kind: 'asset' | 'liability'; opening?: number; note?: string }>;
+      accounts: Array<{
+        name: string;
+        kind: 'asset' | 'liability';
+        contingent?: boolean;
+        opening?: number;
+        note?: string;
+      }>;
       entries: Array<{
         date: string;
         memo: string;
@@ -244,6 +258,7 @@ export function useLedger() {
           campaignId,
           name: account.name,
           kind: account.kind,
+          contingent: account.contingent,
           note: account.note,
         });
         byName.set(key, made);
@@ -290,6 +305,66 @@ export function useLedger() {
     [campaignId, reload],
   );
 
+  /**
+   * Writes every charge that has fallen due since the campaign date last moved.
+   *
+   * @remarks
+   * Safe to call on every open because {@link accrueBills} is idempotent — each
+   * bill's watermark advances with its charges, so a second run finds nothing.
+   *
+   * Each charge is an ordinary ledger entry. That matters: it can be read,
+   * exported, corrected or deleted like any other, and nothing about it is
+   * special once written.
+   *
+   * Returns what it posted so the caller can say so. Posting money silently
+   * would be indistinguishable from a bug.
+   */
+  const postDueBills = useCallback(async () => {
+    if (!campaignId || campaignDate.trim() === '') return { count: 0, total: 0, truncated: false };
+
+    const live = await recurringBillRepository.listByCampaign(campaignId);
+    const result = accrueBills({ bills: live, campaignDate, calendar });
+    if (result.charges.length === 0) return { count: 0, total: 0, truncated: false };
+
+    for (const charge of result.charges) {
+      await ledgerRepository.create({
+        campaignId,
+        date: charge.date,
+        memo: charge.bill.name,
+        amount: -charge.bill.amount,
+        accountId: charge.bill.accountId,
+        counterAccountId: charge.bill.counterAccountId,
+      });
+    }
+
+    // Watermarks last: if the entry writes fail partway, the bill still shows
+    // the charges as outstanding rather than silently swallowing them.
+    for (const accrual of result.accruals) {
+      if (accrual.charges.length === 0) continue;
+      await recurringBillRepository.markPosted(
+        accrual.bill.id,
+        accrual.postedThrough,
+        accrual.postedCount,
+      );
+    }
+
+    await reload();
+    return { count: result.charges.length, total: result.total, truncated: result.truncated };
+  }, [campaignId, campaignDate, calendar, reload]);
+
+  /** Sets the campaign's in-world date. Bills catch up on the next post. */
+  const setCampaignDate = useCallback(
+    async (next: string) => {
+      if (!campaignId) return;
+      await campaignRepository.updateCampaign(campaignId, { campaignDate: next });
+      // Re-selecting the campaign is how the context reloads it; there is no
+      // narrower refresh, and a stale campaign here would silently stop bills
+      // accruing.
+      await setActiveCampaign(campaignId);
+    },
+    [campaignId, setActiveCampaign],
+  );
+
   const removeEntry = useCallback(
     async (id: string) => {
       const entry = await ledgerRepository.getById(id);
@@ -314,9 +389,32 @@ export function useLedger() {
     accounts,
     summary,
     importLedger,
-    addAccount: async (name: string, kind: LedgerAccount['kind'], note?: string) => {
+    bills,
+    calendar,
+    campaignDate,
+    setCampaignDate,
+    postDueBills,
+    addBill: async (data: Omit<Parameters<typeof recurringBillRepository.create>[0], 'campaignId'>) => {
       if (!campaignId) return;
-      await ledgerAccountRepository.create({ campaignId, name, kind, note });
+      await recurringBillRepository.create({ ...data, campaignId });
+      await reload();
+    },
+    updateBill: async (id: string, patch: Parameters<typeof recurringBillRepository.update>[1]) => {
+      await recurringBillRepository.update(id, patch);
+      await reload();
+    },
+    removeBill: async (id: string) => {
+      await recurringBillRepository.softDelete(id);
+      await reload();
+    },
+    addAccount: async (
+      name: string,
+      kind: LedgerAccount['kind'],
+      note?: string,
+      contingent?: boolean,
+    ) => {
+      if (!campaignId) return;
+      await ledgerAccountRepository.create({ campaignId, name, kind, note, contingent });
       await reload();
     },
     updateAccount: async (id: string, patch: { name?: string; kind?: LedgerAccount['kind']; note?: string }) => {

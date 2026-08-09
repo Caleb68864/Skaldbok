@@ -199,6 +199,17 @@ export interface SystemDefinition {
    * Lets a ruleset ask for Kin and Weakness while another asks for Species and
    * Homeworld, instead of every character carrying Dragonbane's field set.
    */
+  /**
+   * How this ruleset writes dates.
+   *
+   * @remarks
+   * Read by anything that schedules in campaign time — the route planner and the
+   * ledger's recurring costs both. It sits at the top level rather than under
+   * `routePlanner` because a ruleset can have ship costs without a jump route,
+   * and the ledger should not have to depend on a route declaration to know what
+   * a date looks like.
+   */
+  calendar?: { kind: 'day-of-year'; daysInYear: number; example?: string };
   identityFields?: Array<{
     id: string;
     label: string;

@@ -53,6 +53,7 @@ export async function ensureForCampaign(campaignId: string): Promise<LedgerAccou
         name: DEFAULT_PRIMARY_ACCOUNT_NAME,
         kind: 'asset',
         isPrimary: true,
+        contingent: false,
         note: '',
         schemaVersion: CURRENT_LEDGER_ACCOUNT_SCHEMA_VERSION,
         createdAt: now,
@@ -89,6 +90,7 @@ export async function create(data: {
   campaignId: string;
   name: string;
   kind?: LedgerAccount['kind'];
+  contingent?: boolean;
   note?: string;
 }): Promise<LedgerAccount> {
   const now = nowISO();
@@ -98,6 +100,7 @@ export async function create(data: {
     name: data.name,
     kind: data.kind ?? 'asset',
     isPrimary: false,
+    contingent: data.contingent ?? false,
     note: data.note ?? '',
     schemaVersion: CURRENT_LEDGER_ACCOUNT_SCHEMA_VERSION,
     createdAt: now,
@@ -110,7 +113,7 @@ export async function create(data: {
 /** Patches an account's name, kind or note. */
 export async function update(
   id: string,
-  patch: Partial<Pick<LedgerAccount, 'name' | 'kind' | 'note'>>,
+  patch: Partial<Pick<LedgerAccount, 'name' | 'kind' | 'note' | 'contingent'>>,
 ): Promise<void> {
   await db.ledgerAccounts.update(id, { ...patch, updatedAt: nowISO() });
 }

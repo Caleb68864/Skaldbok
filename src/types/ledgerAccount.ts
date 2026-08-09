@@ -41,6 +41,17 @@ export const ledgerAccountSchema = z.object({
    * crew's cash — needs no picking at all.
    */
   isPrimary: z.boolean().default(false),
+  /**
+   * Owed only if some condition fails.
+   *
+   * @remarks
+   * The benefactor covering the mortgage is the case: the money is real and
+   * accruing, but the crew owes it only if the job goes wrong. Real accounting
+   * discloses a contingent liability rather than booking it, so this is kept out
+   * of net worth and reported separately — booking it would make the crew look
+   * bankrupt for a debt they will probably never pay.
+   */
+  contingent: z.boolean().default(false),
   /** What it is for, in the crew's own words. */
   note: z.string().default(''),
 
