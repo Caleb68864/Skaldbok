@@ -70,9 +70,19 @@ immutability rather than an absent write.
 - Reordering Zila and reloading persisted the new order, still dense.
 
 ### System gating
-- Traveller renders the route screen with five declaration-labelled fields.
+- Traveller renders the route screen with five declaration-labelled fields. The
+  labels read `['Name', 'UWP', 'Hex', 'Jump', 'Notes']` — asserted against the
+  rendered DOM, and none of those words appears in the screen's source.
 - Switching the campaign to Dragonbane: **no route nav link**, and `/route`
-  says "Dragonbane does not use a route planner."
+  **redirects** — the browser lands on `/session`.
+
+  > *Corrected 2026-08-09.* This section previously said `/route` "says
+  > *Dragonbane does not use a route planner*". That was true of the original
+  > implementation and is no longer true of the code: SS-08's Decisions block
+  > requires a redirect and explicitly forbids an error page, and the
+  > convergence run replaced the panel with
+  > `<Navigate to="/session" replace />` (`src/screens/RouteScreen.tsx:53`).
+  > The string no longer exists anywhere in `src/`.
 - The same stored integers render as **`1065g 2s 2c`** under Dragonbane's coin
   system and `Cr …` under Traveller — one `formatAmount`, no branch.
 
