@@ -76,6 +76,39 @@ describe('systemDefinitionSchema', () => {
     }
   });
 
+  it('preserves routePlanner and every declared field through the parse', () => {
+    // Same trap as `groupId` above, and the reason the route planner exists at
+    // all: the whole feature is gated on this key surviving. If the schema entry
+    // were dropped, bundled Traveller would keep working — it is read straight
+    // off the module — while every *imported* system silently lost its route
+    // planner, with the screen and its nav link simply never appearing.
+    const traveller: any = BUNDLED_SYSTEMS.find(s => s.id === 'traveller');
+    const result = systemDefinitionSchema.safeParse(traveller);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      const planner = result.data.routePlanner;
+      expect(planner).toBeDefined();
+      expect(planner?.fields).toHaveLength(5);
+      expect(planner?.fields.map(f => f.id)).toEqual(['name', 'uwp', 'hex', 'jump', 'notes']);
+      // The labels are the point: they are the system's vocabulary, and the
+      // screen renders whatever it is handed.
+      expect(planner?.fields.every(f => f.label.length > 0)).toBe(true);
+      expect(planner?.label.length).toBeGreaterThan(0);
+      // `distanceFieldId` must name a field that actually exists, or the total
+      // silently reads 0 for every stop.
+      expect(planner?.fields.map(f => f.id)).toContain(planner?.distanceFieldId);
+    }
+  });
+
+  it('does not invent a routePlanner for a system that declares none', () => {
+    // The absence of this key is what gates the whole feature off for a
+    // ruleset, so a schema default here would hand every system a route screen.
+    const def: any = BUNDLED_SYSTEMS.find(s => s.id === 'classic-fantasy');
+    const result = systemDefinitionSchema.safeParse(def);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.routePlanner).toBeUndefined();
+  });
+
   it('accepts a system that declares no groups at all', () => {
     // Groups are additive; a ruleset without specialities must be unaffected.
     const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));

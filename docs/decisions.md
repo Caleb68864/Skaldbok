@@ -2559,3 +2559,35 @@
   instruction overrides a spec constraint. Recorded rather than suppressed so
   the divergence is visible.
 - Commit: converge(pass-1) — close 12 spec gaps in the ledger and route planner.
+
+## 2026-08-09 — The guard against the repo's most-repeated bug was never written
+- Symptom: convergence pass 2 found that `routePlanner` appeared in **zero test
+  files**. `systemDefinitionSchema.test.ts` asserted only `safeParse().success`
+  and never looked at `result.data`.
+- Why that matters more than it sounds: Zod strips unknown keys. Deleting the
+  `routePlanner` entry from `schemas/system.schema.ts` would have left the whole
+  suite green — bundled Traveller reads its definition straight off the module,
+  so it would keep working — while every **imported** system silently lost its
+  route planner. The screen and its nav link would simply never appear, for
+  somebody else's JSON, with no error anywhere.
+- This is the exact trap CLAUDE.md documents, and the exact reason SS-05's
+  acceptance criterion demanded a test that inspects the parsed result. The
+  criterion was written and never implemented. The file already held a sibling
+  test — "preserves groupId and skillGroups through the parse" — written for the
+  identical failure mode.
+- Fix: two tests. One pins the five field ids, non-empty labels, and that
+  `distanceFieldId` names a field that exists — otherwise the parsec total reads
+  0 for every stop and nothing complains. The other pins that a system declaring
+  no planner parses to `undefined`, because that absence is what gates the
+  feature off.
+- Surfaces: `src/features/systems/engine/systemDefinitionSchema.test.ts`.
+- Watch: the guard is now **compile-time, not assertion-time**. Removing the
+  schema entry makes the test file stop type-checking, so the suite becomes
+  uncollectable rather than merely red. That is stronger than the criterion
+  asked for and is deliberate — a silently-stripped key should not be able to
+  reach a test run at all.
+- Watch also: "the schema entry ships in the same change as the type" was
+  satisfied and still insufficient. Both landed together and the key was still
+  unprotected, because nothing read it back. Shipping a schema entry and pinning
+  that it survives are two separate obligations.
+- Commit: converge(pass-2) — pin the Zod survival of routePlanner.
