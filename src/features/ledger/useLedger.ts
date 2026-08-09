@@ -109,7 +109,12 @@ export function useLedger() {
    * there is nowhere for the note to go, and the ledger still works.
    */
   const mirrorToLog = useCallback(
-    async (title: string, ledgerEntryId: string, kind: 'entry' | 'distribution' | 'removal') => {
+    async (
+      title: string,
+      /** Empty for a line that summarises a run rather than reporting one entry. */
+      ledgerEntryId: string,
+      kind: 'entry' | 'distribution' | 'removal' | 'bills',
+    ) => {
       if (!hasActiveSession) return;
       try {
         // `body` as well as `title`: the session log renders the body, so a
@@ -356,9 +361,32 @@ export function useLedger() {
       );
     }
 
+    // One line per posting run, not one per charge. Advancing the date three
+    // months posts a dozen charges and catching up on the benefactor's whole
+    // term posts eighty; a log line each would bury the session's actual events
+    // under the ship's standing costs. The summary names every bill and what it
+    // took, which is what the log gets asked months later.
+    const money = (n: number) => engine?.currency.formatAmount(n) ?? String(n);
+    const perBill = result.accruals
+      .filter(a => a.charges.length > 0)
+      .map(a => `${a.bill.name} x${a.charges.length} ${money(a.bill.amount * a.charges.length)}`)
+      .join(', ');
+    await mirrorToLog(
+      `Ledger: posted ${result.charges.length} recurring charge` +
+        `${result.charges.length === 1 ? '' : 's'} through ${campaignDate}` +
+        ` — ${money(result.total)}${perBill ? ` (${perBill})` : ''}` +
+        // A capped run is not a caught-up book. The toast says so and then it is
+        // gone; the log is what gets read months later, and a line reporting
+        // sixty charges with no caveat reads as "the ship is paid up" when the
+        // cap stopped it partway and the rest are still owed.
+        (result.truncated ? '. Stopped at the per-run limit — more still due' : ''),
+      '',
+      'bills',
+    );
+
     await reload();
     return { count: result.charges.length, total: result.total, truncated: result.truncated };
-  }, [campaignId, campaignDate, calendar, reload]);
+  }, [campaignId, campaignDate, calendar, reload, engine, mirrorToLog]);
 
   /** Sets the campaign's in-world date. Bills catch up on the next post. */
   const setCampaignDate = useCallback(

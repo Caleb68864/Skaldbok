@@ -2938,3 +2938,39 @@
   opening mirrors into the session log.
 - Commit: feat(ledger) — opening balances on account creation, accounting
   vocabulary.
+
+## 2026-08-09 — recurring charges reached the book but never the session log
+- Symptom: a played-through session (opening balances, five movements, a
+  Cr819,000 payout, three recurring charges, three months advanced, then three
+  years) produced **79 ledger movements and 8 session-log lines**. Every hand-
+  entered movement mirrored; every automatically posted charge did not.
+  `postDueBills` wrote `ledgerRepository.create` in a loop with no `mirrorToLog`
+  — the one write path that skipped the mirror, and the one that produces the
+  most entries.
+- Fix: one summary line per posting run, naming each bill and its count and
+  total: "posted 12 recurring charges through 187-1105 — Cr 873,340 (Ship
+  mortgage x4 Cr 805,340, …)". Not one line per charge: catching up the
+  benefactor's whole term posts sixty, and sixty log lines would bury the
+  session's actual events under the ship's standing costs.
+- Surfaces: `useLedger.postDueBills`, `mirrorToLog` (kind widened to include
+  `'bills'`; `ledgerEntryId` is empty for a run summary, because a summary is
+  not about one entry and faking an id there would be a lie the metadata keeps).
+- Watch: **the per-run cap is 60 and the log line now says when it fired.** A
+  three-year jump posts exactly 60 and stops. The toast said "More still due;
+  reopen to post them" and then vanished; the log line reported sixty charges
+  with no caveat, which reads as "the ship is paid up" months later when it is
+  the opposite. Same family as the codebase's no-silent-caps rule.
+- Watch also: the cap is global and bills post in bill order, so a starved run
+  distributes unevenly — Ship mortgage x23, Life support x36, Berthing x1. It
+  catches up on reopen, so no money is lost, but a single run is not a fair
+  slice across bills. Left as is; reopening resolves it.
+- Watch also: cash is allowed to go negative (the run ended at -Cr 244,100) and
+  nothing flags it. `DistributeModal` warns when a payout would overdraw; bill
+  accrual does not. Deliberate for now — a crew that cannot pay its nut is a
+  real situation the book should be able to represent.
+- Verified: the same session run, replayed, shows both summaries in the log with
+  the truncation note on the capped one, and all invariants still hold — cash
+  matches an independent fold, legs sum to gross, the 27-month term is respected
+  (escrow accrued exactly Cr 5,436,045, the real campaign figure), and three
+  consecutive reloads post nothing further.
+- Commit: fix(ledger) — recurring charges reach the session log.
