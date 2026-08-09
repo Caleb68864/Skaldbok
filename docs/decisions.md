@@ -2607,3 +2607,40 @@
   unprotected, because nothing read it back. Shipping a schema entry and pinning
   that it survives are two separate obligations.
 - Commit: converge(pass-2) — pin the Zod survival of routePlanner.
+
+## 2026-08-09 — The ledger and the route get tabs, not a hamburger
+- Symptom, from the table: both screens were reachable only through the campaign
+  header's overflow sheet. Two things used constantly during play sat three taps
+  deep behind a menu that also holds Settings and export — the place you go when
+  you want to *configure* something, not when the crew just got paid.
+- Fix: `SessionSubNav`, the campaign-side counterpart to `CharacterSubNav`.
+  Session / Log / Ledger, plus the route when the ruleset declares one. Both
+  links are removed from the overflow sheet rather than duplicated — a second,
+  slower path to the same screen is clutter, not redundancy.
+- Surfaces: new `components/shell/SessionSubNav.tsx`; `ShellLayout` renders it;
+  `BottomNav` and `CampaignHeader` updated.
+- Watch: **these are campaign-scoped, not character-scoped**, which is why they
+  sit beside the session rather than on the character row. The character tabs
+  only exist when a character is open — `/character/*` redirects to the library
+  otherwise — and the ledger must work with no character loaded at all.
+- Watch also: the system is resolved with `useSystemDefinition(campaign.system)`,
+  **not** `useSystemEngine()`. The engine hook keys off the active *character*,
+  so the route tab would vanish whenever no character was open, which on the
+  session side is most of the time. Third place in this feature where the wrong
+  async source would have produced a plausible, quiet bug.
+- Watch also: `SESSION_SECTION_PREFIXES` is exported and shared, because the
+  shell decides whether to show the sub-nav and the bottom bar decides whether to
+  light "Session". If those two lists ever drift, a user on `/ledger` sees the
+  session tabs while the bottom bar highlights nothing — the navigation
+  contradicting itself about where they are.
+- Watch also: the icons are lucide, not `GameIcon`. `GameIcon` resolves against a
+  fixed path map and **returns `null` for an unknown name** — the first draft
+  used four names that did not exist and would have shipped four tabs with no
+  icons, no error, and no failing test. There is no money or route glyph in that
+  map; lucide has both.
+- Verified in a browser on both rulesets: Traveller shows
+  Session/Log/Ledger/<declared label> and reaches each in one tap with the bottom
+  bar still on Session; Dragonbane shows Session/Log/Ledger and no route tab; the
+  character row is unchanged and no session tab leaks into it; neither screen
+  appears in the overflow sheet any more.
+- Commit: feat(nav) — surface the ledger and the route as session tabs.

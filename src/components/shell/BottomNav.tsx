@@ -1,6 +1,7 @@
 import { useLocation, Link } from 'react-router-dom';
 import { Scroll, Flame, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SESSION_SECTION_PREFIXES } from './SessionSubNav';
 
 /**
  * Top-level navigation tabs rendered inside {@link BottomNav}.
@@ -47,7 +48,12 @@ export function BottomNav() {
           label === 'Characters'
             ? location.pathname.startsWith('/character')
             : label === 'Session'
-            ? location.pathname === '/session' || location.pathname.startsWith('/session/')
+            ? // Not just `/session`: the ledger and the route are campaign-scoped
+              // and live under this section's sub-nav, so the bottom bar has to
+              // agree with the shell about where the user is.
+              SESSION_SECTION_PREFIXES.some(
+                p => location.pathname === p || location.pathname.startsWith(p + '/'),
+              )
             : label === 'Reference'
             ? location.pathname === '/reference' || location.pathname.startsWith('/reference/')
             : false;

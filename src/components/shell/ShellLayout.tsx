@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { CampaignHeader } from './CampaignHeader';
 import { CharacterSubNav } from './CharacterSubNav';
+import { SessionSubNav, SESSION_SECTION_PREFIXES } from './SessionSubNav';
 import { BottomNav } from './BottomNav';
 import { GlobalFAB } from './GlobalFAB';
 import { CampaignCreateModal } from '../../features/campaign/CampaignCreateModal';
@@ -44,6 +45,11 @@ export function ShellLayout() {
   const [showCreateCampaign, setShowCreateCampaign] = useState(false);
   const [showManageParty, setShowManageParty] = useState(false);
   const isCharacterTab = location.pathname.startsWith('/character');
+  // The ledger and the route are campaign-scoped, so they sit under the session
+  // sub-nav rather than the character one — see `SESSION_SECTION_PREFIXES`.
+  const isSessionTab = SESSION_SECTION_PREFIXES.some(
+    p => location.pathname === p || location.pathname.startsWith(p + '/'),
+  );
 
   return (
     <SessionRefreshProvider>
@@ -53,6 +59,7 @@ export function ShellLayout() {
           onManageParty={() => setShowManageParty(true)}
         />
         {isCharacterTab && <CharacterSubNav />}
+        {isSessionTab && <SessionSubNav />}
         <main className="flex-1 overflow-y-auto overflow-x-hidden pb-[140px]">
           <Outlet />
         </main>
