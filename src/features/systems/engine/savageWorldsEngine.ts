@@ -208,6 +208,11 @@ export const savageWorldsEngine: SystemEngine = {
     denominations: [
       { id: 'cash', label: 'Cash', abbr: '$', value: 1, step: 1, quickSteps: [1, 5, 10, 50, 100] },
     ],
+    baseDenominationId: 'cash',
+    formatAmount: baseUnits => {
+      const sign = baseUnits < 0 ? '-' : '';
+      return `${sign}$${Math.abs(baseUnits).toLocaleString('en-US')}`;
+    },
     read: character => ({ cash: character.wealth?.cash ?? 0 }),
     write: (character, amounts) => ({ wealth: { ...character.wealth, ...amounts } }),
   },

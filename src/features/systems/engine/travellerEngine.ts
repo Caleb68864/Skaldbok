@@ -321,6 +321,11 @@ export const travellerEngine: SystemEngine = {
     denominations: [
       { id: 'credits', label: 'Credits', abbr: 'Cr', value: 1, step: 100, quickSteps: [1, 5, 10, 100, 1000, 10000] },
     ],
+    baseDenominationId: 'credits',
+    formatAmount: baseUnits => {
+      const sign = baseUnits < 0 ? '-' : '';
+      return `${sign}Cr ${Math.abs(baseUnits).toLocaleString('en-US')}`;
+    },
     read: character => ({ credits: character.wealth?.credits ?? 0 }),
     write: (character, amounts) => ({
       wealth: { ...character.wealth, ...amounts },

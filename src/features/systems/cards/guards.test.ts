@@ -7,7 +7,15 @@ function fakeEngine(overrides: Partial<SystemEngine> = {}): SystemEngine {
     hasMagic: false,
     rest: null,
     damageTrack: null,
-    currency: { mode: 'coins', label: 'Coins', denominations: [], read: () => ({}), write: () => ({}) },
+    currency: {
+      mode: 'coins',
+      label: 'Coins',
+      denominations: [],
+      baseDenominationId: 'copper',
+      formatAmount: () => '',
+      read: () => ({}),
+      write: () => ({}),
+    },
     ...overrides,
   } as unknown as SystemEngine;
 }
@@ -44,7 +52,15 @@ describe('GUARDS', () => {
     expect(
       GUARDS.hasCurrency(
         fakeEngine({
-          currency: { mode: 'coins', label: 'Coins', denominations: [], read: () => ({}), write: () => ({}) },
+          currency: {
+            mode: 'coins',
+            label: 'Coins',
+            denominations: [],
+            baseDenominationId: 'copper',
+            formatAmount: () => '',
+            read: () => ({}),
+            write: () => ({}),
+          },
         }),
       ),
     ).toBe(false);
@@ -55,6 +71,8 @@ describe('GUARDS', () => {
             mode: 'coins',
             label: 'Coins',
             denominations: [{ id: 'gold', label: 'Gold' }] as SystemEngine['currency']['denominations'],
+            baseDenominationId: 'gold',
+            formatAmount: () => '',
             read: () => ({}),
             write: () => ({}),
           },

@@ -2345,3 +2345,29 @@
   `/session/log` *display* was not exercised by the harness (it is the ink
   capture view, untouched here).
 - Commit: feat(play) — log a note without leaving the Play tab.
+
+## 2026-08-08 — Money the engine can render without a character
+- Symptom: the campaign ledger needs to print an amount, and `CurrencyModel`
+  could not. Its whole surface — `read` and `write` — takes a `CharacterRecord`,
+  because until now every amount in the app belonged to someone. A campaign
+  cashbook belongs to the crew, and there is no character to hand it.
+- "Print the integer" is not a fallback either. The ledger is ungated (every
+  system has money), so Dragonbane's three-denomination `coins` mode has to
+  render from the same stored number as Traveller's single credit.
+- Fix: two additive members — `baseDenominationId` (the unit ledger amounts are
+  counted in) and `formatAmount(baseUnits)` — implemented in all three adapters
+  over a shared `decomposeAmount` helper now living in `utils/currency.ts`
+  alongside `remakeCurrency`, which already did the same greedy change-making.
+- Surfaces: `engine/types.ts`, the three adapters, `utils/currency.ts`, and
+  `cards/guards.test.ts`'s fake engine (the members are required, so every
+  fixture has to satisfy them).
+- Watch: **additive only**. No existing signature moved, which is what makes
+  "Dragonbane is unchanged" a claim rather than a hope — `engineContract.test.ts`
+  fingerprints the engine's visible output and still passes.
+- Watch also: `baseDenominationId` has no consumer *yet*. Its reader is the
+  ledger's amount-input label, landing with the ledger screen. Declaring a
+  capability with nothing reading it is the exact bug
+  `declaredCapabilities.test.ts` exists to catch — it has found that shape five
+  times in this repo. If the ledger screen is abandoned, this member must come
+  out rather than be added to `KNOWN_UNIMPLEMENTED`.
+- Commit: feat(engine) — render money without a character.

@@ -74,6 +74,24 @@ export interface CurrencyModel {
   /** Panel heading for the purse — "Coins" vs "Credits". */
   label: string;
   denominations: CurrencyDenomination[];
+  /**
+   * Id (into {@link denominations}) of the smallest/base denomination — the
+   * unit `formatAmount` and ledger entries are expressed in. Traveller's
+   * single denomination is its own base; classic-fantasy's is `copper`.
+   *
+   * @remarks
+   * Read by the ledger entry form (SS-07) to label the amount input with
+   * this denomination's `abbr`, so the player knows what unit they're typing.
+   */
+  baseDenominationId: string;
+  /**
+   * Renders a whole-purse total, expressed in base units, as a
+   * character-free display string — e.g. Traveller's `Cr 15,000`,
+   * classic-fantasy's `1g 2s 3c`. Sign-aware; negative totals render with a
+   * leading `-`. Used by the ledger and route planner (SS-07, SS-09) so
+   * neither has to know how a given system's money decomposes.
+   */
+  formatAmount: (baseUnits: number) => string;
   /** Current amounts, keyed by denomination id. */
   read: (character: CharacterRecord) => Record<string, number>;
   /** Patch to apply for new amounts, keyed by denomination id. */

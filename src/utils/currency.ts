@@ -1,6 +1,34 @@
 import type { CurrencyDenomination } from '../features/systems/engine/types';
 
 /**
+ * Greedily decomposes an unsigned amount of base units across denominations,
+ * highest value first.
+ *
+ * @remarks
+ * Shared by {@link remakeCurrency} and by each engine's `CurrencyModel.formatAmount`
+ * (`classicFantasyEngine`, `travellerEngine`, `savageWorldsEngine`) so the
+ * change-making logic lives in exactly one place. Callers pass an already-signless
+ * (`Math.abs`'d) amount; sign handling belongs to the caller.
+ *
+ * @param denominations - Any order; decomposition sorts highest value first.
+ * @param baseUnits - Unsigned total, expressed in the smallest denomination's units.
+ */
+export function decomposeAmount(
+  denominations: CurrencyDenomination[],
+  baseUnits: number,
+): Record<string, number> {
+  const byValueDesc = [...denominations].sort((a, b) => b.value - a.value);
+  let remainder = baseUnits;
+  const result: Record<string, number> = {};
+  for (const d of byValueDesc) {
+    const count = Math.floor(remainder / d.value);
+    result[d.id] = count;
+    remainder -= count * d.value;
+  }
+  return result;
+}
+
+/**
  * Adjusts one denomination by `delta` and re-makes change across the whole purse
  * so the totals stay in their most compact form.
  *
@@ -31,16 +59,9 @@ export function remakeCurrency(
   // denomination with NaN, corrupting the whole purse.
   if (!Number.isFinite(nextTotal) || nextTotal < 0) return null;
 
-  // Greedy change-making requires highest-value-first; sort a copy rather than
-  // trusting the caller's (or a community system.json's) declaration order — an
-  // out-of-order list would otherwise collapse the total into the wrong coin.
-  const byValueDesc = [...denominations].sort((a, b) => b.value - a.value);
-  let remainder = nextTotal;
-  const next: Record<string, number> = {};
-  for (const d of byValueDesc) {
-    const count = Math.floor(remainder / d.value);
-    next[d.id] = count;
-    remainder -= count * d.value;
-  }
-  return next;
+  // Greedy change-making requires highest-value-first; decomposeAmount sorts a
+  // copy rather than trusting the caller's (or a community system.json's)
+  // declaration order — an out-of-order list would otherwise collapse the
+  // total into the wrong coin.
+  return decomposeAmount(denominations, nextTotal);
 }

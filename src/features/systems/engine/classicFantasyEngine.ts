@@ -3,7 +3,15 @@ import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../..
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
 import { attrKey, armorKey, derivedKey } from '../../../utils/statKeys';
-import type { SystemEngine, RestDefinition } from './types';
+import { decomposeAmount } from '../../../utils/currency';
+import type { SystemEngine, RestDefinition, CurrencyDenomination } from './types';
+
+/** Dragonbane's coin denominations, shared between the `denominations` list and `formatAmount`. */
+const classicFantasyCoinDenominations: CurrencyDenomination[] = [
+  { id: 'gold', label: 'Gold', abbr: 'g', value: 100 },
+  { id: 'silver', label: 'Silver', abbr: 's', value: 10 },
+  { id: 'copper', label: 'Copper', abbr: 'c', value: 1 },
+];
 
 /** Formats a skill's success probability string for the current boon/bane state. */
 export function formatSkillProbability(value: number, state: BoonBaneState): string {
@@ -130,11 +138,20 @@ export const classicFantasyEngine: SystemEngine = {
   currency: {
     mode: 'coins',
     label: 'Coins',
-    denominations: [
-      { id: 'gold', label: 'Gold', abbr: 'g', value: 100 },
-      { id: 'silver', label: 'Silver', abbr: 's', value: 10 },
-      { id: 'copper', label: 'Copper', abbr: 'c', value: 1 },
-    ],
+    denominations: classicFantasyCoinDenominations,
+    baseDenominationId: 'copper',
+    formatAmount: baseUnits => {
+      const sign = baseUnits < 0 ? '-' : '';
+      const denomsDesc = [...classicFantasyCoinDenominations].sort((a, b) => b.value - a.value);
+      const smallest = denomsDesc[denomsDesc.length - 1];
+      if (baseUnits === 0) return `0${smallest.abbr}`;
+      const parts = decomposeAmount(classicFantasyCoinDenominations, Math.abs(baseUnits));
+      const rendered = denomsDesc
+        .filter(d => (parts[d.id] ?? 0) > 0)
+        .map(d => `${parts[d.id]}${d.abbr}`)
+        .join(' ');
+      return `${sign}${rendered}`;
+    },
     read: character => ({
       gold: character.wealth?.gold ?? 0,
       silver: character.wealth?.silver ?? 0,
