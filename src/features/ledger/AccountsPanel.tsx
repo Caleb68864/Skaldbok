@@ -11,7 +11,14 @@ const inputClass =
 export interface AccountsPanelProps {
   summary: AccountSummary;
   formatMoney: (baseUnits: number) => string;
-  onAdd: (name: string, kind: LedgerAccount['kind'], note?: string, contingent?: boolean) => Promise<void>;
+  onAdd: (input: {
+    name: string;
+    kind: LedgerAccount['kind'];
+    note?: string;
+    contingent?: boolean;
+    /** Signed. A liability's opening is already negative by the time it lands here. */
+    opening?: number;
+  }) => Promise<void>;
   onRemove: (id: string) => Promise<boolean>;
 }
 
@@ -20,18 +27,26 @@ export interface AccountsPanelProps {
  *
  * @remarks
  * A liability's balance is stored negative, and this is the one place that
- * matters to a reader: the panel prints it as *owed* rather than as a minus
- * sign somebody has to interpret at the table. The arithmetic is untouched —
- * only the words change.
+ * matters to a reader: the panel prints its magnitude under the word
+ * *Outstanding* rather than as a minus sign somebody has to interpret at the
+ * table. The arithmetic is untouched — only the words change.
  *
- * Net worth is shown because it is the number the mortgage makes interesting.
- * Paying it down does not make the crew richer — cash becomes equity — but
- * spending on fuel does make them poorer, and only a figure spanning both
- * accounts shows the difference.
+ * Net position is shown because it is the number the mortgage makes
+ * interesting. Paying it down does not make the crew richer — cash becomes
+ * equity — but spending on fuel does make them poorer, and only a figure
+ * spanning both sides shows the difference. Contingent liabilities are
+ * disclosed and excluded from it, which is what "contingent" means: an
+ * obligation that only becomes real if something happens.
  */
 export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: AccountsPanelProps) {
   const [draft, setDraft] = useState<
-    { name: string; kind: LedgerAccount['kind'] | 'contingent' } | null
+    | {
+        name: string;
+        kind: LedgerAccount['kind'] | 'contingent';
+        opening: string;
+        note: string;
+      }
+    | null
   >(null);
 
   const hasDebt = summary.totalOwed !== 0 || summary.totalAtRisk !== 0;
@@ -41,9 +56,9 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
       title="Accounts"
       subtitle={
         [
-          `${formatMoney(summary.totalAssets)} held`,
-          summary.totalOwed !== 0 ? `${formatMoney(summary.totalOwed)} owed` : null,
-          summary.totalAtRisk !== 0 ? `${formatMoney(summary.totalAtRisk)} at risk` : null,
+          `Assets ${formatMoney(summary.totalAssets)}`,
+          summary.totalOwed !== 0 ? `Liabilities ${formatMoney(summary.totalOwed)}` : null,
+          summary.totalAtRisk !== 0 ? `Contingent ${formatMoney(summary.totalAtRisk)}` : null,
         ]
           .filter(Boolean)
           .join(' · ')
@@ -71,7 +86,11 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
                 <>
                   {formatMoney(Math.abs(balance))}
                   <span className="block text-sm font-normal text-[var(--color-text-muted)]">
-                    {balance === 0 ? 'cleared' : account.contingent ? 'at risk' : 'owed'}
+                    {balance === 0
+                      ? 'Settled'
+                      : account.contingent
+                        ? 'Contingent'
+                        : 'Outstanding'}
                   </span>
                 </>
               ) : (
@@ -98,7 +117,7 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
 
         {hasDebt && (
           <div className="flex justify-between gap-2 pt-1">
-            <span className="font-semibold">Net worth</span>
+            <span className="font-semibold">Net position</span>
             <span
               className="tabular-nums font-semibold"
               style={{
@@ -115,48 +134,96 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
 
         {draft === null ? (
           <div>
-            <Button variant="secondary" onClick={() => setDraft({ name: '', kind: 'asset' })}>
-              Add an account
+            <Button
+              variant="secondary"
+              onClick={() => setDraft({ name: '', kind: 'asset', opening: '', note: '' })}
+            >
+              New account
             </Button>
           </div>
         ) : (
-          <div className="flex gap-[var(--space-sm)] flex-wrap items-center">
-            <input
-              className={`${inputClass} flex-1 min-w-[10rem]`}
-              value={draft.name}
-              placeholder="Ship Loan"
-              aria-label="Account name"
-              autoFocus
-              onChange={e => setDraft({ ...draft, name: e.target.value })}
-            />
-            <select
-              className={`${inputClass} max-w-[10rem]`}
-              value={draft.kind}
-              aria-label="Account kind"
-              onChange={e => setDraft({ ...draft, kind: e.target.value as typeof draft.kind })}
-            >
-              <option value="asset">Money we have</option>
-              <option value="liability">Money we owe</option>
-              <option value="contingent">Owed only if something fails</option>
-            </select>
-            <Button
-              disabled={draft.name.trim() === ''}
-              onClick={() => {
-                const contingent = draft.kind === 'contingent';
-                void onAdd(
-                  draft.name.trim(),
-                  contingent ? 'liability' : (draft.kind as LedgerAccount['kind']),
-                  undefined,
-                  contingent,
-                );
-                setDraft(null);
-              }}
-            >
-              Add
-            </Button>
-            <Button variant="secondary" onClick={() => setDraft(null)}>
-              Cancel
-            </Button>
+          <div className="flex flex-col gap-[var(--space-sm)] p-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)]">
+            <div className="flex gap-[var(--space-sm)] flex-wrap">
+              <label className="flex flex-col gap-1 flex-1 min-w-[12rem]">
+                <span className="text-sm text-[var(--color-text-muted)]">Account name</span>
+                <input
+                  className={inputClass}
+                  value={draft.name}
+                  placeholder="Ship mortgage"
+                  aria-label="Account name"
+                  autoFocus
+                  onChange={e => setDraft({ ...draft, name: e.target.value })}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-[var(--color-text-muted)]">Type</span>
+                <select
+                  className={`${inputClass} max-w-[14rem]`}
+                  value={draft.kind}
+                  aria-label="Account type"
+                  onChange={e => setDraft({ ...draft, kind: e.target.value as typeof draft.kind })}
+                >
+                  <option value="asset">Asset</option>
+                  <option value="liability">Liability</option>
+                  <option value="contingent">Contingent liability</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  {draft.kind === 'asset' ? 'Opening balance' : 'Opening balance owed'}
+                </span>
+                <input
+                  className={`${inputClass} max-w-[12rem]`}
+                  inputMode="numeric"
+                  value={draft.opening}
+                  placeholder="0"
+                  aria-label="Opening balance"
+                  onChange={e => setDraft({ ...draft, opening: e.target.value })}
+                />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1">
+              <span className="text-sm text-[var(--color-text-muted)]">Note (optional)</span>
+              <input
+                className={inputClass}
+                value={draft.note}
+                placeholder="The Leap — Empress Marava far trader"
+                aria-label="Account note"
+                onChange={e => setDraft({ ...draft, note: e.target.value })}
+              />
+            </label>
+            <div className="flex gap-[var(--space-sm)]">
+              <Button
+                disabled={draft.name.trim() === ''}
+                onClick={() => {
+                  const contingent = draft.kind === 'contingent';
+                  const kind: LedgerAccount['kind'] = contingent
+                    ? 'liability'
+                    : (draft.kind as LedgerAccount['kind']);
+                  const typed = Number(draft.opening.replace(/[^0-9.-]/g, ''));
+                  const magnitude = Number.isFinite(typed) ? Math.trunc(Math.abs(typed)) : 0;
+                  // A liability's opening is *typed* as the amount owed — the
+                  // way anyone would say it out loud — and *stored* negative,
+                  // which is the sign the balance arithmetic expects. The
+                  // conversion belongs here rather than in the hook so the two
+                  // callers (this form and the JSON import) agree on it.
+                  const opening = kind === 'liability' ? -magnitude : magnitude;
+                  void onAdd({
+                    name: draft.name.trim(),
+                    kind,
+                    contingent,
+                    opening,
+                    note: draft.note.trim(),
+                  });
+                  setDraft(null);
+                }}
+              >
+                Create
+              </Button>
+              <Button variant="secondary" onClick={() => setDraft(null)}>
+                Cancel
+              </Button>
+            </div>
           </div>
         )}
       </div>

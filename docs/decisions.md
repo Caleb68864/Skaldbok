@@ -2895,3 +2895,40 @@
   **Cr500,000 held · Cr39,194,660 owed · Cr805,340 at risk** with cash untouched
   and the bill counting down "23 left". Reloading does not double-post.
 - Commit: feat(ledger) — recurring ship costs that accrue in campaign time.
+
+## 2026-08-09 — opening balances on account creation, and accounting vocabulary
+- Symptom: an account could only be opened at zero. The one number every account
+  starts with — a mortgage's principal, a cash float — could only be entered
+  through the JSON importer, which is a strange place to keep it. Separately the
+  UI vocabulary ("Money we have", "Owed only if something fails", "— nothing (it
+  is just a cost) —") was written for someone who had never seen a ledger, which
+  made it longer and vaguer than the thing it named.
+- Fix: the new-account form takes an opening balance and a note. The opening is
+  booked as a **dated ledger entry**, not a column on the account — "what did
+  this start at" is a fact with a date, and keeping it in the book puts it in the
+  running balance, the export and the session log like every other movement.
+  Vocabulary is now Asset / Liability / Contingent liability, with balances
+  reading Outstanding / Contingent / Settled and the total reading Net position.
+- Surfaces: `AccountsPanel` (form + labels), `useLedger.addAccount` (now takes an
+  object and writes the opening entry), `BillsPanel` (Recurring charges,
+  Interval, First charge, Term, Charge to, Applied against), `LedgerScreen`.
+- Watch: **an opening on the account record would have been a second, invisible
+  source of truth.** Every balance reader would have had to remember to add it,
+  and the one that forgot would be off by exactly the opening — silently, and
+  only for accounts that had one. The entry keeps a single path.
+- Watch also: the sign conversion (liability typed positive, stored negative)
+  lives in `AccountsPanel`, deliberately next to the input that creates the
+  ambiguity. `useLedger.addAccount` takes an already-signed number so the JSON
+  importer and the form cannot disagree about it.
+- Watch also: **the headline "Balance" folds every entry regardless of account.**
+  With one cash account that was the cashbook balance; now that a mortgage can be
+  opened it reads -Cr 44,936,045 while cash is Cr 500,000 and net position is
+  -Cr 39,500,000 — three numbers, one of them meaning nothing. Pre-existing, not
+  introduced here, but opening balances make it easy to hit. Not changed:
+  redefining a displayed money figure is the user's call.
+- Verified in a browser: Cr40,000,000 liability and Cr5,436,045 contingent both
+  store negative and display as magnitudes; contingent stays out of net position
+  (-Cr 39,500,000, not -Cr 44,936,045); a Cr500,000 asset stays positive; the
+  opening mirrors into the session log.
+- Commit: feat(ledger) — opening balances on account creation, accounting
+  vocabulary.
