@@ -2321,3 +2321,27 @@
   one-off; the writing area is what you came for. It now always starts
   collapsed, and the localStorage plumbing is gone.
 - Commit: feat(traveller) — itemised debts, and stop the S Pen panel re-opening.
+
+## 2026-08-08 — Logging a note without leaving the Play tab
+- Symptom, from the first live session: capturing a note meant leaving Play for
+  the session log — and "Characters" in the bottom nav returns you to the
+  *sheet*, not to Play. So every note cost two navigations and a
+  re-orientation while the table waited.
+- Fix: `QuickLogBar`, a composer docked to the bottom of the Play screen.
+  Collapsed it is one line; focused it is an input with the play screen still
+  visible behind and above it — which is the point, since you are usually
+  writing *about* something you can see. Enter commits, Escape closes.
+- Watch: deliberately **not** a dashboard card. A card scrolls away with the
+  rest of the layout, and the one thing this must never do is require scrolling
+  to find mid-session. It is `sticky bottom-0` outside the card flow.
+- Watch also: renders nothing without an active session. There is nowhere for
+  the note to go, and an input that silently discards is worse than no input.
+- Watch also: after committing it clears and re-focuses rather than toasting.
+  The next note usually follows straight after, and a toast that moved focus
+  would cost a tap to get back.
+- Verified in a browser on real imported data: hidden with no session, visible
+  with one, input focuses, clears on commit, **stays on /character/play**, and
+  the note lands in `notes` with the right `sessionId` and type. The
+  `/session/log` *display* was not exercised by the harness (it is the ink
+  capture view, untouched here).
+- Commit: feat(play) — log a note without leaving the Play tab.

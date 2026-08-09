@@ -18,6 +18,7 @@ import { MagicModule } from '../features/playDashboard/MagicModule';
 import { RestModule } from '../features/playDashboard/RestModule';
 import { DerivedStatsModule } from '../features/playDashboard/DerivedStatsModule';
 import { QuickReferenceModule } from '../features/playDashboard/QuickReferenceModule';
+import { QuickLogBar } from '../features/playDashboard/QuickLogBar';
 import { StoryBankModule } from '../features/playDashboard/StoryBankModule';
 import { DamageHealModule } from '../features/playDashboard/DamageHealModule';
 import { CurrencyModule } from '../features/playDashboard/CurrencyModule';
@@ -147,6 +148,10 @@ export default function PlayDashboardScreen() {
         {!playTemplate && <StoryBankModule {...moduleProps} />}
         {!playTemplate && <QuickReferenceModule {...moduleProps} />}
       </div>
+      {/* Docked composer, outside the card flow on purpose: a card scrolls away
+          with the layout, and the one thing this must never do is need
+          scrolling to find mid-session. */}
+      <QuickLogBar />
     </div>
   );
 }
