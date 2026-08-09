@@ -217,6 +217,15 @@ export default function LedgerScreen() {
         summary={summary}
         formatMoney={formatMoney}
         onAdd={input => ledger.addAccount(input)}
+        // Derived from the entries, because that is where an opening lives.
+        // Reading it off the account record would mean maintaining a second
+        // copy that the ledger could drift away from.
+        openings={Object.fromEntries(
+          rows
+            .filter(r => r.kind === 'opening' && r.accountId)
+            .map(r => [r.accountId as string, r.amount]),
+        )}
+        onEdit={(id, patch) => ledger.updateAccount(id, patch)}
         onRemove={async id => {
           const removed = await ledger.removeAccount(id);
           if (!removed) showToast('The default account cannot be removed', 'error');

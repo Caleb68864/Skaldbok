@@ -507,8 +507,67 @@ export function useLedger() {
       }
       await reload();
     },
-    updateAccount: async (id: string, patch: { name?: string; kind?: LedgerAccount['kind']; note?: string }) => {
-      await ledgerAccountRepository.update(id, patch);
+    /**
+     * Edits an account, reconciling its opening balance.
+     *
+     * @remarks
+     * `opening` is *set*, not added. Because the opening lives as a ledger entry
+     * rather than a column, "change the opening to X" has three shapes and all
+     * three have to be handled or the book quietly stops adding up: amend the
+     * existing entry, write a first one, or delete it when the opening goes back
+     * to zero. Writing a second entry instead of amending the first would leave
+     * the account holding both, and the balance would read as their sum.
+     *
+     * Omitting `opening` leaves any existing opening alone — renaming an account
+     * must not touch its money.
+     */
+    updateAccount: async (
+      id: string,
+      patch: {
+        name?: string;
+        kind?: LedgerAccount['kind'];
+        note?: string;
+        contingent?: boolean;
+        /** Signed, already converted by the caller. */
+        opening?: number;
+      },
+    ) => {
+      if (!campaignId) return;
+      const { opening, ...fields } = patch;
+      if (Object.keys(fields).length > 0) {
+        await ledgerAccountRepository.update(id, fields);
+      }
+
+      if (opening !== undefined) {
+        const account = accounts.find(a => a.id === id);
+        const name = patch.name ?? account?.name ?? 'account';
+        const existing = entries.find(e => e.kind === 'opening' && e.accountId === id);
+        const next = Math.trunc(opening);
+
+        if (existing && next === 0) {
+          await ledgerRepository.softDelete(existing.id);
+        } else if (existing) {
+          await ledgerRepository.update(existing.id, {
+            amount: next,
+            memo: `Opening balance — ${name}`,
+          });
+        } else if (next !== 0) {
+          await ledgerRepository.create({
+            campaignId,
+            date: new Date().toISOString().slice(0, 10),
+            memo: `Opening balance — ${name}`,
+            amount: next,
+            accountId: id,
+            kind: 'opening',
+          });
+        }
+
+        if (!existing || existing.amount !== next) {
+          const money = engine?.currency.formatAmount(Math.abs(next)) ?? String(next);
+          await mirrorToLog(`Ledger: set ${name} opening balance to ${money}`, '', 'entry');
+        }
+      }
+
       await reload();
     },
     removeAccount: async (id: string) => {

@@ -3129,3 +3129,36 @@
   subtitle is suppressed by design. The change is the same one-token swap as its
   siblings, but it has not been watched rendering.
 - Commit: fix(timeline) — remaining small labels to 12px.
+
+## 2026-08-09 — accounts are editable, so the default Cash account can be opened
+- Symptom: an opening balance could only be set at creation, and the primary
+  **Cash** account is created automatically by `ensureForCampaign` — so the one
+  account every campaign has was the one account whose opening could never be
+  set. `useLedger.updateAccount` existed but had no caller and no notion of an
+  opening. Declared, wired to nothing.
+- Fix: an Edit control on every row, including the primary one, reusing the
+  create form. `updateAccount` now reconciles the opening.
+- Surfaces: `AccountsPanel` (Edit button, shared form, Save), `useLedger.updateAccount`,
+  `LedgerScreen` (passes `openings`, derived from the entries).
+- Watch: **"set the opening to X" has three shapes and all three must be
+  handled** — amend the existing entry, write a first one, or delete it when X
+  is zero. The opening is a ledger entry, not a column, so writing a new entry
+  on every save would leave the account holding several and the balance would
+  read as their sum. Test pins "still exactly one opening entry" after a second
+  edit.
+- Watch also: **`kind` is deliberately not editable.** It decides the sign of
+  every entry already booked against the account, so switching asset to
+  liability would invert the history rather than reclassify it. The control is
+  disabled and labelled "(fixed)" rather than left looking editable and silently
+  doing nothing.
+- Watch also: omitting `opening` from the patch leaves it alone. Renaming an
+  account must not touch its money — pinned by a test that renames and asserts
+  the opening and the cash figure are both unchanged.
+- Watch also: `openings` is derived from the entries in `LedgerScreen`, not read
+  off the account record. A copy on the account would be a second source of
+  truth that the ledger could drift away from.
+- Verified in a browser, 16 checks: Cash starts at zero, takes an opening, the
+  form prefills, a second edit amends rather than stacks, clearing removes the
+  entry, a liability prefills unsigned and stores negative, renaming disturbs
+  nothing, and the edit reaches the session log.
+- Commit: feat(ledger) — edit an account, including its opening balance.

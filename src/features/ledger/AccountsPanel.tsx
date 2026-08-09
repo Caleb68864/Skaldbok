@@ -20,6 +20,20 @@ export interface AccountsPanelProps {
     opening?: number;
   }) => Promise<void>;
   onRemove: (id: string) => Promise<boolean>;
+  /**
+   * Each account's current opening balance, signed, keyed by account id.
+   *
+   * @remarks
+   * Needed to prefill the edit form. The opening is a ledger entry rather than a
+   * field on the account, so the panel cannot read it off `summary` — an
+   * account's *balance* is every movement folded together and is not the same
+   * number.
+   */
+  openings: Record<string, number>;
+  onEdit: (
+    id: string,
+    patch: { name?: string; note?: string; contingent?: boolean; opening?: number },
+  ) => Promise<void>;
 }
 
 /**
@@ -38,9 +52,18 @@ export interface AccountsPanelProps {
  * disclosed and excluded from it, which is what "contingent" means: an
  * obligation that only becomes real if something happens.
  */
-export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: AccountsPanelProps) {
+export function AccountsPanel({
+  summary,
+  formatMoney,
+  onAdd,
+  onRemove,
+  openings,
+  onEdit,
+}: AccountsPanelProps) {
   const [draft, setDraft] = useState<
     | {
+        /** Absent when creating; present when editing that account. */
+        id?: string;
         name: string;
         kind: LedgerAccount['kind'] | 'contingent';
         opening: string;
@@ -48,6 +71,8 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
       }
     | null
   >(null);
+
+  const isEditing = draft?.id !== undefined;
 
   const hasDebt = summary.totalOwed !== 0 || summary.totalAtRisk !== 0;
 
@@ -97,6 +122,31 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
                 formatMoney(balance)
               )}
             </span>
+            {/* Every account is editable, including the primary one. It is
+                created automatically with no opening balance, so without this
+                there is no way to tell the book how much cash the crew started
+                with — the exact hole this closes. */}
+            <button
+              type="button"
+              aria-label={`Edit ${account.name}`}
+              onClick={() =>
+                setDraft({
+                  id: account.id,
+                  name: account.name,
+                  kind: account.contingent ? 'contingent' : account.kind,
+                  // Shown the way it is typed: a liability's opening is entered
+                  // as the amount owed, so strip the stored sign.
+                  opening:
+                    openings[account.id] === undefined || openings[account.id] === 0
+                      ? ''
+                      : String(Math.abs(openings[account.id])),
+                  note: account.note ?? '',
+                })
+              }
+              className="shrink-0 min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] bg-transparent border-none cursor-pointer text-[var(--color-text-muted)]"
+            >
+              Edit
+            </button>
             {!account.isPrimary && (
               <button
                 type="button"
@@ -156,11 +206,20 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
                 />
               </label>
               <label className="flex flex-col gap-1">
-                <span className="text-sm text-[var(--color-text-muted)]">Type</span>
+                <span className="text-sm text-[var(--color-text-muted)]">
+                  Type{isEditing && ' (fixed)'}
+                </span>
                 <select
-                  className={`${inputClass} max-w-[14rem]`}
+                  className={`${inputClass} max-w-[14rem] disabled:opacity-60`}
                   value={draft.kind}
                   aria-label="Account type"
+                  // Locked once the account exists. The kind decides the sign of
+                  // every entry already booked against it, so switching asset to
+                  // liability would invert the history rather than reclassify
+                  // it. A control that looks editable and silently does nothing
+                  // is worse than one that is plainly disabled.
+                  disabled={isEditing}
+                  title={isEditing ? 'Delete and recreate the account to change its type' : undefined}
                   onChange={e => setDraft({ ...draft, kind: e.target.value as typeof draft.kind })}
                 >
                   <option value="asset">Asset</option>
@@ -208,17 +267,30 @@ export function AccountsPanel({ summary, formatMoney, onAdd, onRemove }: Account
                   // conversion belongs here rather than in the hook so the two
                   // callers (this form and the JSON import) agree on it.
                   const opening = kind === 'liability' ? -magnitude : magnitude;
-                  void onAdd({
-                    name: draft.name.trim(),
-                    kind,
-                    contingent,
-                    opening,
-                    note: draft.note.trim(),
-                  });
+                  if (draft.id !== undefined) {
+                    // `kind` is deliberately not editable: it decides the sign
+                    // of every entry already booked against the account, so
+                    // flipping asset to liability would silently invert history.
+                    // Delete and recreate is the honest way to change it.
+                    void onEdit(draft.id, {
+                      name: draft.name.trim(),
+                      note: draft.note.trim(),
+                      contingent,
+                      opening,
+                    });
+                  } else {
+                    void onAdd({
+                      name: draft.name.trim(),
+                      kind,
+                      contingent,
+                      opening,
+                      note: draft.note.trim(),
+                    });
+                  }
                   setDraft(null);
                 }}
               >
-                Create
+                {isEditing ? 'Save' : 'Create'}
               </Button>
               <Button variant="secondary" onClick={() => setDraft(null)}>
                 Cancel
