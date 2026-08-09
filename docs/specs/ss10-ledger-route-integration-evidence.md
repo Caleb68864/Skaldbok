@@ -123,15 +123,37 @@ No mutation survived.
 
 ## Not exercised
 
-- **The `QuickLogBar` path still logs title-only**, so notes typed there remain
-  blank rows in `/session/log`. It is the same defect as (3) above and the fix
-  is now one argument away, but changing it was outside this change's scope and
-  it has not been touched or tested.
-- The ink-capture surface of `/session/log` (untouched here).
-- The session ZIP export was verified by construction and by the shared
-  `buildLedgerMarkdown` helper, not by unzipping a produced archive; the
-  single-file session Markdown path and the standalone ledger export were both
-  exercised end to end.
-- Import/round-trip of a campaign bundle containing ledger or route rows.
+*Reviewed line by line on 2026-08-09 during the convergence run, after two
+separate stale claims were found in this file. Every item below was re-checked
+against the tree rather than carried forward.*
+
+- The ink-capture surface of `/session/log` — untouched by this work and not
+  driven by any harness here.
+- **The session ZIP export.** Verified by construction and through the shared
+  `buildLedgerMarkdown` helper, *not* by unzipping a produced archive. The
+  single-file session Markdown path and both standalone exports (ledger and
+  route) were each exercised end to end in a browser; the ZIP path was not.
+- Import / round-trip of a campaign bundle containing ledger or route rows.
 - No Dragonbane surface beyond the two checks above was re-tested; none was
   touched.
+- **`ledgerRepository.ts` has no dedicated test file.** Its siblings
+  (`ledgerSplitRepository.test.ts`, `routeRepository.test.ts`) do. No SS-04
+  criterion requires one, and its behaviour is covered by the browser run — but
+  it is the module that writes the money and is the thinnest-covered new code
+  here. Recorded as a recommendation, deliberately not fixed inside a
+  convergence loop.
+
+### Corrected on 2026-08-09
+
+This section previously claimed **"the `QuickLogBar` path still logs title-only…
+it has not been touched or tested."** That was true when written and false by the
+time it was read: commit `768410b` changed the call to
+`logToSession(title, 'log', {}, { body: title })` and the fix was verified in a
+browser (`decisions.md`, 2026-08-09). The claim was *two* faults deep — the bar
+also wrote the wrong note **type**, so its entries were filtered out of
+`/session/log` entirely rather than merely rendering blank.
+
+Left standing here because the same section is where a reader looks to decide
+what still needs attention, and an out-of-date "known limitation" is worse than
+no note at all: it sends someone to fix something already fixed, and it makes
+every other item in the list less trustworthy.
