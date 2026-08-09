@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "spec_slug": "campaign-ledger-and-route-planner",
+  "contracts": [
+    {
+      "owner_sub_spec": 1,
+      "consumer_sub_specs": [7, 9],
+      "name": "formatAmount",
+      "kind": "function",
+      "signature": "formatAmount: (baseUnits: number) => string",
+      "file_path": "src/features/systems/engine/types.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 1,
+      "consumer_sub_specs": [7],
+      "name": "baseDenominationId",
+      "kind": "type",
+      "signature": "baseDenominationId: string",
+      "file_path": "src/features/systems/engine/types.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 2,
+      "consumer_sub_specs": [3, 4, 7, 9],
+      "name": "LedgerEntry",
+      "kind": "type",
+      "signature": "{ id, campaignId, date, description, amount: number, gross?: number, kind: 'manual'|'distribution', legs: LedgerLeg[], splitSnapshot?: PayoutSplit, schemaVersion, createdAt, updatedAt, deletedAt?, softDeletedBy? }",
+      "file_path": "src/types/ledger.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 2,
+      "consumer_sub_specs": [3, 7, 9],
+      "name": "LedgerLeg",
+      "kind": "type",
+      "signature": "{ id, label, amount: number, payeeMemberId?, payeeName?, percent?, kind: 'shipFund'|'payee'|'unallocated' }",
+      "file_path": "src/types/ledger.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 2,
+      "consumer_sub_specs": [3, 4, 7],
+      "name": "PayoutSplit",
+      "kind": "type",
+      "signature": "{ shipFundPct: number, rows: PayoutSplitRow[] }",
+      "file_path": "src/types/payoutSplit.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 2,
+      "consumer_sub_specs": [6, 8, 9],
+      "name": "RouteStop",
+      "kind": "type",
+      "signature": "{ id, campaignId, order: number, name: string, values: Record<string,string>, schemaVersion, createdAt, updatedAt, deletedAt?, softDeletedBy? }",
+      "file_path": "src/types/routeStop.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 3,
+      "consumer_sub_specs": [7],
+      "name": "computeDistribution",
+      "kind": "function",
+      "signature": "computeDistribution(gross: number, split: PayoutSplit): { legs: LedgerLeg[]; net: number }",
+      "file_path": "src/utils/ledgerMath.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 3,
+      "consumer_sub_specs": [7],
+      "name": "validateSplit",
+      "kind": "function",
+      "signature": "validateSplit(split: PayoutSplit): { total: number; status: 'ok' | 'under' | 'over' }",
+      "file_path": "src/utils/ledgerMath.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 3,
+      "consumer_sub_specs": [7],
+      "name": "evenSplit",
+      "kind": "function",
+      "signature": "evenSplit(n: number): number[]",
+      "file_path": "src/utils/ledgerMath.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 3,
+      "consumer_sub_specs": [7],
+      "name": "computeRunningBalance",
+      "kind": "function",
+      "signature": "computeRunningBalance(entries: LedgerEntry[]): Array<LedgerEntry & { balance: number }>",
+      "file_path": "src/utils/ledgerMath.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 4,
+      "consumer_sub_specs": [7, 9],
+      "name": "ledgerRepository",
+      "kind": "interface",
+      "signature": "listByCampaign(campaignId, opts?) | getById(id, opts?) | create(data) | update(id, patch) | softDelete(id, txId?) | restore(id) | hardDelete(id)",
+      "file_path": "src/storage/repositories/ledgerRepository.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 4,
+      "consumer_sub_specs": [7],
+      "name": "getOrCreateForCampaign",
+      "kind": "function",
+      "signature": "getOrCreateForCampaign(campaignId: string): Promise<LedgerSplitRow>",
+      "file_path": "src/storage/repositories/ledgerSplitRepository.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 5,
+      "consumer_sub_specs": [8],
+      "name": "routePlanner",
+      "kind": "type",
+      "signature": "routePlanner?: { label: string; distanceFieldId?: string; fields: Array<{ id: string; label: string; type?: 'text'|'textarea'|'number' }> }",
+      "file_path": "src/types/system.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 6,
+      "consumer_sub_specs": [8],
+      "name": "readNumericField",
+      "kind": "function",
+      "signature": "readNumericField(values: Record<string, string>, id: string): number",
+      "file_path": "src/utils/routeMath.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 6,
+      "consumer_sub_specs": [8],
+      "name": "routeRepository",
+      "kind": "interface",
+      "signature": "listByCampaign(campaignId, opts?) | create(data) | update(id, patch) | reorder(campaignId, orderedIds) | softDelete(id, txId?) | restore(id) | hardDelete(id)",
+      "file_path": "src/storage/repositories/routeRepository.ts",
+      "content_sha256": "pending-implementation"
+    },
+    {
+      "owner_sub_spec": 9,
+      "consumer_sub_specs": [],
+      "name": "generateEntityFilename",
+      "kind": "function",
+      "signature": "generateEntityFilename(input: { title: string; date: string }): string",
+      "file_path": "src/utils/export/generateFilename.ts",
+      "content_sha256": "pending-implementation"
+    }
+  ]
+}
