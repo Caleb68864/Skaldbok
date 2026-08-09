@@ -3098,3 +3098,34 @@
   Remaining sub-12px text: the axis marker pill and the now-marker, both 10px,
   and `TimelineItemBar`'s subtitle at 11px.
 - Commit: fix(timeline) — axis labels to 12px.
+
+## 2026-08-09 — the last small timeline labels, and a wrong call about markers
+- Symptom: three labels below 12px remained on the timeline — the axis marker
+  pill and the "Now" chip at 10px, and `TimelineItemBar`'s subtitle at 11px.
+- Fix: all three to `--size-xs` (12px). No sub-12px literal remains anywhere in
+  `src/components/timeline/`.
+- Surfaces: `TimelineHeaderAxis.tsx`, `TimelineNowMarker.tsx`, `TimelineItemBar.tsx`.
+- **Correction:** an earlier note in this file claimed the axis marker pill was
+  unreachable in production, on the grounds that `notesToTimeline` returns
+  `markers: []`. That was the wrong adapter. `SessionTimelinePanel` uses
+  `features/session/sessionTimelineAdapter.ts`, which emits a `Start` marker
+  (line 178). The pill renders, and it has now been measured at 12px.
+- Watch: **an instantaneous timeline event renders at a 28px floor and stays
+  there at any zoom.** `TimelineItemBar` treats anything under 92px as compact
+  and drops the title and subtitle entirely, and `renderedWidth` clamps to
+  `max(width, 28)`. Bar width comes from *duration*, not zoom, so zooming a
+  zero-length event never widens it. Anything verifying the subtitle needs an
+  event with a real span — an encounter with a start and an end.
+- Watch also: a session seeded without `date` and `startedAt` reads "Started:
+  Invalid Date" and the timeline window excludes every note, so the ruler draws
+  zero events and any check over it measures nothing. Both fields are required
+  in fixtures.
+- Watch also: log entries are created by the composer's **Commit** button.
+  Pressing Enter inserts a newline and writes nothing, which is why an earlier
+  attempt reported three entries logged and zero events on the timeline.
+- Verified: the Now chip and the Start marker pill both render at 12px in
+  portrait and landscape. **The item subtitle is unverified** — every event
+  reachable in a fresh session is instantaneous and therefore compact, where the
+  subtitle is suppressed by design. The change is the same one-token swap as its
+  siblings, but it has not been watched rendering.
+- Commit: fix(timeline) — remaining small labels to 12px.

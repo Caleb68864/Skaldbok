@@ -124,7 +124,7 @@ export function TimelineItemBar({
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-sm font-medium">{label}</span>
                   {layout.item.subtitle ? (
-                    <span className="block truncate text-[11px] text-text-muted">{layout.item.subtitle}</span>
+                    <span className="block truncate text-[length:var(--size-xs)] text-text-muted">{layout.item.subtitle}</span>
                   ) : null}
                 </span>
               )}

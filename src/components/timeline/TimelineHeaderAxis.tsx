@@ -52,7 +52,7 @@ export function TimelineHeaderAxis({
         {markers.map((marker) => (
           <div
             key={`marker-${marker.marker.id}`}
-            className="absolute bottom-2 -translate-x-1/2 rounded-full border border-gold/70 bg-surface px-2 py-0.5 text-[10px] uppercase tracking-[0.16em] text-gold"
+            className="absolute bottom-2 -translate-x-1/2 rounded-full border border-gold/70 bg-surface px-2 py-0.5 text-[length:var(--size-xs)] uppercase tracking-[0.16em] text-gold"
             style={{ left: `${marker.leftPercent}%` }}
           >
             {marker.marker.label}
