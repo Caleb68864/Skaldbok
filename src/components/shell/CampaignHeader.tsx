@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Menu } from 'lucide-react';
 import { useCampaignContext } from '../../features/campaign/CampaignContext';
+import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
 import { useExportActions } from '../../features/export/useExportActions';
 import { useImportActions } from '../../features/import/useImportActions';
 import { ImportPreview } from '../../components/import/ImportPreview';
@@ -51,6 +52,10 @@ export interface CampaignHeaderProps {
  */
 export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHeaderProps) {
   const { activeCampaign, activeSession, activeCharacterInCampaign, setActiveCampaign } = useCampaignContext();
+  // The route link exists only for rulesets that declare route fields; the
+  // declaration also supplies its label, so no ruleset vocabulary lives here.
+  const { system: campaignSystem } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const routePlanner = campaignSystem?.routePlanner;
   const { exportAllNotes, exportCampaign } = useExportActions();
   const { startImport, showPreview, parsedResult, contentHashMismatch, conflicts, executeImport, cancelImport, isImporting } = useImportActions();
   const { settings, toggleMode } = useAppState();
@@ -180,6 +185,27 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
             >
               Ships
             </Link>
+
+            <Link
+              to="/ledger"
+              onClick={() => setSheetOpen(false)}
+              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
+            >
+              Ledger
+            </Link>
+
+            {/* Gated on the system declaring route fields — a jump route with a
+                UWP column is nonsense in Dragonbane. The neighbouring Ships link
+                is ungated, which is a wart, not a pattern to copy. */}
+            {routePlanner && (
+              <Link
+                to="/route"
+                onClick={() => setSheetOpen(false)}
+                className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
+              >
+                {routePlanner.label}
+              </Link>
+            )}
 
             <Link
               to="/settings"

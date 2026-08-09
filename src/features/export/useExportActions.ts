@@ -12,7 +12,13 @@ import { renderSessionBundle } from '../../utils/export/renderSession';
 import { renderCampaignIndex } from '../../utils/export/renderCampaignIndex';
 import { bundleToZip } from '../../utils/export/bundleToZip';
 import { shareFile, copyToClipboard } from '../../utils/export/delivery';
-import { generateFilename } from '../../utils/export/generateFilename';
+import { generateFilename, generateEntityFilename } from '../../utils/export/generateFilename';
+import * as ledgerRepository from '../../storage/repositories/ledgerRepository';
+import * as routeRepository from '../../storage/repositories/routeRepository';
+import * as systemRepository from '../../storage/repositories/systemRepository';
+import { getEngine } from '../systems/engine';
+import { renderLedgerToMarkdown } from '../../utils/export/renderLedger';
+import { renderRouteToMarkdown } from '../../utils/export/renderRoute';
 import { collectCharacterBundle, collectSessionBundle, collectCampaignBundle } from '../../utils/export/collectors';
 import { applyPrivacyFilter, excludePrivateNotes } from '../../utils/export/privacyFilter';
 import { serializeBundle, deliverBundle } from '../../utils/export/bundleSerializer';
@@ -389,6 +395,88 @@ export function useExportActions() {
     }
   }, [showToast, updateSettings]);
 
+  /**
+   * Exports the active campaign's cashbook as Markdown.
+   *
+   * @remarks
+   * Money is rendered through the campaign system's own engine, so a Traveller
+   * book exports credits and a Dragonbane one exports coins from the same
+   * stored integers.
+   *
+   * Deliberately **not** privacy-filtered, unlike the note paths above: a
+   * campaign cashbook is shared crew data by definition and entries carry no
+   * private flag. See `docs/decisions.md`, 2026-08-08.
+   */
+  const exportLedger = useCallback(async (): Promise<void> => {
+    if (!activeCampaign) {
+      showToast('No active campaign');
+      return;
+    }
+    try {
+      const entries = await ledgerRepository.listByCampaign(activeCampaign.id);
+      const system = await systemRepository.getById(activeCampaign.system);
+      const engine = system ? getEngine(system) : null;
+      const formatMoney =
+        engine?.currency.formatAmount ?? ((baseUnits: number) => String(baseUnits));
+      const markdown = renderLedgerToMarkdown(activeCampaign.name, entries, formatMoney);
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      await shareFile(
+        blob,
+        generateEntityFilename({
+          title: `${activeCampaign.name} ledger`,
+          suffix: activeCampaign.id,
+          fallback: 'ledger',
+        }),
+      );
+    } catch (err) {
+      showToast('Export failed');
+      console.error('[useExportActions] exportLedger error', err);
+    }
+  }, [activeCampaign, showToast]);
+
+  /**
+   * Exports the active campaign's route as Markdown.
+   *
+   * @remarks
+   * Columns come from the system's `routePlanner` declaration. A system that
+   * declares no planner has no route to export and says so rather than
+   * producing an empty file.
+   */
+  const exportRoute = useCallback(async (): Promise<void> => {
+    if (!activeCampaign) {
+      showToast('No active campaign');
+      return;
+    }
+    try {
+      const system = await systemRepository.getById(activeCampaign.system);
+      const planner = system?.routePlanner;
+      if (!planner) {
+        showToast('This system has no route planner');
+        return;
+      }
+      const stops = await routeRepository.listByCampaign(activeCampaign.id);
+      const markdown = renderRouteToMarkdown(
+        activeCampaign.name,
+        planner.label,
+        stops,
+        planner.fields,
+        planner.distanceFieldId,
+      );
+      const blob = new Blob([markdown], { type: 'text/markdown' });
+      await shareFile(
+        blob,
+        generateEntityFilename({
+          title: `${activeCampaign.name} ${planner.label}`,
+          suffix: activeCampaign.id,
+          fallback: 'route',
+        }),
+      );
+    } catch (err) {
+      showToast('Export failed');
+      console.error('[useExportActions] exportRoute error', err);
+    }
+  }, [activeCampaign, showToast]);
+
   return {
     exportNote,
     exportSessionMarkdown,
@@ -398,5 +486,7 @@ export function useExportActions() {
     exportCharacter,
     exportSessionSkaldmark,
     exportCampaign,
+    exportLedger,
+    exportRoute,
   };
 }

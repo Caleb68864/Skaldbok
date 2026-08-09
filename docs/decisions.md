@@ -2415,3 +2415,41 @@
   and pays out only the rest"* plus three others; flipping `evenSplit`'s
   remainder fails *"puts the remainder on the leading rows"*.
 - Commit: feat(ledger) — distribution arithmetic, repositories and route ordering.
+
+## 2026-08-08 — A route planner only the systems that want one can see
+- Symptom: the crew wanted a jump route — an ordered list of worlds with UWP,
+  hex and parsec distance. All three are meaningless in Dragonbane, so the
+  screen cannot simply always exist. The obvious fix, `if (systemId ===
+  'traveller')`, is banned for good reason.
+- Fix: `SystemDefinition.routePlanner` — a system declares `{ label,
+  distanceFieldId, fields[] }`, and both the screen and its nav link exist only
+  where a declaration does. Traveller declares name/UWP/hex/jump/notes.
+- Surfaces: `types/system.ts`, `schemas/system.schema.ts`,
+  `traveller/system.json` (version bumped), `screens/RouteScreen.tsx`,
+  `features/route`, `CampaignHeader.tsx`, `utils/export/renderRoute.ts`.
+- Watch: gating was only half the reason. The same declaration supplies the
+  **labels**, so "UWP" and "parsecs" are Traveller's words, not the app's — a
+  hex-crawl system could declare name/region/days-travel and get the identical
+  screen with no code change. An engine panel flag would have gated correctly
+  and left the vocabulary hardcoded, which is the half that hurts when a fourth
+  system arrives.
+- Watch also: the Zod entry in `schemas/system.schema.ts` shipped in the same
+  change as the type, deliberately. Zod strips unknown keys, so a type without
+  a schema entry works for bundled systems and silently vanishes for **imported**
+  ones. `systemDefinitionSchema.test.ts` now asserts the parsed Traveller
+  definition still has all five fields, which a bare "does it parse" check would
+  not have caught.
+- Watch also: `readNumericField` in `utils/routeMath.ts` is the only place in
+  the feature that parses a string to a number. Values are stored as strings
+  regardless of a field's declared `type`, and a half-filled route is the normal
+  state mid-session — so the distance total reads 0 for a blank leg rather than
+  rendering `NaN`. The export names any stop whose distance could not be read,
+  so a typo is visible rather than silently counting as zero.
+- Watch also: reorder is up/down buttons, not drag. The app is used on a tablet
+  with a stylus, and there is no existing drag primitive in the codebase to
+  reuse. `routeRepository.reorder` writes every affected row in one transaction,
+  so an interrupted write cannot leave two stops sharing an index.
+- Watch also: the **Ships** link next to these is ungated — a Dragonbane
+  campaign sees it. That is a pre-existing wart, left alone here rather than
+  copied.
+- Commit: feat(traveller) — the crew's cashbook and their jump route.
