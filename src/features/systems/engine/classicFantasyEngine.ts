@@ -3,7 +3,7 @@ import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../..
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
 import { attrKey, armorKey, derivedKey } from '../../../utils/statKeys';
-import { decomposeAmount } from '../../../utils/currency';
+import { makeFormatAmount } from '../../../utils/currency';
 import type { SystemEngine, RestDefinition, CurrencyDenomination } from './types';
 
 /** Dragonbane's coin denominations, shared between the `denominations` list and `formatAmount`. */
@@ -140,18 +140,10 @@ export const classicFantasyEngine: SystemEngine = {
     label: 'Coins',
     denominations: classicFantasyCoinDenominations,
     baseDenominationId: 'copper',
-    formatAmount: baseUnits => {
-      const sign = baseUnits < 0 ? '-' : '';
-      const denomsDesc = [...classicFantasyCoinDenominations].sort((a, b) => b.value - a.value);
-      const smallest = denomsDesc[denomsDesc.length - 1];
-      if (baseUnits === 0) return `0${smallest.abbr}`;
-      const parts = decomposeAmount(classicFantasyCoinDenominations, Math.abs(baseUnits));
-      const rendered = denomsDesc
-        .filter(d => (parts[d.id] ?? 0) > 0)
-        .map(d => `${parts[d.id]}${d.abbr}`)
-        .join(' ');
-      return `${sign}${rendered}`;
-    },
+    // Built from the same denomination list everything else reads — see
+    // makeFormatAmount. Was a private decomposition closing over the constant
+    // above, which a system.json override could not reach.
+    formatAmount: makeFormatAmount(classicFantasyCoinDenominations),
     read: character => ({
       gold: character.wealth?.gold ?? 0,
       silver: character.wealth?.silver ?? 0,

@@ -5,6 +5,7 @@ import { classicFantasyEngine } from './classicFantasyEngine';
 import { travellerEngine } from './travellerEngine';
 import { savageWorldsEngine } from './savageWorldsEngine';
 import type { SystemEngine } from './types';
+import { makeFormatAmount } from '../../../utils/currency';
 
 export type { SystemEngine, PanelKey, SystemTerms, SystemLabels, SkillDisplayContext } from './types';
 export { classicFantasyEngine } from './classicFantasyEngine';
@@ -23,6 +24,35 @@ function baseEngineFor(system: SystemDefinition | undefined | null): SystemEngin
     console.warn(`getEngine: no adapter for system "${system.id}", defaulting to classic-fantasy`);
   }
   return classicFantasyEngine;
+}
+
+/**
+ * Folds a system's declared money over the adapter's.
+ *
+ * @remarks
+ * `read` and `write` stay in code: they know where on the character record the
+ * money lives, which is not something JSON can state. Everything else — the
+ * purse label, the denominations, which one is the base unit — is data.
+ *
+ * Declaring `denominations` also **rebuilds `formatAmount`**. The adapter's
+ * closes over its own hardcoded list, so without this a ruleset could declare
+ * its own coins, see them in the purse and the inputs, and still watch every
+ * total in the ledger decompose into the adapter's — a declaration that half
+ * works, which is worse than one that does not work at all.
+ */
+function mergeCurrency(
+  base: SystemEngine['currency'],
+  declared: SystemDefinition['currency'],
+): SystemEngine['currency'] {
+  if (!declared) return base;
+  const denominations = declared.denominations ?? base.denominations;
+  return {
+    ...base,
+    label: declared.label ?? base.label,
+    denominations,
+    baseDenominationId: declared.baseDenominationId ?? base.baseDenominationId,
+    formatAmount: declared.denominations ? makeFormatAmount(denominations) : base.formatAmount,
+  };
 }
 
 /**
@@ -72,6 +102,8 @@ export function getEngine(system: SystemDefinition | undefined | null): SystemEn
     outcomes: system.outcomes ?? base.outcomes,
     rollModifiers: system.rollModifiers ?? base.rollModifiers,
     timeUnits: system.timeUnits ?? base.timeUnits,
+    panels: system.panels ?? base.panels,
+    currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);
   return merged;

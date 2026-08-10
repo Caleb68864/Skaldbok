@@ -167,6 +167,48 @@ describe('systemDefinitionSchema', () => {
     if (result.success) expect(result.data.terms?.reservePot).toBe('Guild tithe');
   });
 
+  it('rejects a panel key the app cannot render', () => {
+    // A typo'd panel is otherwise a screen that silently never appears.
+    expect(broken((d: any) => { d.panels = ['skills', 'invnetory']; })).toBe(false);
+    expect(broken((d: any) => { d.panels = ['skills', 'inventory']; })).toBe(true);
+  });
+
+  it('rejects money with no unit worth 1', () => {
+    // Everything is counted in base units; without one, totals decompose
+    // against a scale nothing else shares.
+    expect(broken((d: any) => {
+      d.currency = { denominations: [{ id: 'slab', label: 'Slab', abbr: 'sl', value: 20 }] };
+    })).toBe(false);
+  });
+
+  it('rejects a base denomination that is missing, or is not the unit', () => {
+    const denominations = [
+      { id: 'slab', label: 'Slab', abbr: 'sl', value: 20 },
+      { id: 'bit', label: 'Bit', abbr: 'b', value: 1 },
+    ];
+    expect(broken((d: any) => { d.currency = { denominations, baseDenominationId: 'ghost' }; })).toBe(false);
+    expect(broken((d: any) => { d.currency = { denominations, baseDenominationId: 'slab' }; })).toBe(false);
+    expect(broken((d: any) => { d.currency = { denominations, baseDenominationId: 'bit' }; })).toBe(true);
+  });
+
+  it('rejects a base denomination named without the denominations', () => {
+    // It would point into the adapter's list, which the schema cannot see — so
+    // a wrong id could not be caught, and would mislabel every amount.
+    expect(broken((d: any) => { d.currency = { baseDenominationId: 'copper' }; })).toBe(false);
+    expect(broken((d: any) => { d.currency = { label: 'Purse' }; })).toBe(true);
+  });
+
+  it('rejects duplicate denomination ids', () => {
+    expect(broken((d: any) => {
+      d.currency = {
+        denominations: [
+          { id: 'bit', label: 'Bit', abbr: 'b', value: 1 },
+          { id: 'bit', label: 'Bit again', abbr: 'b2', value: 5 },
+        ],
+      };
+    })).toBe(false);
+  });
+
   it('still declares every finance line the Traveller sheet used to hardcode', () => {
     // These six were literals in SheetScreen and again in PrintableSheet.
     // Dropping one from system.json now blanks it on both surfaces at once,

@@ -65,3 +65,47 @@ export function remakeCurrency(
   // total into the wrong coin.
   return decomposeAmount(denominations, nextTotal);
 }
+
+/**
+ * Builds a `CurrencyModel.formatAmount` over an arbitrary denomination list.
+ *
+ * @remarks
+ * Each adapter used to close over its own hardcoded array, which meant a
+ * `currency.denominations` declared in system.json changed the inputs and the
+ * purse panel but *not* the formatted totals — the ledger would keep decomposing
+ * over the adapter's coins. Formatting has to be derived from the same list
+ * everything else reads, so it lives here and `getEngine` rebuilds it whenever a
+ * ruleset declares its own.
+ *
+ * A single denomination renders as a prefix and a grouped number. Whether a
+ * space separates them follows the abbreviation: a word takes one (`Cr 15,000`),
+ * a symbol does not (`$1,000`). That is ordinary typographic practice, and it is
+ * also exactly what the Traveller and Savage Worlds adapters each hand-wrote —
+ * so deriving the rule reproduces both rather than making one of them wrong.
+ *
+ * Several denominations render most significant first, omitting the ones that
+ * came out zero (`1g 2s 3c`), except that a zero total still prints one unit
+ * rather than an empty string.
+ */
+export function makeFormatAmount(
+  denominations: CurrencyDenomination[],
+): (baseUnits: number) => string {
+  const byValueDesc = [...denominations].sort((a, b) => b.value - a.value);
+  return (baseUnits: number) => {
+    const sign = baseUnits < 0 ? '-' : '';
+    const magnitude = Math.abs(baseUnits);
+    if (byValueDesc.length === 1) {
+      const { abbr } = byValueDesc[0];
+      const separator = /[a-z]/i.test(abbr) ? ' ' : '';
+      return `${sign}${abbr}${separator}${magnitude.toLocaleString('en-US')}`;
+    }
+    const smallest = byValueDesc[byValueDesc.length - 1];
+    if (magnitude === 0) return `0${smallest.abbr}`;
+    const parts = decomposeAmount(denominations, magnitude);
+    const rendered = byValueDesc
+      .filter(d => (parts[d.id] ?? 0) > 0)
+      .map(d => `${parts[d.id]}${d.abbr}`)
+      .join(' ');
+    return `${sign}${rendered}`;
+  };
+}

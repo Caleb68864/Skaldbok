@@ -2,27 +2,11 @@ import type { CharacterRecord, CharacterSkill } from '../../../types/character';
 import type { SystemDefinition } from '../../../types/system';
 import type { DerivedValues } from '../../../utils/derivedValues';
 
-export type PanelKey =
-  | 'attributes'
-  | 'skills'
-  | 'resources'
-  | 'inventory'
-  | 'magic'
-  | 'combat'
-  | 'rest'
-  | 'death'
-  | 'notes'
-  | 'characteristics'
-  | 'finances'
-  | 'careers'
-  | 'augments'
-  // Savage Worlds surfaces
-  | 'edges'
-  | 'hindrances'
-  | 'bennies'
-  // Reserved for SWADE Arcane Background / Powers — no adapter ships it yet
-  // (savageWorldsEngine.magic is null), so no panel currently uses this key.
-  | 'powers';
+// `PanelKey` and its backing list live in types/system so the schema can
+// validate a JSON-declared `panels` array against exactly the keys the app
+// renders. Re-exported here because this is where consumers expect it.
+import type { PanelKey } from '../../../types/system';
+export type { PanelKey };
 
 export type ResolutionMethod = 'd20-roll-under' | '2d6-plus' | 'trait-die-vs-tn';
 

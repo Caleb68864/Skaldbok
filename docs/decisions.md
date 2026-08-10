@@ -3503,4 +3503,3 @@ b"` with a real break parses as a broken
   reads "Credits" / "Cr 0", and the sheet still shows Characteristics, Finances,
   Careers and Augments — all now sourced from JSON.
 - Commit: feat(systems) — panels and currency come from system.json.
-

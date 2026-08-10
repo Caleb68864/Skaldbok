@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { WEAPON_BUILT_IN_FIELD_IDS, ARMOR_BUILT_IN_FIELD_IDS } from '../src/types/system';
+import { WEAPON_BUILT_IN_FIELD_IDS, ARMOR_BUILT_IN_FIELD_IDS, PANEL_KEYS } from '../src/types/system';
 
 const attributeDefinitionSchema = z.object({
   id: z.string().min(1).describe('Unique attribute identifier'),
@@ -213,6 +213,22 @@ export const systemDefinitionSchema = z.object({
     summaryCounterIds: z.array(z.string().min(1)).optional(),
     subtitleSpecId: z.string().min(1).optional(),
   }).optional().describe('Per-system vehicle sheet (e.g. Traveller starships)'),
+  // Enumerated against the keys the app actually renders: a typo'd panel is
+  // otherwise a screen that silently never appears.
+  panels: z.array(z.enum(PANEL_KEYS)).min(1).optional()
+    .describe("Panels this system's character surfaces offer; replaces the adapter's list"),
+  currency: z.object({
+    label: z.string().min(1).optional(),
+    denominations: z.array(z.object({
+      id: z.string().min(1),
+      label: z.string().min(1),
+      abbr: z.string().min(1),
+      value: z.number().positive(),
+      step: z.number().positive().optional(),
+      quickSteps: z.array(z.number().positive()).optional(),
+    })).min(1).optional(),
+    baseDenominationId: z.string().min(1).optional(),
+  }).optional().describe('Denominations and purse label; read/write stay in the adapter'),
   creatures: z.object({
     statFields: z.array(z.object({
       id: z.string().min(1),
@@ -302,6 +318,41 @@ export const systemDefinitionSchema = z.object({
         message: `Vehicle subtitle names unknown spec "${def.vehicles.subtitleSpecId}"`,
       });
     }
+  }
+
+  // Money: the base denomination has to exist and has to be the unit everything
+  // else is counted in, or totals silently decompose against the wrong scale.
+  const denominations = def.currency?.denominations;
+  if (denominations) {
+    const ids = denominations.map(d => d.id);
+    flagDupes(ids, 'currency denomination');
+    if (!denominations.some(d => d.value === 1)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Currency needs a denomination with value 1 — the unit everything is counted in.',
+      });
+    }
+    const baseId = def.currency?.baseDenominationId;
+    if (baseId && !ids.includes(baseId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Currency baseDenominationId names unknown denomination "${baseId}"`,
+      });
+    }
+    if (baseId && denominations.find(d => d.id === baseId)?.value !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Currency baseDenominationId "${baseId}" must be the denomination worth 1.`,
+      });
+    }
+  } else if (def.currency?.baseDenominationId) {
+    // Naming a base without listing the denominations points at the adapter's
+    // list, which this file cannot see — so it cannot be checked, and a wrong
+    // id would silently label every amount with the wrong unit.
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Declaring baseDenominationId requires declaring denominations too.',
+    });
   }
 
   // Stat ids key the stored bag, so a duplicate means two inputs writing one

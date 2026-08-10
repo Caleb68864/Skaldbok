@@ -301,6 +301,43 @@ export interface CreatureModel {
   armorStatId?: string;
 }
 
+/**
+ * Every panel key an engine may claim, and the source of {@link PanelKey}.
+ *
+ * @remarks
+ * A `const` array rather than a bare union so the schema can validate a
+ * JSON-declared `panels` list against exactly the keys the app renders — a
+ * typo'd panel in a hand-authored system.json is otherwise a silently missing
+ * screen. Mirrors how `WEAPON_BUILT_IN_FIELD_IDS` backs the hide-list.
+ *
+ * Distinct from `SHEET_PANEL_KEYS` in `panelOrder`, which is the narrower set of
+ * panels the *sheet surface* knows how to draw.
+ */
+export const PANEL_KEYS = [
+  'attributes',
+  'skills',
+  'resources',
+  'inventory',
+  'magic',
+  'combat',
+  'rest',
+  'death',
+  'notes',
+  'characteristics',
+  'finances',
+  'careers',
+  'augments',
+  'edges',
+  'hindrances',
+  'bennies',
+  // Reserved for SWADE Arcane Background / Powers — no adapter ships it yet
+  // (savageWorldsEngine.magic is null), so no panel currently uses this key.
+  'powers',
+] as const;
+
+/** One of the panels an engine may claim. See {@link PANEL_KEYS}. */
+export type PanelKey = (typeof PANEL_KEYS)[number];
+
 export interface SystemDefinition {
   id: string;
   version: number;
@@ -369,6 +406,32 @@ export interface SystemDefinition {
    */
   creatures?: CreatureModel;
   /**
+   * Panels this ruleset's character surfaces offer. Absent = the engine
+   * adapter's own list.
+   *
+   * @remarks
+   * Declaring it REPLACES the adapter's list wholesale, as `logActions` and the
+   * other declarative arrays do — a panel set is a palette, not something to
+   * merge halfway.
+   */
+  panels?: PanelKey[];
+  /**
+   * Money, when this ruleset wants its own denominations without an adapter
+   * change. `read`/`write` stay in code (they know where on the record the
+   * money lives); everything a JSON author can meaningfully state is here.
+   *
+   * @remarks
+   * Declaring `denominations` also rebuilds `formatAmount`, which would
+   * otherwise keep decomposing over the adapter's hardcoded list and quietly
+   * ignore the declaration — the exact "declared capability with no reader"
+   * failure this codebase keeps finding.
+   */
+  currency?: {
+    label?: string;
+    denominations?: Array<{ id: string; label: string; abbr: string; value: number; step?: number; quickSteps?: number[] }>;
+    baseDenominationId?: string;
+  };
+  /**
    * Extra per-item fields this system wants on weapons and armour, beyond the
    * shared core (name, damage, equipped…).
    *
@@ -399,8 +462,11 @@ export interface SystemDefinition {
       armor?: string[];
     };
   };
-  resolution?: 'd20-roll-under' | '2d6-plus' | 'trait-die-vs-tn';
-  currency?: { label: string; abbr: string; mode: 'coins' | 'single' };
+  // `resolution` and the old `{label, abbr, mode}` `currency` used to sit here.
+  // Both were deleted from the schema as dead fields but left on the type,
+  // where they still read as configuration an author could fill in. The
+  // authoritative resolution method is `engine.resolution`; `currency` below is
+  // the real, wired-up declaration.
   /**
    * Optional overrides for system vocabulary (see `SystemTerms` in the engine).
    * Any omitted key falls back to the engine adapter's default.
