@@ -3429,3 +3429,27 @@ b"` with a real break parses as a broken
   IndexedDB shows exactly that with stats and the other rows untouched.
 - Commit: feat(bestiary) — edit a creature's attacks, abilities and skills.
 
+## 2026-08-10 — Creatures export as JSON, round-tripping the importer
+- Symptom: creatures left the app only inside a whole campaign bundle. A stat
+  block researched, imported and then corrected could not be shared or kept as a
+  file — the importer had no counterpart going out.
+- Fix: `renderCreaturesToJson` emitting the importer's exact format; "Export" on
+  the bestiary header (file, via the existing shareFile/download helper) and
+  "Copy JSON" on a single creature (clipboard).
+- Surfaces: BestiaryScreen, utils/bestiary/renderCreatureExport.ts.
+- Watch: export writes EVERY stored stat, including ones the current ruleset does
+  not declare. The file records the creature, not one system's view of it —
+  stripping undeclared stats at export loses data silently, whereas the importer
+  drops them WITH a warning, which is the right place for that decision.
+- Watch also: `description` is Tiptap JSON or a plain string depending on how it
+  was authored. Only a string is exported; a document node would come back
+  through the importer as "[object Object]".
+- Watch also: Export writes the *visible* (filtered) list, not the whole
+  bestiary — the predictable reading of a button above a filtered list.
+- Verified: build clean, 1191 tests (10 new, incl. an export→import round-trip).
+  Browser: exported the live campaign to spinward-run-bestiary.json, read the
+  actual downloaded file, pasted it back into the import dialog — two creatures,
+  identical values, zero warnings. Import cancelled so the real campaign was not
+  duplicated (confirmed still 2 creatures).
+- Commit: feat(bestiary) — export creatures as JSON.
+

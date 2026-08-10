@@ -5,6 +5,11 @@ import { CreatureTemplateCard } from './CreatureTemplateCard';
 import { CreatureTemplateForm } from './CreatureTemplateForm';
 import { CreatureImportModal } from './CreatureImportModal';
 import type { ParsedCreature } from '../../utils/bestiary/parseCreatureImport';
+import {
+  creatureExportFilename,
+  renderCreaturesToJson,
+} from '../../utils/bestiary/renderCreatureExport';
+import { copyToClipboard, shareFile } from '../../utils/export/delivery';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { EncounterParticipant } from '../../types/encounter';
 import { db } from '../../storage/db/client';
@@ -24,6 +29,8 @@ import {
 
 export interface BestiaryScreenProps {
   campaignId: string;
+  /** Campaign name, used only to name an exported file. */
+  campaignName: string;
   /**
    * The campaign's ruleset id — the bestiary's stat block comes from it.
    *
@@ -51,7 +58,7 @@ const actionBtnClass = 'min-h-11 px-4 py-2 bg-[var(--color-accent)] text-[var(--
  * Campaign-scoped bestiary screen. Displays creature templates with search,
  * category filtering, and CRUD operations.
  */
-export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClose }: BestiaryScreenProps) {
+export function BestiaryScreen({ campaignId, campaignName, systemId, activeEncounterId, onClose }: BestiaryScreenProps) {
   const { showToast } = useToast();
   const {
     templates,
@@ -135,6 +142,34 @@ export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClos
     );
   };
 
+  /**
+   * Writes the visible creatures out as JSON, in the importer's own format.
+   *
+   * @remarks
+   * *Visible*, not all: exporting what the filters are showing is the
+   * predictable reading of a button sitting above a filtered list, and it is
+   * how you share "my forest animals" rather than the whole library.
+   */
+  const handleExport = async () => {
+    const json = renderCreaturesToJson(templates);
+    await shareFile(
+      new Blob([json], { type: 'application/json' }),
+      creatureExportFilename(campaignName),
+    );
+  };
+
+  /** Copies one creature as JSON — the shape you paste back into a chat. */
+  const handleCopyOne = async (template: CreatureTemplate) => {
+    try {
+      await copyToClipboard(renderCreaturesToJson([template]));
+      showToast(`${template.name} copied as JSON`, 'success');
+    } catch {
+      // Clipboard access is refusable (permissions, insecure context). Say so
+      // rather than leaving a button that silently does nothing.
+      showToast('Could not copy to the clipboard', 'error');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this creature? It can be restored from Trash.')) return;
     await softDelete(id);
@@ -146,6 +181,14 @@ export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClos
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[var(--color-text)] m-0">Bestiary</h2>
         <div className="flex gap-2">
+          <button
+            onClick={() => void handleExport()}
+            disabled={templates.length === 0}
+            className="min-h-11 px-3 py-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs cursor-pointer disabled:opacity-50"
+            title="Export the listed creatures as JSON"
+          >
+            Export
+          </button>
           <button
             onClick={() => setShowImport(true)}
             className="min-h-11 px-3 py-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs cursor-pointer"
@@ -380,6 +423,14 @@ export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClos
                 className="min-h-11 px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-sm font-semibold cursor-pointer"
               >
                 Edit
+              </button>
+              {/* Copy rather than download: a single stat block is usually
+                  wanted in a message or a chat, not as a file on disk. */}
+              <button
+                onClick={() => void handleCopyOne(viewingTemplate)}
+                className="min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer"
+              >
+                Copy JSON
               </button>
               <button
                 onClick={() => handleDelete(viewingTemplate.id)}
