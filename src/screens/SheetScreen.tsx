@@ -26,6 +26,7 @@ import { GUARDS } from '../features/systems/cards/guards';
 import { getEngine } from '../features/systems/engine';
 import type { RestDefinition } from '../features/systems/engine/types';
 import type { FinanceField } from '../types/system';
+import { summariseCounters, vehicleSubtitle } from '../features/vehicles/vehicleView';
 import { useAutosave } from '../hooks/useAutosave';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 import { useFieldEditable, useIsEditMode, FIELD_PATHS } from '../utils/modeGuards';
@@ -1035,9 +1036,12 @@ export default function SheetScreen() {
   // (ships are campaign-scoped entities, not character fields); this panel is a
   // convenience pointer so the sheet references the vessel without duplicating
   // it. Hidden entirely when the character owns no ship.
+  // The ruleset's own word for its vehicles; this panel is a pointer at them
+  // and must not out-name the screen it points to.
+  const vehicleLabel = system?.vehicles?.label ?? 'Vehicles';
   const shipsPanel =
     ownedShips.length > 0 ? (
-      <SectionPanel title="Ships" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
+      <SectionPanel title={vehicleLabel} icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
         <div className="flex flex-col gap-[var(--space-md)]">
           {ownedShips.map(ship => (
             <button
@@ -1048,16 +1052,18 @@ export default function SheetScreen() {
             >
               <span className="font-semibold text-[var(--color-text)]">
                 {ship.name}
-                {ship.shipClass ? (
-                  <span className="font-normal text-[var(--color-text-muted)]"> · {ship.shipClass}</span>
+                {vehicleSubtitle(ship, system?.vehicles) ? (
+                  <span className="font-normal text-[var(--color-text-muted)]">
+                    {' · '}
+                    {vehicleSubtitle(ship, system?.vehicles)}
+                  </span>
                 ) : null}
               </span>
               <span className="text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
-                Hull {ship.hullCurrent}/{ship.hullMax} · Cargo {ship.cargoCurrent}/{ship.cargoMax}t · Fuel{' '}
-                {ship.fuelCurrent}/{ship.fuelMax}
+                {summariseCounters(ship, system?.vehicles)}
               </span>
               <span className="text-[length:var(--size-xs)] uppercase tracking-wide text-[var(--color-primary)]">
-                Open in Ships →
+                Open in {vehicleLabel} →
               </span>
             </button>
           ))}

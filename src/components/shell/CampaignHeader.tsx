@@ -6,6 +6,7 @@ import { useExportActions } from '../../features/export/useExportActions';
 import { useImportActions } from '../../features/import/useImportActions';
 import { ImportPreview } from '../../components/import/ImportPreview';
 import { useAppState } from '../../context/AppStateContext';
+import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { db } from '../../storage/db/client';
@@ -60,6 +61,10 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Resolved from the *campaign*, not the active character: the overflow sheet
+  // is campaign-scoped and is most often opened with no character loaded.
+  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const vehicles = system?.vehicles;
   const isPlayMode = settings.mode === 'play';
 
   useEffect(() => {
@@ -173,13 +178,18 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
               Manage Party
             </button>
 
-            <Link
-              to="/ships"
-              onClick={() => setSheetOpen(false)}
-              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
-            >
-              Ships
-            </Link>
+            {/* Only for rulesets that have vehicles at all, and named as they
+                name them — the same gating the route tab gets. A dungeon crawl
+                has no ships and should not be offered a starship sheet. */}
+            {vehicles && (
+              <Link
+                to="/ships"
+                onClick={() => setSheetOpen(false)}
+                className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
+              >
+                {vehicles.label}
+              </Link>
+            )}
 
             {/* Ledger and route deliberately absent: both are used constantly
                 at the table and now live as tabs on the session sub-nav, one

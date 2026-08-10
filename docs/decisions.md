@@ -3322,3 +3322,30 @@ b"` with a real break parses as a broken
   Traveller character — all six finance lines render with labels identical to the
   hardcoded ones, and the ledger still reads "Ship fund".
 - Commit: feat(systems) — finance lines and the reserve pot come from the ruleset.
+
+## 2026-08-10 — Vehicles become a ruleset declaration, not a Traveller starship
+- Symptom: `types/ship.ts` spelled one game's starship into the schema —
+  `hullCurrent/Max`, `fuel*`, `cargo*` (tons), `jump`, `thrust`, `tl`, `armor`,
+  plus a Pilot/Navigator/Engineer/Gunner/Sensors/Steward roster as a const. The
+  screen restated the labels; the sheet's pointer card and the campaign list held
+  two copies of the same hardcoded stat line, in different orders. A system with
+  a Toughness rating and no jump drive had nowhere to put either.
+- Fix: `system.vehicles` (label, singular, counters, specs with sections,
+  crewRoles, summaryCounterIds, subtitleSpecId), mirroring `routePlanner`. The
+  record now holds open `counters` and `specs` bags keyed by the declared ids;
+  only name/owner/crew/weapons/notes stay columns. `summariseCounters` is shared
+  by both list surfaces.
+- Surfaces: types/ship.ts, shipRepository, ShipsScreen, SheetScreen ships panel,
+  CampaignHeader nav, features/vehicles/vehicleView.
+- Watch: the migration is read-path (`upgradeShip`, v1→v2), not a Dexie upgrade —
+  so nothing rewrites on upgrade and a rollback is lossless (legacy columns are
+  deliberately left in the row). `update()` therefore writes the *upgraded* row
+  rather than patching in place: patching would leave schemaVersion 1 with the
+  old columns authoritative, and the next read would re-derive the bags over the
+  edit just made.
+- Watch also: a ruleset declaring no `vehicles` hides the nav entry and the
+  screen explains itself, rather than offering an empty starship.
+- Verified: build clean, 1133 tests (20 new). Browser check against the live
+  Traveller ship — list line byte-identical, editor panels unchanged, and the
+  stored row upgraded to v2 with an edit round-tripping through the bags.
+- Commit: feat(systems) — a ruleset declares its own vehicles.

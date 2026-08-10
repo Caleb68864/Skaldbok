@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 20,
+  "version": 21,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -830,6 +830,27 @@
     "databank",
     "neon-sprawl"
   ],
+  "vehicles": {
+    "label": "Ships",
+    "singular": "Ship",
+    "counters": [
+      { "id": "hull", "label": "Hull" },
+      { "id": "fuel", "label": "Fuel" },
+      { "id": "cargo", "label": "Cargo", "unit": "t" }
+    ],
+    "summaryCounterIds": ["hull", "cargo", "fuel"],
+    "subtitleSpecId": "shipClass",
+    "specs": [
+      { "id": "shipClass", "label": "Class / Type", "placeholder": "e.g. Free Trader" },
+      { "id": "tl", "label": "TL", "type": "number" },
+      { "id": "armor", "label": "Armour", "type": "number", "section": "Status" },
+      { "id": "jump", "label": "Jump", "type": "number", "section": "Drives" },
+      { "id": "thrust", "label": "Thrust", "type": "number", "section": "Drives" },
+      { "id": "power", "label": "Power Plant", "section": "Drives" },
+      { "id": "upkeep", "label": "Monthly Upkeep", "type": "number", "unit": "currency", "section": "Drives" }
+    ],
+    "crewRoles": ["Pilot", "Navigator", "Engineer", "Gunner", "Sensors", "Steward"]
+  },
   "financeFields": [
     {
       "id": "shipShares",

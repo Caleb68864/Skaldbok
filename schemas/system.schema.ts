@@ -193,6 +193,26 @@ export const systemDefinitionSchema = z.object({
       type: z.enum(['text', 'textarea', 'number']).optional(),
     })),
   }).optional().describe('Per-system route/travel planner (e.g. Traveller Jump Route)'),
+  vehicles: z.object({
+    label: z.string().min(1),
+    singular: z.string().min(1),
+    counters: z.array(z.object({
+      id: z.string().min(1),
+      label: z.string().min(1),
+      unit: z.string().optional(),
+    })).optional(),
+    specs: z.array(z.object({
+      id: z.string().min(1),
+      label: z.string().min(1),
+      type: z.enum(['text', 'number']).optional(),
+      unit: z.enum(['currency']).optional(),
+      section: z.string().min(1).optional(),
+      placeholder: z.string().optional(),
+    })).optional(),
+    crewRoles: z.array(z.string().min(1)).optional(),
+    summaryCounterIds: z.array(z.string().min(1)).optional(),
+    subtitleSpecId: z.string().min(1).optional(),
+  }).optional().describe('Per-system vehicle sheet (e.g. Traveller starships)'),
 }).superRefine((def, ctx) => {
   // Cross-reference integrity: without these, a typo'd id (e.g. a skill linked
   // to a non-existent attribute) passes validation and then silently misbehaves
@@ -250,6 +270,30 @@ export const systemDefinitionSchema = z.object({
       }
     }
   }
+  // A vehicle summary or subtitle pointing at an id that does not exist prints
+  // nothing at all — the sheet's pointer card silently loses its stat line,
+  // which looks like a vehicle with no data rather than like a typo.
+  if (def.vehicles) {
+    const declaredCounters = (def.vehicles.counters ?? []).map(c => c.id);
+    const declaredSpecs = (def.vehicles.specs ?? []).map(s => s.id);
+    const counterIds = new Set(declaredCounters);
+    const specIds = new Set(declaredSpecs);
+    // Ids key the stored bags, so a duplicate means two rows editing one value.
+    flagDupes(declaredCounters, 'vehicle counter');
+    flagDupes(declaredSpecs, 'vehicle spec');
+    for (const id of def.vehicles.summaryCounterIds ?? []) {
+      if (!counterIds.has(id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Vehicle summary names unknown counter "${id}"` });
+      }
+    }
+    if (def.vehicles.subtitleSpecId && !specIds.has(def.vehicles.subtitleSpecId)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Vehicle subtitle names unknown spec "${def.vehicles.subtitleSpecId}"`,
+      });
+    }
+  }
+
   for (const a of def.attributes) {
     if (a.min > a.max) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Attribute "${a.id}" has min > max` });

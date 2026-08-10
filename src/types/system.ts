@@ -202,6 +202,60 @@ export interface FinanceField {
   group?: string;
 }
 
+/**
+ * A ruleset's vehicle sheet — what a campaign's ships/rigs/vessels are called,
+ * what is tracked on them, and who crews them.
+ *
+ * @remarks
+ * The same treatment `routePlanner` already gets. Before this, the vehicle
+ * screen was a Traveller starship spelled out in code and in the record's
+ * columns: Hull, Fuel, Cargo in tons, Jump, Thrust, TL, and a Pilot/Navigator/
+ * Engineer/Gunner/Sensors/Steward roster. Absent = this ruleset has no vehicles,
+ * and the screen and its nav entry disappear rather than offering an empty
+ * starship to a dungeon crawl.
+ */
+export interface VehicleModel {
+  /** Plural, for the screen heading and the nav entry — "Ships", "Vehicles". */
+  label: string;
+  /** Singular, for the add button and empty state — "Ship", "Rig". */
+  singular: string;
+  /**
+   * Live counters, each a current value against a built maximum, shown with
+   * steppers and editable during play.
+   */
+  counters?: Array<{
+    id: string;
+    label: string;
+    /** Suffix printed after the maximum — Traveller's cargo is in tons. */
+    unit?: string;
+  }>;
+  /** Flat build specs, grouped by {@link VehicleSpec.section} in declaration order. */
+  specs?: VehicleSpec[];
+  /** Crew positions a newly created vehicle starts with, in operating order. */
+  crewRoles?: string[];
+  /**
+   * Ids (into {@link counters}) summarised on the character sheet's vehicle
+   * pointer, in order. Absent shows every counter, which is right until a
+   * ruleset declares more of them than fit on one line.
+   */
+  summaryCounterIds?: string[];
+  /** Id (into {@link specs}) shown beside the name as a subtitle — "· Free Trader". */
+  subtitleSpecId?: string;
+}
+
+/** One build spec on a vehicle. See {@link VehicleModel}. */
+export interface VehicleSpec {
+  id: string;
+  label: string;
+  /** `number` renders a numeric input; defaults to `text`. */
+  type?: 'text' | 'number';
+  /** Appends the system's base currency abbreviation to the label. */
+  unit?: 'currency';
+  /** Panel this spec is grouped under. Absent groups it with the vehicle's details. */
+  section?: string;
+  placeholder?: string;
+}
+
 export interface SystemDefinition {
   id: string;
   version: number;
@@ -259,6 +313,11 @@ export interface SystemDefinition {
    * without naming anybody's money.
    */
   financeFields?: FinanceField[];
+  /**
+   * Declares this ruleset's vehicle sheet. Absent = no vehicles, and the Ships
+   * screen and its nav entry disappear. See {@link VehicleModel}.
+   */
+  vehicles?: VehicleModel;
   /**
    * Extra per-item fields this system wants on weapons and armour, beyond the
    * shared core (name, damage, equipped…).
