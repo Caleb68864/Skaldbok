@@ -222,7 +222,7 @@ export function useLedger() {
       const shares = input.legs
         .map(leg =>
           leg.kind === 'shipFund'
-            ? `ship fund ${fmt(leg.amount)} (retained)`
+            ? `${(engine?.terms.reservePot ?? 'Reserve').toLowerCase()} ${fmt(leg.amount)} (retained)`
             : leg.kind === 'unallocated'
               ? `unallocated ${fmt(leg.amount)}`
               : `${leg.payeeName ?? 'unnamed'} ${fmt(leg.amount)}`,
@@ -584,6 +584,15 @@ export function useLedger() {
     formatMoney,
     baseDenomination,
     currencyLabel: engine?.currency.label ?? 'Money',
+    /**
+     * What this ruleset calls the pot kept off the top of a payout.
+     *
+     * @remarks
+     * The stored leg kind stays `shipFund` — see `SystemTerms.reservePot`. Only
+     * the word on screen moves, so a fantasy party sees "Party fund" without
+     * any distribution already written changing shape.
+     */
+    reservePotLabel: engine?.terms.reservePot ?? 'Reserve',
     addEntry,
     addDistribution,
     removeEntry,

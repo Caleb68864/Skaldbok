@@ -82,15 +82,19 @@ describe('renderLedgerToMarkdown', () => {
   });
 
   it('renders every leg with the percentage it was computed from', () => {
-    const md = renderLedgerToMarkdown('Spinward Main', [income, payout], cr);
+    const md = renderLedgerToMarkdown('Spinward Main', [income, payout], cr, {
+      reservePotLabel: 'Ship fund',
+    });
     expect(md).toContain('Ship fund (50%)');
     expect(md).toContain('Milo Aer (36%)');
     expect(md).toContain('Eldon Holt (18%)');
     expect(md).toContain('Unallocated (46%)');
   });
 
-  it('marks the ship fund retained and the payees paid', () => {
-    const md = renderLedgerToMarkdown('Spinward Main', [income, payout], cr);
+  it('marks the reserve pot retained and the payees paid', () => {
+    const md = renderLedgerToMarkdown('Spinward Main', [income, payout], cr, {
+      reservePotLabel: 'Ship fund',
+    });
     // The distinction the whole schema exists to preserve: retained money did
     // not leave the book, so the reader must not count it as an outflow.
     expect(md).toMatch(/Ship fund \(50%\) — retained/);
@@ -98,11 +102,30 @@ describe('renderLedgerToMarkdown', () => {
   });
 
   it('records the agreed percentages in their own section', () => {
-    const md = renderLedgerToMarkdown('Spinward Main', [income, payout], cr);
+    const md = renderLedgerToMarkdown('Spinward Main', [income, payout], cr, {
+      reservePotLabel: 'Ship fund',
+    });
     expect(md).toContain('## Distributions');
     expect(md).toContain('agreed at the time of each payout');
     expect(md).toContain('Ship fund: 50% (retained)');
     expect(md).toContain('Milo Aer: 36%');
+  });
+
+  it("names the off-the-top pot in the ruleset's own words", () => {
+    // The leg kind stays `shipFund` in storage; only the word moves. A fantasy
+    // party's cut used to export as "Ship fund" because the renderer said so.
+    const md = renderLedgerToMarkdown('Hexcrawl', [income, payout], cr, {
+      reservePotLabel: 'Party fund',
+    });
+    expect(md).toContain('Party fund (50%)');
+    expect(md).toContain('Party fund: 50% (retained)');
+    expect(md).not.toContain('Ship fund');
+  });
+
+  it('falls back to a neutral word rather than one ruleset’s', () => {
+    const md = renderLedgerToMarkdown('Hexcrawl', [income, payout], cr);
+    expect(md).toContain('Reserve (50%)');
+    expect(md).not.toContain('Ship fund');
   });
 
   it('renders an empty book without a table', () => {

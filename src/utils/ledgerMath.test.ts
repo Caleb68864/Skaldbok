@@ -279,7 +279,7 @@ describe('computeDistribution', () => {
     expect(() => computeDistribution(1_000, split(50, [60, 50]))).toThrow(/more than the 100%/);
   });
 
-  it('refuses a nonsensical ship fund', () => {
+  it('refuses a nonsensical off-the-top share', () => {
     expect(() => computeDistribution(1_000, split(150, [100]))).toThrow(/between 0% and 100%/);
   });
 });

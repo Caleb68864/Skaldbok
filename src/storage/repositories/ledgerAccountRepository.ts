@@ -1,6 +1,6 @@
 import { db } from '../db/client';
 import type { LedgerAccount } from '../../types/ledgerAccount';
-import { DEFAULT_PRIMARY_ACCOUNT_NAME } from '../../types/ledgerAccount';
+import { DEFAULT_PRIMARY_ACCOUNT_NAME } from '../../config/defaults/ledger';
 import { excludeDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';

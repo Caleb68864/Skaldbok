@@ -185,6 +185,7 @@ export const classicFantasyEngine: SystemEngine = {
     magicResource: 'WP',
     healthResource: 'HP',
     roleFallback: 'Adventurer',
+    reservePot: 'Party fund',
   },
   labels: {
     abilitiesScreen: 'Abilities / Magic',

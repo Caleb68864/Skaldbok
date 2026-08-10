@@ -76,6 +76,7 @@ async function buildLedgerMarkdown(campaign: Campaign): Promise<string | null> {
     bills,
     campaignDate: campaign.campaignDate,
     calendar: system?.calendar ?? system?.routePlanner?.calendar,
+    reservePotLabel: engine?.terms.reservePot,
   });
 }
 

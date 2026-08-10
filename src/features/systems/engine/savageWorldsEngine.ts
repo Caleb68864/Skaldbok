@@ -239,6 +239,7 @@ export const savageWorldsEngine: SystemEngine = {
     magicResource: 'PP',
     healthResource: 'Wounds',
     roleFallback: 'Wild Card',
+    reservePot: 'Party fund',
   },
   labels: {
     abilitiesScreen: null,

@@ -9,10 +9,16 @@ const pctClass = `${inputClass} max-w-[6rem] text-right`;
 /** Props for {@link SplitEditor}. */
 export interface SplitEditorProps {
   split: ReturnType<typeof useLedgerSplit>;
+  /**
+   * What the active ruleset calls the pot taken off the top — "Ship fund",
+   * "Party fund". Supplied by the caller from the engine's `terms.reservePot`;
+   * this editor names no ruleset's own concept.
+   */
+  reservePotLabel: string;
 }
 
 /**
- * Edits the crew's payout agreement: a ship-fund cut off the top, then one
+ * Edits the crew's payout agreement: a reserve cut off the top, then one
  * hand-entered percentage per crew member for the remainder.
  *
  * @remarks
@@ -23,7 +29,7 @@ export interface SplitEditorProps {
  * contain; under 100 is a legitimate in-progress state and distributes with a
  * visible unallocated leg.
  */
-export function SplitEditor({ split }: SplitEditorProps) {
+export function SplitEditor({ split, reservePotLabel }: SplitEditorProps) {
   const { split: record, validation, payeeOptions, setShipFundPct, setRow, addRow, removeRow, applyEvenSplit } = split;
 
   if (!record) return null;
@@ -46,7 +52,7 @@ export function SplitEditor({ split }: SplitEditorProps) {
     <SectionPanel title="Payout split" subtitle="How income is divided when you distribute">
       <div className="flex flex-col gap-[var(--space-sm)]">
         <label className="flex items-center gap-[var(--space-sm)]">
-          <span className="flex-1">Ship fund (off the top, stays in the book)</span>
+          <span className="flex-1">{reservePotLabel} (off the top, stays in the book)</span>
           <input
             className={pctClass}
             inputMode="decimal"

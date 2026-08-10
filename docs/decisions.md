@@ -3299,3 +3299,26 @@ b"` with a real break parses as a broken
 - Note: most of the 2026-07-26 hardening backlog is now stale. Items 3, 4, 7, 9,
   10 and 17 were checked this pass and are already fixed in Production.
 - Commit: feat(a11y) — Escape, focus trap and focus restore for hand-rolled dialogs.
+
+## 2026-08-10 — Traveller vocabulary out of shared code: finance lines and the reserve pot
+- Symptom: the sheet's Finances panel named six Traveller field ids in
+  `SheetScreen` and again in `PrintableSheet` (two copies, already in different
+  orders), with "(Cr)" baked into the labels; the payout split called its
+  off-the-top pot "Ship fund" everywhere including the export; the debt list was
+  labelled with `denominations[0]`.
+- Fix: `system.financeFields` (id/label/unit/per/group) read by both sheet
+  surfaces; `terms.reservePot` read by the split editor, distribute preview,
+  entry table, session log and export; both new readers and the debt list take
+  the unit from `baseDenominationId`.
+- Surfaces: SheetScreen, PrintableSheet, LedgerScreen, SplitEditor,
+  DistributeModal, useLedger, renderLedger, ledgerMath.
+- Watch: the persisted `shipFund` leg kind and `shipFundPct` field are
+  deliberately NOT renamed — they are stored ids, and renaming them orphans every
+  distribution already written. Only the label moves.
+- Watch also: `denominations[0]` is not the base denomination. For a coins system
+  it is gold while the stored figure is copper — wrong by 100. Read
+  `baseDenominationId`.
+- Verified: build clean, 1104 tests (3 new). Browser check against the live
+  Traveller character — all six finance lines render with labels identical to the
+  hardcoded ones, and the ledger still reads "Ship fund".
+- Commit: feat(systems) — finance lines and the reserve pot come from the ruleset.

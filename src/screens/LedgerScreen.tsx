@@ -88,7 +88,8 @@ export default function LedgerScreen() {
 
   if (!activeCampaign) return <NoCampaignPrompt />;
 
-  const { rows, balance, formatMoney, baseDenomination, currencyLabel, accounts, summary } = ledger;
+  const { rows, balance, formatMoney, baseDenomination, currencyLabel, accounts, summary, reservePotLabel } =
+    ledger;
   const abbr = baseDenomination?.abbr ?? '';
   const amount = Math.trunc(Number(amountText));
   const amountIsUsable = amountText.trim() !== '' && Number.isFinite(amount) && amount !== 0;
@@ -260,7 +261,7 @@ export default function LedgerScreen() {
         onRemove={id => ledger.removeBill(id)}
       />
 
-      <SplitEditor split={split} />
+      <SplitEditor split={split} reservePotLabel={reservePotLabel} />
 
       <SectionPanel title="Entries">
         {rows.length === 0 ? (
@@ -318,7 +319,7 @@ export default function LedgerScreen() {
                           <td className="py-1 pr-2 pl-4">
                             ⤷{' '}
                             {leg.kind === 'shipFund'
-                              ? 'Ship fund'
+                              ? reservePotLabel
                               : leg.kind === 'unallocated'
                                 ? 'Unallocated'
                                 : leg.payeeName || 'Unnamed'}
@@ -365,6 +366,7 @@ export default function LedgerScreen() {
           balance={balance}
           formatMoney={formatMoney}
           denominationAbbr={abbr}
+          reservePotLabel={reservePotLabel}
           onCancel={() => setIsDistributing(false)}
           onConfirm={async input => {
             await ledger.addDistribution(input);

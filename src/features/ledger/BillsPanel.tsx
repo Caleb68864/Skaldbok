@@ -6,6 +6,7 @@ import { isRouteDateValid } from '../../utils/route/calendar';
 import type { RouteCalendar } from '../../utils/route/calendar';
 import type { RecurringBill } from '../../types/recurringBill';
 import type { LedgerAccount } from '../../types/ledgerAccount';
+import { DEFAULT_BILL_INTERVAL_DAYS } from '../../config/defaults/ledger';
 
 const inputClass =
   'w-full min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]';
@@ -34,7 +35,7 @@ export interface BillsPanelProps {
 const EMPTY = {
   name: '',
   amount: '',
-  everyDays: '30',
+  everyDays: String(DEFAULT_BILL_INTERVAL_DAYS),
   startDate: '',
   accountId: '',
   counterAccountId: '',
@@ -261,7 +262,7 @@ export function BillsPanel({
                   void onAdd({
                     name: draft.name.trim(),
                     amount,
-                    everyDays: Number(draft.everyDays) || 30,
+                    everyDays: Number(draft.everyDays) || DEFAULT_BILL_INTERVAL_DAYS,
                     startDate: draft.startDate.trim() || campaignDate,
                     accountId: draft.accountId || undefined,
                     counterAccountId: draft.counterAccountId || undefined,

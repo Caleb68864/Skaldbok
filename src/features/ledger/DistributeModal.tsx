@@ -17,6 +17,8 @@ export interface DistributeModalProps {
   balance: number;
   formatMoney: (baseUnits: number) => string;
   denominationAbbr: string;
+  /** The active ruleset's name for the pot kept off the top — see `terms.reservePot`. */
+  reservePotLabel: string;
   onCancel: () => void;
   onConfirm: (input: {
     date: string;
@@ -57,6 +59,7 @@ export function DistributeModal({
   balance,
   formatMoney,
   denominationAbbr,
+  reservePotLabel,
   onCancel,
   onConfirm,
 }: DistributeModalProps) {
@@ -192,7 +195,7 @@ export function DistributeModal({
               <div key={i} className="flex justify-between gap-2">
                 <span>
                   {leg.kind === 'shipFund'
-                    ? 'Ship fund'
+                    ? reservePotLabel
                     : leg.kind === 'unallocated'
                       ? 'Unallocated'
                       : leg.payeeName || 'Unnamed'}

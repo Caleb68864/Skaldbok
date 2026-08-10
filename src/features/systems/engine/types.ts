@@ -236,6 +236,18 @@ export interface SystemTerms {
   healthResource: string;
   /** Fallback shown when a character has no profession/role set. */
   roleFallback: string;
+  /**
+   * The pot taken off the top of a payout and kept by the group — Traveller's
+   * "Ship fund", a fantasy party's "Party fund", a guild's tithe.
+   *
+   * @remarks
+   * A label only. The persisted leg kind stays `shipFund` and the split field
+   * stays `shipFundPct`, because those are stored ids: renaming them would
+   * orphan every distribution already written. This is the one place the
+   * ledger's vocabulary varies, and it was the last Traveller noun left in an
+   * otherwise system-neutral cashbook.
+   */
+  reservePot: string;
 }
 
 /**

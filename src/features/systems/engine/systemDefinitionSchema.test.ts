@@ -143,4 +143,43 @@ describe('systemDefinitionSchema', () => {
       expect(result.data.labels?.creatureMovement).toBe('Stride');
     }
   });
+
+  it('survives a financeFields declaration intact', () => {
+    // Zod strips unknown keys, so a field added to the type but not the schema
+    // vanishes for imported systems while working for bundled ones.
+    const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));
+    def.financeFields = [
+      { id: 'debt', label: 'Debt', unit: 'currency' },
+      { id: 'income', label: 'Income', unit: 'currency', per: 'month', group: 'Cash Flow' },
+    ];
+    const result = systemDefinitionSchema.safeParse(def);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.financeFields).toEqual(def.financeFields);
+    }
+  });
+
+  it('keeps the reservePot term, which the ledger reads', () => {
+    const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));
+    def.terms = { ...(def.terms ?? {}), reservePot: 'Guild tithe' };
+    const result = systemDefinitionSchema.safeParse(def);
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.terms?.reservePot).toBe('Guild tithe');
+  });
+
+  it('still declares every finance line the Traveller sheet used to hardcode', () => {
+    // These six were literals in SheetScreen and again in PrintableSheet.
+    // Dropping one from system.json now blanks it on both surfaces at once,
+    // with nothing else to notice.
+    const traveller = BUNDLED_SYSTEMS.find(s => s.id === 'traveller');
+    expect(traveller).toBeDefined();
+    expect((traveller?.financeFields ?? []).map(f => f.id)).toEqual([
+      'shipShares',
+      'debt',
+      'income',
+      'livingCost',
+      'annualPension',
+      'shipPayments',
+    ]);
+  });
 });

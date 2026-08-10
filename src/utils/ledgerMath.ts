@@ -156,7 +156,11 @@ export function computeDistribution(gross: number, split: SplitSnapshot): Distri
     );
   }
   if (split.shipFundPct < 0 || split.shipFundPct > 100) {
-    throw new Error(`The ship fund must be between 0% and 100% (got ${split.shipFundPct}%).`);
+    // Neutral wording: this module has no engine and so no ruleset's word for
+    // the pot. The field id stays `shipFundPct`, which is stored data.
+    throw new Error(
+      `The share kept off the top must be between 0% and 100% (got ${split.shipFundPct}%).`,
+    );
   }
 
   const legs: LedgerLeg[] = [];

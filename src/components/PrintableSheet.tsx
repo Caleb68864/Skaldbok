@@ -279,21 +279,28 @@ function AbilitiesSpells({
 // ──────────────────────────────────────────────
 
 /** Prints the character's money per the engine's currency denominations. */
-function Currency({ character, engine }: { character: CharacterRecord; engine: SystemEngine }): React.ReactElement {
+function Currency({
+  character,
+  engine,
+  system,
+}: {
+  character: CharacterRecord;
+  engine: SystemEngine;
+  system: SystemDefinition | null;
+}): React.ReactElement {
   const denominations = engine.currency.denominations;
   const amounts = engine.currency.read(character);
   // A lone denomination carries its unit in the label ("Credits (Cr)") since
   // there is no second box to give it context.
   const showAbbr = denominations.length === 1;
-  // Optional Traveller Finances lines, printed only when the sheet records one.
-  const financeLines: Array<[string, string]> = [
-    ['shipShares', 'Ship Shares'],
-    ['debt', 'Debt'],
-    ['income', 'Income'],
-    ['livingCost', 'Cost of Living'],
-    ['annualPension', 'Annual Pension'],
-    ['shipPayments', 'Ship Payments'],
-  ];
+  // The ruleset's own finance lines, printed only when the sheet records one.
+  // Declared in system.json, as the screen sheet's are — the two used to hold
+  // separate copies of the same Traveller list, so adding a line meant editing
+  // both and forgetting one meant it printed blank.
+  const financeLines: Array<[string, string]> = (system?.financeFields ?? []).map(f => [
+    f.id,
+    f.label,
+  ]);
   return (
     <div className="sheet-currency">
       <div className="sheet-section-header">Currency</div>
@@ -821,7 +828,7 @@ export default function PrintableSheet({
         {/* Left: Abilities/Spells + Currency */}
         <div className="print-col print-col--left">
           <AbilitiesSpells character={character} engine={engine} />
-          <Currency character={character} engine={engine} />
+          <Currency character={character} engine={engine} system={system} />
         </div>
 
         {/* Center: Skills */}

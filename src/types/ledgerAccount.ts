@@ -63,6 +63,3 @@ export const ledgerAccountSchema = z.object({
 });
 
 export type LedgerAccount = z.infer<typeof ledgerAccountSchema>;
-
-/** The account every campaign starts with. */
-export const DEFAULT_PRIMARY_ACCOUNT_NAME = 'Cash';

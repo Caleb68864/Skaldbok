@@ -21,8 +21,20 @@ export interface LedgerExportContext {
   /** The campaign's in-world date, for reporting when each charge next falls due. */
   campaignDate?: string;
   calendar?: RouteCalendar;
+  /**
+   * What the campaign's ruleset calls the pot kept off the top of a payout —
+   * the engine's `terms.reservePot`.
+   *
+   * @remarks
+   * Optional, and it falls back to a neutral "Reserve" rather than to any one
+   * ruleset's word, so an export written without a system to hand does not
+   * quietly file a fantasy party's cut under "Ship fund".
+   */
+  reservePotLabel?: string;
 }
 
+/** Neutral fallback when no ruleset supplied its own word. */
+const DEFAULT_RESERVE_POT_LABEL = 'Reserve';
 
 /** Escapes a value for a Markdown table cell, where a raw pipe would split the row. */
 function cell(value: string): string {
@@ -30,8 +42,8 @@ function cell(value: string): string {
 }
 
 /** How a leg reads in the exported book. */
-function legLabel(leg: LedgerLeg): string {
-  if (leg.kind === 'shipFund') return 'Ship fund';
+function legLabel(leg: LedgerLeg, reservePotLabel: string): string {
+  if (leg.kind === 'shipFund') return reservePotLabel;
   if (leg.kind === 'unallocated') return 'Unallocated';
   return leg.payeeName ?? 'Unnamed payee';
 }
@@ -63,6 +75,7 @@ export function renderLedgerToMarkdown(
   formatMoney: (baseUnits: number) => string,
   context?: LedgerExportContext,
 ): string {
+  const reservePotLabel = context?.reservePotLabel ?? DEFAULT_RESERVE_POT_LABEL;
   const accounts = context?.accounts ?? [];
   const hasAccounts = accounts.length > 0;
 
@@ -115,7 +128,9 @@ export function renderLedgerToMarkdown(
       const pct = leg.pct !== undefined ? ` (${leg.pct}%)` : '';
       const note = leg.kind === 'shipFund' ? 'retained' : 'paid';
       lines.push(
-        `| | ⤷ ${cell(legLabel(leg))}${pct} — ${note} | | ${cell(formatMoney(leg.amount))} | |`,
+        `| | ⤷ ${cell(legLabel(leg, reservePotLabel))}${pct} — ${note} | | ${cell(
+          formatMoney(leg.amount),
+        )} | |`,
       );
     }
   }
@@ -202,7 +217,7 @@ export function renderLedgerToMarkdown(
       if (row.gross !== undefined) {
         lines.push(`- Gross divided: ${formatMoney(row.gross)}`);
       }
-      lines.push(`- Ship fund: ${snap.shipFundPct}% (retained)`);
+      lines.push(`- ${reservePotLabel}: ${snap.shipFundPct}% (retained)`);
       for (const splitRow of snap.rows) {
         lines.push(`- ${splitRow.payeeName}: ${splitRow.pct}%`);
       }

@@ -356,6 +356,7 @@ export const travellerEngine: SystemEngine = {
     magicResource: 'PSI',
     healthResource: 'END',
     roleFallback: 'Traveller',
+    reservePot: 'Ship fund',
   },
   labels: {
     // null => the abilities/magic tab is hidden entirely rather than linking to

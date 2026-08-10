@@ -176,6 +176,32 @@ export interface QuickRefCard {
   note?: string;
 }
 
+/**
+ * One numeric bookkeeping line on the sheet's Finances panel.
+ *
+ * @remarks
+ * A holding or an obligation rather than spendable currency — Traveller's Ship
+ * Shares, its mortgage figure, its monthly nut — so the value lives in
+ * `CharacterRecord.systemData` under {@link FinanceField.id} rather than in
+ * `wealth`, which the engine's currency model owns.
+ */
+export interface FinanceField {
+  id: string;
+  label: string;
+  /** Appends the system's base denomination abbreviation to the label. */
+  unit?: 'currency';
+  /**
+   * Cadence for a recurring line, rendered into the label — `'month'` gives
+   * "Income (Cr / month)". Absent means a standing figure, not a flow.
+   */
+  per?: string;
+  /**
+   * Sub-heading this line groups under, e.g. "Cash Flow". Lines declaring no
+   * group render first, above the grouped ones, in declaration order.
+   */
+  group?: string;
+}
+
 export interface SystemDefinition {
   id: string;
   version: number;
@@ -216,6 +242,23 @@ export interface SystemDefinition {
     /** `text` renders a single-line input, `textarea` a multi-line one. */
     type?: 'text' | 'textarea';
   }>;
+  /**
+   * Numeric bookkeeping lines shown on the sheet's Finances panel beneath the
+   * currency denominations, in display order. Each `id` is a key in
+   * `CharacterRecord.systemData`.
+   *
+   * @remarks
+   * These are holdings and obligations, not spendable currency — Traveller's
+   * Ship Shares and its mortgage figure — so they live in `systemData` rather
+   * than in `wealth`, and each ruleset names its own. The sheet used to render
+   * Traveller's two by name, with the credit abbreviation baked into the label,
+   * for every system that showed the panel at all.
+   *
+   * `unit: 'currency'` appends the system's base denomination abbreviation to
+   * the label, so a ruleset writes "Debt" and the sheet shows "Debt (Cr)"
+   * without naming anybody's money.
+   */
+  financeFields?: FinanceField[];
   /**
    * Extra per-item fields this system wants on weapons and armour, beyond the
    * shared core (name, damage, equipped…).

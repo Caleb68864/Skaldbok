@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 19,
+  "version": 20,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -829,6 +829,45 @@
     "starfarers-cockpit",
     "databank",
     "neon-sprawl"
+  ],
+  "financeFields": [
+    {
+      "id": "shipShares",
+      "label": "Ship Shares"
+    },
+    {
+      "id": "debt",
+      "label": "Debt",
+      "unit": "currency"
+    },
+    {
+      "id": "income",
+      "label": "Income",
+      "unit": "currency",
+      "per": "month",
+      "group": "Cash Flow"
+    },
+    {
+      "id": "livingCost",
+      "label": "Cost of Living",
+      "unit": "currency",
+      "per": "month",
+      "group": "Cash Flow"
+    },
+    {
+      "id": "annualPension",
+      "label": "Annual Pension",
+      "unit": "currency",
+      "per": "year",
+      "group": "Cash Flow"
+    },
+    {
+      "id": "shipPayments",
+      "label": "Ship Payments",
+      "unit": "currency",
+      "per": "month",
+      "group": "Cash Flow"
+    }
   ],
   "identityFields": [
     {

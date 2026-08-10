@@ -98,6 +98,13 @@ export const systemDefinitionSchema = z.object({
     label: z.string().min(1),
     type: z.enum(['text', 'textarea']).optional(),
   })).optional().describe('Identity fields shown on the sheet, keyed into character.metadata'),
+  financeFields: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    unit: z.enum(['currency']).optional(),
+    per: z.string().min(1).optional(),
+    group: z.string().min(1).optional(),
+  })).optional().describe('Numeric finance lines on the sheet, keyed into character.systemData'),
   itemFields: z.object({
     weapon: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
     armor: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
@@ -122,6 +129,7 @@ export const systemDefinitionSchema = z.object({
     magicResource: z.string().optional(),
     healthResource: z.string().optional(),
     roleFallback: z.string().optional(),
+    reservePot: z.string().optional(),
   }).optional().describe('Overrides for system vocabulary; omitted keys use engine defaults'),
   // Mirrors the full SystemLabels surface (engine/types.ts) so EVERY label can
   // be renamed from system.json, not just these first four — Zod strips

@@ -25,6 +25,7 @@ import {
 import { GUARDS } from '../features/systems/cards/guards';
 import { getEngine } from '../features/systems/engine';
 import type { RestDefinition } from '../features/systems/engine/types';
+import type { FinanceField } from '../types/system';
 import { useAutosave } from '../hooks/useAutosave';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 import { useFieldEditable, useIsEditMode, FIELD_PATHS } from '../utils/modeGuards';
@@ -821,23 +822,57 @@ export default function SheetScreen() {
   const creationSubHeading =
     'm-0 mb-[var(--space-xs)] text-[length:var(--font-size-sm)] font-semibold uppercase tracking-wide text-[var(--color-accent)]';
 
-  // A single numeric finance line backed by systemData (Ship Shares, Debt, etc.).
-  // These sit alongside the currency denominations but are plain Traveller
-  // bookkeeping fields, not spendable currency, so they live in systemData.
-  const financeField = (key: string, label: string) => (
-    <div>
-      <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">{label}</label>
-      <input
-        type="number"
-        min={0}
-        aria-label={label}
-        className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
-        value={sysStr(key)}
-        disabled={!identityEditable}
-        onChange={e => setSysStr(key, e.target.value)}
-      />
-    </div>
-  );
+  // The denomination amounts are counted in — what a `unit: 'currency'` finance
+  // line is expressed in, and what an itemised debt is quoted in. Read via
+  // `baseDenominationId` rather than taking `denominations[0]`: for a coins
+  // system the first entry is gold while the stored figure is copper, so the
+  // first entry labels the number with the wrong unit by a factor of 100.
+  const baseDenomination =
+    engine.currency.denominations.find(d => d.id === engine.currency.baseDenominationId) ?? null;
+
+  // A single numeric finance line backed by systemData — a holding or an
+  // obligation rather than spendable currency, which is why it is not in
+  // `wealth`. Which lines exist, and what they are called, comes from
+  // `system.financeFields`; this screen names none of them.
+  const declaredFinanceFields: FinanceField[] = system?.financeFields ?? [];
+  const ungroupedFinanceFields = declaredFinanceFields.filter(f => !f.group);
+  // Groups in first-declaration order, each holding its lines in declaration
+  // order — a Map rather than a sort, so the ruleset's own sequence survives.
+  const financeFieldGroups = [
+    ...declaredFinanceFields
+      .filter(f => f.group)
+      .reduce((acc, field) => {
+        acc.set(field.group!, [...(acc.get(field.group!) ?? []), field]);
+        return acc;
+      }, new Map<string, FinanceField[]>())
+      .entries(),
+  ];
+
+  const financeField = (field: FinanceField) => {
+    const unit = field.unit === 'currency' && baseDenomination ? baseDenomination.abbr : '';
+    // "Income (Cr / month)" with a unit, "Income (per month)" without one — a
+    // bare "(/ month)" reads as a typo.
+    const qualifier = unit
+      ? [unit, field.per && `/ ${field.per}`].filter(Boolean).join(' ')
+      : field.per
+        ? `per ${field.per}`
+        : '';
+    const label = qualifier ? `${field.label} (${qualifier})` : field.label;
+    return (
+      <div key={field.id}>
+        <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">{label}</label>
+        <input
+          type="number"
+          min={0}
+          aria-label={label}
+          className={cn(inputClass(identityEditable), identityEditable ? 'field--editable' : 'field--locked')}
+          value={sysStr(field.id)}
+          disabled={!identityEditable}
+          onChange={e => setSysStr(field.id, e.target.value)}
+        />
+      </div>
+    );
+  };
 
   const financesPanel = (
     <SectionPanel title="Finances" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
@@ -865,17 +900,14 @@ export default function SheetScreen() {
             />
           </div>
         ))}
-        {/* Assets held outside spendable cash. Ship Shares are the character's
-            documented stake in a starship (see the ship-entity model); Debt is
-            owed capital. Both mirror the Book's Finances block. */}
-        {financeField('shipShares', 'Ship Shares')}
-        {financeField('debt', 'Debt (Cr)')}
+        {/* Standing holdings and obligations, as the ruleset declares them. */}
+        {ungroupedFinanceFields.map(financeField)}
 
-        {/* Itemised debts, distinct from the Book's single Debt total above:
-            that line is a mortgage figure and cannot say who you owe or why. */}
+        {/* Itemised debts, distinct from any single Debt total above: that line
+            is a lump figure and cannot say who you owe or why. */}
         <DebtList
           debts={character.debts ?? []}
-          abbr={engine.currency.denominations[0]?.abbr ?? ''}
+          abbr={baseDenomination?.abbr ?? ''}
           editable={identityEditable}
           onAdd={debt => updateCharacter({
             ...addDebt(character, debt, generateId(), nowISO()), updatedAt: nowISO(),
@@ -898,17 +930,14 @@ export default function SheetScreen() {
           onRemove={id => updateCharacter({ ...removeDebt(character, id), updatedAt: nowISO() })}
         />
 
-        {/* Monthly / annual cash flow — the recurring lines from the Book's
-            Finances block. Cost of Living is the Book's "Living Costs". */}
-        <div>
-          <h4 className={creationSubHeading}>Cash Flow</h4>
-          <div className="flex flex-col gap-[var(--space-md)]">
-            {financeField('income', 'Income (Cr / month)')}
-            {financeField('livingCost', 'Cost of Living (Cr / month)')}
-            {financeField('annualPension', 'Annual Pension (Cr / year)')}
-            {financeField('shipPayments', 'Ship Payments (Cr / month)')}
+        {/* Grouped lines — recurring cash flow, and whatever else a ruleset
+            chooses to gather under a heading of its own. */}
+        {financeFieldGroups.map(([heading, fields]) => (
+          <div key={heading}>
+            <h4 className={creationSubHeading}>{heading}</h4>
+            <div className="flex flex-col gap-[var(--space-md)]">{fields.map(financeField)}</div>
           </div>
-        </div>
+        ))}
 
         <div>
           <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Finance Notes</label>
