@@ -5,6 +5,7 @@ import { computeDistribution } from '../../utils/ledgerMath';
 import type { DistributionResult } from '../../utils/ledgerMath';
 import type { SplitSnapshot } from '../../types/ledger';
 import type { SplitValidation } from '../../utils/ledgerMath';
+import { useOverlayDismiss } from '../../components/primitives/useOverlayDismiss';
 
 const inputClass =
   'w-full min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]';
@@ -59,6 +60,9 @@ export function DistributeModal({
   onCancel,
   onConfirm,
 }: DistributeModalProps) {
+  // Escape, a focus trap and focus restore — this is a hand-rolled
+  // dialog, so none of it comes for free. See useOverlayDismiss.
+  const dialogRef = useOverlayDismiss<HTMLDivElement>(onCancel);
   const { showToast } = useToast();
   const [alsoRecordIncome, setAlsoRecordIncome] = useState(false);
   const [grossText, setGrossText] = useState('');
@@ -130,6 +134,7 @@ export function DistributeModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-[var(--space-md)]"
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Distribute"

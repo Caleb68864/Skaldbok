@@ -3,6 +3,7 @@ import { Button } from '../../components/primitives/Button';
 import { parseRouteImport } from '../../utils/route/parseRouteImport';
 import type { ParsedRouteStop } from '../../utils/route/parseRouteImport';
 import type { RouteFieldSpec } from '../../utils/export/renderRoute';
+import { useOverlayDismiss } from '../../components/primitives/useOverlayDismiss';
 
 /** Props for {@link RouteImportModal}. */
 export interface RouteImportModalProps {
@@ -37,6 +38,9 @@ export function RouteImportModal({
   onCancel,
   onImport,
 }: RouteImportModalProps) {
+  // Escape, a focus trap and focus restore — this is a hand-rolled
+  // dialog, so none of it comes for free. See useOverlayDismiss.
+  const dialogRef = useOverlayDismiss<HTMLDivElement>(onCancel);
   const [text, setText] = useState('');
   const [parsed, setParsed] = useState<ParsedRouteStop[] | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -81,6 +85,7 @@ export function RouteImportModal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-[var(--space-md)]"
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Import route"

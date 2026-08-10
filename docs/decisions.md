@@ -3269,3 +3269,33 @@ b"` with a real break parses as a broken
 - Verified: 28 tests on this renderer, 14 of them the pre-existing
   entries-only ones, unchanged. Full suite 1095.
 - Commit: feat(export) — accounts and recurring charges in the exported ledger.
+
+## 2026-08-09 — Escape, a focus trap and focus restore for hand-rolled dialogs
+- Symptom: the ledger's three overlays are hand-built `<div role="dialog">`s.
+  They announced themselves as modal and behaved as nothing of the kind — no
+  Escape, no focus trap, no focus restore. Tab walked straight out of the dialog
+  into the page behind it, which on a tablet means the on-screen keyboard starts
+  editing the ledger underneath the modal still covering it.
+- Fix: `components/primitives/useOverlayDismiss`, a bridge for overlays whose
+  markup would have to be restructured to adopt the Radix-backed `Modal`. New
+  overlays should still use `Modal`.
+- Surfaces: `DistributeModal`, `LedgerImportModal`, `RouteImportModal`.
+- Watch: **a trap is only a trap if focus is inside it.** `LedgerImportModal` had
+  no `autoFocus`, so focus never entered, and a trap that only acts at the first
+  and last element did nothing at all. The hook moves focus in on mount.
+- Watch also: **`autoFocus` fires during commit, before effects.** Capturing the
+  previously-focused element inside the effect therefore captured the dialog's
+  *own* input, and the hook faithfully restored focus to a detached node. It is
+  captured during the first render instead, which happens before the commit.
+- Watch also: two plausible ways to detect "was focus lost" both fail. The
+  dialog node is already detached by cleanup time, so asking whether it contains
+  the active element always says no; and focus does not reliably fall back to
+  `body` — here it landed on a tabbable scroll container, indistinguishable from
+  a deliberate move. A `focusin` listener records it as it happens instead.
+- Watch also: the keydown listener is on the **capture** phase, or an input that
+  stops propagation on its own keydown swallows Escape first.
+- Verified: 8 browser checks across two dialogs — opens, Tab stays inside over 25
+  presses, Escape closes, focus returns to the opener.
+- Note: most of the 2026-07-26 hardening backlog is now stale. Items 3, 4, 7, 9,
+  10 and 17 were checked this pass and are already fixed in Production.
+- Commit: feat(a11y) — Escape, focus trap and focus restore for hand-rolled dialogs.

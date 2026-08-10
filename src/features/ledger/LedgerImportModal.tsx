@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { Button } from '../../components/primitives/Button';
 import { parseLedgerImport } from '../../utils/ledger/parseLedgerImport';
 import type { ParsedLedgerAccount, ParsedLedgerEntry } from '../../utils/ledger/parseLedgerImport';
+import { useOverlayDismiss } from '../../components/primitives/useOverlayDismiss';
 
 /** Props for {@link LedgerImportModal}. */
 export interface LedgerImportModalProps {
@@ -39,6 +40,9 @@ const EXAMPLE = `{
  * as income leaves a balance wrong by twice the figure and entirely plausible.
  */
 export function LedgerImportModal({ formatMoney, onCancel, onImport }: LedgerImportModalProps) {
+  // Escape, a focus trap and focus restore — this is a hand-rolled
+  // dialog, so none of it comes for free. See useOverlayDismiss.
+  const dialogRef = useOverlayDismiss<HTMLDivElement>(onCancel);
   const [text, setText] = useState('');
   const [accounts, setAccounts] = useState<ParsedLedgerAccount[]>([]);
   const [entries, setEntries] = useState<ParsedLedgerEntry[]>([]);
@@ -89,6 +93,7 @@ export function LedgerImportModal({ formatMoney, onCancel, onImport }: LedgerImp
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-[var(--space-md)]"
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Import ledger"
