@@ -4,6 +4,15 @@ import type { CreatureStatField } from '../../types/system';
 import { readCreatureStat } from './creatureStats';
 import { cn } from '../../lib/utils';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
+import { RepeatableRows, type RepeatableColumn } from '../../components/fields/RepeatableRows';
+import {
+  abilityRows,
+  attackRows,
+  rowsToAbilities,
+  rowsToAttacks,
+  rowsToSkills,
+  skillRows,
+} from './creatureRows';
 
 export type FormData = Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>;
 
@@ -27,6 +36,31 @@ const primaryBtnClass = 'min-h-11 px-5 py-2 bg-[var(--color-accent)] text-[var(-
 const secondaryBtnClass = 'min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer';
 
 /**
+ * Column sets for the three list fields.
+ *
+ * @remarks
+ * Labels are distinct across the three tables on purpose — `RepeatableRows`
+ * uses the label as each input's `aria-label`, so three columns all called
+ * "Name" would leave a screen reader (and a test) unable to tell an attack from
+ * an ability.
+ */
+const ATTACK_COLUMNS: RepeatableColumn[] = [
+  { key: 'name', label: 'Attack', flex: '1 1 120px' },
+  { key: 'damage', label: 'Damage', flex: '1 1 90px' },
+  { key: 'range', label: 'Range', flex: '1 1 90px' },
+  { key: 'skill', label: 'Skill used', flex: '1 1 110px' },
+  { key: 'special', label: 'Special', flex: '1 1 100%' },
+];
+const ABILITY_COLUMNS: RepeatableColumn[] = [
+  { key: 'name', label: 'Ability', flex: '1 1 120px' },
+  { key: 'description', label: 'Description', flex: '1 1 100%' },
+];
+const SKILL_COLUMNS: RepeatableColumn[] = [
+  { key: 'name', label: 'Skill', flex: '1 1 140px' },
+  { key: 'value', label: 'Level', flex: '0 1 90px', type: 'number' },
+];
+
+/**
  * Form for creating or editing a creature template.
  * Renders as a modal overlay.
  */
@@ -44,6 +78,9 @@ export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, 
     }
     return seeded;
   });
+  const [attacks, setAttacks] = useState<Record<string, string>[]>(() => attackRows(initial?.attacks ?? []));
+  const [abilities, setAbilities] = useState<Record<string, string>[]>(() => abilityRows(initial?.abilities ?? []));
+  const [skills, setSkills] = useState<Record<string, string>[]>(() => skillRows(initial?.skills ?? []));
   const [tagsText, setTagsText] = useState(initial?.tags.join(', ') ?? '');
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? '');
   const [saving, setSaving] = useState(false);
@@ -60,9 +97,11 @@ export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, 
         role: role.trim() || undefined,
         affiliation: affiliation.trim() || undefined,
         stats,
-        attacks: initial?.attacks ?? [],
-        abilities: initial?.abilities ?? [],
-        skills: initial?.skills ?? [],
+        // Unnamed rows are dropped and a blank skill level becomes 0 — see
+        // creatureRows, where both rules are pinned by tests.
+        attacks: rowsToAttacks(attacks),
+        abilities: rowsToAbilities(abilities),
+        skills: rowsToSkills(skills),
         tags: tagsText
           .split(',')
           .map((t) => t.trim())
@@ -145,6 +184,43 @@ export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, 
                 />
               </div>
             ))}
+          </div>
+          {/* Attacks, abilities and skills. These were previously passed
+              through from `initial` with no editor at all, so an imported stat
+              block could be created and never corrected — a typo in a damage
+              die meant deleting the creature and importing it again. */}
+          <div>
+            <label className={labelClass}>Attacks</label>
+            <RepeatableRows
+              columns={ATTACK_COLUMNS}
+              rows={attacks}
+              onChange={setAttacks}
+              editable
+              addLabel="Attack"
+              emptyLabel="No attacks."
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Abilities</label>
+            <RepeatableRows
+              columns={ABILITY_COLUMNS}
+              rows={abilities}
+              onChange={setAbilities}
+              editable
+              addLabel="Ability"
+              emptyLabel="No abilities."
+            />
+          </div>
+          <div>
+            <label className={labelClass}>Skills</label>
+            <RepeatableRows
+              columns={SKILL_COLUMNS}
+              rows={skills}
+              onChange={setSkills}
+              editable
+              addLabel="Skill"
+              emptyLabel="No skills."
+            />
           </div>
           <div>
             <label className={labelClass}>Tags (comma separated)</label>

@@ -3406,3 +3406,26 @@ b"` with a real break parses as a broken
   correctly did NOT report `habitat`.
 - Commit: feat(bestiary) — import creatures from JSON.
 
+## 2026-08-10 — Attacks, abilities and skills become editable
+- Symptom: `CreatureTemplateForm` passed the three list fields straight through
+  (`attacks: initial?.attacks ?? []`) with no editor at all. Once the JSON
+  importer shipped, import was the ONLY way they were ever populated — so a typo
+  in an imported damage die was permanent, fixable only by deleting the creature
+  and importing it again.
+- Fix: three `RepeatableRows` tables in the form, with the row/typed conversions
+  extracted to `creatureRows.ts` and tested.
+- Surfaces: CreatureTemplateForm, features/bestiary/creatureRows.ts.
+- Watch: a row with no name is DROPPED on save — adding a row and thinking
+  better of it is the normal way to use an add/remove list, and a nameless attack
+  stores as a blank line that can only be deleted by position.
+- Watch also: a blank or unparseable skill level stores as 0, never `NaN`. `NaN`
+  passes the type (it IS a number), serialises to `null` in an export and renders
+  as "NaN" on the stat block — a corrupt record that type-checks.
+- Watch also: the three column sets use DISTINCT labels ("Attack"/"Ability"/
+  "Skill", not three "Name"s) because `RepeatableRows` uses the label as each
+  input's aria-label.
+- Verified: build clean, 1181 tests (10 new). Browser round-trip on the imported
+  Grey Wolf — edited the bite to 2d6+2, added a range, raised Survival to 3;
+  IndexedDB shows exactly that with stats and the other rows untouched.
+- Commit: feat(bestiary) — edit a creature's attacks, abilities and skills.
+
