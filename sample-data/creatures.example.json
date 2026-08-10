@@ -1,0 +1,60 @@
+{
+  "_comment": [
+    "Example input for Bestiary → Import…. Hand this file to whatever is writing",
+    "your stat blocks as a shape to follow. Everything except `name` is optional.",
+    "",
+    "The importer is forgiving: a bare array works, a single creature object works,",
+    "stat keys match by id, label or abbreviation (case- and space-insensitive), and",
+    "stats may sit at the top level instead of under `stats`. It is strict about one",
+    "thing only — a stat the active ruleset does not declare is dropped, and the",
+    "preview tells you which before anything is written.",
+    "",
+    "Stat ids below are Traveller's (see src/systems/traveller/system.json).",
+    "Dragonbane's are hp, armor and movement."
+  ],
+  "creatures": [
+    {
+      "name": "Grey Wolf",
+      "category": "animal",
+      "role": "Pack predator",
+      "affiliation": "",
+      "stats": {
+        "hp": 12,
+        "armor": 1,
+        "movement": 8,
+        "str": 7,
+        "dex": 8,
+        "end": 6
+      },
+      "attacks": [
+        {
+          "name": "Bite",
+          "damage": "2d6",
+          "range": "Melee",
+          "skill": "Melee (natural) 1",
+          "special": "Knockdown on effect 4+"
+        }
+      ],
+      "abilities": [
+        { "name": "Pack hunter", "description": "+1 DM to attack when flanking with another wolf." }
+      ],
+      "skills": [
+        { "name": "Survival", "value": 2 },
+        { "name": "Recon", "value": 1 }
+      ],
+      "tags": ["forest", "pack", "temperate"],
+      "description": "Lean and grey-brown, 40kg, hunts in packs of six to twelve."
+    },
+    {
+      "name": "Cave Bear",
+      "category": "animal",
+      "stats": { "hp": 40, "armor": 3, "movement": 6 },
+      "attacks": [
+        { "name": "Claw", "damage": "3d6" },
+        { "name": "Bite", "damage": "2d6+2" }
+      ],
+      "abilities": [{ "name": "Bellow", "description": "Fear check for anyone within 20m." }],
+      "tags": ["mountain", "solitary"]
+    }
+  ]
+}

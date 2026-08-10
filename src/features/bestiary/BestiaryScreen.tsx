@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useBestiary, type CategoryFilter } from './useBestiary';
 import { CreatureTemplateCard } from './CreatureTemplateCard';
 import { CreatureTemplateForm } from './CreatureTemplateForm';
+import { CreatureImportModal } from './CreatureImportModal';
+import type { ParsedCreature } from '../../utils/bestiary/parseCreatureImport';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { EncounterParticipant } from '../../types/encounter';
 import { db } from '../../storage/db/client';
@@ -67,6 +69,7 @@ export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClos
   const healthStatId = resolveCreatureHealthStatId(system);
 
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CreatureTemplate | null>(null);
   const [viewingTemplate, setViewingTemplate] = useState<CreatureTemplate | null>(null);
   // The ref goes on the inner panel, which is the element carrying
@@ -98,6 +101,40 @@ export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClos
     setViewingTemplate(null);
   };
 
+  /**
+   * Writes an imported batch.
+   *
+   * @remarks
+   * One `create` per creature rather than a bulk write: the repository stamps
+   * ids and timestamps, and a batch small enough to review in a preview table is
+   * not worth a second code path. Sequential, so a failure part-way leaves the
+   * creatures already written intact rather than rolling back a library the user
+   * watched arrive.
+   */
+  const handleImport = async (creatures: ParsedCreature[]) => {
+    for (const creature of creatures) {
+      await create({
+        campaignId,
+        name: creature.name,
+        category: creature.category,
+        role: creature.role,
+        affiliation: creature.affiliation,
+        stats: creature.stats,
+        attacks: creature.attacks,
+        abilities: creature.abilities,
+        skills: creature.skills,
+        tags: creature.tags,
+        description: creature.description,
+        status: 'active',
+      });
+    }
+    setShowImport(false);
+    showToast(
+      `Imported ${creatures.length} creature${creatures.length === 1 ? '' : 's'}`,
+      'success',
+    );
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm('Delete this creature? It can be restored from Trash.')) return;
     await softDelete(id);
@@ -109,6 +146,13 @@ export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClos
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-[var(--color-text)] m-0">Bestiary</h2>
         <div className="flex gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="min-h-11 px-3 py-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs cursor-pointer"
+            title="Import creatures from JSON"
+          >
+            Import…
+          </button>
           <button
             onClick={() => navigate('/bestiary/trash')}
             className="min-h-11 px-3 py-1 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs cursor-pointer"
@@ -232,7 +276,15 @@ export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClos
                 <h4 className="text-[var(--color-text)] text-xs font-semibold uppercase tracking-wide mb-1">Attacks</h4>
                 {viewingTemplate.attacks.map((a, i) => (
                   <div key={i} className="text-sm text-[var(--color-text)] mb-1">
-                    <span className="font-semibold">{a.name}</span> &mdash; {a.damage} ({a.range}, {a.skill})
+                    {/* Every part after the name is optional — an imported
+                        stat block often has damage and nothing else — so the
+                        separators are built from what is present. Interpolating
+                        them printed "2d6 (, Melee)" for an attack with no range. */}
+                    <span className="font-semibold">{a.name}</span>
+                    {a.damage && <> &mdash; {a.damage}</>}
+                    {[a.range, a.skill].filter(Boolean).length > 0 && (
+                      <> ({[a.range, a.skill].filter(Boolean).join(', ')})</>
+                    )}
                     {a.special && <span className="text-[var(--color-text-muted)]"> [{a.special}]</span>}
                   </div>
                 ))}
@@ -354,6 +406,15 @@ export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClos
           campaignId={campaignId}
           onSave={handleCreate}
           onCancel={() => setShowForm(false)}
+        />
+      )}
+
+      {/* Import */}
+      {showImport && (
+        <CreatureImportModal
+          statFields={statFields}
+          onCancel={() => setShowImport(false)}
+          onImport={handleImport}
         />
       )}
 

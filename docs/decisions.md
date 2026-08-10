@@ -3378,3 +3378,31 @@ b"` with a real break parses as a broken
   Spd".
 - Commit: feat(bestiary) — a ruleset declares its own creature stat block.
 
+## 2026-08-10 — Creature JSON import, for stat blocks researched with an AI
+- Symptom: no way to get a researched animal into the bestiary except typing it,
+  and the creature form has no editor for attacks/abilities/skills at all — so
+  those fields were only reachable via a full bundle import.
+- Fix: `parseCreatureImport` + `CreatureImportModal`, built as the sibling of
+  `parseRouteImport`/`RouteImportModal` — paste or file, preview before writing,
+  and the preview reports what was ignored.
+- Surfaces: BestiaryScreen ("Import…" button), sample-data/creatures.example.json.
+- Watch: forgiving about SHAPE, strict about STATS. Accepts a bare array, a
+  creatures/bestiary/animals wrapper or a single unwrapped creature; matches stat
+  keys by id, label or abbr, case- and separator-insensitively; reads stats
+  nested or spread at the top level; pulls a leading integer out of
+  "40 (average)" and "6m"; takes skills as a list or a {name: level} map.
+  An undeclared stat key is dropped and REPORTED.
+- Watch also: only a *nested* stat block reports unknown keys. At the top level
+  an unrecognised key is far more likely to be another property of the creature
+  ("habitat", "sources") than a mistyped stat, and reporting those as ignored
+  stats is noise that hides the real warning.
+- Watch also: a stat with no readable number is OMITTED, not stored as 0 —
+  "the file did not say" and "this creature has 0 hits" are different claims.
+- Verified: build clean, 1171 tests (23 new, one of which asserts the shipped
+  example file imports with zero warnings — it exists to be handed to an AI as
+  the shape to follow, so it must stay importable). Browser check: deliberately
+  messy AI-shaped JSON imported two creatures with full attacks/abilities/skills,
+  mapped "beast"→animal, read "40 (average)"→40, reported `morale` as ignored and
+  correctly did NOT report `habitat`.
+- Commit: feat(bestiary) — import creatures from JSON.
+
