@@ -206,11 +206,22 @@ export async function importBundle(bundle: ReferenceImportBundle): Promise<numbe
     };
   });
 
+  // Bind each imported section to its card by id. Title is the only key a
+  // bundle carries, so matching on it here is right — but leaving it at that
+  // wrote sections with no `groupId`, which has been the authoritative join
+  // since v14. They rendered only through the legacy category fallback, and
+  // renaming the card they arrived in stranded them.
+  const groupIdByTitle = new Map(groups.map(group => [group.title, group.id]));
+  const boundSections = sections.map(section => ({
+    ...section,
+    groupId: groupIdByTitle.get(section.category || 'General') ?? section.groupId,
+  }));
+
   await db.transaction('rw', [db.referenceSections, db.referenceGroups], async () => {
     await db.referenceGroups.bulkPut(groups);
-    await db.referenceSections.bulkPut(sections);
+    await db.referenceSections.bulkPut(boundSections);
   });
-  return sections.length;
+  return boundSections.length;
 }
 
 /**

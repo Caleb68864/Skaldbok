@@ -3453,3 +3453,54 @@ b"` with a real break parses as a broken
   duplicated (confirmed still 2 creatures).
 - Commit: feat(bestiary) — export creatures as JSON.
 
+## 2026-08-10 — Reference: the category picker was still label-keyed
+- Symptom: the backlog said "reference groups are joined on the mutable title".
+  The JOIN was fixed in schema v14 (`groupId` authoritative, soft-delete added) —
+  I re-verified that claim earlier today by reading `ensureGroupsForSections`,
+  which is a creation path, and got it wrong. What was actually still broken:
+  the section editor's Category `<select>` used `group.title` as its option value
+  and wrote ONLY `category`. Since v14 nothing reads `category` when a `groupId`
+  is present, so changing a section's card in the drawer moved nothing at all —
+  and two cards sharing a title (the default is "New Card") were indistinguishable.
+  Separately, `importBundle` never assigned `groupId`, so imported sections
+  rendered only through the legacy fallback and were stranded by a rename.
+- Fix: `assignSectionGroup`/`currentGroupFor` (utils/reference), picker keyed on
+  group id, and the importer binds sections to their card by id.
+- Surfaces: ReferenceScreen, referenceSectionRepository.importBundle.
+- Watch: a card synthesised at render time for an orphaned category has no row
+  behind it (`orphan-` id prefix). Assigning to one clears `groupId` and lets the
+  legacy category join carry the section — storing the placeholder id would point
+  at a row that does not exist.
+- Verified: build clean, 1207 tests (16 new, incl. fake-indexeddb coverage of the
+  import path). Reference screen loads clean in the browser; the picker itself was
+  not exercised in-app because doing so writes cards and sections into the real
+  campaign.
+- Commit: fix(reference) — move a section by card id, not by card title.
+
+## 2026-08-10 — Panels and currency move into system.json
+- Symptom: the last two code→data items on the engine roadmap. `panels` and
+  `currency.denominations` lived only in the adapter, so a JSON-only ruleset could
+  not state which panels it has or what its money is.
+- Fix: `SystemDefinition.panels` (validated against `PANEL_KEYS`) and
+  `SystemDefinition.currency` (label/denominations/baseDenominationId), merged in
+  `getEngine`. Traveller now declares both from JSON. Also deleted the dead
+  `resolution` and old `{label, abbr, mode}` `currency` from the type — removed
+  from the schema previously but left on the type, still reading as configuration.
+- Surfaces: types/system.ts, schemas/system.schema.ts, engine/index.ts,
+  utils/currency.ts (makeFormatAmount), classicFantasyEngine.
+- Watch: declaring denominations MUST rebuild `formatAmount`. The adapter's closes
+  over its own hardcoded coin list, so without the rebuild the purse and inputs
+  change and every ledger total keeps decomposing against the adapter's coins —
+  a declaration that half works.
+- Watch also: `makeFormatAmount` derives single-denomination spacing from the
+  abbreviation (word → "Cr 15,000", symbol → "$1,000"). That reproduces what
+  Traveller and Savage Worlds each hand-wrote; picking one style would have made
+  the other wrong.
+- Watch also: `getEngine` memoises on `id@version`. A test building several
+  variants of one system must vary the version or it silently gets the first
+  variant's engine back — which is a test that passes by not running.
+- Verified: build clean, 1221 tests (14 new). Browser: Traveller ledger still
+  reads "Credits" / "Cr 0", and the sheet still shows Characteristics, Finances,
+  Careers and Augments — all now sourced from JSON.
+- Commit: feat(systems) — panels and currency come from system.json.
+

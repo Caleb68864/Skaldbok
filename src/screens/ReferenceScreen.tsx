@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import * as referenceNoteRepository from '../storage/repositories/referenceNoteRepository';
 import * as referenceSectionRepository from '../storage/repositories/referenceSectionRepository';
+import { assignSectionGroup, currentGroupFor, PLACEHOLDER_GROUP_PREFIX } from '../utils/reference/assignSectionGroup';
 import type { ReferenceNote } from '../storage/db/client';
 import type { ReferenceGroup, ReferenceImportBundle, ReferenceSection, ReferenceSectionType } from '../types/reference';
 import { generateId } from '../utils/ids';
@@ -168,7 +169,7 @@ export default function ReferenceScreen() {
     const orphanGroups = Array.from(new Set(sections.map(section => section.category || 'General')))
       .filter(title => !knownTitles.has(title))
       .map((title, index): ReferenceGroup => ({
-        id: `orphan-${title}`,
+        id: `${PLACEHOLDER_GROUP_PREFIX}${title}`,
         title,
         order: groups.length + index,
         createdAt: nowISO(),
@@ -595,8 +596,24 @@ export default function ReferenceScreen() {
               </label>
               <label className="flex flex-col gap-1 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
                 Category
-                <select className={inputClasses} value={editingSection.category} onChange={e => setEditingSection({ ...editingSection, category: e.target.value })}>
-                  {visibleGroups.map(group => <option key={group.id} value={group.title}>{group.title}</option>)}
+                {/* Keyed on the group id, not its title. Two cards may share
+                    a title — "New Card" is the default — and the old picker
+                    wrote `category` alone, so choosing a different card moved
+                    nothing: `groupId` has been the authoritative join since
+                    v14. See assignSectionGroup. */}
+                <select
+                  className={inputClasses}
+                  value={currentGroupFor(editingSection, visibleGroups)?.id ?? ''}
+                  onChange={e =>
+                    setEditingSection(
+                      assignSectionGroup(
+                        editingSection,
+                        visibleGroups.find(group => group.id === e.target.value),
+                      ),
+                    )
+                  }
+                >
+                  {visibleGroups.map(group => <option key={group.id} value={group.id}>{group.title}</option>)}
                 </select>
               </label>
               <label className="flex flex-col gap-1 text-[length:var(--font-size-sm)] text-[var(--color-text-muted)]">
