@@ -237,7 +237,10 @@ export default function LedgerScreen() {
                 : refusal.reason === 'has-entries'
                   ? `${refusal.entryCount} ${refusal.entryCount === 1 ? 'entry references' : 'entries reference'} this account.` +
                     ' Delete or reassign them first — removing it now would take their money out of the totals.'
-                  : 'That account no longer exists.',
+                  : refusal.reason === 'has-bills'
+                    ? `${refusal.billCount} recurring ${refusal.billCount === 1 ? 'charge is' : 'charges are'} booked against this account.` +
+                      ' Point them elsewhere or remove them first.'
+                    : 'That account no longer exists.',
               'error',
             );
           }

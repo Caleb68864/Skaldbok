@@ -3224,3 +3224,20 @@ b"` with a real break parses as a broken
   browser run — refusing leaves the account listed and cash unmoved at
   Cr500,000, and clearing the entry lets the deletion through with cash at Cr0.
 - Commit: fix(ledger) — refuse to delete an account that has entries.
+
+
+## 2026-08-09 — a recurring charge pins its account too
+- Symptom: the has-entries guard closed the obvious door and left one open. A
+  **recurring bill** naming an account holds no entries until it posts, so a
+  fresh account could still be deleted out from under one. The next time the
+  campaign date moved, its charges landed on a dead account and their money left
+  the totals — the same defect, one step later.
+- Fix: `softDelete` also refuses `has-bills`, with the count, checking both
+  `accountId` and `counterAccountId`.
+- Surfaces: `ledgerAccountRepository.softDelete`, `LedgerScreen` toast.
+- Watch: this is the shape to look for whenever a row can be referenced without
+  yet having produced anything. "No rows point at it" is not the same as
+  "nothing depends on it" — a *template* that will produce rows later depends on
+  it just as much.
+- Verified: 13 repository tests; the full suite is 1081.
+- Commit: fix(ledger) — a recurring charge pins its account too.

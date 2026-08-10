@@ -122,7 +122,8 @@ export async function update(
 export type AccountDeleteRefusal =
   | { reason: 'missing' }
   | { reason: 'primary' }
-  | { reason: 'has-entries'; entryCount: number };
+  | { reason: 'has-entries'; entryCount: number }
+  | { reason: 'has-bills'; billCount: number };
 
 /**
  * Soft-deletes an account.
@@ -165,6 +166,15 @@ export async function softDelete(
     e => e.accountId === id || e.counterAccountId === id,
   );
   if (live.length > 0) return { reason: 'has-entries', entryCount: live.length };
+
+  // A bill naming this account is the same hole one step later. Nothing has
+  // posted yet, so there are no entries to find — but the next time the
+  // campaign date moves, the charges land on a dead account and their money
+  // leaves the totals exactly as it would have done above.
+  const bills = excludeDeleted(
+    await db.recurringBills.where('campaignId').equals(row.campaignId).toArray(),
+  ).filter(b => b.accountId === id || b.counterAccountId === id);
+  if (bills.length > 0) return { reason: 'has-bills', billCount: bills.length };
 
   await db.ledgerAccounts.update(id, {
     deletedAt: nowISO(),

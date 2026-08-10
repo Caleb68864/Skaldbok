@@ -3,6 +3,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { db } from '../db/client';
 import { create, ensureForCampaign, listByCampaign, softDelete } from './ledgerAccountRepository';
 import { create as createEntry, softDelete as softDeleteEntry } from './ledgerRepository';
+import { create as createBill } from './recurringBillRepository';
 
 /**
  * The rule these tests exist for: **an account with entries cannot be deleted.**
@@ -18,6 +19,7 @@ import { create as createEntry, softDelete as softDeleteEntry } from './ledgerRe
 beforeEach(async () => {
   await db.ledgerAccounts.clear();
   await db.ledgerEntries.clear();
+  await db.recurringBills.clear();
 });
 
 async function cashAndSavings() {
@@ -84,6 +86,35 @@ describe('softDelete — what it refuses', () => {
     await softDelete(savings.id);
     const live = await listByCampaign('c1');
     expect(live.map(a => a.id)).toContain(savings.id);
+  });
+});
+
+describe('softDelete — recurring charges pin an account too', () => {
+  it('refuses an account a bill is charged to, before anything has posted', async () => {
+    // The same hole one step later: with no charges posted there are no entries
+    // to find, but the next time the campaign date moves they land on a dead
+    // account and the money leaves the totals just the same.
+    const { savings } = await cashAndSavings();
+    await createBill({
+      campaignId: 'c1', name: 'Life support', amount: 10_000, accountId: savings.id,
+    });
+    expect(await softDelete(savings.id)).toEqual({ reason: 'has-bills', billCount: 1 });
+  });
+
+  it('refuses when the bill only names it as the account being paid down', async () => {
+    const { savings } = await cashAndSavings();
+    await createBill({
+      campaignId: 'c1', name: 'Mortgage', amount: 201_335, counterAccountId: savings.id,
+    });
+    expect(await softDelete(savings.id)).toEqual({ reason: 'has-bills', billCount: 1 });
+  });
+
+  it('allows removal once the bill is gone', async () => {
+    const { savings } = await cashAndSavings();
+    const bill = await createBill({ campaignId: 'c1', name: 'Berthing', amount: 7_000, accountId: savings.id });
+    expect(await softDelete(savings.id)).toEqual({ reason: 'has-bills', billCount: 1 });
+    await db.recurringBills.update(bill.id, { deletedAt: new Date().toISOString() });
+    expect(await softDelete(savings.id)).toBeNull();
   });
 });
 
