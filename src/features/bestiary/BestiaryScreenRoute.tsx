@@ -20,6 +20,7 @@ export function BestiaryScreenRoute() {
   return (
     <BestiaryScreen
       campaignId={activeCampaign.id}
+      systemId={activeCampaign.system}
       activeEncounterId={activeEncounter?.id}
       onClose={() => navigate(-1)}
     />

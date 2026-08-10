@@ -256,6 +256,51 @@ export interface VehicleSpec {
   placeholder?: string;
 }
 
+/**
+ * One stat on a bestiary creature. See {@link CreatureModel}.
+ */
+export interface CreatureStatField {
+  id: string;
+  label: string;
+  /** Compact form for the list card, e.g. "HP". Falls back to `label`. */
+  abbr?: string;
+  /** Include on the list card's one-line summary. Default false. */
+  summary?: boolean;
+}
+
+/**
+ * A ruleset's creature stat block.
+ *
+ * @remarks
+ * `creatureTemplate.stats` used to be a closed `{ hp, armor, movement }` — three
+ * required Dragonbane numbers. A Traveller animal has Hits, Armour and Speed
+ * *and* characteristics; it had nowhere to put any of it. Worse, the labels over
+ * those three numbers were already engine-driven (`labels.creatureHealth` and
+ * friends), so a Traveller creature honestly read "END / Plating / Stride" over
+ * a stat block that was structurally somebody else's.
+ *
+ * Absent means the ruleset takes the default hp/armor/movement set, which is
+ * exactly today's behaviour — see `DEFAULT_CREATURE_STAT_FIELDS`.
+ */
+export interface CreatureModel {
+  statFields: CreatureStatField[];
+  /**
+   * Id (into {@link statFields}) of the stat a creature's health is read from
+   * when it joins an encounter. Defaults to `hp`.
+   *
+   * @remarks
+   * The add-to-encounter flow has to seed the participant's `currentHp` from
+   * *something*, and it used to read `stats.hp` by name. Declaring it keeps that
+   * one consumer honest for a ruleset whose health stat is called anything else.
+   */
+  healthStatId?: string;
+  /**
+   * Id (into {@link statFields}) of the stat shown as a participant's armour on
+   * the combat list. Defaults to `armor`.
+   */
+  armorStatId?: string;
+}
+
 export interface SystemDefinition {
   id: string;
   version: number;
@@ -318,6 +363,11 @@ export interface SystemDefinition {
    * screen and its nav entry disappear. See {@link VehicleModel}.
    */
   vehicles?: VehicleModel;
+  /**
+   * Declares the stat block this ruleset's creatures carry. Absent = the
+   * default hp/armor/movement set. See {@link CreatureModel}.
+   */
+  creatures?: CreatureModel;
   /**
    * Extra per-item fields this system wants on weapons and armour, beyond the
    * shared core (name, damage, equipped…).

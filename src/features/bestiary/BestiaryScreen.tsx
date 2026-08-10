@@ -12,9 +12,25 @@ import { nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
+import { useSystemDefinition } from '../systems/useSystemDefinition';
+import {
+  partitionCreatureStats,
+  readCreatureStat,
+  resolveCreatureHealthStatId,
+  resolveCreatureStatFields,
+} from './creatureStats';
 
 export interface BestiaryScreenProps {
   campaignId: string;
+  /**
+   * The campaign's ruleset id — the bestiary's stat block comes from it.
+   *
+   * @remarks
+   * Resolved from the campaign rather than from the active character: a GM
+   * browsing the bestiary usually has no character open, and the creatures are
+   * campaign-scoped anyway.
+   */
+  systemId: string;
   activeEncounterId?: string;
   onClose?: () => void;
 }
@@ -33,7 +49,7 @@ const actionBtnClass = 'min-h-11 px-4 py-2 bg-[var(--color-accent)] text-[var(--
  * Campaign-scoped bestiary screen. Displays creature templates with search,
  * category filtering, and CRUD operations.
  */
-export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: BestiaryScreenProps) {
+export function BestiaryScreen({ campaignId, systemId, activeEncounterId, onClose }: BestiaryScreenProps) {
   const { showToast } = useToast();
   const {
     templates,
@@ -46,6 +62,9 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
     softDelete,
   } = useBestiary(campaignId);
   const navigate = useNavigate();
+  const { system } = useSystemDefinition(systemId);
+  const statFields = resolveCreatureStatFields(system);
+  const healthStatId = resolveCreatureHealthStatId(system);
 
   const [showForm, setShowForm] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<CreatureTemplate | null>(null);
@@ -151,6 +170,7 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
             <CreatureTemplateCard
               key={t.id}
               template={t}
+              statFields={statFields}
               onClick={() => setViewingTemplate(t)}
             />
           ))
@@ -180,21 +200,31 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats — one tile per stat this ruleset declares. */}
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="bg-[var(--color-surface-raised)] rounded-lg p-3 text-center">
-                <div className="text-[var(--color-text)] text-lg font-bold">{viewingTemplate.stats.hp}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px] uppercase tracking-wider">HP</div>
-              </div>
-              <div className="bg-[var(--color-surface-raised)] rounded-lg p-3 text-center">
-                <div className="text-[var(--color-text)] text-lg font-bold">{viewingTemplate.stats.armor}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px] uppercase tracking-wider">Armor</div>
-              </div>
-              <div className="bg-[var(--color-surface-raised)] rounded-lg p-3 text-center">
-                <div className="text-[var(--color-text)] text-lg font-bold">{viewingTemplate.stats.movement}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px] uppercase tracking-wider">Movement</div>
-              </div>
+              {partitionCreatureStats(viewingTemplate, statFields).declared.map(({ field, value }) => (
+                <div key={field.id} className="bg-[var(--color-surface-raised)] rounded-lg p-3 text-center">
+                  <div className="text-[var(--color-text)] text-lg font-bold">{value}</div>
+                  <div className="text-[var(--color-text-muted)] text-[10px] uppercase tracking-wider">{field.label}</div>
+                </div>
+              ))}
             </div>
+
+            {/* Stats recorded against ids this ruleset does not declare — kept
+                visible rather than dropped, so switching a campaign's system
+                cannot silently hide a stat block somebody typed in. */}
+            {partitionCreatureStats(viewingTemplate, statFields).undeclared.length > 0 && (
+              <div className="mb-4">
+                <h4 className="text-[var(--color-text-muted)] text-xs font-semibold uppercase tracking-wider mb-1">Other</h4>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {partitionCreatureStats(viewingTemplate, statFields).undeclared.map((stat) => (
+                    <span key={stat.id} className="text-[var(--color-text-muted)] text-xs">
+                      {stat.id} <span className="text-[var(--color-text)] font-semibold">{stat.value}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Attacks */}
             {viewingTemplate.attacks.length > 0 && (
@@ -260,7 +290,7 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
                     const templateId = viewingTemplate.id;
                     const templateName = viewingTemplate.name;
                     const templateCategory = viewingTemplate.category;
-                    const templateHp = viewingTemplate.stats.hp;
+                    const templateHp = readCreatureStat(viewingTemplate, healthStatId);
                     await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
                       const enc = await db.encounters.get(activeEncounterId);
                       if (!enc) throw new Error(`encounter ${activeEncounterId} not found`);
@@ -320,6 +350,7 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
       {/* Create form */}
       {showForm && (
         <CreatureTemplateForm
+          statFields={statFields}
           campaignId={campaignId}
           onSave={handleCreate}
           onCancel={() => setShowForm(false)}
@@ -330,6 +361,7 @@ export function BestiaryScreen({ campaignId, activeEncounterId, onClose }: Besti
       {editingTemplate && (
         <CreatureTemplateForm
           initial={editingTemplate}
+          statFields={statFields}
           campaignId={campaignId}
           onSave={handleEdit}
           onCancel={() => setEditingTemplate(null)}

@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 21,
+  "version": 22,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -830,6 +830,16 @@
     "databank",
     "neon-sprawl"
   ],
+  "creatures": {
+    "statFields": [
+      { "id": "hp", "label": "Hits", "abbr": "Hits", "summary": true },
+      { "id": "armor", "label": "Armour", "abbr": "Armour", "summary": true },
+      { "id": "movement", "label": "Speed (m)", "abbr": "Spd", "summary": true },
+      { "id": "str", "label": "STR" },
+      { "id": "dex", "label": "DEX" },
+      { "id": "end", "label": "END" }
+    ]
+  },
   "vehicles": {
     "label": "Ships",
     "singular": "Ship",

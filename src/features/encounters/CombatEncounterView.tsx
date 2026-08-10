@@ -13,6 +13,12 @@ import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
 import { registerFlush } from '../persistence/autosaveFlush';
 import { useSystemEngineFor } from '../systems/engine';
+import { useSystemDefinition } from '../systems/useSystemDefinition';
+import {
+  readCreatureStat,
+  resolveCreatureArmorStatId,
+  resolveCreatureHealthStatId,
+} from '../bestiary/creatureStats';
 import { useSessionLog } from '../session/useSessionLog';
 import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 import { useCampaignContext } from '../campaign/CampaignContext';
@@ -44,6 +50,9 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   // label, so a Traveller encounter contradicted itself between the row and
   // the drawer it opens.
   const engine = useSystemEngineFor(activeCampaign?.system);
+  const { system: campaignSystem } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const healthStatId = resolveCreatureHealthStatId(campaignSystem);
+  const armorStatId = resolveCreatureArmorStatId(campaignSystem);
   const healthNoun = engine.labels.creatureHealth;
   const [encounter, setEncounter] = useState<Encounter>(initialEncounter);
   const [selectedParticipant, setSelectedParticipant] = useState<EncounterParticipant | null>(null);
@@ -165,7 +174,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
     // (which is tuned for character-sheet counter spam, not combat blurs).
     const templateId = participantTemplateMap[participantId];
     const template = templateId ? templateCache[templateId] : undefined;
-    const maxHp = template?.stats.hp;
+    const maxHp = template ? readCreatureStat(template, healthStatId) : undefined;
 
     const notePromises: Promise<unknown>[] = [];
 
@@ -230,7 +239,10 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       campaignId: encounter.campaignId,
       name,
       category: 'monster',
-      stats: { hp: stats.hp ?? 0, armor: stats.armor ?? 0, movement: stats.movement ?? 0 },
+      // Keyed by the ruleset's own ids. The quick-create flow still collects
+      // three numbers (health/armour/movement) under engine labels; a ruleset
+      // declaring more stats fills the rest in from the bestiary afterwards.
+      stats: { [healthStatId]: stats.hp ?? 0, [armorStatId]: stats.armor ?? 0, movement: stats.movement ?? 0 },
       attacks: [],
       abilities: [],
       skills: [],
@@ -250,7 +262,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
         id: participantId,
         name: template.name,
         type: 'monster',
-        instanceState: { currentHp: template.stats.hp },
+        instanceState: { currentHp: readCreatureStat(template, healthStatId) },
         // max(existing)+1, not length+1, so it stays unique after a mid-list removal.
         sortOrder: Math.max(0, ...(enc.participants ?? []).map(p => p.sortOrder)) + 1,
       };
@@ -348,7 +360,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
                     <div className="flex items-center gap-3">
                       {template && (
                         <span className="text-[var(--color-text-muted)] text-[10px]">
-                          Armor {template.stats.armor}
+                          {engine.labels.creatureArmor} {readCreatureStat(template, armorStatId)}
                         </span>
                       )}
                       {p.instanceState.currentHp !== undefined && (

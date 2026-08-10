@@ -3349,3 +3349,32 @@ b"` with a real break parses as a broken
   Traveller ship — list line byte-identical, editor panels unchanged, and the
   stored row upgraded to v2 with an edit round-tripping through the bags.
 - Commit: feat(systems) — a ruleset declares its own vehicles.
+
+## 2026-08-10 — The bestiary stat block becomes a ruleset declaration
+- Symptom: `creatureTemplate.stats` was a closed, required `{hp, armor, movement}`
+  — three Dragonbane numbers a Traveller animal could not use and could not
+  extend. The labels over them were ALREADY engine-driven
+  (`labels.creatureHealth`/`creatureArmor`/`creatureMovement`), so a Traveller
+  creature honestly read "END / Plating / Stride" over a stat block that was
+  structurally somebody else's. `CreatureTemplateCard` additionally printed a
+  hardcoded "HP x · Armor y · Mv z".
+- Fix: `system.creatures.statFields` (id/label/abbr/summary) plus `healthStatId`
+  and `armorStatId`; `stats` becomes `Record<string, number>`. Traveller declares
+  Hits/Armour/Speed/STR/DEX/END. Shared readers in
+  `features/bestiary/creatureStats.ts`.
+- Surfaces: BestiaryScreen (tiles + add-to-encounter), CreatureTemplateCard,
+  CreatureTemplateForm, ParticipantDrawer, CombatEncounterView.
+- Watch: NO data migration, deliberately — every stored creature already
+  satisfies the open record because the default declaration names exactly the
+  three old keys. Traveller keeps the same storage ids and changes only labels,
+  so no existing creature is orphaned. Dragonbane declares no `creatures` block
+  at all: the default set IS its stat block, which is what keeps it unchanged.
+- Watch also: a stat STORED under an undeclared id is kept and shown in a
+  trailing "Other" group (the custom-skills precedent). That is the opposite of
+  the import rule, and deliberately so — stored data is somebody's typing, an
+  import is untrusted input.
+- Verified: build clean, 1148 tests (11 new). Browser check on the live Traveller
+  campaign — six stat tiles, correct labels, card summary reads "Hits · Armour ·
+  Spd".
+- Commit: feat(bestiary) — a ruleset declares its own creature stat block.
+

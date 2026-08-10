@@ -6,6 +6,7 @@ import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
 import { useSystemEngineFor } from '../systems/engine';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
+import { partitionCreatureStats, resolveCreatureStatFields } from '../bestiary/creatureStats';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
@@ -29,6 +30,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
   const { activeCampaign } = useCampaignContext();
   const engine = useSystemEngineFor(activeCampaign?.system);
   const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const statFields = resolveCreatureStatFields(system);
   const { character: activeCharacter, updateCharacter } = useActiveCharacter();
   const [template, setTemplate] = useState<CreatureTemplate | null>(null);
   const [linkedCharacter, setLinkedCharacter] = useState<CharacterRecord | null>(null);
@@ -170,25 +172,16 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
             <h4 className="text-[var(--color-text)] text-xs font-semibold uppercase tracking-wide mb-2">
               Base Stats
             </h4>
+            {/* One tile per stat the ruleset declares. A Traveller animal shows
+                its whole block (Hits, Armour, Speed, STR/DEX/END) rather than
+                three tiles shaped like somebody else's stat line. */}
             <div className="grid grid-cols-3 gap-2 mb-2">
-              <div className="bg-[var(--color-surface-raised)] rounded p-2 text-center">
-                <div className="text-[var(--color-text)] text-sm font-bold">{template.stats.hp}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px]">
-                  {engine.labels.creatureHealth}
+              {partitionCreatureStats(template, statFields).declared.map(({ field, value }) => (
+                <div key={field.id} className="bg-[var(--color-surface-raised)] rounded p-2 text-center">
+                  <div className="text-[var(--color-text)] text-sm font-bold">{value}</div>
+                  <div className="text-[var(--color-text-muted)] text-[10px]">{field.label}</div>
                 </div>
-              </div>
-              <div className="bg-[var(--color-surface-raised)] rounded p-2 text-center">
-                <div className="text-[var(--color-text)] text-sm font-bold">{template.stats.armor}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px]">
-                  {engine.labels.creatureArmor}
-                </div>
-              </div>
-              <div className="bg-[var(--color-surface-raised)] rounded p-2 text-center">
-                <div className="text-[var(--color-text)] text-sm font-bold">{template.stats.movement}</div>
-                <div className="text-[var(--color-text-muted)] text-[10px]">
-                  {engine.labels.creatureMovement}
-                </div>
-              </div>
+              ))}
             </div>
             {template.attacks.length > 0 && (
               <div className="text-xs text-[var(--color-text-muted)]">

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
+import type { CreatureStatField } from '../../types/system';
+import { readCreatureStat } from './creatureStats';
 import { cn } from '../../lib/utils';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
@@ -8,6 +10,12 @@ export type FormData = Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' |
 export interface CreatureTemplateFormProps {
   /** Pre-populated data when editing an existing template. */
   initial?: CreatureTemplate;
+  /**
+   * The active ruleset's declared creature stats — one numeric input each.
+   * The form used to hardcode HP/Armor/Movement, so no other ruleset's stat
+   * block could be entered at all.
+   */
+  statFields: CreatureStatField[];
   campaignId: string;
   onSave: (data: FormData) => Promise<void>;
   onCancel: () => void;
@@ -22,14 +30,20 @@ const secondaryBtnClass = 'min-h-11 px-4 py-2 bg-[var(--color-surface)] border b
  * Form for creating or editing a creature template.
  * Renders as a modal overlay.
  */
-export function CreatureTemplateForm({ initial, campaignId, onSave, onCancel }: CreatureTemplateFormProps) {
+export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, onCancel }: CreatureTemplateFormProps) {
   const [name, setName] = useState(initial?.name ?? '');
   const [category, setCategory] = useState<'monster' | 'npc' | 'animal'>(initial?.category ?? 'monster');
   const [role, setRole] = useState(initial?.role ?? '');
   const [affiliation, setAffiliation] = useState(initial?.affiliation ?? '');
-  const [hp, setHp] = useState(initial?.stats.hp ?? 0);
-  const [armor, setArmor] = useState(initial?.stats.armor ?? 0);
-  const [movement, setMovement] = useState(initial?.stats.movement ?? 0);
+  // Seeded from the whole stored bag, not just the declared ids, so editing a
+  // creature never drops a stat this ruleset happens not to declare.
+  const [stats, setStats] = useState<Record<string, number>>(() => {
+    const seeded: Record<string, number> = { ...(initial?.stats ?? {}) };
+    for (const field of statFields) {
+      if (seeded[field.id] === undefined) seeded[field.id] = initial ? readCreatureStat(initial, field.id) : 0;
+    }
+    return seeded;
+  });
   const [tagsText, setTagsText] = useState(initial?.tags.join(', ') ?? '');
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? '');
   const [saving, setSaving] = useState(false);
@@ -45,7 +59,7 @@ export function CreatureTemplateForm({ initial, campaignId, onSave, onCancel }: 
         category,
         role: role.trim() || undefined,
         affiliation: affiliation.trim() || undefined,
-        stats: { hp, armor, movement },
+        stats,
         attacks: initial?.attacks ?? [],
         abilities: initial?.abilities ?? [],
         skills: initial?.skills ?? [],
@@ -117,18 +131,20 @@ export function CreatureTemplateForm({ initial, campaignId, onSave, onCancel }: 
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className={labelClass}>HP</label>
-              <input type="number" value={hp} onChange={(e) => setHp(Number(e.target.value))} className={inputClass} min={0} />
-            </div>
-            <div>
-              <label className={labelClass}>Armor</label>
-              <input type="number" value={armor} onChange={(e) => setArmor(Number(e.target.value))} className={inputClass} min={0} />
-            </div>
-            <div>
-              <label className={labelClass}>Movement</label>
-              <input type="number" value={movement} onChange={(e) => setMovement(Number(e.target.value))} className={inputClass} min={0} />
-            </div>
+            {statFields.map((field) => (
+              <div key={field.id}>
+                <label className={labelClass} htmlFor={`creature-stat-${field.id}`}>{field.label}</label>
+                <input
+                  id={`creature-stat-${field.id}`}
+                  type="number"
+                  value={stats[field.id] ?? 0}
+                  aria-label={field.label}
+                  onChange={(e) => setStats((prev) => ({ ...prev, [field.id]: Number(e.target.value) }))}
+                  className={inputClass}
+                  min={0}
+                />
+              </div>
+            ))}
           </div>
           <div>
             <label className={labelClass}>Tags (comma separated)</label>

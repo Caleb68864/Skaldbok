@@ -213,6 +213,16 @@ export const systemDefinitionSchema = z.object({
     summaryCounterIds: z.array(z.string().min(1)).optional(),
     subtitleSpecId: z.string().min(1).optional(),
   }).optional().describe('Per-system vehicle sheet (e.g. Traveller starships)'),
+  creatures: z.object({
+    statFields: z.array(z.object({
+      id: z.string().min(1),
+      label: z.string().min(1),
+      abbr: z.string().min(1).optional(),
+      summary: z.boolean().optional(),
+    })).min(1),
+    healthStatId: z.string().min(1).optional(),
+    armorStatId: z.string().min(1).optional(),
+  }).optional().describe('Per-system creature stat block for the bestiary'),
 }).superRefine((def, ctx) => {
   // Cross-reference integrity: without these, a typo'd id (e.g. a skill linked
   // to a non-existent attribute) passes validation and then silently misbehaves
@@ -291,6 +301,25 @@ export const systemDefinitionSchema = z.object({
         code: z.ZodIssueCode.custom,
         message: `Vehicle subtitle names unknown spec "${def.vehicles.subtitleSpecId}"`,
       });
+    }
+  }
+
+  // Stat ids key the stored bag, so a duplicate means two inputs writing one
+  // number — the second silently wins and the first looks like it does nothing.
+  if (def.creatures) {
+    const statIds = def.creatures.statFields.map(f => f.id);
+    flagDupes(statIds, 'creature stat');
+    // An unresolvable health stat seeds every encounter participant at 0 HP.
+    for (const [key, id] of [
+      ['healthStatId', def.creatures.healthStatId],
+      ['armorStatId', def.creatures.armorStatId],
+    ] as const) {
+      if (id && !statIds.includes(id)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Creature ${key} names unknown stat "${id}"`,
+        });
+      }
     }
   }
 

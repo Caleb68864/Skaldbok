@@ -1,8 +1,16 @@
 import type { CreatureTemplate } from '../../types/creatureTemplate';
+import type { CreatureStatField } from '../../types/system';
+import { summariseCreatureStats } from './creatureStats';
 import { cn } from '../../lib/utils';
 
 export interface CreatureTemplateCardProps {
   template: CreatureTemplate;
+  /**
+   * The active ruleset's declared creature stats. Supplied by the caller —
+   * this card named Dragonbane's three by hand, so a Traveller animal listed
+   * as "HP / Armor / Mv" whatever its stat block actually was.
+   */
+  statFields: CreatureStatField[];
   onClick: () => void;
 }
 
@@ -16,7 +24,7 @@ const categoryColors: Record<string, string> = {
  * Compact card displaying a creature template's summary for the bestiary list.
  * Tapping opens the full stat block view.
  */
-export function CreatureTemplateCard({ template, onClick }: CreatureTemplateCardProps) {
+export function CreatureTemplateCard({ template, statFields, onClick }: CreatureTemplateCardProps) {
   return (
     <button
       onClick={onClick}
@@ -36,7 +44,7 @@ export function CreatureTemplateCard({ template, onClick }: CreatureTemplateCard
         </span>
       </div>
       <div className="text-[var(--color-text-muted)] text-xs mb-1.5">
-        HP {template.stats.hp} &middot; Armor {template.stats.armor} &middot; Mv {template.stats.movement}
+        {summariseCreatureStats(template, statFields)}
       </div>
       {template.tags.length > 0 && (
         <div className="flex gap-1 flex-wrap">

@@ -50,12 +50,23 @@ export const creatureTemplateSchema = z.object({
   role: z.string().optional(),
   /** Faction or group affiliation. */
   affiliation: z.string().optional(),
-  /** Core combat stats. */
-  stats: z.object({
-    hp: z.number(),
-    armor: z.number(),
-    movement: z.number(),
-  }),
+  /**
+   * Stat block, keyed by the ids the active ruleset declares in
+   * `SystemDefinition.creatures.statFields`.
+   *
+   * @remarks
+   * Was a closed `{ hp, armor, movement }`: three required Dragonbane numbers a
+   * Traveller animal could not use and could not extend. An open bag needs no
+   * data migration — every stored creature already satisfies it, because those
+   * three keys are exactly what the default declaration names.
+   *
+   * A stat the ruleset does not declare is **kept**, and surfaces in a trailing
+   * "Other" group rather than vanishing. That is deliberately the opposite of
+   * the import rule, which drops undeclared keys: a stored number is data
+   * somebody already entered, while an import is untrusted input that has not
+   * been accepted yet.
+   */
+  stats: z.record(z.string(), z.number()),
   /** Attacks available to this creature. */
   attacks: z.array(creatureAttackSchema),
   /** Special abilities. */
@@ -84,3 +95,10 @@ export const creatureTemplateSchema = z.object({
  * A creature template record inferred from {@link creatureTemplateSchema}.
  */
 export type CreatureTemplate = z.infer<typeof creatureTemplateSchema>;
+
+/** One attack on a creature. See {@link creatureAttackSchema}. */
+export type CreatureAttack = z.infer<typeof creatureAttackSchema>;
+/** One special ability on a creature. See {@link creatureAbilitySchema}. */
+export type CreatureAbility = z.infer<typeof creatureAbilitySchema>;
+/** One skill on a creature. See {@link creatureSkillSchema}. */
+export type CreatureSkill = z.infer<typeof creatureSkillSchema>;
