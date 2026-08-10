@@ -3194,3 +3194,33 @@ b"` with a real break parses as a broken
   unmounts it on success. That is the caller's behaviour, not the component's
   contract; a "record another" flow would have found every button dead.
 - Commit: fix(export,systems) — one yamlValue, and stop serving a stale system.
+
+## 2026-08-09 — deleting an account unbalanced the book
+- Symptom: removing a ledger account with entries in it **succeeded**. The
+  account row was soft-deleted and its entries kept pointing at it, but both
+  `computeAccountBalances` and the cash-on-hand fold walk only *live* accounts —
+  so the money silently left the totals while the entries stayed listed in the
+  table. Delete an asset account holding Cr500,000 and Cr500,000 of cash
+  vanished from the headline with the rows still on screen. Nothing failed
+  loudly; the numbers just stopped agreeing.
+- Fix: `softDelete` refuses and returns why — `primary`, `missing`, or
+  `has-entries` with the count. The UI names the count and the way out
+  ("Delete or reassign them first"), rather than a bare "could not remove".
+- Surfaces: `ledgerAccountRepository.softDelete` (now returns
+  `AccountDeleteRefusal | null`), `useLedger.removeAccount`, `LedgerScreen`,
+  `AccountsPanel`.
+- Watch: **reassigning the entries to the primary account was the tempting
+  alternative and is wrong.** The only sane target is cash, and moving a
+  *liability's* entries onto cash turns a debt into spending. Refusing is what
+  real bookkeeping does with an account that has transactions in it.
+- Watch also: **`accountId` and `counterAccountId` are deliberately unindexed**
+  on `ledgerEntries` (schema note in `db/client.ts`), so `.where('accountId')`
+  throws at runtime. The check scans one campaign's entries off the indexed
+  `campaignId` instead. It runs on a delete, not on every read.
+- Watch also: the far side of a transfer counts. `counterAccountId` moves an
+  account's balance as much as the near side does, so a transfer pins the
+  account down too — pinned by its own test.
+- Verified: 10 repository tests (removing the guard fails 5 by name) plus a
+  browser run — refusing leaves the account listed and cash unmoved at
+  Cr500,000, and clearing the entry lets the deletion through with cash at Cr0.
+- Commit: fix(ledger) — refuse to delete an account that has entries.

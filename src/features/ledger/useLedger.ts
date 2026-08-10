@@ -562,7 +562,12 @@ export function useLedger() {
           });
         }
 
-        if (!existing || existing.amount !== next) {
+        // Compare the before and after, not "was an opening supplied". The form
+        // always supplies one, so `!existing` alone logged "set opening to Cr 0"
+        // every time somebody merely renamed an account that never had an
+        // opening — a log line for a change that did not happen.
+        const before = existing?.amount ?? 0;
+        if (before !== next) {
           const money = engine?.currency.formatAmount(Math.abs(next)) ?? String(next);
           await mirrorToLog(`Ledger: set ${name} opening balance to ${money}`, '', 'entry');
         }
@@ -570,10 +575,11 @@ export function useLedger() {
 
       await reload();
     },
+    /** Returns the refusal when the account could not be removed, else `null`. */
     removeAccount: async (id: string) => {
-      const removed = await ledgerAccountRepository.softDelete(id);
-      await reload();
-      return removed;
+      const refusal = await ledgerAccountRepository.softDelete(id);
+      if (refusal === null) await reload();
+      return refusal;
     },
     formatMoney,
     baseDenomination,

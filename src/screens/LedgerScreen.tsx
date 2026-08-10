@@ -227,9 +227,21 @@ export default function LedgerScreen() {
         )}
         onEdit={(id, patch) => ledger.updateAccount(id, patch)}
         onRemove={async id => {
-          const removed = await ledger.removeAccount(id);
-          if (!removed) showToast('The default account cannot be removed', 'error');
-          return removed;
+          const refusal = await ledger.removeAccount(id);
+          if (refusal) {
+            // Say which rule stopped it and what to do about it. "Could not
+            // remove" leaves the user clicking the same button again.
+            showToast(
+              refusal.reason === 'primary'
+                ? 'The default account cannot be removed.'
+                : refusal.reason === 'has-entries'
+                  ? `${refusal.entryCount} ${refusal.entryCount === 1 ? 'entry references' : 'entries reference'} this account.` +
+                    ' Delete or reassign them first — removing it now would take their money out of the totals.'
+                  : 'That account no longer exists.',
+              'error',
+            );
+          }
+          return refusal;
         }}
       />
 

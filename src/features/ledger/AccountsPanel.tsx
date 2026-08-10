@@ -19,7 +19,7 @@ export interface AccountsPanelProps {
     /** Signed. A liability's opening is already negative by the time it lands here. */
     opening?: number;
   }) => Promise<void>;
-  onRemove: (id: string) => Promise<boolean>;
+  onRemove: (id: string) => Promise<unknown>;
   /**
    * Each account's current opening balance, signed, keyed by account id.
    *

@@ -118,23 +118,59 @@ export async function update(
   await db.ledgerAccounts.update(id, { ...patch, updatedAt: nowISO() });
 }
 
+/** Why a {@link softDelete} declined, or `null` when it went ahead. */
+export type AccountDeleteRefusal =
+  | { reason: 'missing' }
+  | { reason: 'primary' }
+  | { reason: 'has-entries'; entryCount: number };
+
 /**
  * Soft-deletes an account.
  *
  * @remarks
- * Refuses to remove the primary — every unassigned entry belongs to it, and
+ * Refuses in three cases, returning why so the caller can say so.
+ *
+ * The primary is refused because every unassigned entry belongs to it, and
  * deleting it would leave them counted against whatever happened to be oldest.
- * Returns `false` when it declined.
+ *
+ * An account with entries is refused because deleting it **unbalances the
+ * book**. The row is soft-deleted but its entries keep pointing at it, and both
+ * the accounts panel and the cash-on-hand fold walk only live accounts — so the
+ * money silently leaves the totals while the entries stay listed in the table,
+ * and the ledger stops adding up. Real bookkeeping does not delete an account
+ * with transactions in it either. Delete or reassign the entries first.
+ *
+ * Reassigning them here instead was the tempting alternative and is wrong: the
+ * only sane target is the primary, and moving a *liability's* entries onto cash
+ * would turn a debt into spending.
  */
-export async function softDelete(id: string, txId?: string): Promise<boolean> {
+export async function softDelete(
+  id: string,
+  txId?: string,
+): Promise<AccountDeleteRefusal | null> {
   const row = await db.ledgerAccounts.get(id);
-  if (!row || row.deletedAt) return false;
-  if (row.isPrimary) return false;
+  if (!row || row.deletedAt) return { reason: 'missing' };
+  if (row.isPrimary) return { reason: 'primary' };
+
+  // Scanned in memory off the indexed `campaignId` rather than queried by
+  // account: `accountId` and `counterAccountId` are deliberately unindexed on
+  // `ledgerEntries` (see the schema note in db/client.ts), so `.where` on either
+  // would throw. One campaign's entries is a small set — this runs on a delete,
+  // not on every read.
+  const campaignEntries = await db.ledgerEntries
+    .where('campaignId')
+    .equals(row.campaignId)
+    .toArray();
+  const live = excludeDeleted(campaignEntries).filter(
+    e => e.accountId === id || e.counterAccountId === id,
+  );
+  if (live.length > 0) return { reason: 'has-entries', entryCount: live.length };
+
   await db.ledgerAccounts.update(id, {
     deletedAt: nowISO(),
     softDeletedBy: txId ?? generateId(),
   });
-  return true;
+  return null;
 }
 
 /** Restores a soft-deleted account. */
