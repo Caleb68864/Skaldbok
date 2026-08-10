@@ -30,6 +30,18 @@ export function useSystemDefinition(systemId: string) {
 
   useEffect(() => {
     let mounted = true;
+    // Reset before fetching. Without this, switching campaigns leaves the
+    // *previous* system in state with `isLoading` already false, so consumers
+    // spend a render or more resolving the wrong ruleset — a Traveller ledger
+    // formatting money as Dragonbane coins, for instance. A stale `error` was
+    // worse: it never cleared, so one unknown system poisoned the hook for
+    // every campaign opened afterwards.
+    //
+    // Resetting to null is safe by construction: null is the initial state, so
+    // every consumer already handles it.
+    setSystem(null);
+    setError(null);
+    setIsLoading(true);
     systemRepository.getById(systemId).then(async stored => {
       if (!mounted) return;
       const bundled = bundledSystem(systemId);

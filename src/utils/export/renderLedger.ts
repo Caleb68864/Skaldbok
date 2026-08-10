@@ -1,25 +1,7 @@
 import type { LedgerEntry, LedgerLeg } from '../../types/ledger';
 import { computeRunningBalance } from '../ledgerMath';
+import { yamlValue } from './yamlValue';
 
-/**
- * Renders a frontmatter value, quoting only when the content needs it.
- *
- * @remarks
- * Same shape as the helper in `renderSession`, `renderNote`,
- * `renderCampaignIndex` and `renderAttachmentSidecar` — the four existing
- * renderers each carry a private copy. Matching it keeps every exported
- * document's frontmatter parseable by the same rules; see the note in
- * `docs/converge/` about extracting the five copies into one module.
- */
-function yamlValue(val: unknown): string {
-  if (val === null || val === undefined) return '""';
-  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
-  const str = String(val);
-  if (str.includes(':') || str.includes('"') || str.includes("'") || str.includes('\n') || str.includes('#')) {
-    return `"${str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n+/g, ' ')}"`;
-  }
-  return str;
-}
 
 /** Escapes a value for a Markdown table cell, where a raw pipe would split the row. */
 function cell(value: string): string {

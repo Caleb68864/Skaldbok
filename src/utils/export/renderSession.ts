@@ -4,20 +4,8 @@ import type { EntityLink } from '../../types/entityLink';
 import { generateFilename } from './generateFilename';
 import { renderNoteToMarkdown } from './renderNote';
 import { docToText } from '../../features/notes/textToDoc';
+import { yamlValue } from './yamlValue';
 
-function yamlValue(val: unknown): string {
-  if (val === null || val === undefined) return '""';
-  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
-  if (Array.isArray(val)) {
-    if (val.length === 0) return '[]';
-    return '\n' + val.map(item => `  - ${yamlValue(item)}`).join('\n');
-  }
-  const str = String(val);
-  if (str.includes(':') || str.includes('"') || str.includes("'") || str.includes('\n') || str.includes('#')) {
-    return `"${str.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-  }
-  return str;
-}
 
 function deduplicateFilename(filename: string, existing: Set<string>): string {
   if (!existing.has(filename)) return filename;

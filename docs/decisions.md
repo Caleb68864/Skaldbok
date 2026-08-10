@@ -3162,3 +3162,35 @@
   entry, a liability prefills unsigned and stores negative, renaming disturbs
   nothing, and the edit reaches the session log.
 - Commit: feat(ledger) — edit an account, including its opening balance.
+
+## 2026-08-09 — polishing sweep: one yamlValue, a stale system, a stuck flag
+- Symptom: three defects of the same shape — code that looked correct because
+  nothing had exercised the path that breaks.
+  1. `yamlValue` existed as **six near-copies**, one per export renderer, which
+     had diverged into two variants that each carried the other's bug. Four
+     supported arrays but emitted raw newlines inside double-quoted scalars; two
+     flattened newlines but could not render a list.
+  2. `useSystemDefinition` never reset on a `systemId` change.
+  3. `DistributeModal` cleared `isSaving` only in its `catch`.
+- Fix: one shared `utils/export/yamlValue.ts` doing both jobs, with 18 tests;
+  reset `system`/`error`/`isLoading` before each fetch; move the flag clear to a
+  `finally`.
+- Surfaces: `utils/export/yamlValue.ts` (new) and the six renderers,
+  `features/systems/useSystemDefinition.ts`, `features/ledger/DistributeModal.tsx`.
+- Watch: **a raw newline inside a double-quoted YAML scalar ends the
+  frontmatter line.** `title: "a
+b"` with a real break parses as a broken
+  document, not a two-line title — and titles and tags are user-typed, so the
+  note and session renderers were the ones exposed. Frontmatter is single-line
+  by construction: a newline becomes a space. Removing that one `.replace` fails
+  six tests by name.
+- Watch also: escape the backslash **before** the quote. Doing it the other way
+  doubles the backslashes the first step introduces.
+- Watch also: resetting `useSystemDefinition` to `null` is safe *by
+  construction* — `null` is the initial state, so every consumer already handles
+  it. The stale `error` was the worse half of that bug: it never cleared, so one
+  unknown system poisoned the hook for every campaign opened afterwards.
+- Watch also: `DistributeModal` only *looked* correct because the parent
+  unmounts it on success. That is the caller's behaviour, not the component's
+  contract; a "record another" flow would have found every button dead.
+- Commit: fix(export,systems) — one yamlValue, and stop serving a stale system.

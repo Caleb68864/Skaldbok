@@ -115,6 +115,12 @@ export function DistributeModal({
       const message = err instanceof Error ? err.message : 'Could not record the payout.';
       showToast(message, 'error');
       setError(message);
+    } finally {
+      // `finally`, not just the catch. On success the parent unmounts this
+      // modal, so leaving the flag set happened to look fine — but that is the
+      // caller's behaviour, not this component's contract. A caller that keeps
+      // it mounted (a "record another" flow, say) would find every button
+      // disabled for good.
       setIsSaving(false);
     }
   }

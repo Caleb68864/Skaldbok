@@ -1,20 +1,8 @@
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
 import { resolveWikiLinks } from './resolveWikiLinks';
+import { yamlValue } from './yamlValue';
 
-function yamlValue(val: unknown): string {
-  if (val === null || val === undefined) return '""';
-  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
-  if (Array.isArray(val)) {
-    if (val.length === 0) return '[]';
-    return '\n' + val.map(item => `  - ${yamlValue(item)}`).join('\n');
-  }
-  const str = String(val);
-  if (str.includes(':') || str.includes('"') || str.includes("'") || str.includes('\n') || str.includes('#')) {
-    return `"${str.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
-  }
-  return str;
-}
 
 /**
  * Renders a note as an Obsidian-flavoured Markdown file with YAML front matter.
