@@ -3241,3 +3241,31 @@ b"` with a real break parses as a broken
   it just as much.
 - Verified: 13 repository tests; the full suite is 1081.
 - Commit: fix(ledger) — a recurring charge pins its account too.
+
+## 2026-08-09 — the ledger export had fallen behind the ledger
+- Symptom: `renderLedger` still described the cashbook as it was before
+  accounts, opening balances and recurring charges existed. Two consequences:
+  1. It folded the Balance column over **every** entry, so the exported figure
+     summed the mortgage's opening alongside a fuel purchase — the same defect
+     fixed on screen earlier the same day and left behind here. The app said
+     Cr500,000 and the export said -Cr39,500,000 for the same book.
+  2. Accounts and bills were absent entirely, so an export lost the mortgage,
+     the escrow and the monthly nut.
+- Fix: an optional `LedgerExportContext` carrying accounts, bills, campaign date
+  and calendar. With accounts the column folds cash and is named **Cash**;
+  without them the old whole-book fold stands, which is right for a
+  single-account book and keeps the three-argument call valid.
+- Surfaces: `utils/export/renderLedger.ts`, `features/export/useExportActions.ts`.
+- Watch: the frontmatter key changes with the column — `closing_cash` rather
+  than `closing_balance`. A reader diffing two exports must not find the same
+  key silently meaning something different.
+- Watch also: **fixing a fold on screen does not fix it in the export.** They are
+  separate call sites of the same helper, and only one of them was passed the
+  new argument. Whenever a derivation changes, grep the other callers.
+- Watch also: the test asserting "cash is not folded with the loan" has to be
+  scoped to the mortgage's own table row — `-Cr 39,500,000` legitimately appears
+  further down as the net position, so a document-wide `not.toContain` asserts
+  the opposite of a neighbouring test.
+- Verified: 28 tests on this renderer, 14 of them the pre-existing
+  entries-only ones, unchanged. Full suite 1095.
+- Commit: feat(export) — accounts and recurring charges in the exported ledger.

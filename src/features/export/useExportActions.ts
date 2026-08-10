@@ -14,6 +14,8 @@ import { bundleToZip } from '../../utils/export/bundleToZip';
 import { shareFile, copyToClipboard } from '../../utils/export/delivery';
 import { generateFilename, generateEntityFilename } from '../../utils/export/generateFilename';
 import * as ledgerRepository from '../../storage/repositories/ledgerRepository';
+import * as ledgerAccountRepository from '../../storage/repositories/ledgerAccountRepository';
+import * as recurringBillRepository from '../../storage/repositories/recurringBillRepository';
 import * as routeRepository from '../../storage/repositories/routeRepository';
 import * as systemRepository from '../../storage/repositories/systemRepository';
 import { getEngine } from '../systems/engine';
@@ -62,7 +64,19 @@ async function buildLedgerMarkdown(campaign: Campaign): Promise<string | null> {
   const system = await systemRepository.getById(campaign.system);
   const engine = system ? getEngine(system) : null;
   const formatMoney = engine?.currency.formatAmount ?? ((baseUnits: number) => String(baseUnits));
-  return renderLedgerToMarkdown(campaign.name, entries, formatMoney);
+  // Accounts and bills as well as entries: the export used to carry the
+  // movements alone, which lost the mortgage, the escrow and the monthly nut —
+  // and folded a Balance column that no longer matched the screen.
+  const [accounts, bills] = await Promise.all([
+    ledgerAccountRepository.listByCampaign(campaign.id),
+    recurringBillRepository.listByCampaign(campaign.id),
+  ]);
+  return renderLedgerToMarkdown(campaign.name, entries, formatMoney, {
+    accounts,
+    bills,
+    campaignDate: campaign.campaignDate,
+    calendar: system?.calendar ?? system?.routePlanner?.calendar,
+  });
 }
 
 export function useExportActions() {

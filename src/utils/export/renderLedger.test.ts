@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { renderLedgerToMarkdown } from './renderLedger';
 import type { LedgerEntry } from '../../types/ledger';
+import type { LedgerAccount } from '../../types/ledgerAccount';
+import type { RecurringBill } from '../../types/recurringBill';
 
 /**
  * The exported cashbook has to be readable without the app — that is the whole
@@ -148,5 +150,155 @@ describe('renderLedgerToMarkdown', () => {
   it('falls back to a dash for an unlabelled entry', () => {
     const md = renderLedgerToMarkdown('Spinward Main', [entry({ id: 'e5', amount: -1 })], cr);
     expect(md).toContain('| — |');
+  });
+});
+
+
+/**
+ * The account structure, added after the entries-only export had already
+ * shipped. Two things were wrong with it by then: the Balance column folded
+ * every account together — the mortgage's opening alongside a fuel purchase —
+ * so it reported a figure that was not any quantity the crew had and no longer
+ * matched the screen; and the mortgage, the escrow and the monthly nut were
+ * absent altogether.
+ */
+
+function account(over: Partial<LedgerAccount> & { id: string; name: string }): LedgerAccount {
+  return {
+    campaignId: 'c1',
+    kind: 'asset',
+    isPrimary: false,
+    contingent: false,
+    note: '',
+    schemaVersion: 1,
+    createdAt: '2026-08-01T00:00:00.000Z',
+    updatedAt: '2026-08-01T00:00:00.000Z',
+    ...over,
+  } as LedgerAccount;
+}
+
+function bill(over: Partial<RecurringBill> & { name: string; amount: number }): RecurringBill {
+  return {
+    id: `b-${over.name}`,
+    campaignId: 'c1',
+    everyDays: 30,
+    startDate: '097-1105',
+    postedThrough: '',
+    postedCount: 0,
+    active: true,
+    note: '',
+    schemaVersion: 1,
+    createdAt: '2026-08-01T00:00:00.000Z',
+    updatedAt: '2026-08-01T00:00:00.000Z',
+    ...over,
+  };
+}
+
+const CASH = account({ id: 'cash', name: 'Cash', isPrimary: true });
+const LOAN = account({ id: 'loan', name: 'Ship mortgage', kind: 'liability', note: 'The Leap' });
+const ESCROW = account({
+  id: 'escrow', name: 'Benefactor escrow', kind: 'liability', contingent: true,
+});
+
+const openCash = entry({ id: 'o1', memo: 'Opening balance — Cash', amount: 500_000, accountId: 'cash', kind: 'opening' });
+const openLoan = entry({ id: 'o2', memo: 'Opening balance — Ship mortgage', amount: -40_000_000, accountId: 'loan', kind: 'opening' });
+
+describe('renderLedgerToMarkdown — with accounts', () => {
+  const md = () =>
+    renderLedgerToMarkdown('Spinward Main', [openCash, openLoan], cr, {
+      accounts: [CASH, LOAN, ESCROW],
+    });
+
+  it('folds cash on hand, not every account together', () => {
+    // The mortgage moves the loan account and no cash whatsoever, so the
+    // mortgage's own row must leave the Cash column where it was. Asserted on
+    // that row rather than on the whole document: -Cr 39,500,000 legitimately
+    // appears further down as the net position.
+    const mortgageRow = md()
+      .split('\n')
+      .find(l => l.includes('Opening balance — Ship mortgage'));
+    expect(mortgageRow).toBeDefined();
+    expect(mortgageRow!.endsWith('| Cr 500,000 |')).toBe(true);
+    expect(md()).toContain('**Closing cash: Cr 500,000**');
+  });
+
+  it('names the column Cash so the number is not mistaken for a net worth', () => {
+    expect(md()).toContain('| Date | Description | In | Out | Cash |');
+  });
+
+  it('renames the frontmatter key alongside the column', () => {
+    // A reader diffing two exports should not find closing_balance silently
+    // changing meaning between them.
+    expect(md()).toContain('closing_cash: 500000');
+    expect(md()).not.toContain('closing_balance:');
+  });
+
+  it('lists every account with its type', () => {
+    const out = md();
+    expect(out).toContain('## Accounts');
+    expect(out).toContain('| Cash _(default)_ | Asset |');
+    expect(out).toContain('| Ship mortgage | Liability |');
+    expect(out).toContain('| Benefactor escrow | Contingent liability |');
+  });
+
+  it('prints a liability as its magnitude, as the screen does', () => {
+    expect(md()).toContain('Cr 40,000,000');
+    expect(md()).not.toContain('-Cr 40,000,000');
+  });
+
+  it('carries the account note', () => {
+    expect(md()).toContain('The Leap');
+  });
+
+  it('reports the standing position and excludes contingent debt from it', () => {
+    const out = md();
+    expect(out).toContain('- Assets: Cr 500,000');
+    expect(out).toContain('- Liabilities: Cr 40,000,000');
+    expect(out).toContain('**Net position: -Cr 39,500,000**');
+  });
+
+  it('keeps the old fold when no accounts are supplied', () => {
+    // The three-argument call is a single-account cashbook and still correct.
+    const out = renderLedgerToMarkdown('Spinward Main', [openCash, openLoan], cr);
+    expect(out).toContain('| Date | Description | In | Out | Balance |');
+    expect(out).toContain('**Closing balance: -Cr 39,500,000**');
+  });
+});
+
+describe('renderLedgerToMarkdown — recurring charges', () => {
+  const withBills = (bills: RecurringBill[], campaignDate?: string) =>
+    renderLedgerToMarkdown('Spinward Main', [openCash], cr, {
+      accounts: [CASH], bills, campaignDate,
+    });
+
+  it('lists a charge with its amount and interval', () => {
+    const out = withBills([bill({ name: 'Life support', amount: 10_000 })]);
+    expect(out).toContain('## Recurring charges');
+    expect(out).toContain('| Life support | Cr 10,000 | every 30 days |');
+  });
+
+  it('reports a term as remaining of total', () => {
+    const out = withBills([
+      bill({ name: 'Mortgage', amount: 201_335, occurrenceLimit: 27, postedCount: 4 }),
+    ]);
+    expect(out).toContain('23 of 27');
+  });
+
+  it('calls an open-ended charge open-ended rather than leaving it blank', () => {
+    expect(withBills([bill({ name: 'Berthing', amount: 7_000 })])).toContain('open-ended');
+  });
+
+  it('marks a suspended charge rather than showing a due date it will not meet', () => {
+    const out = withBills([bill({ name: 'Berthing', amount: 7_000, active: false })]);
+    expect(out).toContain('suspended');
+  });
+
+  it('states the date the charges are accrued through', () => {
+    const out = withBills([bill({ name: 'Life support', amount: 10_000 })], '187-1105');
+    expect(out).toContain('Accrued through **187-1105**');
+  });
+
+  it('omits the section entirely when there are no charges', () => {
+    expect(withBills([])).not.toContain('## Recurring charges');
   });
 });
