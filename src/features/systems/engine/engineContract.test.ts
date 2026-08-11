@@ -341,25 +341,34 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
 );
 
 /**
- * The Dragonbane-shaped keys `DerivedValues` mandates but most rulesets do not
- * use.
+ * The Dragonbane-shaped keys the derived block used to mandate.
  *
  * @remarks
- * Every adapter must return them to satisfy the shared type, so every
- * non-Dragonbane adapter returns filler. Filler that *looks* like a real value
+ * `DerivedValues` once required all six of these from every adapter, so every
+ * non-Dragonbane engine returned filler. Filler that *looks* like a real value
  * is a landmine: Traveller once returned `hpMax: END`, and Savage Worlds
  * returned `movement: 6` — Pace's value under Dragonbane's name. Neither was
  * read, because neither adapter declares the key in `derivedFields`… until a
  * system cloned from one of them does, at which point it silently prints a
  * number nobody computed.
  *
- * So: a mandated key an engine does not *declare* must be neutral.
+ * The shape is now open, so the guarantee is stronger than "the filler is
+ * neutral": a stat a ruleset has no concept of is **absent**, and reading it
+ * yields `undefined` rather than a plausible zero. This test holds that line —
+ * reintroducing a placeholder to satisfy some consumer would restore exactly the
+ * landmine described above.
  */
-const MANDATED_NUMERIC_KEYS = ['hpMax', 'wpMax', 'movement', 'encumbranceLimit'] as const;
-const MANDATED_STRING_KEYS = ['damageBonus', 'aglDamageBonus'] as const;
+const FORMERLY_MANDATED_KEYS = [
+  'hpMax',
+  'wpMax',
+  'movement',
+  'encumbranceLimit',
+  'damageBonus',
+  'aglDamageBonus',
+] as const;
 
 describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
-  'undeclared derived placeholders are neutral: %s',
+  'a derived stat a ruleset does not declare is absent: %s',
   (_name, system) => {
     const engine = getEngine(system);
     const declared = new Set(engine.derivedFields.map(f => f.key));
@@ -368,19 +377,15 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
       unknown
     >;
 
-    it.each(MANDATED_NUMERIC_KEYS)('%s', key => {
+    it.each(FORMERLY_MANDATED_KEYS)('%s', key => {
       if (declared.has(key)) return; // A declared field is a real value.
       expect(
         derived[key],
-        `${system.id} does not declare "${key}" in derivedFields, so its value is ` +
-          `filler and must be 0 — a meaningful-looking placeholder prints as a ` +
-          `real stat the moment a system cloned from this adapter declares it`,
-      ).toBe(0);
-    });
-
-    it.each(MANDATED_STRING_KEYS)('%s', key => {
-      if (declared.has(key)) return;
-      expect(derived[key], `${system.id} filler for "${key}" must be neutral`).toBe('+0');
+        `${system.id} does not declare "${key}" in derivedFields, so it must be ` +
+          `absent from the derived block. A placeholder — even a neutral one — ` +
+          `prints as a real stat the moment a system cloned from this adapter ` +
+          `declares the key`,
+      ).toBeUndefined();
     });
   },
 );

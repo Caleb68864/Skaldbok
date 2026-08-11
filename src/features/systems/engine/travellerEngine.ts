@@ -132,18 +132,14 @@ export function computeTravellerDerivedValues(character: CharacterRecord): Trave
 
   // hpMax/wpMax/movement/damageBonus/aglDamageBonus are Dragonbane-shaped fields
   // the base DerivedValues type still mandates. Traveller has none of them — it
-  // surfaces its real stats (characteristicDMs, initiativeDM, encumbranceLimit)
-  // separately — so these are inert placeholders. They MUST stay neutral (0/'+0'),
-  // NOT a "meaningful" value: hpMax was previously END, a landmine that
-  // PrintableSheet.maxFor would print as max HP for any system cloned from this
-  // one that declares an `hp` resource. Traveller has no `hp` resource, so 0 here
-  // is never read; keeping it honest protects future clones.
+
+  // Traveller computes none of Dragonbane's derived stats, and no longer has to
+  // pretend it does: the derived block is an open map, so a stat this ruleset
+  // has no concept of is simply absent. It used to return hpMax/wpMax/movement/
+  // damageBonus as neutral placeholders because the shape demanded all six —
+  // and before that, hpMax was END, a landmine `PrintableSheet.maxFor` would
+  // have printed as max HP for any system cloned from this one.
   return {
-    hpMax: 0,
-    wpMax: 0,
-    movement: 0,
-    damageBonus: '+0',
-    aglDamageBonus: '+0',
     encumbranceLimit: computeTravellerCarryLimit(character),
     characteristicDMs,
     characteristicScores,

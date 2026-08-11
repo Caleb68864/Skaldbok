@@ -3503,3 +3503,52 @@ b"` with a real break parses as a broken
   reads "Credits" / "Cr 0", and the sheet still shows Characteristics, Finances,
   Careers and Augments — all now sourced from JSON.
 - Commit: feat(systems) — panels and currency come from system.json.
+
+## 2026-08-10 — DerivedValues becomes an open map
+- Symptom: `DerivedValues` mandated six Dragonbane keys, so every other adapter
+  returned filler. Traveller once returned `hpMax: END` — which
+  `PrintableSheet.maxFor` would have printed as max HP for any system cloned from
+  it — and Savage Worlds returned `movement: 6`, Pace's value under Dragonbane's
+  name. Both had been neutralised to 0/'+0', which is safer but still a lie.
+- Fix: `[key: string]: DerivedFieldValue` with the six as OPTIONAL well-known
+  keys; Traveller and Savage Worlds now omit what they do not compute.
+  `getDerivedValue`/`getEffectiveValue` take an optional precomputed engine block.
+- Surfaces: utils/derivedValues.ts, travellerEngine, savageWorldsEngine,
+  engineContract.test.
+- Watch: the index type admits `Record<string, number>` because an adapter may
+  publish lookup tables in the same block (Traveller's per-characteristic DMs).
+  Those are data for its own screens, never sheet fields — `getDerivedValue` and
+  `resolveDerivedField` both narrow them to `undefined` so an object can never
+  reach a sheet cell as "[object Object]".
+- Watch also: the roadmap's other half of this item was already done — all four
+  consumers share `resolveDerivedField`, which already takes the engine's block.
+  The `derived` parameter on `getEffectiveValue` has no production caller today
+  (the sheet pipeline goes through `resolveDerivedField`); it is exercised by
+  derivedShape.test and exists so a future caller resolving a `derived:` target
+  outside that pipeline is not silently given Dragonbane's numbers.
+- Watch also: engineContract's placeholder test now asserts ABSENCE, not a
+  neutral zero. Reintroducing a placeholder to satisfy a consumer restores the
+  landmine.
+- Verified: build clean, 1227 tests (6 new).
+- Commit: refactor(engine) — a derived block is whatever the ruleset computes.
+
+## 2026-08-10 — Story Bank rows expand to the full story
+- Symptom: a Story Bank row held a cue and a one-line prompt, with nowhere to put
+  the anecdote behind it.
+- Fix: optional `body` on `StoryBeat` + `StoryBeatModal`; the row is a real
+  button that opens it, and carries a "more" hint when a body exists.
+- Surfaces: types/character.ts, schemas/character.schema.ts, SheetScreen,
+  components/fields/StoryBeatModal.tsx.
+- Watch: `body` is OPTIONAL, so no migration and no schemaVersion bump — every
+  beat written before this is still valid and simply has nothing to expand.
+- Watch also: it had to be added to `character.schema.ts` as well as the type.
+  Zod strips unknown keys, so a field on the type alone survives for locally
+  created beats and vanishes for imported ones — the same trap `skillGroups` hit.
+- Watch also: read-only in play mode, like the rest of the build; the writing pad
+  is offered because this is long-form text somebody may hand-write on a tablet.
+- Verified: build clean, 1227 tests. Browser round-trip on the live character —
+  opened "How Otho Went", wrote a body, saved, confirmed it in IndexedDB after
+  the autosave debounce (the first read at 800ms was too early), reopened to see
+  it, then cleared it so the real character was left as found.
+- Commit: feat(sheet) — a Story Bank row opens the story behind it.
+

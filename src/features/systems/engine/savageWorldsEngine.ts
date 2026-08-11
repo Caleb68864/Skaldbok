@@ -93,21 +93,12 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
     // none of which Savage Worlds uses. Held at neutral values to satisfy the
     // shared type. SAFE ONLY BECAUSE: (a) SWADE declares no resource with id
     // 'hp'/'wp', so PrintableSheet.maxFor never reads hpMax/wpMax, and (b) these
-    // keys are absent from `derivedFields`, so no dashboard/print tile surfaces
-    // them. A system reusing this adapter must preserve both invariants, or these
-    // zeros will print as real values.
-    //
-    // `movement` was 6 — Pace's value, which reads as meaningful and is not.
-    // Pace is a declared derived field and the real SWADE stat; `movement` is
-    // the Dragonbane-shaped slot nothing here surfaces. A neutral 0 is what
-    // stops a system cloned from this adapter, which *did* declare `movement`
-    // in derivedFields, from printing a Pace it never computed. This is the
-    // same landmine as Traveller's old `hpMax: END`.
-    hpMax: 0,
-    wpMax: 0,
-    movement: 0,
-    damageBonus: '+0',
-    aglDamageBonus: '+0',
+
+    // Savage Worlds computes none of Dragonbane's derived stats, and no longer
+    // returns neutral placeholders for them: the derived block is an open map,
+    // so a stat this ruleset has no concept of is simply absent. `movement` in
+    // particular used to be 6 — Pace's value, which reads as meaningful and is
+    // not. Pace is the real SWADE stat and is declared below.
     // Load Limit is Strength x5, and a d12+1 Strength carries as a 13 would.
     encumbranceLimit: (strength.sides + strength.bonus) * 5,
     pace: 6,

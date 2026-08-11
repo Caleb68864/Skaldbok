@@ -10,23 +10,49 @@ import type { SystemDefinition } from '../types/system';
  * extend it (see {@link features/systems/engine/travellerEngine!TravellerDerivedValues | TravellerDerivedValues}). Damage bonuses are strings
  * because they are dice expressions (`+D6`), not numbers.
  */
+/**
+ * A value a ruleset's derived block may carry.
+ *
+ * @remarks
+ * A derived *field* — the kind that appears on a sheet and can be overridden or
+ * modified — is a number, or a string when it is a dice expression (`+D6`). The
+ * map form exists because an adapter may also expose lookup tables to its own
+ * screens: Traveller publishes per-characteristic DMs and scores in the same
+ * block. Those are data for that system's UI, never a sheet field, and the
+ * resolvers below treat them as absent rather than trying to render one.
+ */
+export type DerivedFieldValue = number | string | Record<string, number> | undefined;
+
 export interface DerivedValues {
-  hpMax: number;
-  wpMax: number;
-  movement: number;
-  damageBonus: string;
-  aglDamageBonus: string;
-  encumbranceLimit: number;
+  /** Every derived stat a ruleset computes, keyed by the id it declares. */
+  [key: string]: DerivedFieldValue;
+
+  // The well-known Dragonbane keys, named so classic-fantasy's own consumers
+  // keep their types. **Optional**: a ruleset that has no concept of a willpower
+  // maximum should return a map without one, not a dummy zero. Traveller
+  // returning `hpMax: END` was the landmine this shape created — a fourth system
+  // cloned from it would have printed END as max HP.
+  hpMax?: number;
+  wpMax?: number;
+  movement?: number;
+  damageBonus?: string;
+  aglDamageBonus?: string;
+  encumbranceLimit?: number;
 }
 
 /** A single derived stat with its computed value, any manual override, and the effective result. */
 export interface DerivedValueResult {
-  /** Value the rules produce from the character's stats. */
-  computed: number | string;
+  /**
+   * Value the rules produce from the character's stats, or `undefined` when
+   * this ruleset computes no such stat — which is now expressible, since a
+   * derived block is whatever the active engine returns rather than a fixed
+   * six Dragonbane keys.
+   */
+  computed: number | string | undefined;
   /** User-entered override, or `null` when the computed value stands. */
   override: number | string | null;
   /** The value actually used: `override` when set, otherwise `computed`. */
-  effective: number | string;
+  effective: number | string | undefined;
 }
 
 /**
@@ -146,10 +172,27 @@ export function computeDerivedValues(character: CharacterRecord, _system?: Syste
   };
 }
 
-/** Resolves one derived stat by key, folding in any user override to give the effective value. */
-export function getDerivedValue(character: CharacterRecord, key: string): DerivedValueResult {
-  const all = computeDerivedValues(character);
-  const computed = all[key as keyof DerivedValues];
+/**
+ * Resolves one derived stat by key, folding in any user override.
+ *
+ * @remarks
+ * `derived` is the active engine's already-computed stat block. Without it this
+ * falls back to the classic-fantasy computation, which is the historical
+ * behaviour and correct only for Dragonbane — every other ruleset's derived key
+ * resolved to `undefined`, and therefore to 0, wherever the caller had an engine
+ * available and did not pass it. Callers that hold an engine should pass
+ * `engine.derivedStats(character)`.
+ */
+export function getDerivedValue(
+  character: CharacterRecord,
+  key: string,
+  derived?: DerivedValues,
+): DerivedValueResult {
+  const all = derived ?? computeDerivedValues(character);
+  const raw = all[key];
+  // A lookup table is not a field: report it as absent rather than letting an
+  // object reach a sheet cell as "[object Object]".
+  const computed = typeof raw === 'number' || typeof raw === 'string' ? raw : undefined;
   const overrideRaw = character.derivedOverrides?.[key] ?? null;
   const override = overrideRaw !== null && overrideRaw !== undefined ? overrideRaw : null;
   return {
@@ -178,6 +221,7 @@ function resolveNamespaced(
   namespace: StatNamespace,
   id: string,
   character: CharacterRecord,
+  derived?: DerivedValues,
 ): number {
   switch (namespace) {
     case 'attr':
@@ -185,7 +229,7 @@ function resolveNamespaced(
     case 'res':
       return character.resources?.[id]?.current ?? 0;
     case 'derived': {
-      const dv = getDerivedValue(character, id);
+      const dv = getDerivedValue(character, id, derived);
       return typeof dv.effective === 'number' ? dv.effective : 0;
     }
     case 'armor':
@@ -205,14 +249,14 @@ function resolveNamespaced(
  * to what they always did, whether or not they have been migrated. New keys
  * should always carry a namespace — see {@link statKey}.
  */
-function resolveLegacy(stat: string, character: CharacterRecord): number {
+function resolveLegacy(stat: string, character: CharacterRecord, derived?: DerivedValues): number {
   if (Object.prototype.hasOwnProperty.call(character.attributes ?? {}, stat)) {
     return character.attributes[stat] ?? 0;
   }
   if (stat === 'armor') return character.armor?.rating ?? 0;
   if (stat === 'helmet') return character.helmet?.rating ?? 0;
   if (DERIVED_KEYS.has(stat)) {
-    const dv = getDerivedValue(character, stat);
+    const dv = getDerivedValue(character, stat, derived);
     return typeof dv.effective === 'number' ? dv.effective : 0;
   }
   if (character.skills?.[stat]) return character.skills[stat].value ?? 0;
@@ -229,19 +273,23 @@ function resolveLegacy(stat: string, character: CharacterRecord): number {
  * attribute — Traveller's damage track does exactly that. Unprefixed keys fall
  * back to the legacy precedence order.
  */
-function resolveBase(stat: StatKey, character: CharacterRecord): number {
+function resolveBase(stat: StatKey, character: CharacterRecord, derived?: DerivedValues): number {
   const { namespace, id } = parseStatKey(stat);
   return namespace === null
-    ? resolveLegacy(id, character)
-    : resolveNamespaced(namespace, id, character);
+    ? resolveLegacy(id, character, derived)
+    : resolveNamespaced(namespace, id, character, derived);
 }
 
 /**
  * Resolves a stat's effective value by summing base + all active temp modifier deltas.
  * Pure function — no side effects, no mutations.
  */
-export function getEffectiveValue(stat: StatKey, character: CharacterRecord): EffectiveValueResult {
-  const base = resolveBase(stat, character);
+export function getEffectiveValue(
+  stat: StatKey,
+  character: CharacterRecord,
+  derived?: DerivedValues,
+): EffectiveValueResult {
+  const base = resolveBase(stat, character, derived);
   const active = character.tempModifiers ?? [];
   const modifiers = active.flatMap(m =>
     m.effects
@@ -354,10 +402,11 @@ export interface ResolvedDerivedField extends EffectiveValueResult {
  */
 export function resolveDerivedField(
   character: CharacterRecord,
-  derived: Record<string, number | string | undefined>,
+  derived: Record<string, DerivedFieldValue>,
   field: { key: string; overridable?: boolean },
 ): ResolvedDerivedField {
-  const computed = derived[field.key];
+  const raw = derived[field.key];
+  const computed = typeof raw === 'number' || typeof raw === 'string' ? raw : undefined;
   const overrideRaw = character.derivedOverrides?.[field.key];
   const override = field.overridable && typeof overrideRaw === 'number' ? overrideRaw : null;
 
