@@ -3551,4 +3551,3 @@ b"` with a real break parses as a broken
   the autosave debounce (the first read at 800ms was too early), reopened to see
   it, then cleared it so the real character was left as found.
 - Commit: feat(sheet) — a Story Bank row opens the story behind it.
-

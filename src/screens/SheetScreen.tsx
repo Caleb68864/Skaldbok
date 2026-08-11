@@ -5,6 +5,7 @@ import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { AdvancementPanel } from '../components/fields/AdvancementPanel';
 import { DebtList } from '../components/fields/DebtList';
+import { StoryBeatModal } from '../components/fields/StoryBeatModal';
 import { addDebt, settleDebt, payDebt, reopenDebt, removeDebt } from '../features/characters/debts';
 import { resolveSkillCategories } from '../features/characters/customSkills';
 import {
@@ -185,6 +186,8 @@ export default function SheetScreen() {
   // Story Bank editor draft (a new beat being composed)
   const [newBeatCue, setNewBeatCue] = useState('');
   const [newBeatText, setNewBeatText] = useState('');
+  /** Beat whose full story is open, or null. */
+  const [openStoryBeatId, setOpenStoryBeatId] = useState<string | null>(null);
 
   function addStoryBeat() {
     const text = newBeatText.trim();
@@ -193,6 +196,16 @@ export default function SheetScreen() {
     updateCharacter(prev => ({ storyBank: [...(prev.storyBank ?? []), beat], updatedAt: nowISO() }));
     setNewBeatCue('');
     setNewBeatText('');
+  }
+
+  /** Writes the full story back onto one beat. */
+  function updateStoryBeatBody(id: string, body: string) {
+    updateCharacter(prev => ({
+      storyBank: (prev.storyBank ?? []).map(b =>
+        b.id === id ? { ...b, body: body.trim() ? body : undefined } : b,
+      ),
+      updatedAt: nowISO(),
+    }));
   }
 
   function removeStoryBeat(id: string) {
@@ -1124,6 +1137,8 @@ export default function SheetScreen() {
     </SectionPanel>
   );
 
+  const openStoryBeat = (character.storyBank ?? []).find(b => b.id === openStoryBeatId) ?? null;
+
   const storyBankPanel = (
     <SectionPanel title="Story Bank" icon={<GameIcon name="cog" size={18} />} collapsible defaultOpen>
       <div className="flex flex-col gap-[var(--space-sm)]">
@@ -1134,14 +1149,26 @@ export default function SheetScreen() {
         )}
         {(character.storyBank ?? []).map(beat => (
           <div key={beat.id} className="flex items-start justify-between gap-[var(--space-sm)] border-b border-[var(--color-border)] pb-[var(--space-xs)]">
-            <div className="min-w-0">
+            {/* The row is the title; the story itself opens in a modal. A real
+                button, not a div: this is the primary way into the anecdote and
+                has to be reachable from a keyboard. */}
+            <button
+              type="button"
+              onClick={() => setOpenStoryBeatId(beat.id)}
+              className="min-w-0 flex-1 min-h-[44px] text-left bg-transparent border-none cursor-pointer p-0"
+            >
               {beat.cue && (
                 <span className="mr-2 rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] px-1.5 py-0.5 text-[length:var(--font-size-sm)] font-semibold text-[var(--color-accent)]">
                   {beat.cue}
                 </span>
               )}
               <span className="text-[var(--color-text)] text-[length:var(--font-size-md)]">{beat.text}</span>
-            </div>
+              {beat.body && (
+                <span className="ml-2 text-[length:var(--size-xs)] uppercase tracking-wide text-[var(--color-text-muted)]">
+                  more
+                </span>
+              )}
+            </button>
             {isEditMode && (
               <button
                 type="button"
@@ -1154,6 +1181,14 @@ export default function SheetScreen() {
             )}
           </div>
         ))}
+        {openStoryBeat && (
+          <StoryBeatModal
+            beat={openStoryBeat}
+            editable={isEditMode}
+            onSave={body => updateStoryBeatBody(openStoryBeat.id, body)}
+            onClose={() => setOpenStoryBeatId(null)}
+          />
+        )}
         {isEditMode && (
           <div className="flex flex-wrap gap-[var(--space-xs)]">
             <input

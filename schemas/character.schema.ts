@@ -95,6 +95,10 @@ export const characterRecordSchema = z.object({
     id: z.string(),
     cue: z.string(),
     text: z.string(),
+    // Optional, and listed here as well as on the type: Zod strips unknown keys,
+    // so a field added to `StoryBeat` alone would survive for locally-created
+    // beats and silently vanish for imported ones.
+    body: z.string().optional(),
   })).optional().describe('Roleplay prompts / story-bank beats'),
   wealth: z
     .record(z.string(), z.number().nonnegative())

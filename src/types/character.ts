@@ -410,6 +410,16 @@ export interface StoryBeat {
   cue: string;
   /** The prompt itself: an anecdote title, a reminder, a line to deliver. */
   text: string;
+  /**
+   * The story in full, opened from the row rather than shown in it.
+   *
+   * @remarks
+   * `text` is a title you scan down a list at the table; this is the anecdote
+   * behind it, which is too long to sit in the row without burying every other
+   * cue. Optional, so every beat written before this existed is still valid and
+   * no migration is needed — a beat with no body simply has nothing to expand.
+   */
+  body?: string;
 }
 
 export interface CharacterRecord extends Versioned, Timestamped {
