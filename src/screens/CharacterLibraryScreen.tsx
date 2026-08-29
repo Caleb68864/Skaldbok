@@ -210,8 +210,16 @@ export default function CharacterLibraryScreen() {
   async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const result = await importCharacter(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    let result: Awaited<ReturnType<typeof importCharacter>>;
+    try {
+      result = await importCharacter(file);
+    } catch (err) {
+      console.error('CharacterLibraryScreen.handleImportFile failed:', err);
+      result = { success: false, error: 'Import failed: the file could not be read.' };
+    } finally {
+      // Reset on every path, or the same file cannot be picked again.
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
     if (result.success) {
       await loadCharacters();
       if (result.warning) {

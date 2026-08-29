@@ -98,18 +98,20 @@ async function convertAttachmentsToBase64(contents: BundleContents): Promise<Bun
   return { ...contents, attachments: processedAttachments };
 }
 
+/**
+ * Base64 of a Blob's bytes, via `arrayBuffer()` rather than `FileReader` — the
+ * former exists everywhere the app runs (and in the test runtime), and skips
+ * the data-URL prefix dance. Encoded in chunks so a multi-megabyte image does
+ * not spread into one giant `String.fromCharCode` call.
+ */
 async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      // Strip data URL prefix (data:...;base64,) — keep only the base64 data
-      const base64 = result.split(',')[1] ?? result;
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 async function computeSha256(data: string): Promise<string | null> {

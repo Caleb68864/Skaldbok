@@ -4,6 +4,8 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../../storage/db/client';
 import { mergeBundle, type MergeOptions } from './mergeEngine';
+import { serializeBundle } from '../export/bundleSerializer';
+import { parseBundle } from './bundleParser';
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
 
 function makeBundle(contents: Record<string, unknown>): BundleEnvelope {
@@ -57,6 +59,45 @@ describe('mergeBundle', () => {
     expect(report.inserted).toBe(0);
     expect(report.errors).toHaveLength(1);
     expect(await db.attachments.get('a1')).toBeUndefined();
+  });
+
+  it('round-trips an attachment: exported blob comes back as the same bytes', async () => {
+    // The export collector used to strip the Blob before the serializer looked
+    // for it, so every exported attachment was metadata-only and the importer
+    // refused all of them.
+    const bytes = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]);
+    const attachment = {
+      id: 'a-rt', noteId: 'n1', campaignId: 'camp', filename: 'x.jpg',
+      mimeType: 'image/jpeg', sizeBytes: bytes.length,
+      blob: new Blob([bytes], { type: 'image/jpeg' }),
+      createdAt: '2026-01-02T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z',
+    };
+    const json = await serializeBundle('character', { attachments: [attachment] } as unknown as BundleContents);
+    const parsed = parseBundle(json);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    const report = await mergeBundle(parsed.bundle, opts);
+    expect(report.errors).toEqual([]);
+    expect(report.inserted).toBe(1);
+    const row = await db.attachments.get('a-rt');
+    expect(row?.blob).toBeInstanceOf(Blob);
+    expect(new Uint8Array(await row!.blob.arrayBuffer())).toEqual(bytes);
+    expect(row?.sizeBytes).toBe(bytes.length);
+  });
+
+  it('refuses an attachment whose declared mime type is not an image', async () => {
+    const report = await mergeBundle(
+      makeBundle({ attachments: [{
+        id: 'a-html', noteId: 'n1', campaignId: 'camp', filename: 'x.html',
+        mimeType: 'text/html', sizeBytes: 4, data: btoa('<h1>'), encoding: 'base64',
+        createdAt: '2026-01-02T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z',
+      }] }),
+      opts,
+    );
+    expect(report.inserted).toBe(0);
+    expect(report.errors).toHaveLength(1);
+    expect(await db.attachments.get('a-html')).toBeUndefined();
   });
 
   it('dedups by PARSED timestamp — older import skips, newer updates', async () => {

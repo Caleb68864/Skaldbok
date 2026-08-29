@@ -167,6 +167,18 @@ function handleLegacySkaldbok(obj: Record<string, unknown>): ParsedBundleResult 
     },
   };
 
+  // Same per-entity validation and migration as the versioned path. This
+  // branch used to hand the raw object straight to the merge engine, so a
+  // legacy file was the one way an unvalidated, unmigrated record reached
+  // IndexedDB.
+  wrappedBundle.contents = validateContentsEntities(wrappedBundle.contents, warnings);
+  if ((wrappedBundle.contents.characters?.length ?? 0) === 0) {
+    return {
+      success: false,
+      error: `Legacy character file is not a valid character: ${warnings[warnings.length - 1]?.message ?? 'unknown error'}`,
+    };
+  }
+
   return { success: true, bundle: wrappedBundle, warnings };
 }
 

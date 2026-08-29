@@ -336,11 +336,17 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
 }
 
 /**
- * Strips the Blob field from a storage attachment, producing the
- * bundle-safe shape (matching `attachmentBundleSchema`). The actual
- * Blob→base64 conversion happens later in the bundle serializer.
+ * Passes a storage attachment through with its Blob intact.
+ *
+ * @remarks
+ * The bundle serializer (`convertAttachmentsToBase64`) is what turns the Blob
+ * into `data`/`encoding`, and it only does so when it finds a Blob on the row.
+ * This helper used to strip the Blob first "to match the bundle schema", so
+ * every export carried attachment metadata with no payload and the importer
+ * rejected each one as "no restorable base64 data". The type is widened rather
+ * than narrowed on purpose: the schema shape is reached after serialization,
+ * not before.
  */
 function toBundleAttachment(a: Attachment): Omit<Attachment, 'blob'> {
-  const { blob: _blob, ...rest } = a;
-  return rest;
+  return a as Omit<Attachment, 'blob'>;
 }

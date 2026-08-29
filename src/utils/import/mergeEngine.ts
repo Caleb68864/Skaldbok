@@ -256,7 +256,7 @@ async function mergeEntity(
     // For attachments: restore base64 data back to Blob before inserting.
     const toInsert = entityType === 'attachments' ? restoreAttachmentBlob(reparented) : reparented;
     if (!toInsert) {
-      report.errors.push({ entityType, entityId: id, message: 'Attachment has no restorable base64 data; skipped' });
+      report.errors.push({ entityType, entityId: id, message: 'Attachment has no restorable image payload (missing, oversized, or not an image); skipped' });
       return;
     }
     // Insert new entity — use put() to preserve original ID
@@ -386,16 +386,33 @@ function restoreAttachmentBlob(entity: Record<string, unknown>): Record<string, 
   const data = entity.data as string | undefined;
   const encoding = entity.encoding as string | undefined;
   if (!data || encoding !== 'base64') return null;
-  const binary = atob(data);
+  // The bundle's declared mime type and size are untrusted. Attachments are
+  // images (the repository re-encodes everything it stores through a canvas),
+  // so anything else is refused, and the payload is capped before decoding
+  // rather than after.
+  const mimeType = entity.mimeType;
+  if (typeof mimeType !== 'string' || !ALLOWED_ATTACHMENT_MIME.has(mimeType)) return null;
+  if (data.length > MAX_ATTACHMENT_BASE64_LENGTH) return null;
+  let binary: string;
+  try {
+    binary = atob(data);
+  } catch {
+    return null;
+  }
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  const mimeType = (entity.mimeType as string) ?? 'application/octet-stream';
   const blob = new Blob([bytes], { type: mimeType });
   const { data: _data, encoding: _enc, ...rest } = entity;
-  return { ...rest, blob };
+  return { ...rest, blob, sizeBytes: bytes.length };
 }
+
+/** Image types the attachment store produces; a bundle claiming anything else is refused. */
+const ALLOWED_ATTACHMENT_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+/** 10 MiB of decoded image, as base64 length (4/3 expansion). */
+const MAX_ATTACHMENT_BASE64_LENGTH = Math.ceil((10 * 1024 * 1024) * 4 / 3);
 
 /**
  * Logs warnings for encounter participants with unresolvable linkedCreatureId.

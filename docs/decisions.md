@@ -3659,3 +3659,39 @@ b"` with a real break parses as a broken
   across the rename" fails on the old code, passes now; build clean; 1236 tests;
   Traveller Play dashboard tiles render STR…SOC / Init / Carry in the browser.
 - Commit: fix(engine) — printed sheet and JSON tiles read through the resolvers.
+
+## 2026-08-28 — Exported attachments never carried their bytes
+- Symptom: `collectors.toBundleAttachment` stripped the Blob "to match the
+  bundle schema", and `bundleSerializer.convertAttachmentsToBase64` only
+  base64-encodes when it finds a Blob — so every campaign export emitted
+  attachment metadata with no payload, and on import every one was rejected as
+  "no restorable base64 data", surfaced only as "N error(s)". The importer also
+  trusted the bundle's `mimeType` verbatim and `atob`'d an uncapped payload;
+  a legacy bare-character file (no `version` key) bypassed
+  `validateContentsEntities` and `migrateCharacter` entirely and was `put`
+  straight into `db.characters`; `startImport`, `CreatureImportModal.handleFile`
+  and `CharacterLibraryScreen.handleImportFile` awaited `file.text()` with no
+  try/catch (and the library never reset its file input on the failure path).
+- Fix: the collector passes the Blob through; `blobToBase64` uses
+  `arrayBuffer()` + chunked `btoa` (FileReader does not exist in the test
+  runtime and the arrayBuffer form is simpler anyway). `restoreAttachmentBlob`
+  refuses a mime type outside {jpeg,png,webp,gif}, caps the payload at 10 MiB
+  decoded before `atob`, tolerates a malformed base64 string, and rewrites
+  `sizeBytes` from the real length. The legacy branch runs the same
+  validation and returns a hard failure when nothing survives. The three entry
+  points are guarded; the import toast names the first three failing entities
+  and logs the rest.
+- Surfaces: utils/export/{collectors,bundleSerializer}.ts,
+  utils/import/{mergeEngine,bundleParser}.ts, features/import/useImportActions.ts,
+  features/bestiary/CreatureImportModal.tsx, screens/CharacterLibraryScreen.tsx.
+- Watch: `toBundleAttachment` now returns a value that still *has* a Blob under
+  an `Omit<Attachment,'blob'>` type — a deliberate cast, commented, because the
+  schema shape is reached after serialization, not before. Do not "fix" the
+  type by stripping the Blob again.
+- Watch also: the campaign bundle still omits ships, ledger, routes, reference
+  groups and the system definition (`bundleContentsSchema` has no slot for
+  them). That is a feature gap, not a regression, and is left open.
+- Verified: new tests — attachment round-trip (serialize → parse → merge →
+  identical bytes), non-image mime refused, legacy bare record validated,
+  non-character bare object rejected; build clean; 1236 tests.
+- Commit: fix(import-export) — attachments round-trip; untrusted input is checked.

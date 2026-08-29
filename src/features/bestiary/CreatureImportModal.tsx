@@ -64,7 +64,12 @@ export function CreatureImportModal({ statFields, onCancel, onImport }: Creature
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
-    handleText(await file.text());
+    try {
+      handleText(await file.text());
+    } catch (err) {
+      console.error('CreatureImportModal.handleFile failed:', err);
+      setError('The file could not be read.');
+    }
   }
 
   async function commit() {
