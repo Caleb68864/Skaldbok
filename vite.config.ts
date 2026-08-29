@@ -39,6 +39,13 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [],
+        // Workbox's default ceiling is 2 MiB per file, and a file over it is
+        // dropped from the precache with only a build-time warning — the app
+        // then silently stops working offline. Screens are code-split so no
+        // chunk is near this, but the shared chunk was at 89% of the default
+        // before splitting; the explicit margin keeps a dependency bump from
+        // taking offline mode with it.
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
       },
     }),
   ],

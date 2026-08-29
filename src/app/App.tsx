@@ -1,4 +1,4 @@
-import { useRoutes } from 'react-router-dom';
+import { useLocation, useRoutes } from 'react-router-dom';
 import { routes } from '../routes';
 import { useAppState } from '../context/AppStateContext';
 import { UpdatePrompt } from '../pwa/UpdatePrompt';
@@ -7,6 +7,7 @@ import { ErrorBoundary } from './ErrorBoundary';
 export function App() {
   const { isLoading } = useAppState();
   const element = useRoutes(routes);
+  const { pathname } = useLocation();
 
   if (isLoading) {
     return (
@@ -17,7 +18,7 @@ export function App() {
   }
 
   return (
-    <ErrorBoundary>
+    <ErrorBoundary resetKey={pathname}>
       {element}
       <UpdatePrompt />
     </ErrorBoundary>

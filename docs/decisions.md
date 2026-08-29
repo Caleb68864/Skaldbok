@@ -3551,3 +3551,32 @@ b"` with a real break parses as a broken
   the autosave debounce (the first read at 800ms was too early), reopened to see
   it, then cleared it so the real character was left as found.
 - Commit: feat(sheet) — a Story Bank row opens the story behind it.
+
+## 2026-08-28 — Every screen shipped in one 1.87 MB chunk
+- Symptom: `routes/index.tsx` imported all twenty screens eagerly, so the first
+  paint downloaded a single 1,866 kB JS file. That is 89% of Workbox's default
+  2 MiB per-file precache ceiling; past it the file is dropped from the precache
+  with only a build-time warning and the PWA stops working offline. One more
+  dependency would have done it.
+- Fix: each screen is a `React.lazy` chunk behind a Suspense fallback
+  (`lazyScreen`/`screen` helpers). Shared chunk is now 850 kB, screens are
+  16–120 kB each, and `maximumFileSizeToCacheInBytes` is set to 4 MiB explicitly.
+  `main.tsx` listens for `vite:preloadError` and reloads once (session-flagged)
+  so a stale chunk hash after a deploy does not land on the error boundary.
+- Surfaces: routes/index.tsx, main.tsx, app/App.tsx, app/ErrorBoundary.tsx,
+  vite.config.ts.
+- Watch: `lazy()` MUST be called at module scope. The first draft called it
+  inside a render arrow, which mints a new component type every render and
+  remounts the screen on each parent update. Hoisted before it was ever run.
+- Watch also: the ErrorBoundary now takes `resetKey` (App passes the pathname)
+  so a crashed screen does not hold the whole app on the fallback after the
+  user navigates away; and a second boundary wraps `AppProviders` in main.tsx,
+  because the providers themselves can throw during render (ThemeProvider did —
+  see the storage-guard entry below) with nothing above them to catch it.
+- Watch also: the `linkSyncEngine` "dynamically imported but also statically
+  imported" build warning is unchanged and harmless — KnowledgeBaseScreen
+  imports it statically; the others lazily.
+- Verified: build clean, 1236 tests. Browser smoke on the built bundle over
+  plain HTTP: library → new Traveller character → Sheet/Play/Skills/Gear →
+  Session → Reference → Menu, seven lazy chunks, zero console errors/warnings.
+- Commit: perf(app) — code-split every screen; boundary outside the providers.
