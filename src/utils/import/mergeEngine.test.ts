@@ -86,6 +86,20 @@ describe('mergeBundle', () => {
     expect(row?.sizeBytes).toBe(bytes.length);
   });
 
+  it('drops a remote portraitUri and keeps an inline one', async () => {
+    await mergeBundle(
+      makeBundle({ characters: [
+        { id: 'p-remote', name: 'Beacon', updatedAt: '2026-01-02T00:00:00.000Z', portraitUri: 'https://tracker.example/pixel.png' },
+        { id: 'p-inline', name: 'Inline', updatedAt: '2026-01-02T00:00:00.000Z', portraitUri: 'data:image/png;base64,iVBORw0KGgo=' },
+      ] }),
+      opts,
+    );
+    const remote = (await db.characters.get('p-remote')) as unknown as Record<string, unknown>;
+    const inline = (await db.characters.get('p-inline')) as unknown as Record<string, unknown>;
+    expect(remote.portraitUri).toBeUndefined();
+    expect(inline.portraitUri).toBe('data:image/png;base64,iVBORw0KGgo=');
+  });
+
   it('refuses an attachment whose declared mime type is not an image', async () => {
     const report = await mergeBundle(
       makeBundle({ attachments: [{

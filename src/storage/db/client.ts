@@ -618,3 +618,16 @@ export class SkaldbokDatabase extends Dexie {
 
 /** The process-wide database singleton every repository reads and writes through. */
 export const db = new SkaldbokDatabase();
+
+// Another tab opened a newer schema (the app updated there). Dexie's default
+// is to close this connection, after which every repository call throws
+// DatabaseClosedError with no way for the user to know why. Reload instead:
+// the new build's migrations have already run, so the reload just picks up
+// the version that can open the database.
+if (typeof window !== 'undefined') {
+  db.on('versionchange', () => {
+    db.close();
+    window.location.reload();
+    return false;
+  });
+}

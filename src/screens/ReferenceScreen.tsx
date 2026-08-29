@@ -236,9 +236,14 @@ export default function ReferenceScreen() {
       setDeleteGroupTarget(null);
       return;
     }
-    await referenceSectionRepository.removeGroup(deleteGroupTarget.id);
-    setDeleteGroupTarget(null);
-    await loadSections();
+    try {
+      await referenceSectionRepository.removeGroup(deleteGroupTarget.id);
+      await loadSections();
+    } catch (e) {
+      setError(`Could not delete the card. ${String(e)}`);
+    } finally {
+      setDeleteGroupTarget(null);
+    }
   }
 
   function openEditSection(section: ReferenceSection) {
@@ -263,15 +268,26 @@ export default function ReferenceScreen() {
 
   async function handleSectionDeleteConfirm() {
     if (!deleteSectionTarget) return;
-    await referenceSectionRepository.remove(deleteSectionTarget.id);
-    setDeleteSectionTarget(null);
-    await loadSections();
+    try {
+      await referenceSectionRepository.remove(deleteSectionTarget.id);
+      await loadSections();
+    } catch (e) {
+      setError(`Could not delete the section. ${String(e)}`);
+    } finally {
+      setDeleteSectionTarget(null);
+    }
   }
 
   async function persistLayout(nextGroups: ReferenceGroup[], nextSections: ReferenceSection[]) {
     setGroups(nextGroups.map((group, index) => ({ ...group, order: index })));
     setSections(nextSections);
-    await referenceSectionRepository.saveLayout(nextGroups, nextSections);
+    try {
+      await referenceSectionRepository.saveLayout(nextGroups, nextSections);
+    } catch (e) {
+      // The optimistic order above is now wrong; reload what is actually stored.
+      setError(`Could not save the new order. ${String(e)}`);
+      await loadSections();
+    }
   }
 
   async function moveGroup(activeGroupId: string, targetGroupId: string) {
@@ -366,9 +382,14 @@ export default function ReferenceScreen() {
 
   async function handleNoteDeleteConfirm() {
     if (!deleteNoteTarget) return;
-    await referenceNoteRepository.remove(deleteNoteTarget.id);
-    setDeleteNoteTarget(null);
-    await loadNotes();
+    try {
+      await referenceNoteRepository.remove(deleteNoteTarget.id);
+      await loadNotes();
+    } catch (e) {
+      setError(`Could not delete the note. ${String(e)}`);
+    } finally {
+      setDeleteNoteTarget(null);
+    }
   }
 
   return (

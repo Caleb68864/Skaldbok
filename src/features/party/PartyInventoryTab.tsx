@@ -249,23 +249,30 @@ export function PartyInventoryTab() {
     carrier: Carrier,
     patch: Partial<{ items: InventoryItem[]; wealth: Wealth }>,
   ): Promise<void> {
-    if (carrier.kind === 'pc') {
-      const next: CharacterRecord = {
-        ...carrier.character,
-        inventory: patch.items ?? carrier.character.inventory,
-        ...(patch.wealth ? engine.currency.write(carrier.character, patch.wealth) : {}),
-        updatedAt: nowISO(),
-      };
-      await characterRepository.save(next);
-    } else {
-      const next: InventoryContainer = {
-        ...carrier.container,
-        items: patch.items ?? carrier.container.items,
-        // Containers hold denomination-keyed money now, so any currency the
-        // active system defines round-trips instead of being dropped.
-        wealth: patch.wealth ?? containerWealth(carrier.container),
-      };
-      await inventoryContainerRepository.save(next);
+    // Every caller reloads afterwards, so on failure the screen snaps back to
+    // what is actually stored; the toast is what tells the user it did not take.
+    try {
+      if (carrier.kind === 'pc') {
+        const next: CharacterRecord = {
+          ...carrier.character,
+          inventory: patch.items ?? carrier.character.inventory,
+          ...(patch.wealth ? engine.currency.write(carrier.character, patch.wealth) : {}),
+          updatedAt: nowISO(),
+        };
+        await characterRepository.save(next);
+      } else {
+        const next: InventoryContainer = {
+          ...carrier.container,
+          items: patch.items ?? carrier.container.items,
+          // Containers hold denomination-keyed money now, so any currency the
+          // active system defines round-trips instead of being dropped.
+          wealth: patch.wealth ?? containerWealth(carrier.container),
+        };
+        await inventoryContainerRepository.save(next);
+      }
+    } catch (e) {
+      console.error('PartyInventoryTab.persistCarrier failed:', e);
+      showToast('Could not save the inventory change', 'error');
     }
   }
 

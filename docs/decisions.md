@@ -3758,3 +3758,41 @@ b"` with a real break parses as a broken
   Trash shows the row with its deletion time → Restore → toast → library lists
   the character again; zero console output throughout.
 - Commit: feat(trash) — characters, sessions and notes can be restored.
+
+## 2026-08-29 — A database that would not open looked like a working app
+- Symptom: `useAppSettings` caught the settings-load failure and only cleared
+  `isLoading`, so when IndexedDB refused to open (private mode, blocked site
+  data, a newer schema opened by another tab) the app rendered on defaults and
+  every save failed silently. `settingsError` was exported and read by nobody.
+  No `versionchange` handler existed, so an update in another tab left this
+  one with a closed connection and `DatabaseClosedError` on every call. Also:
+  `isFatalMergeError` matched `name === 'DexieError'`, which Dexie never
+  assigns, so a genuinely dead database during import was logged as N per-row
+  errors and the import "completed"; three ReferenceScreen delete confirms and
+  the drag-reorder writer were unguarded (reorder was optimistic, so a failed
+  save left the screen showing an order that was never stored);
+  `PartyInventoryTab` writes had `showToast` in hand and did not use it; an
+  imported character could carry `portraitUri: https://…`, rendered as an
+  `<img>` every time the sheet opened.
+- Fix: `storageError` from `useAppSettings` → `AppStateContext` → `App`
+  renders `StorageUnavailable` (causes listed, error verbatim, Reload).
+  `db.on('versionchange')` closes and reloads. `FATAL_MERGE_ERROR_NAMES` holds
+  the real names (QuotaExceeded, Abort, DatabaseClosed, Version, OpenFailed,
+  Upgrade, InvalidState, MissingAPI, Unknown, TransactionInactive). Reference
+  handlers try/catch into `setError`; a failed reorder reloads the stored
+  order. `persistCarrier` catches and toasts (every caller reloads, so the
+  screen snaps back to truth). `importablePortraitUri` keeps
+  `data:image/*;base64,` only, applied in `sanitizeCharacterStrings` and in
+  `mergeEntity` for characters (test: remote dropped, inline kept).
+- Surfaces: app/{StorageUnavailable,App}.tsx, context/AppStateContext.tsx,
+  features/settings/useAppSettings.ts, storage/db/client.ts,
+  screens/ReferenceScreen.tsx, features/party/PartyInventoryTab.tsx,
+  utils/import/{mergeEngine,portraitUri}.ts, utils/importExport.ts.
+- Watch: `StorageUnavailable` renders only when the *settings* read fails. A
+  database that opens and then fails mid-session is still the per-write toast
+  path. The reload-on-versionchange is deliberate for a local-first app with no
+  unsaved server state; if a screen ever holds unsaved in-memory work, revisit.
+- Watch also: `portraitUri` on a *locally created* character is untouched;
+  the picker already produces data URLs.
+- Verified: build clean; 1242 tests; E2E suite 14/14 on the dev server.
+- Commit: fix(app) — say so when storage will not open; guard the last silent writes.

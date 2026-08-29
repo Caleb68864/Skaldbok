@@ -1,6 +1,7 @@
 import { db } from '../../storage/db/client';
 import type { BundleEnvelope, BundleContents } from '../../types/bundle';
 import { getById as getCreatureTemplateById } from '../../storage/repositories/creatureTemplateRepository';
+import { importablePortraitUri } from './portraitUri';
 
 /**
  * Options controlling how a bundle is merged into local IndexedDB.
@@ -195,13 +196,25 @@ export async function mergeBundle(
  */
 function isFatalMergeError(err: unknown): boolean {
   const name = (err as { name?: string } | null)?.name ?? '';
-  return (
-    name === 'QuotaExceededError' ||
-    name === 'AbortError' ||
-    name === 'DatabaseClosedError' ||
-    name === 'DexieError'
-  );
+  // Dexie never assigns the name 'DexieError' to a thrown error — concrete
+  // failures carry their own names — so the old check let a closed or
+  // mis-versioned database read as a per-row problem and the import "finished".
+  return FATAL_MERGE_ERROR_NAMES.has(name);
 }
+
+/** Error names that mean the database itself is unusable, not one row. */
+const FATAL_MERGE_ERROR_NAMES = new Set([
+  'QuotaExceededError',
+  'AbortError',
+  'DatabaseClosedError',
+  'VersionError',
+  'OpenFailedError',
+  'UpgradeError',
+  'InvalidStateError',
+  'MissingAPIError',
+  'UnknownError',
+  'TransactionInactiveError',
+]);
 
 /**
  * Merges a single entity into IndexedDB using dedup rules.
@@ -228,6 +241,10 @@ async function mergeEntity(
   const reparented = { ...applyReparenting(entity, options.targetCampaignId, bundleContents) } as Record<string, unknown>;
   delete reparented.deletedAt;
   delete reparented.softDeletedBy;
+  if (entityType === 'characters' && 'portraitUri' in reparented) {
+    // Inline images only — see importablePortraitUri.
+    reparented.portraitUri = importablePortraitUri(reparented.portraitUri);
+  }
 
   // Skip an entityLink whose endpoints didn't make it into the DB — importing it
   // would create a dangling edge. This catches both the "user deselected the

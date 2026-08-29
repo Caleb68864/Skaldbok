@@ -4,6 +4,7 @@ import { generateId } from './ids';
 import { nowISO } from './dates';
 import { BUNDLED_SYSTEMS } from '../systems/registry';
 import type { CharacterRecord } from '../types/character';
+import { importablePortraitUri } from './import/portraitUri';
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'character';
@@ -59,6 +60,7 @@ function sanitizeCharacterStrings(char: CharacterRecord): CharacterRecord {
     name: stripHtml(char.name),
     metadata: sanitizeDeep(char.metadata),
     memento: stripHtml(char.memento),
+    portraitUri: importablePortraitUri(char.portraitUri),
   };
   if (char.systemData) {
     sanitized.systemData = sanitizeDeep(char.systemData);
