@@ -3796,3 +3796,34 @@ b"` with a real break parses as a broken
   the picker already produces data URLs.
 - Verified: build clean; 1242 tests; E2E suite 14/14 on the dev server.
 - Commit: fix(app) — say so when storage will not open; guard the last silent writes.
+
+## 2026-08-29 — Migration whitelist copies; KB edge twins across tabs
+- Symptom: `migrateCharacterV3ToV4`'s `spellToAbility` / `heroicToAbility`
+  copied only the fields they named, so anything else on a legacy spell or
+  heroic ability (a field added to the type later, or user data an older build
+  stored) was dropped on upgrade — against CLAUDE.md's "must preserve unrelated
+  fields". `linkSyncEngine` inserted edges with `generateId()`; the per-note
+  mutex serialises one tab, but two tabs both read the edge set, both decide
+  the edge is missing, both `put()` — two rows, a doubled backlink. And
+  `characterMappers.BLANK_TEMPLATES` was a third hand-kept system-id list with
+  nothing checking it against `registry.ts`.
+- Fix: `partitionLegacy(entry, systemKeys, consumedKeys)` splits an entry into
+  `systemFields`, the keys the new shape replaces (`wpCost`, `summary`, `type`),
+  and `rest`, which is spread first so the named fields still win. Edge id is
+  `edge:${type}:${from}:${to}` — one such edge can exist, so its id is its
+  identity and the second `put` is a no-op; `absorbPlaceholder` deletes the
+  old row and re-puts under the id of the edge it now is. `hasBlankTemplate` +
+  `characterMappers.test.ts` (`it.each(BUNDLED_SYSTEMS)`) fails the build when
+  a system is registered without a template.
+- Surfaces: utils/migrations.ts, features/kb/linkSyncEngine.ts,
+  features/characters/characterMappers.ts.
+- Watch: edges written before this keep their random ids. The key-set diff
+  (`type:toId`) still prevents adding a twin next to one, so nothing
+  duplicates; a `bulkRebuildGraph` rewrites them under the new ids. There is
+  still no unique index on `(fromId,type,toId)` — the id *is* the constraint.
+- Watch also: `partitionLegacy` treats a legacy `type` key as consumed, so a
+  v3 spell that somehow carried `type: 'heroic'` becomes `type: 'spell'`, as
+  before. That is the intended precedence, not a loss.
+- Verified: new migration test fails on the old code (dropped `notes`/
+  `usesPerRest`), passes now; linkSyncEngine tests unchanged; 1242 tests.
+- Commit: fix(data) — migrations keep unknown fields; KB edges have one identity.

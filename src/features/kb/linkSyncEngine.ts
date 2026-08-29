@@ -22,7 +22,6 @@ import {
   deleteEdgesToNode,
 } from '../../storage/repositories/kbEdgeRepository';
 import { extractLinksFromTiptapJSON } from './tiptapParser';
-import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { db } from '../../storage/db/client';
 import type { KBNode, KBEdge } from '../../storage/db/client';
@@ -77,6 +76,11 @@ function placeholderNodeId(campaignId: string, label: string): string {
  * merged `Old Gods` with `Old-Gods`. Existing tag nodes under the old ids are
  * replaced on the next graph rebuild.
  */
+/** Id of the edge `from —type→ to`; one such edge can exist, so its id is its identity. */
+function edgeIdFor(fromId: string, type: string, toId: string): string {
+  return `edge:${type}:${fromId}:${toId}`;
+}
+
 function tagNodeIdFor(campaignId: string, label: string): string {
   return `tag:${campaignId}:${label.trim().toLowerCase().replace(/\s+/g, ' ')}`;
 }
@@ -118,7 +122,11 @@ async function absorbPlaceholder(
       await deleteEdge(edge.id);
       continue;
     }
-    await upsertEdge({ ...edge, toId: realNodeId });
+    // The old id encodes the placeholder as target; the edge is now a
+    // different edge and takes that edge's id, so a later sync that computes
+    // the same id finds this row rather than adding a twin.
+    await deleteEdge(edge.id);
+    await upsertEdge({ ...edge, id: edgeIdFor(edge.fromId, edge.type, realNodeId), toId: realNodeId });
     alreadyLinked.add(`${edge.fromId}:${edge.type}`);
   }
   await deleteNode(stubId);
@@ -320,7 +328,11 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
     for (const [key, { toId, type }] of desiredEdges.entries()) {
       if (!existingEdgeKeys.has(key)) {
         await upsertEdge({
-          id: generateId(),
+          // Deterministic, not generated: two tabs syncing the same note both
+          // diff against the edge set they read, both decide this edge is
+          // missing, and both put() — with a random id that was two rows and
+          // a doubled backlink; with this id the second put is a no-op.
+          id: edgeIdFor(noteNodeId, type, toId),
           fromId: noteNodeId,
           toId,
           type,

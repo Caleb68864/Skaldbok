@@ -135,12 +135,36 @@ export function migrateCharacterV2ToV3(data: unknown): unknown {
  * expressed as `cost: { wp }` rather than a field named after one system's
  * resource.
  */
-function spellToAbility(spell: Record<string, unknown>): Record<string, unknown> {
+const SPELL_SYSTEM_FIELDS = ['school', 'powerLevel', 'range', 'duration', 'rank', 'requirements', 'castingTime', 'powerScaling'];
+const HEROIC_SYSTEM_FIELDS = ['requirement', 'requirementSkillId', 'requirementSkillLevel'];
+
+/**
+ * Splits a legacy entry into the keys that move under `systemFields`, the
+ * keys the new shape replaces, and everything else — which is carried across
+ * untouched. A whitelist copy dropped any field it did not name, so a field
+ * added to `Spell` after the migration was written vanished on upgrade.
+ */
+function partitionLegacy(
+  entry: Record<string, unknown>,
+  systemKeys: string[],
+  consumedKeys: string[],
+): { systemFields: Record<string, unknown>; rest: Record<string, unknown> } {
   const systemFields: Record<string, unknown> = {};
-  for (const key of ['school', 'powerLevel', 'range', 'duration', 'rank', 'requirements', 'castingTime', 'powerScaling']) {
-    if (spell[key] !== undefined) systemFields[key] = spell[key];
+  const rest: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(entry)) {
+    if (systemKeys.includes(key)) {
+      if (value !== undefined && value !== null) systemFields[key] = value;
+    } else if (!consumedKeys.includes(key)) {
+      rest[key] = value;
+    }
   }
+  return { systemFields, rest };
+}
+
+function spellToAbility(spell: Record<string, unknown>): Record<string, unknown> {
+  const { systemFields, rest } = partitionLegacy(spell, SPELL_SYSTEM_FIELDS, ['wpCost', 'summary', 'type']);
   return {
+    ...rest,
     id: spell.id,
     type: 'spell',
     name: spell.name,
@@ -154,11 +178,9 @@ function spellToAbility(spell: Record<string, unknown>): Record<string, unknown>
 }
 
 function heroicToAbility(ability: Record<string, unknown>): Record<string, unknown> {
-  const systemFields: Record<string, unknown> = {};
-  for (const key of ['requirement', 'requirementSkillId', 'requirementSkillLevel']) {
-    if (ability[key] !== undefined && ability[key] !== null) systemFields[key] = ability[key];
-  }
+  const { systemFields, rest } = partitionLegacy(ability, HEROIC_SYSTEM_FIELDS, ['wpCost', 'summary', 'type']);
   return {
+    ...rest,
     id: ability.id,
     type: 'heroic',
     name: ability.name,

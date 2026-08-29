@@ -270,6 +270,21 @@ describe('migrateCharacterV3ToV4 (unified abilities)', () => {
     expect(spell.prepared).toBe(true);
   });
 
+  it('carries fields it does not know about across the conversion', () => {
+    // A field added to Spell/HeroicAbility after this migration was written
+    // must survive it; the whitelist copy used to drop anything unnamed.
+    const src = v3WithBoth();
+    (src.spells[0] as Record<string, unknown>).notes = 'learned at the tower';
+    (src.heroicAbilities[0] as Record<string, unknown>).usesPerRest = 2;
+    const out = migrateCharacterV3ToV4(src) as Record<string, unknown>;
+    const [spell, heroic] = out.abilities as Array<Record<string, unknown>>;
+    expect(spell.notes).toBe('learned at the tower');
+    expect(heroic.usesPerRest).toBe(2);
+    // …while the consumed legacy keys do not leak through alongside `cost`.
+    expect(spell).not.toHaveProperty('wpCost');
+    expect(spell).not.toHaveProperty('school');
+  });
+
   it('is idempotent — re-running does not duplicate abilities', () => {
     const once = migrateCharacterV3ToV4(v3WithBoth());
     const twice = migrateCharacterV3ToV4(once);
