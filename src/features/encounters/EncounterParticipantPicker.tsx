@@ -191,6 +191,7 @@ export function EncounterParticipantPicker({
         autoFocus
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search bestiary"
         placeholder="Search bestiary…"
         className="px-2 py-1 border border-neutral-300 rounded"
       />

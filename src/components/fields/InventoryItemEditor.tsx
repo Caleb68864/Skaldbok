@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { InventoryItem } from '../../types/character';
+import { useId } from 'react';
 import { Drawer } from '../primitives/Drawer';
 import { Button } from '../primitives/Button';
 import { generateId } from '../../utils/ids';
@@ -57,17 +58,19 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
     onClose();
   }
 
+  const ids = useId();
   return (
     <Drawer open={open} onClose={onClose} title={item ? 'Edit Item' : 'Add Item'}>
       <div className="flex flex-col gap-[var(--space-md)]">
         <div>
-          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Name</label>
-          <input className={inputClasses} value={name} onChange={e => setName(e.target.value)} />
+          <label htmlFor={`${ids}-name`} className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Name</label>
+          <input id={`${ids}-name`} className={inputClasses} value={name} onChange={e => setName(e.target.value)} />
         </div>
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Weight</label>
+            <label htmlFor={`${ids}-weight`} className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Weight</label>
             <input
+              id={`${ids}-weight`}
               type="number"
               className={inputClasses}
               value={tiny ? 0 : weight}
@@ -77,8 +80,8 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
             />
           </div>
           <div className="flex-1">
-            <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Quantity</label>
-            <input type="number" className={inputClasses} value={quantity} min={0} onChange={e => setQuantity(Number(e.target.value))} />
+            <label htmlFor={`${ids}-qty`} className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Quantity</label>
+            <input id={`${ids}-qty`} type="number" className={inputClasses} value={quantity} min={0} onChange={e => setQuantity(Number(e.target.value))} />
           </div>
         </div>
         <label className="flex items-center gap-[var(--space-sm)] text-[var(--color-text)] text-[length:var(--font-size-md)] cursor-pointer">
@@ -100,10 +103,11 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
           Consumable (show +/− quantity buttons in play mode)
         </label>
         <div>
-          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
+          <label htmlFor={`${ids}-capacity`} className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">
             Capacity bonus (e.g. backpack: +5)
           </label>
           <input
+            id={`${ids}-capacity`}
             type="number"
             className={inputClasses}
             value={capacityBonus}
@@ -112,8 +116,8 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
           />
         </div>
         <div>
-          <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Description</label>
-          <textarea className={`${inputClasses} resize-y`} value={description} rows={3} onChange={e => setDescription(e.target.value)} />
+          <label htmlFor={`${ids}-description`} className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Description</label>
+          <textarea id={`${ids}-description`} className={`${inputClasses} resize-y`} value={description} rows={3} onChange={e => setDescription(e.target.value)} />
         </div>
         <div className="flex gap-3 justify-end">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>

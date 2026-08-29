@@ -3827,3 +3827,33 @@ b"` with a real break parses as a broken
 - Verified: new migration test fails on the old code (dropped `notes`/
   `usesPerRest`), passes now; linkSyncEngine tests unchanged; 1242 tests.
 - Commit: fix(data) — migrations keep unknown fields; KB edges have one identity.
+
+## 2026-08-29 — Note-type and KB-category groupings out of components
+- Symptom: three literal arrays of user-facing groupings inside components —
+  `NotesGrid.NOTE_TYPE_FILTERS` (+ `HIDDEN_NOTE_TYPES`),
+  `PromoteEntriesSheet.SELECTABLE_NOTE_TYPES` (a *different* subset with
+  different labels), `VaultBrowser.CATEGORY_TABS` (renamed labels: People,
+  Places, Loot). CLAUDE.md names note-type groupings and filter presets as
+  must-be-configurable. Plus a spread of unlabeled inputs.
+- Fix: `config/defaults/noteTypes.ts` — one `NoteTypeConfig[]` with `label`,
+  order, `hiddenByDefault`, `promotable`; `config/defaults/kbCategories.ts`.
+  `AppSettings.noteTypes` / `kbCategoryTabs` overrides; `useNoteTypeConfig()` /
+  `useKBCategoryTabs()` in `useConfigurableDefaults`. The grid derives its
+  chips and hidden set, the promote sheet its selectable list, the browser its
+  tabs. `InventoryItemEditor` labels bound with `htmlFor`/`useId`;
+  `aria-label` on the participant drawer's HP/conditions/notes, the modifier
+  drawer's label/stat/amount, and the notes/bestiary search boxes.
+- Surfaces: config/defaults/{noteTypes,kbCategories}.ts, types/settings.ts,
+  hooks/useConfigurableDefaults.ts, features/notes/{NotesGrid,
+  PromoteEntriesSheet}.tsx, features/kb/VaultBrowser.tsx, and the labelled
+  components.
+- Watch: the default list now labels `generic` as "Note" everywhere (the grid
+  used to say "Generic"). `npc`, `spell-cast` and `ability-use` are not in the
+  default list, as before — they are system-assigned and were never offered.
+- Watch also: `AppSettings` is a TS interface, not Zod-validated, so a stored
+  override with a bad `id` is used as-is; the grid tolerates an unknown type
+  (it filters nothing) and the promote sheet writes it. A preferences UI must
+  validate against `NOTE_TYPES` when it lands.
+- Verified: build clean; 1242 tests; E2E promote flow (type picker) 14/14;
+  KB tabs All/People/Places/Loot/Notes render in the browser.
+- Commit: refactor(config) — note types and KB tabs come from configuration.

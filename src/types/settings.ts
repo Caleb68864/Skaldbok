@@ -1,5 +1,7 @@
 import type { TagPresetGroup } from '../config/defaults/tagPresets';
 import type { InventoryContainerKindConfig } from '../config/defaults/inventoryContainerKinds';
+import type { NoteTypeConfig } from '../config/defaults/noteTypes';
+import type { KBCategoryTab } from '../config/defaults/kbCategories';
 import type { Versioned } from './common';
 import type { ID } from './common';
 import type { ThemeName } from '../theme/themes';
@@ -104,6 +106,17 @@ export interface AppSettings extends Versioned {
    * `useInventoryContainerKinds()`.
    */
   inventoryContainerKinds?: InventoryContainerKindConfig[];
+  /**
+   * Presentation of the note types (labels, order, which are hidden or
+   * promotable), overriding `DEFAULT_NOTE_TYPE_CONFIG`. Read via
+   * `useNoteTypeConfig()`.
+   */
+  noteTypes?: NoteTypeConfig[];
+  /**
+   * Category tabs of the Knowledge Base browser, overriding
+   * `DEFAULT_KB_CATEGORY_TABS`. Read via `useKBCategoryTabs()`.
+   */
+  kbCategoryTabs?: KBCategoryTab[];
   /**
    * If `true`, the `Abilities / Magic` character screen shows both Spells and
    * Heroic Abilities. If `false` (or absent), only Heroic Abilities render —

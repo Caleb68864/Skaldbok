@@ -212,6 +212,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setCurrentHp(e.target.value)}
               onBlur={linkedCharacter ? handleLinkedHealthBlur : handleHpBlur}
               className={inputClass}
+              aria-label={engine.labels.creatureHealth}
               placeholder={engine.labels.creatureHealth}
             />
           </div>
@@ -225,6 +226,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setConditionsText(e.target.value)}
               onBlur={handleConditionsBlur}
               className={inputClass}
+              aria-label="Conditions, comma separated"
               placeholder={engine.labels.conditionExamples}
             />
           </div>
@@ -237,6 +239,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setNotes(e.target.value)}
               onBlur={handleNotesBlur}
               className={`${inputClass} min-h-[80px] resize-y`}
+              aria-label="Participant notes"
               placeholder="Participant notes..."
             />
           </div>
