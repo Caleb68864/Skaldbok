@@ -605,6 +605,9 @@ export async function saveInkPage(noteId: string, page: StrokePage): Promise<Not
     if (!existing) {
       throw new Error(`note ${noteId} not found`);
     }
+    if ((existing as Note).deletedAt) {
+      throw new Error(`note ${noteId} has been deleted`);
+    }
     const mergedTypeData = {
       ...asTypeDataRecord((existing as Note).typeData),
       [INK_TYPE_DATA_KEY]: serializeStrokePage(page),

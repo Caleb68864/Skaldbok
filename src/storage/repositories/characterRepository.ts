@@ -4,6 +4,7 @@ import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { normalizeCharacter } from '../../utils/characterNormalization';
 import { upgradeCharacter } from '../../utils/migrations';
+import { restoreLinksForTxId, softDeleteLinksForEntity } from './entityLinkRepository';
 
 /**
  * Retrieves all {@link CharacterRecord} entries stored in IndexedDB.
@@ -79,31 +80,6 @@ export async function save(character: CharacterRecord): Promise<void> {
 }
 
 /**
- * Permanently deletes a character record from IndexedDB.
- *
- * @remarks
- * This operation is irreversible.  The caller is responsible for any
- * confirmation UI before invoking this function.  Cascade-deleting related
- * records (e.g. party members) must be handled separately by the caller.
- *
- * @param id - The unique ID of the character to delete.
- * @returns A promise that resolves when the deletion is complete.
- * @throws {Error} If the Dexie delete operation fails.
- *
- * @example
- * ```ts
- * await remove('char-abc123');
- * ```
- */
-export async function remove(id: string): Promise<void> {
-  try {
-    await db.characters.delete(id);
-  } catch (err) {
-    throw new Error(`Failed to delete character: ${String(err)}`);
-  }
-}
-
-/**
  * Soft-deletes a character.
  *
  * @remarks
@@ -111,6 +87,12 @@ export async function remove(id: string): Promise<void> {
  * stamp so it can be restored. Pass `txId` to enlist this in a wider cascade;
  * otherwise a fresh transaction id is minted. No-op if the character is missing
  * or already deleted.
+ *
+ * Cascades, under the same transaction id, to everything that points at the
+ * character: the party seats linked to it (`partyMembers.linkedCharacterId`)
+ * and every `entityLinks` edge touching it (encounter participants
+ * `represents` it). Without the cascade a deleted character keeps a live seat
+ * in the party drawer and a live participant in old encounters.
  */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
@@ -119,26 +101,60 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
     if (row.deletedAt) return;
     const finalTxId = txId ?? generateSoftDeleteTxId();
     const now = nowISO();
-    await db.characters.update(id, {
-      deletedAt: now,
-      softDeletedBy: finalTxId,
-      updatedAt: now,
+    await db.transaction('rw', [db.characters, db.partyMembers, db.entityLinks], async () => {
+      await db.characters.update(id, {
+        deletedAt: now,
+        softDeletedBy: finalTxId,
+        updatedAt: now,
+      });
+      const seats = await db.partyMembers.where('linkedCharacterId').equals(id).toArray();
+      const liveSeats = seats.filter((m) => !m.deletedAt);
+      if (liveSeats.length > 0) {
+        await db.partyMembers.bulkUpdate(
+          liveSeats.map((m) => ({
+            key: m.id,
+            changes: { deletedAt: now, softDeletedBy: finalTxId, updatedAt: now },
+          })),
+        );
+      }
+      await softDeleteLinksForEntity(id, finalTxId, now);
     });
   } catch (e) {
     throw new Error(`characterRepository.softDelete failed: ${e}`);
   }
 }
 
-/** Restores a soft-deleted character by clearing its `deletedAt`/`softDeletedBy`. No-op if missing or already live. */
+/**
+ * Restores a soft-deleted character together with everything its deletion
+ * cascaded to — party seats and edges that share its `softDeletedBy`. A seat
+ * removed on its own earlier carries a different transaction id and stays
+ * removed. No-op if missing or already live.
+ */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.characters.get(id);
     if (!row) return;
     if (!row.deletedAt) return;
-    await db.characters.update(id, {
-      deletedAt: undefined,
-      softDeletedBy: undefined,
-      updatedAt: nowISO(),
+    const txId = row.softDeletedBy;
+    const now = nowISO();
+    await db.transaction('rw', [db.characters, db.partyMembers, db.entityLinks], async () => {
+      await db.characters.update(id, {
+        deletedAt: undefined,
+        softDeletedBy: undefined,
+        updatedAt: now,
+      });
+      if (!txId) return;
+      const seats = await db.partyMembers.where('linkedCharacterId').equals(id).toArray();
+      const cascaded = seats.filter((m) => m.softDeletedBy === txId);
+      if (cascaded.length > 0) {
+        await db.partyMembers.bulkUpdate(
+          cascaded.map((m) => ({
+            key: m.id,
+            changes: { deletedAt: undefined, softDeletedBy: undefined, updatedAt: now },
+          })),
+        );
+      }
+      await restoreLinksForTxId(txId);
     });
   } catch (e) {
     throw new Error(`characterRepository.restore failed: ${e}`);

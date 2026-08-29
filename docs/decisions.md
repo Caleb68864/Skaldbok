@@ -3580,3 +3580,47 @@ b"` with a real break parses as a broken
   plain HTTP: library → new Traveller character → Sheet/Play/Skills/Gear →
   Session → Reference → Menu, seven lazy chunks, zero console errors/warnings.
 - Commit: perf(app) — code-split every screen; boundary outside the providers.
+
+## 2026-08-28 — Deleting a character was the one hard delete left in the UI
+- Symptom: `useCharacterActions.deleteCharacter` ran `db.partyMembers…delete()`
+  and `characterRepository.remove()` — two hard deletes from UI code, against
+  the project-wide soft-delete rule, and the only user-facing delete that could
+  never be restored. `represents` edges from encounter participants were left
+  dangling. Around it, a cluster of raw Dexie reads leaked tombstones: the
+  campaign switcher (`db.campaigns.toArray()`) listed trashed campaigns;
+  `CampaignContext.resolvePartyWithMembers` read parties/seats raw, so a deleted
+  character's seat came back in the drawer; the active-session lookup could pick
+  a trashed session; `ManagePartyDrawer` hard-deleted seats; `saveInkPage` wrote
+  strokes onto a deleted note. `addPartyCharactersToEncounter` did
+  `db.entityLinks.toArray()` — a full-table scan — despite the compound index.
+  "Clear all data" cleared a hand-kept list of 16 tables and had silently missed
+  ships, the whole ledger, routes, reference groups and systems.
+- Fix: `characterRepository.softDelete` cascades in one transaction to seats
+  (`linkedCharacterId`) and edges under a shared `softDeletedBy`; `restore`
+  brings back only rows carrying that id, so a seat removed on its own earlier
+  stays removed. `sessionRepository` cascades/restores its edges the same way.
+  Shared helper `softDeleteLinksForEntity` in entityLinkRepository. The dead
+  `characterRepository.remove` is gone (`hardDelete` already existed). Leaking
+  reads go through `getAllCampaigns`, `partyRepository.getPartyByCampaign/
+  getPartyMembers`, `sessionRepository.getActiveSession/getSessionById`; session
+  writes in CampaignContext go through `createSession`/`updateSession`. The
+  encounter helper queries `[fromEntityId+relationshipType]` with `anyOf`.
+  Settings wipe iterates `db.tables`.
+- Surfaces: storage/repositories/{character,session,entityLink,note}Repository.ts,
+  features/characters/useCharacterActions.ts, features/campaign/CampaignContext.tsx,
+  features/campaign/ManagePartyDrawer.tsx, components/shell/CampaignHeader.tsx,
+  features/encounters/addPartyCharactersToEncounter.ts, screens/SettingsScreen.tsx.
+- Watch: there is still no Trash UI for characters — a soft-deleted character is
+  restorable only via `characterRepository.restore`. That is strictly better than
+  before (the row exists) but the library has no "Trash" affordance yet.
+- Watch also: `updateSession` stamps `updatedAt` itself; callers that used to
+  pass it no longer do. The "Session N" numbering counts deleted sessions on
+  purpose (`includeDeleted: true`) so numbering stays stable after a delete.
+- Watch also: the audit that found these listed `useSessionLog`, `useEncounter`,
+  `useSessionEncounter`, `CombatEncounterView`, `BestiaryScreen` and the KB
+  files as still touching `db.*` directly. Those are by-id writes inside
+  transactions, not leaking reads, and were left for a separate pass.
+- Verified: new `characterRepository.test.ts` (4 tests: hidden-but-kept,
+  cascade shares txId, restore brings all back, independently-removed seat stays
+  removed); build clean; 1236 tests.
+- Commit: fix(storage) — deleting a character is a soft delete with a cascade.

@@ -30,16 +30,18 @@ export async function addPartyCharactersToEncounter(
     const enc = await db.encounters.get(encounterId);
     if (!enc) throw new Error(`encounter ${encounterId} not found`);
 
-    const participantIds = new Set((enc.participants ?? []).map((p) => p.id));
-    const existingLinks = await db.entityLinks.toArray();
+    const participantIds = (enc.participants ?? []).map((p) => p.id);
+    // Indexed lookup on the participants' outgoing `represents` edges — this
+    // used to scan the whole entityLinks table and filter in memory.
+    const existingLinks = participantIds.length === 0
+      ? []
+      : await db.entityLinks
+          .where('[fromEntityId+relationshipType]')
+          .anyOf(participantIds.map((id) => [id, 'represents']))
+          .toArray();
     const existingCharacterIds = new Set(
       existingLinks
-        .filter((link) =>
-          !link.deletedAt
-          && link.relationshipType === 'represents'
-          && link.toEntityType === 'character'
-          && participantIds.has(link.fromEntityId),
-        )
+        .filter((link) => !link.deletedAt && link.toEntityType === 'character')
         .map((link) => link.toEntityId),
     );
 

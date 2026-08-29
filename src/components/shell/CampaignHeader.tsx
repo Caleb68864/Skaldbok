@@ -9,7 +9,7 @@ import { useAppState } from '../../context/AppStateContext';
 import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
-import { db } from '../../storage/db/client';
+import { getAllCampaigns } from '../../storage/repositories/campaignRepository';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -30,6 +30,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { Campaign } from '../../types/campaign';
 import { AppLogo } from '../primitives/AppLogo';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 
 // ── Campaign Header ─────────────────────────────────────────────
 
@@ -63,16 +64,18 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
   const [sheetOpen, setSheetOpen] = useState(false);
   // Resolved from the *campaign*, not the active character: the overflow sheet
   // is campaign-scoped and is most often opened with no character loaded.
-  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const vehicles = system?.vehicles;
   const isPlayMode = settings.mode === 'play';
 
   useEffect(() => {
     if (!selectorOpen) return;
     let mounted = true;
-    db.campaigns.toArray().then(all => {
+    // Repository, not the table: a campaign in the trash must not be
+    // switchable-to from the header.
+    getAllCampaigns().then(all => {
       if (mounted) setCampaigns(all);
-    });
+    }).catch(console.error);
     return () => { mounted = false; };
   }, [selectorOpen]);
 

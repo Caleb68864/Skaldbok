@@ -175,6 +175,32 @@ export async function deleteLinksForNote(noteId: string, txId?: string): Promise
 }
 
 /**
+ * Soft-delete every live edge where `entityId` is source or target.
+ *
+ * @remarks
+ * The general form behind the per-entity cascade helpers. All matched edges
+ * share `txId` so {@link restoreLinksForTxId} brings them back together;
+ * edges that were already deleted keep their own transaction and are left
+ * alone.
+ */
+export async function softDeleteLinksForEntity(
+  entityId: string,
+  txId: string,
+  now: string,
+): Promise<void> {
+  const fromLinks = await db.entityLinks.where('fromEntityId').equals(entityId).toArray();
+  const toLinks = await db.entityLinks.where('toEntityId').equals(entityId).toArray();
+  const ids = new Set<string>();
+  for (const l of [...fromLinks, ...toLinks]) {
+    if (!(l as EntityLink).deletedAt) ids.add(l.id);
+  }
+  if (ids.size === 0) return;
+  await db.entityLinks.bulkUpdate(
+    [...ids].map((id) => ({ key: id, changes: { deletedAt: now, softDeletedBy: txId, updatedAt: now } })),
+  );
+}
+
+/**
  * Soft-delete every edge where the given encounter is source or target.
  *
  * @remarks

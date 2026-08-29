@@ -6,7 +6,8 @@ import { ReopenEncounterPrompt } from '../../components/modals/ReopenEncounterPr
 import { flushAll } from '../persistence/autosaveFlush';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import type { Encounter } from '../../types/encounter';
-import { db } from '../../storage/db/client';
+import * as sessionRepository from '../../storage/repositories/sessionRepository';
+import * as partyRepository from '../../storage/repositories/partyRepository';
 import * as metadataRepository from '../../storage/repositories/metadataRepository';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import * as systemRepository from '../../storage/repositories/systemRepository';
@@ -14,7 +15,6 @@ import { sessionRefreshPatch } from '../characters/sessionRefresh';
 import * as campaignRepository from '../../storage/repositories/campaignRepository';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useAppState } from '../../context/AppStateContext';
-import { generateId } from '../../utils/ids';
 import { localDateOnlyISO, nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
 import type { Campaign } from '../../types/campaign';
@@ -190,9 +190,11 @@ function lastSegmentEnd(enc: Encounter): string | null {
  * @returns The party with members, or `null` if no party exists for this campaign.
  */
 async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyWithMembers | null> {
-  const party = await db.parties.where('campaignId').equals(campaignId).first();
+  // Through the repository, which drops soft-deleted parties and seats — a
+  // raw Dexie read here put a deleted character's seat back in the drawer.
+  const party = await partyRepository.getPartyByCampaign(campaignId);
   if (!party) return null;
-  const members = await db.partyMembers.where('partyId').equals(party.id).toArray();
+  const members = await partyRepository.getPartyMembers(party.id);
   return { ...party, members };
 }
 
@@ -310,9 +312,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         setActiveCampaign_(campaign);
         await metadataRepository.set(ACTIVE_CAMPAIGN_METADATA_KEY, campaign.id);
 
-        const session = await db.sessions
-          .where({ campaignId: campaign.id, status: 'active' })
-          .first();
+        const session = await sessionRepository.getActiveSession(campaign.id);
         if (!mounted) return;
         setActiveSession_(session ?? null);
 
@@ -407,24 +407,18 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const sessionCount = await db.sessions.where('campaignId').equals(activeCampaign.id).count();
+      const sessionCount = (await sessionRepository.getSessionsByCampaign(activeCampaign.id, { includeDeleted: true })).length;
       const now = nowISO();
       const dateStr = localDateOnlyISO();
       const title = `Session ${sessionCount + 1} — ${dateStr}`;
 
-      const newSession: Session = {
-        id: generateId(),
+      const newSession = await sessionRepository.createSession({
         campaignId: activeCampaign.id,
         title,
         status: 'active',
         date: dateStr,
         startedAt: now,
-        schemaVersion: 1,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      await db.sessions.add(newSession);
+      });
       setActiveSession_(newSession);
 
       // Refill every party character's session-refreshing resources — Savage
@@ -448,10 +442,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
 
     try {
       const now = nowISO();
-      await db.sessions.update(activeSession.id, {
+      await sessionRepository.updateSession(activeSession.id, {
         status: 'ended',
         endedAt: now,
-        updatedAt: now,
       });
       setActiveSession_(null);
     } catch (e) {
@@ -468,13 +461,12 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     try {
       // Flush pending autosaves before mutating session state.
       await flushAll();
-      const session = await db.sessions.get(sessionId);
+      const session = await sessionRepository.getSessionById(sessionId);
       if (!session) { showToast('Session not found'); return; }
       const now = nowISO();
-      await db.sessions.update(sessionId, {
+      await sessionRepository.updateSession(sessionId, {
         status: 'active' as const,
         endedAt: undefined,
-        updatedAt: now,
       });
       setActiveSession_({ ...session, status: 'active', endedAt: undefined, updatedAt: now });
 
@@ -545,9 +537,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       setActiveCampaign_(campaign);
       await metadataRepository.set(ACTIVE_CAMPAIGN_METADATA_KEY, campaign.id);
 
-      const session = await db.sessions
-        .where({ campaignId, status: 'active' })
-        .first();
+      const session = await sessionRepository.getActiveSession(campaignId);
       setActiveSession_(session ?? null);
 
       const party = await resolvePartyWithMembers(campaignId);
@@ -589,10 +579,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     if (!staleSession) return;
     try {
       const now = nowISO();
-      await db.sessions.update(staleSession.id, {
+      await sessionRepository.updateSession(staleSession.id, {
         status: 'ended',
         endedAt: now,
-        updatedAt: now,
       });
       setActiveSession_(null);
     } catch (e) {

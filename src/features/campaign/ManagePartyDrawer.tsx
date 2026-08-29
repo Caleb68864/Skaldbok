@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCampaignContext } from './CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import { getAll as getAllCharacters } from '../../storage/repositories/characterRepository';
-import { createParty, addPartyMember, removePartyMember } from '../../storage/repositories/partyRepository';
+import { createParty, addPartyMember, softDeletePartyMember } from '../../storage/repositories/partyRepository';
 import { updateCampaign } from '../../storage/repositories/campaignRepository';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
@@ -111,12 +111,12 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
   /**
    * Removes a member from the party by their party-member ID.
    *
-   * @param memberId - ID of the {@link PartyMember} row to delete.
+   * @param memberId - ID of the {@link PartyMember} row to soft-delete.
    */
   const handleRemoveMember = async (memberId: string) => {
     setSaving(true);
     try {
-      await removePartyMember(memberId);
+      await softDeletePartyMember(memberId);
       await refreshParty();
     } catch (e) {
       showToast('Failed to remove member');
@@ -167,6 +167,7 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
           <h2 className="text-[var(--color-text)]">Manage Party</h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="bg-transparent border-none text-[var(--color-text-muted)] text-xl cursor-pointer min-h-11 min-w-11"
           >
             ✕
