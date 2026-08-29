@@ -63,6 +63,7 @@ export function DerivedFieldDisplay({ label, computedValue, override, onOverride
           <input
             type="number"
             value={editValue}
+            aria-label={`${label} override`}
             onChange={e => setEditValue(e.target.value)}
             onBlur={handleCommit}
             onKeyDown={handleKeyDown}
@@ -72,6 +73,16 @@ export function DerivedFieldDisplay({ label, computedValue, override, onOverride
         ) : (
           <span
             onClick={handleStartEdit}
+            role={editable ? 'button' : undefined}
+            tabIndex={editable ? 0 : undefined}
+            aria-label={editable ? `Edit ${label}` : undefined}
+            onKeyDown={e => {
+              if (!editable) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleStartEdit();
+              }
+            }}
             className={cn(
               "text-[length:var(--font-size-md)] font-bold min-w-12 text-center px-[var(--space-sm)] py-[var(--space-xs)] rounded-[var(--radius-sm)]",
               isOverridden ? "text-[var(--color-primary)]" : "text-[var(--color-text)]",

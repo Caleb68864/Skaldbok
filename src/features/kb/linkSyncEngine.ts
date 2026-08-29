@@ -68,6 +68,20 @@ function placeholderNodeId(campaignId: string, label: string): string {
 }
 
 /**
+ * Id for the tag node behind a `#descriptor`.
+ *
+ * @remarks
+ * Same shape as {@link placeholderNodeId}, for the same two reasons: the old
+ * `tag-${slug}` form had no campaign in it, so `#lore` in two campaigns was
+ * one shared row whose `campaignId` was whichever synced last, and slugging
+ * merged `Old Gods` with `Old-Gods`. Existing tag nodes under the old ids are
+ * replaced on the next graph rebuild.
+ */
+function tagNodeIdFor(campaignId: string, label: string): string {
+  return `tag:${campaignId}:${label.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+}
+
+/**
  * Repoints edges from a placeholder onto the real node that now carries its
  * label, then removes the placeholder.
  *
@@ -279,7 +293,7 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
     // Process descriptors
     for (const label of descriptors) {
       // Descriptors become tag nodes
-      let tagNodeId = `tag-${label.toLowerCase().replace(/\s+/g, '-')}`;
+      const tagNodeId = tagNodeIdFor(note.campaignId, label);
       const existingTag = await db.kb_nodes.get(tagNodeId).catch(() => null);
       if (!existingTag) {
         await upsertNode({

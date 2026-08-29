@@ -100,6 +100,7 @@ export function BuffChipBar({
       <button
         type="button"
         onClick={onAdd}
+        aria-label="Add modifier"
         className="inline-flex items-center justify-center min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] px-[var(--space-2)] bg-[var(--color-surface,#2a2a2a)] text-[var(--color-text-secondary,#aaa)] border border-dashed border-[var(--color-text-secondary,#555)] rounded-[var(--radius-full,9999px)] text-[length:var(--font-size-lg)] cursor-pointer [-webkit-tap-highlight-color:transparent]"
       >
         +

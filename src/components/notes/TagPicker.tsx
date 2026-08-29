@@ -147,6 +147,7 @@ export function TagPicker({ selected, onToggle, customTags = [], onCreateTag }: 
         <button
           onClick={handleAddCustomTag}
           disabled={!inputValue.trim()}
+          aria-label="Add tag"
           className={cn(
             "min-h-11 px-3 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-[13px] font-semibold cursor-pointer",
             !inputValue.trim() ? "opacity-50" : "opacity-100"

@@ -3695,3 +3695,38 @@ b"` with a real break parses as a broken
   identical bytes), non-image mime refused, legacy bare record validated,
   non-character bare object rejected; build clean; 1236 tests.
 - Commit: fix(import-export) — attachments round-trip; untrusted input is checked.
+
+## 2026-08-28 — A blocked localStorage was a blank page
+- Symptom: `ThemeProvider`'s `useState` initializer called
+  `localStorage.getItem` unguarded. In Safari private mode (and any browser
+  set to block site data) the accessor itself throws, during the render of the
+  outermost provider, above the only error boundary — a blank page with no
+  recovery. `generateId` was bare `crypto.randomUUID()`, which is gated to
+  secure contexts; the documented tablet flow (`npm run preview` over
+  `http://<lan-ip>:4173`) is not one, so every entity creation threw a
+  TypeError there. `SessionLog` had one `localStorage.removeItem` outside its
+  otherwise-careful guards. KB tag nodes used `tag-${slug}` — no campaign in
+  the id, so `#lore` in two campaigns was one shared row whose `campaignId` was
+  whichever synced last, and slugging merged `Old Gods` with `Old-Gods` — the
+  exact bug already fixed for `[[placeholders]]`, not applied to tags.
+- Fix: both storage touches in ThemeProvider wrapped; `generateId` falls back
+  to a v4 UUID built from `getRandomValues` (not gated); `tagNodeIdFor`
+  mirrors `placeholderNodeId` (`tag:${campaignId}:${normalised label}`).
+  Skill-value input, derived-field edit input get `aria-label`s; the derived
+  click-to-edit span is a keyboard-operable `role="button"` when editable;
+  "Close", "Add tag", "Add modifier" on three icon-only buttons.
+- Surfaces: theme/ThemeProvider.tsx, utils/ids.ts, features/session/sessionLog/
+  SessionLog.tsx, features/kb/linkSyncEngine.ts, components/fields/{SkillRow,
+  DerivedFieldDisplay}.tsx, components/notes/TagPicker.tsx,
+  components/panels/BuffChipBar.tsx.
+- Watch: existing tag nodes under the old `tag-…` ids are orphaned until the
+  next `bulkRebuildGraph`; the Knowledge Base rebuilds on first mount when its
+  migration key is absent, but an already-migrated campaign keeps stale tag
+  rows until something else triggers a rebuild. Cosmetic (duplicate tag node
+  in the graph view), not data loss.
+- Watch also: the audit also flagged `useAppSettings`' `error` being exported
+  as `settingsError` and read by nobody — a DB that fails to open renders on
+  defaults with every save failing silently. Not addressed here; it wants a
+  real "storage unavailable" screen, not a toast.
+- Verified: build clean; 1236 tests; browser smoke as above.
+- Commit: fix(app) — storage guards, id fallback, campaign-scoped tags, a11y labels.

@@ -39,6 +39,7 @@ export function SkillRow({ skillDef, characterSkill, onChange, disabled }: Skill
         min={0}
         max={100}
         disabled={disabled}
+        aria-label={`${skillDef.name} value`}
         onChange={e => onChange({ value: Number(e.target.value), trained })}
         className={cn(
           "w-16 h-10 text-center text-[length:var(--font-size-md)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text)]",

@@ -315,7 +315,11 @@ export function SessionLog() {
     // an ink page (which leaves the text empty) deleted the parked record while
     // the other surface still held content.
     if (draft.trim() === '' && !hasInk) {
-      localStorage.removeItem(key);
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Storage unavailable — nothing was parked there to begin with.
+      }
       return;
     }
     try {
