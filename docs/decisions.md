@@ -3624,3 +3624,38 @@ b"` with a real break parses as a broken
   cascade shares txId, restore brings all back, independently-removed seat stays
   removed); build clean; 1236 tests.
 - Commit: fix(storage) — deleting a character is a soft delete with a cascade.
+
+## 2026-08-28 — Two surfaces still read stats off the record
+- Symptom: CLAUDE.md's "read every stat through the shared resolvers" rule had
+  two holdouts. `PrintableSheet` rendered `character.attributes[id]` and
+  `character.skills[id].value` (three skill loops), so every `attr:`/`skill:`
+  temp modifier was invisible on paper while the same sheet already used
+  `resolveArmorRating`. `TileCard.resolveDataPath` — the JSON card-template
+  path — returned raw `attributes[id]`, `resources[id].current` and
+  `derivedStats()[id]`, so a tile never showed a modifier or a derived
+  override. Separately, `migrateCharacterV4ToV5` built the merged entry as
+  `{ ...target, value, trained }`; with no target entry (the common case)
+  `...target` is empty and a `dragonMarked`/`demonMarked` mark on the legacy
+  `sensors` row was dropped — the doc comment promised "cannot cost anyone a
+  skill level", which was true of the level and false of the mark.
+- Fix: `printedSkillValue` helper + `getEffectiveValue(attrKey(id))` on the
+  print sheet; `resolveDataPath` uses `getEffectiveValue`/`resolveDerivedField`
+  (returns `.display`, so an override wins over computed and modifiers apply).
+  Migration spreads `{ ...legacy, ...target, value, trained }` (test). ShipsScreen
+  create/patch/delete wrapped with toasts. Fifteen `'classic-fantasy'` fallback
+  literals replaced with `DEFAULT_SYSTEM_ID` from the registry.
+- Surfaces: components/PrintableSheet.tsx, features/systems/cards/primitives/
+  TileCard.tsx, utils/migrations.ts, screens/ShipsScreen.tsx, plus the
+  `useSystemDefinition(… ?? DEFAULT_SYSTEM_ID)` call sites.
+- Watch: `resolveDataPath` for `attr:`/`res:` still returns `undefined` when the
+  record has no value at all, so a tile bound to a missing stat stays blank
+  rather than showing a modifier-only number.
+- Watch also: not touched, on purpose — the remaining `'classic-fantasy'`
+  literals in `types/campaign.ts` (Zod default), `bundleParser`/`bundleSerializer`
+  (import/export fallback) and `characterMappers.ts` (blank-template map, the
+  third hand-maintained system list). The mappers map should really be keyed
+  off the registry; that is a bigger change than a literal swap.
+- Verified: migrations test "carries every other field on the legacy entry
+  across the rename" fails on the old code, passes now; build clean; 1236 tests;
+  Traveller Play dashboard tiles render STR…SOC / Init / Carry in the browser.
+- Commit: fix(engine) — printed sheet and JSON tiles read through the resolvers.

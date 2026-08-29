@@ -5,6 +5,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import * as systemRepository from '../storage/repositories/systemRepository';
 import { classicFantasySystem } from '../systems/classic-fantasy';
 import type { AppSettings, ModeName, BoonBaneState, SessionState } from '../types/settings';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 /** App-wide settings plus the in-memory, per-run session state (boon/bane selections). */
 export interface AppStateContextValue {
@@ -62,7 +63,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
 
   // Seed default system if absent
   useEffect(() => {
-    systemRepository.getById('classic-fantasy').then(existing => {
+    systemRepository.getById(DEFAULT_SYSTEM_ID).then(existing => {
       if (!existing) {
         systemRepository.save(classicFantasySystem).catch(console.error);
       }

@@ -23,6 +23,7 @@ import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
 import { useSystemEngine } from '../features/systems/engine';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import * as characterRepository from '../storage/repositories/characterRepository';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit] box-border";
 
@@ -121,7 +122,7 @@ export default function GearScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const engine = useSystemEngine();
-  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
   const isEditMode = useIsEditMode();
   const armorEquipEditable = useFieldEditable(FIELD_PATHS.armorEquipped);
   const helmetEquipEditable = useFieldEditable(FIELD_PATHS.helmetEquipped);

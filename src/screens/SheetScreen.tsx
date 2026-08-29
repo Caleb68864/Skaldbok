@@ -56,6 +56,7 @@ import { cn } from '../lib/utils';
 import { useSessionLog } from '../features/session/useSessionLog';
 import DraggableCardContainer from '../components/panels/DraggableCardContainer';
 import type { PanelItem } from '../components/panels/DraggableCardContainer';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 function clamp(value: number, min: number, max: number): number {
   if (!Number.isFinite(value)) return min;
@@ -158,8 +159,8 @@ export default function SheetScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
-  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
-  const { template, error: templateError } = useSheetTemplate(character?.systemId ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
+  const { template, error: templateError } = useSheetTemplate(character?.systemId ?? DEFAULT_SYSTEM_ID);
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   useSyncedResourceMaxima(character, system, updateCharacter);
   const { showToast } = useToast();

@@ -230,7 +230,10 @@ export function migrateCharacterV4ToV5(data: unknown): unknown {
   if (!legacy) return { ...rec, schemaVersion: 5 };
 
   const target = bag['electronicsSensors'];
+  // Spread the legacy entry too: with no target entry `...target` is empty and
+  // every field beyond value/trained (a skill mark, say) was lost.
   bag['electronicsSensors'] = {
+    ...legacy,
     ...target,
     value: Math.max(legacy.value ?? 0, target?.value ?? 0),
     trained: legacy.trained === true || target?.trained === true,

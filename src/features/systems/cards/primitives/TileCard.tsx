@@ -1,6 +1,8 @@
 import { SectionPanel } from '../../../../components/primitives/SectionPanel';
 import { getEngine } from '../../engine';
-import { parseStatKey } from '../../../../utils/statKeys';
+import { attrKey, parseStatKey, resKey } from '../../../../utils/statKeys';
+import { getEffectiveValue, resolveDerivedField } from '../../../../utils/derivedValues';
+import type { DerivedFieldValue } from '../../../../utils/derivedValues';
 import type { PlayModuleProps } from '../../../playDashboard/types';
 import type { SystemEngine } from '../../engine/types';
 import type { CharacterRecord } from '../../../../types/character';
@@ -37,20 +39,25 @@ export function resolveDataPath(
 
   const { namespace, id } = parseStatKey(path);
 
+  // Every read goes through the shared resolvers (computed → override →
+  // modifiers). A raw `character.attributes[id]` here meant a JSON tile never
+  // showed a temp modifier or a derived override.
   if (namespace === 'attr') {
-    return engine.attributeIds.includes(id) ? character.attributes[id] : undefined;
+    if (!engine.attributeIds.includes(id) || character.attributes[id] == null) return undefined;
+    return getEffectiveValue(attrKey(id), character).effective;
   }
   if (namespace === 'res') {
     // Return the scalar `current` (like `attr:`/`derived:` return scalars), not
     // the whole { current, max } object — otherwise a tile renders "[object
     // Object]" and a toggle bound to it is always truthy.
-    return engine.resourceIds.includes(id) ? character.resources[id]?.current : undefined;
+    if (!engine.resourceIds.includes(id) || character.resources[id]?.current == null) return undefined;
+    return getEffectiveValue(resKey(id), character).effective;
   }
   if (namespace === 'derived') {
-    const isDeclared = engine.derivedFields.some((field) => field.key === id);
-    if (!isDeclared) return undefined;
-    const values = engine.derivedStats(character, system ?? undefined) as unknown as Record<string, unknown>;
-    return values[id];
+    const field = engine.derivedFields.find((f) => f.key === id);
+    if (!field) return undefined;
+    const values = engine.derivedStats(character, system ?? undefined) as unknown as Record<string, DerivedFieldValue>;
+    return resolveDerivedField(character, values, field).display;
   }
 
   return undefined;

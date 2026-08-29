@@ -12,6 +12,7 @@ import * as characterRepository from '../../storage/repositories/characterReposi
 import type { CharacterRecord } from '../../types/character';
 import { nowISO } from '../../utils/dates';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 
 export interface ParticipantDrawerProps {
   participant: EncounterParticipant;
@@ -29,7 +30,7 @@ const inputClass = 'w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] b
 export function ParticipantDrawer({ participant, onUpdateState, onClose }: ParticipantDrawerProps) {
   const { activeCampaign } = useCampaignContext();
   const engine = useSystemEngineFor(activeCampaign?.system);
-  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const statFields = resolveCreatureStatFields(system);
   const { character: activeCharacter, updateCharacter } = useActiveCharacter();
   const [template, setTemplate] = useState<CreatureTemplate | null>(null);

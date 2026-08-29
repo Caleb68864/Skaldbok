@@ -9,10 +9,24 @@ import type {
 } from '../types/character';
 import type { SystemDefinition, SkillDefinition } from '../types/system';
 import { resolveSkillCategories } from '../features/characters/customSkills';
-import { resolveArmorRating } from '../utils/derivedValues';
+import { getEffectiveValue, resolveArmorRating, resolveSkillValue } from '../utils/derivedValues';
+import { attrKey as toAttrKey } from '../utils/statKeys';
 import { compareSpellsByRankThenName, formatCastingTime, formatRequirements, getSpellRank } from '../utils/spells';
 import { toSpells, toHeroicAbilities } from '../utils/abilities';
 import type { SystemEngine } from '../features/systems/engine';
+
+/**
+ * The skill value the printed sheet shows: the stored value with every active
+ * temp modifier folded in, the same number the skills screen and the play
+ * dashboard show. Reading `character.skills[id].value` directly left every
+ * `skill:` modifier invisible on paper. Empty when the skill has no entry.
+ */
+function printedSkillValue(character: CharacterRecord, skillId: string): number | string {
+  const stored = character.skills?.[skillId]?.value;
+  if (stored == null) return '';
+  return resolveSkillValue(character, skillId, stored).effective;
+}
+
 
 // ──────────────────────────────────────────────
 // Exported types (consumed by SS-02 screen)
@@ -137,7 +151,9 @@ function AttributeBand({
           <div className="sheet-attribute-box">
             <div className="sheet-attribute-label">{attr}</div>
             <div className="sheet-attribute-value">
-              {character.attributes?.[attrKey] != null ? character.attributes[attrKey] : ''}
+              {character.attributes?.[attrKey] != null
+                ? getEffectiveValue(toAttrKey(attrKey), character).effective
+                : ''}
             </div>
           </div>
           {conditions.length > 0 ? (
@@ -405,7 +421,7 @@ function SkillsSection({
               <SkillRow
                 key={skill.id}
                 name={skill.name}
-                value={charSkill?.value ?? ''}
+                value={printedSkillValue(character, skill.id)}
                 trained={charSkill?.trained ?? false}
               />
             );
@@ -420,7 +436,7 @@ function SkillsSection({
           <SkillRow
             key={skill.id}
             name={skill.name}
-            value={charSkill?.value ?? ''}
+            value={printedSkillValue(character, skill.id)}
             trained={charSkill?.trained ?? false}
           />
         );
@@ -433,7 +449,7 @@ function SkillsSection({
           <SkillRow
             key={skill.id}
             name={skill.name}
-            value={charSkill?.value ?? ''}
+            value={printedSkillValue(character, skill.id)}
             trained={charSkill?.trained ?? false}
           />
         );

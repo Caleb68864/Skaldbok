@@ -7,6 +7,7 @@ import { buildSchedule } from '../../utils/route/schedule';
 import type { RoutePlan } from '../../types/routePlan';
 import { reorder, totalDistance } from '../../utils/routeMath';
 import type { RouteStop } from '../../types/routeStop';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 
 /**
  * The active campaign's route, and the field declaration that shapes it.
@@ -26,7 +27,7 @@ import type { RouteStop } from '../../types/routeStop';
  */
 export function useRoute() {
   const { activeCampaign } = useCampaignContext();
-  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const [stops, setStops] = useState<RouteStop[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);

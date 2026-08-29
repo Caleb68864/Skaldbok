@@ -323,6 +323,17 @@ describe('migrateCharacterV4ToV5', () => {
     expect((out.skills as Record<string, { trained: boolean }>).electronicsSensors.trained).toBe(true);
   });
 
+  it('carries every other field on the legacy entry across the rename', () => {
+    // Only `value` and `trained` used to be merged; anything else stored on the
+    // legacy entry was dropped on the floor when no target entry existed.
+    const out = migrateCharacterV4ToV5(v4Traveller({
+      sensors: { value: 2, trained: true, dragonMarked: true, note: 'from the scout ship' },
+    })) as Record<string, unknown>;
+    expect((out.skills as Record<string, unknown>).electronicsSensors).toMatchObject({
+      value: 2, trained: true, dragonMarked: true, note: 'from the scout ship',
+    });
+  });
+
   it('leaves a non-Traveller character alone', () => {
     // `sensors` is a plausible skill id in a user-authored sci-fi system.
     const other = { ...v1Dragonbane(), schemaVersion: 4, skills: { sensors: { value: 5, trained: true } } };

@@ -32,6 +32,7 @@ import {
 } from '../features/characters/customSkills';
 import { generateId } from '../utils/ids';
 import { resolveSkillValue } from '../utils/derivedValues';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 function clampSkillValue(value: number, range: { min: number; max: number }): number {
   if (!Number.isFinite(value)) return range.min;
@@ -71,7 +72,7 @@ function clampSkillValue(value: number, range: { min: number; max: number }): nu
 export default function SkillsScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
   const {
     sessionState,
     setGlobalBoonBane,

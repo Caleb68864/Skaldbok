@@ -24,6 +24,7 @@ import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import { addPartyCharactersToEncounter } from './addPartyCharactersToEncounter';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 
 export interface CombatEncounterViewProps {
   encounter: Encounter;
@@ -50,7 +51,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   // label, so a Traveller encounter contradicted itself between the row and
   // the drawer it opens.
   const engine = useSystemEngineFor(activeCampaign?.system);
-  const { system: campaignSystem } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { system: campaignSystem } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const healthStatId = resolveCreatureHealthStatId(campaignSystem);
   const armorStatId = resolveCreatureArmorStatId(campaignSystem);
   const healthNoun = engine.labels.creatureHealth;

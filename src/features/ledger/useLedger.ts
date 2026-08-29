@@ -14,6 +14,7 @@ import type { LedgerAccount } from '../../types/ledgerAccount';
 import { computeRunningBalance } from '../../utils/ledgerMath';
 import type { EntryWithBalance } from '../../utils/ledgerMath';
 import type { LedgerEntry, LedgerLeg, SplitSnapshot } from '../../types/ledger';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 
 /**
  * The active campaign's cashbook, with running balances folded on read.
@@ -26,7 +27,7 @@ import type { LedgerEntry, LedgerLeg, SplitSnapshot } from '../../types/ledger';
  */
 export function useLedger() {
   const { activeCampaign, setActiveCampaign } = useCampaignContext();
-  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const { logToSession, hasActiveSession } = useSessionLog();
   const [rows, setRows] = useState<EntryWithBalance[]>([]);
   const [accounts, setAccounts] = useState<LedgerAccount[]>([]);
