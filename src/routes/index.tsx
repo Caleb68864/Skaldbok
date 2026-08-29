@@ -121,6 +121,8 @@ export const routes: RouteObject[] = [
       { path: '/kb', element: screen(KnowledgeBaseScreen) },
       { path: '/kb/:nodeId', element: screen(KnowledgeBaseScreen) },
       { path: '/bestiary', element: screen(BestiaryScreenRoute) },
+      { path: '/trash', element: screen(TrashScreen) },
+      // Kept: the bestiary linked here before the trash held anything else.
       { path: '/bestiary/trash', element: screen(TrashScreen) },
       { path: '/reference', element: screen(ReferenceScreen) },
       { path: '/settings', element: screen(SettingsScreen) },

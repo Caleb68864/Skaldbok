@@ -246,6 +246,7 @@ export default function CharacterLibraryScreen() {
           </div>
         </div>
         <div className="flex gap-3 flex-wrap">
+          <Button variant="secondary" onClick={() => navigate('/trash')}>Trash</Button>
           <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>Import Character</Button>
           <Button variant="primary" onClick={handleCreate}>+ New Character</Button>
         </div>
@@ -399,7 +400,7 @@ export default function CharacterLibraryScreen() {
         }
       >
         <p className="text-[var(--color-text)]">
-          Delete <strong>{deleteTarget?.name}</strong>? This cannot be undone.
+          Delete <strong>{deleteTarget?.name}</strong>? It moves to the Trash, where it can be restored.
         </p>
       </Modal>
 

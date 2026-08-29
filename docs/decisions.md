@@ -3730,3 +3730,31 @@ b"` with a real break parses as a broken
   real "storage unavailable" screen, not a toast.
 - Verified: build clean; 1236 tests; browser smoke as above.
 - Commit: fix(app) — storage guards, id fallback, campaign-scoped tags, a11y labels.
+
+## 2026-08-29 — Trash for characters, sessions and notes
+- Symptom: yesterday's change made deleting a character a soft delete, but the
+  Trash screen (`/bestiary/trash`) listed creatures only — a deleted character
+  was restorable solely by calling `characterRepository.restore` from a console.
+  Sessions and notes were in the same position. The library's confirm still
+  read "This cannot be undone".
+- Fix: `TrashScreen` is generic over a `TrashRow { title, detail, deletedAt,
+  restore }` and shows four sections — Characters (global), Sessions and Notes
+  (active campaign), Creatures — hidden when empty. New `getDeleted` on the
+  character, session and note repositories use the `deletedAt` index
+  (`where('deletedAt').above('')`) rather than scanning. Restore calls each
+  repository's own `restore`, so a character comes back with its party seat and
+  edges, a note with its links and KB node. Routed at `/trash`; linked from the
+  library header and the overflow menu. Restore is guarded and toasts.
+- Surfaces: screens/TrashScreen.tsx, storage/repositories/{character,session,
+  note}Repository.ts, routes/index.tsx, screens/CharacterLibraryScreen.tsx,
+  components/shell/CampaignHeader.tsx.
+- Watch: a restored character is no longer the *active* character — deletion
+  clears that — so the library shows "Set Active & Open" for it, not "(Active)".
+  Expected, but it reads like a change to someone who did not know.
+- Watch also: sessions/notes are filtered client-side after the index read; a
+  huge multi-campaign trash would read every deleted row. Fine at any real
+  size; noted in case the index gains a compound form later.
+- Verified: build clean; 1242 tests; browser on the built bundle — Delete →
+  Trash shows the row with its deletion time → Restore → toast → library lists
+  the character again; zero console output throughout.
+- Commit: feat(trash) — characters, sessions and notes can be restored.

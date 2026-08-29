@@ -240,6 +240,18 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
+/** Soft-deleted sessions of a campaign, most recently deleted first. Feeds the Trash screen. */
+export async function getDeleted(campaignId: string): Promise<Session[]> {
+  try {
+    const rows = await db.sessions.where('deletedAt').above('').toArray();
+    return (rows as Session[])
+      .filter((r) => r.campaignId === campaignId)
+      .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
+  } catch (e) {
+    throw new Error(`sessionRepository.getDeleted failed: ${e}`);
+  }
+}
+
 /** Permanently removes a session row. Internal only — never called from UI, which soft-deletes. */
 export async function hardDelete(id: string): Promise<void> {
   try {

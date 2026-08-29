@@ -221,6 +221,13 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
               Character Library
             </Link>
             <Link
+              to="/trash"
+              onClick={() => setSheetOpen(false)}
+              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
+            >
+              Trash
+            </Link>
+            <Link
               to="/profile"
               onClick={() => setSheetOpen(false)}
               className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"

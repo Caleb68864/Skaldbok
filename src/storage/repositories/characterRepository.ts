@@ -161,6 +161,21 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
+/**
+ * Every soft-deleted character, most recently deleted first. Feeds the Trash
+ * screen; uses the `deletedAt` index rather than scanning the table.
+ */
+export async function getDeleted(): Promise<CharacterRecord[]> {
+  try {
+    const rows = await db.characters.where('deletedAt').above('').toArray();
+    return rows
+      .map((r) => upgradeCharacter(r) as CharacterRecord)
+      .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
+  } catch (e) {
+    throw new Error(`characterRepository.getDeleted failed: ${e}`);
+  }
+}
+
 /** Permanently removes a character row. Internal only — purge/cleanup jobs, never UI (which soft-deletes). */
 export async function hardDelete(id: string): Promise<void> {
   try {

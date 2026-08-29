@@ -320,6 +320,18 @@ export async function restore(id: string): Promise<void> {
 }
 
 /** Permanently removes a note row. Internal only — never called from UI, which soft-deletes. */
+/** Soft-deleted notes of a campaign, most recently deleted first. Feeds the Trash screen. */
+export async function getDeleted(campaignId: string): Promise<Note[]> {
+  try {
+    const rows = await db.notes.where('deletedAt').above('').toArray();
+    return (rows as Note[])
+      .filter((r) => r.campaignId === campaignId)
+      .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
+  } catch (e) {
+    throw new Error(`noteRepository.getDeleted failed: ${e}`);
+  }
+}
+
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.notes.delete(id);
