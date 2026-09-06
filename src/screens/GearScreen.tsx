@@ -588,11 +588,8 @@ export default function GearScreen() {
         {!!encumbranceField?.overridable && (
           <DerivedFieldDisplay
             label={encumbranceField?.label ?? 'Carry Limit'}
-            computedValue={
-              resolvedEncumbrance.isModified
-                ? (resolvedEncumbrance.display ?? 0)
-                : (resolvedEncumbrance.computed ?? 0)
-            }
+            computedValue={resolvedEncumbrance.computed ?? 0}
+            modifiedValue={resolvedEncumbrance.isModified ? resolvedEncumbrance.display : undefined}
             override={encumbranceOverride}
             onOverride={v => setDerivedOverride('encumbranceLimit', v)}
             onReset={() => resetDerivedOverride('encumbranceLimit')}

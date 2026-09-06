@@ -1233,7 +1233,8 @@ export default function SheetScreen() {
             <DerivedFieldDisplay
               key={key}
               label={label}
-              computedValue={resolved.isModified ? (resolved.display ?? 0) : (resolved.computed ?? 0)}
+              computedValue={resolved.computed ?? 0}
+              modifiedValue={resolved.isModified ? resolved.display : undefined}
               override={resolved.override}
               onOverride={v => setDerivedOverride(key, v)}
               onReset={() => resetDerivedOverride(key)}
