@@ -4144,3 +4144,93 @@ Two more items from the roadmap, worked in its proposed order. Four commits.
 - Commits: fix(security) — prototype keys, portrait sources, and a policy;
   fix(import) — close the id-collision bypass and bound what gets read;
   fix(export) — an attachment name cannot escape the archive.
+
+## 2026-09-06 — Roadmap step 12: rules that lived in shared screens
+
+Four commits, all the same shape: a rule belonging to one ruleset, written
+into code every ruleset runs.
+
+### Conditions did not do what their system declared (D4, F4)
+
+- Symptom: Savage Worlds states its condition penalties in `system.json` as
+  `effect: { scope: 'all-traits', modifier: -2 }`, and nothing read that field.
+  `savageTraitPenalty` matched `distracted` and `entangled` by id and wrote
+  their magnitude into the adapter, so editing the declaration changed the
+  description a player reads and not the number they roll — and a fourth
+  condition added to the JSON did nothing at all. Dragonbane expressed the same
+  idea through a different field (`linkedAttributeId`), read by a different
+  helper, so two systems had two unconnected implementations of "this condition
+  makes rolls worse".
+- Fix: `conditionPenalty` resolves both shapes, returning the advantage state,
+  the flat modifier, whether the character can act, and which conditions
+  contributed. `attribute-linked` is Dragonbane's rule stated the newer way and
+  behaves identically to the bare field.
+- Watch: `SkillDisplayContext` gained `system`, because an engine folding in a
+  JSON-declared rule needs it. A screen that has a system must pass it —
+  without it, declared condition effects contribute nothing and the odds read
+  unpenalised. Both skill surfaces do.
+- Watch also: `effect` came off `TOO_GENERIC` in `declaredCapabilities.test.ts`.
+  Being excluded there as "too generic to prove anything" is precisely what let
+  this ship. `recovery` and `duration` stay excluded and are genuinely unread.
+- Watch also: that test's own staleness check was missing the destructuring read
+  pattern the main check uses, so an allowlisted field that gained a reader
+  written as `const { name } =` would have stayed on the list unchallenged. The
+  rot the test exists to prevent, in the test itself.
+- Verified: tests that the penalty follows an edited declaration, and that a
+  condition the adapter never names still applies.
+- Commit: fix(engine) — a condition does what its system declares it does.
+
+### Two flags restating a model (D11, in part)
+
+- Symptom: `engine.hasMagic` beside `engine.magic`, and `skill.advancementMax`
+  beside `advancement.maxSkillValue`. The tell for the first was a contract test
+  asserting `hasMagic === (magic !== null)` — a test that two fields always
+  agree is a test that one is redundant. The second was already on the
+  declared-capability allowlist as unread, with classic-fantasy declaring 18 in
+  both places.
+- Fix: both deleted. The magic guard asks the nullable model directly.
+- Watch: the *guard name* `hasMagic` is unchanged, because `when: "hasMagic"` is
+  written into every `sheet.json` and that string is stored data.
+- Watch also: the rest of D11 — one `engine.health` object — was **declined**.
+  `terms.healthResource` and `labels.participantHealth` are overridable from
+  `system.json`, and `getEngine` merges those two objects by key; a new home for
+  them either breaks that documented override or becomes an alias for it.
+- Commit: refactor(engine) — two flags that restated what a model already said.
+
+### The damage message spoke SWADE (D5)
+
+- Symptom: the shared Take Damage panel wrote "Shaken", "Wound" and "no effect
+  (under Toughness)" itself. It also branched on
+  `engine.resolveDamage && track.kind === 'levels'`, whose second half names
+  Savage Worlds' track shape rather than asking whether the engine can convert a
+  rolled total at all.
+- Fix: condition names from `system.conditions`, track names from
+  `system.resources`, and the bounce reason travels on the result as
+  `noEffectReason` in the words of the ruleset that decided it bounced. Having
+  the hook is the capability.
+- Commit: fix(engine) — the damage message uses the system's words.
+
+### Dragonbane's magic rules applied to every magical system (D3)
+
+- Symptom: the prepared-spell cap came from `computeMaxPreparedSpells`, which
+  reads INT through Dragonbane's base-chance table. The impairment banner came
+  from an `isMetalEquipped` import and named metal armour. A trick was anything
+  whose school contained "trick", tested in three places including a private
+  copy in the play dashboard — a naming convention in the bundled content
+  treated as a rule, so a system whose cantrips are called something else got no
+  trick handling and one with a school containing the word got it by accident.
+  The screen also carried a `?? { [1,2,3], 2, 1 }` fallback: Dragonbane's
+  economy, substituted silently.
+- Fix: `engine.magic` gains `maxPrepared`, `castingImpairment` and
+  `trickSchools`, all optional — a system without those rules omits them. An
+  explicit `powerLevel` of 0 still marks a trick everywhere, which is the part
+  that is genuinely general. The fallback is gone: the mismatch it covered
+  cannot exist now `hasMagic` does not.
+- Watch: `isMagicTrick` still falls back to the substring test when given no
+  list, so user-authored data that never named its trick schools classifies as
+  before.
+- Commit: fix(engine) — the magic screen stops applying Dragonbane's rules.
+
+### Verification for all four
+
+- `tsc -b` clean; 1373 tests (up from 1352); Playwright 14/14 after each change.

@@ -401,7 +401,7 @@ every adapter declare it, make the screen read it.
   and encounter end. Add a generic "advance time" control for systems with no
   rest ladder.
 
-### D3. Magic rules in the shared screen — OPEN (R)
+### D3. Magic rules in the shared screen — DONE (d34f5fd)
 - `src/screens/MagicScreen.tsx:17,137` `computeMaxPreparedSpells` reads
   `attributes['int']` raw (`derivedValues.ts:150-154`); `:18,139,320` the
   metal-armour-impairs-casting rule; `:145,150` fall back to `'wp'` and
@@ -415,7 +415,7 @@ every adapter declare it, make the screen read it.
   `engine.magic.castingImpairment?(character)`, `engine.magic.trickSchoolIds`;
   `magic === null` means no automation; render everything from the model.
 
-### D4. Savage condition effects are declared and unread — OPEN (R)
+### D4. Savage condition effects are declared and unread — DONE (8404407)
 - **Where:** `src/systems/savage-worlds/system.json` declares
   `conditions[].effect: {scope:'all-traits', modifier:-2}` etc.;
   `savageWorldsEngine.ts:130-131` hardcodes `distracted`/`entangled` instead.
@@ -427,7 +427,7 @@ every adapter declare it, make the screen read it.
   → { boonBane?, modifier, blocksActions }` driven by `conditions[].effect` for
   all three systems. Remove those names from `TOO_GENERIC`.
 
-### D5. Damage handling inlined per track kind — OPEN (R)
+### D5. Damage handling inlined per track kind — DONE (90ab3f7)
 - `DamageHealModule.tsx:6,97-139` imports `utils/damageTrack` directly, inlines
   `track.kind === 'levels'`, hardcodes `'shaken'`, "Shaken", "Wound", "under
   Toughness". `SheetScreen.tsx:43,746` imports `damageStatus`. `resolveDamage`'s
@@ -505,7 +505,7 @@ every adapter declare it, make the screen read it.
   damage"); `:426-428` "Death Roll #n" ignoring `death.tracks[].label`; `:471`
   "Coins" ignoring `currency.label`.
 
-### D11. The health resource is named six ways — OPEN (V)
+### D11. The health resource is named six ways — PARTLY DONE (74bd175); health consolidation declined
 `primaryHealthResourceId`, `damageTrack.order[0]`, `death.triggerResourceId`,
 `terms.healthResource`, `labels.participantHealth`, `creatures.healthStatId`;
 `downLabel`/`deadLabel` exist on both `DamageTrackModel` and `DeathModel`.
@@ -643,7 +643,7 @@ switch. Add those patterns.
 drop that line, or assert per target that at least one of `derived`, `badges`,
 `fields` or `skill` moves.
 
-### F4. Remove `effect`, `duration`, `recovery` from `TOO_GENERIC` — OPEN (V)
+### F4. Remove `effect` from `TOO_GENERIC` — DONE (8404407)
 `declaredCapabilities.test.ts:103-104`. They hide D4. Also align the staleness
 self-check (`:144-146`) with the main check's three read patterns.
 
@@ -999,12 +999,21 @@ the evidence in place so the next scan can confirm it did not regress.
 
 ## Progress
 
-Steps 1 to 11 of the order of attack are closed: A1–A4, A6, A7, B1–B9, C1, C2,
-D1, D2, D6 (all but one part), F2 and F3. Workstream B is finished apart from
-**B10**, the unvalidated reference-import JSON. Step 12 (**D3, D4, D5, D11**)
-is next, and all of workstreams H, I and J remain.
+Steps 1 to 12 of the order of attack are closed: A1–A4, A6, A7, B1–B9, C1, C2,
+D1–D6, D11 (in part), F2, F3 and F4. Workstream B is finished apart from
+**B10**, the unvalidated reference-import JSON. Step 13 is next — the
+screen-by-screen vocabulary cleanup, **D7 to D12**, with **F1** widened first
+so regressions fail. Workstreams E, G, H, I and J remain untouched.
 
-Four things a future reader should know before picking up the rest:
+Five things a future reader should know before picking up the rest:
+
+- **D11's health consolidation was declined, not forgotten.** Folding
+  `terms.healthResource` and `labels.participantHealth` into an
+  `engine.health` object would move two fields that `system.json` can
+  override — `getEngine` merges `terms` and `labels` by key. A new home either
+  breaks that documented override or becomes an alias for it, which is more
+  indirection rather than less. The two genuinely redundant flags it also named
+  (`hasMagic`, `skill.advancementMax`) are gone.
 
 - **D6 is closed except for skill marks.** The dragon/demon glyphs, their
   colours and the marked-count badge are still Dragonbane vocabulary written
