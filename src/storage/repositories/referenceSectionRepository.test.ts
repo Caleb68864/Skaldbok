@@ -3,7 +3,14 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../db/client';
-import { importBundle, ensureGroupsForSections, getGroups } from './referenceSectionRepository';
+import {
+  importBundle,
+  ensureGroupsForSections,
+  getGroups,
+  getAll,
+  removeGroup,
+  restoreGroup,
+} from './referenceSectionRepository';
 
 /**
  * Covers the import path's binding of sections to their grouping card.
@@ -99,5 +106,45 @@ describe('ensureGroupsForSections', () => {
     expect(groups.map(g => g.title)).toEqual(['Combat']);
     expect(groups[0].id).not.toBe('g-gone');
     expect((await getGroups()).length).toBe(1);
+  });
+});
+
+describe('removeGroup / restoreGroup round trip', () => {
+  it('brings back the card and every section deleted with it', async () => {
+    // restoreGroup queries `where('softDeletedBy')`, an index referenceSections
+    // did not declare until schema v19. Dexie throws SchemaError on an
+    // undeclared index, so this whole path was dead — it just had no caller yet
+    // to fire it.
+    await db.referenceGroups.put({
+      id: 'g-combat', title: 'Combat', order: 0, createdAt: 'x', updatedAt: 'x',
+    });
+    await db.referenceSections.bulkPut([
+      { id: 's1', title: 'Initiative', category: 'Combat', groupId: 'g-combat', order: 0, type: 'rules_text', createdAt: 'x', updatedAt: 'x' },
+      { id: 's2', title: 'Cover', category: 'Combat', groupId: 'g-combat', order: 1, type: 'rules_text', createdAt: 'x', updatedAt: 'x' },
+    ]);
+
+    await removeGroup('g-combat');
+    expect((await getGroups()).length).toBe(0);
+    expect((await getAll()).length).toBe(0);
+
+    await restoreGroup('g-combat');
+    expect((await getGroups()).map(g => g.id)).toEqual(['g-combat']);
+    expect((await getAll()).map(s => s.id).sort()).toEqual(['s1', 's2']);
+  });
+
+  it('leaves a section that was deleted on its own deleted', async () => {
+    // Only rows carrying the group's own transaction id come back; a section
+    // the user removed separately stays removed.
+    await db.referenceGroups.put({
+      id: 'g-combat', title: 'Combat', order: 0, createdAt: 'x', updatedAt: 'x',
+    });
+    await db.referenceSections.bulkPut([
+      { id: 's1', title: 'Initiative', category: 'Combat', groupId: 'g-combat', order: 0, type: 'rules_text', createdAt: 'x', updatedAt: 'x' },
+      { id: 's2', title: 'Cover', category: 'Combat', groupId: 'g-combat', order: 1, type: 'rules_text', createdAt: 'x', updatedAt: 'x', deletedAt: 'earlier', softDeletedBy: 'other-tx' },
+    ]);
+
+    await removeGroup('g-combat');
+    await restoreGroup('g-combat');
+    expect((await getAll()).map(s => s.id)).toEqual(['s1']);
   });
 });
