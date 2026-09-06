@@ -3,6 +3,8 @@ import { ChevronDown, ChevronRight, Plus, Trash2, Pencil, ArrowRightLeft } from 
 import { cn } from '../../lib/utils';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
+import { useActiveCharacter } from '../../context/ActiveCharacterContext';
+import { flushAll } from '../persistence/autosaveFlush';
 import { Button } from '../../components/primitives/Button';
 import { Drawer } from '../../components/primitives/Drawer';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
@@ -12,7 +14,6 @@ import type { InventoryContainerKindConfig } from '../../config/defaults/invento
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import * as inventoryContainerRepository from '../../storage/repositories/inventoryContainerRepository';
 import { computeEncumbranceLimit } from '../../utils/derivedValues';
-import { nowISO } from '../../utils/dates';
 import { useSystemEngine } from '../systems/engine';
 import type { CurrencyDenomination } from '../systems/engine/types';
 import type { CharacterRecord, InventoryItem } from '../../types/character';
@@ -119,6 +120,7 @@ export function PartyInventoryTab() {
   const containerKinds = useInventoryContainerKinds();
   const { activeCampaign, activeParty } = useCampaignContext();
   const { showToast } = useToast();
+  const { character: activeCharacter, updateCharacter } = useActiveCharacter();
   const engine = useSystemEngine();
   const denominations = engine.currency.denominations;
 
@@ -245,21 +247,36 @@ export function PartyInventoryTab() {
 
   // ── Writes ──────────────────────────────────────────────────────────
 
+  /** Writes one carrier's items and/or coin. Returns false if the write failed. */
   async function persistCarrier(
     carrier: Carrier,
     patch: Partial<{ items: InventoryItem[]; wealth: Wealth }>,
-  ): Promise<void> {
+  ): Promise<boolean> {
     // Every caller reloads afterwards, so on failure the screen snaps back to
     // what is actually stored; the toast is what tells the user it did not take.
     try {
       if (carrier.kind === 'pc') {
-        const next: CharacterRecord = {
-          ...carrier.character,
-          inventory: patch.items ?? carrier.character.inventory,
-          ...(patch.wealth ? engine.currency.write(carrier.character, patch.wealth) : {}),
-          updatedAt: nowISO(),
-        };
-        await characterRepository.save(next);
+        // Flush first: the active character may have edits still sitting in the
+        // autosave debounce, and the transaction below would read the record
+        // from before them.
+        if (activeCharacter?.id === carrier.character.id) await flushAll();
+        // Read-modify-write inside one transaction against the *stored* record,
+        // not the copy this screen loaded on mount. Putting the whole in-hand
+        // record back reverted anything changed since — move an item off your
+        // own PC into a container, then edit the sheet, and the item was on the
+        // PC again *and* still in the container.
+        const changes = (current: CharacterRecord) => ({
+          inventory: patch.items ?? current.inventory,
+          ...(patch.wealth ? engine.currency.write(current, patch.wealth) : {}),
+        });
+        const saved = await characterRepository.patch(carrier.character.id, changes);
+        if (!saved) {
+          showToast('That character is no longer available', 'error');
+          return false;
+        }
+        // The context's in-memory copy is now behind the database, and its next
+        // autosave would put the old inventory back. Merge the same fields in.
+        if (activeCharacter?.id === saved.id) updateCharacter(changes);
       } else {
         const next: InventoryContainer = {
           ...carrier.container,
@@ -270,9 +287,11 @@ export function PartyInventoryTab() {
         };
         await inventoryContainerRepository.save(next);
       }
+      return true;
     } catch (e) {
       console.error('PartyInventoryTab.persistCarrier failed:', e);
       showToast('Could not save the inventory change', 'error');
+      return false;
     }
   }
 
@@ -356,8 +375,14 @@ export function PartyInventoryTab() {
         { ...item, id: crypto.randomUUID(), quantity: move },
       ];
     }
-    await persistCarrier(from, { items: fromItems });
-    await persistCarrier(to, { items: toItems });
+    // Both halves or neither: these used to be two independent writes, so a
+    // failure between them destroyed the item — gone from the source, never
+    // arrived at the destination.
+    const moved = await persistCarrier(from, { items: fromItems });
+    if (moved) {
+      const arrived = await persistCarrier(to, { items: toItems });
+      if (!arrived) await persistCarrier(from, { items: from.items });
+    }
     setMoveItemTarget(null);
     reload();
   }
@@ -385,8 +410,12 @@ export function PartyInventoryTab() {
     const toNext = normalizeWealth(denominations, to.wealth);
     for (const d of denominations) toNext[d.id] += amounts[d.id] ?? 0;
 
-    await persistCarrier(from, { wealth: settled });
-    await persistCarrier(to, { wealth: toNext });
+    // As with items: put the coin back on the source if it never lands.
+    const debited = await persistCarrier(from, { wealth: settled });
+    if (debited) {
+      const credited = await persistCarrier(to, { wealth: toNext });
+      if (!credited) await persistCarrier(from, { wealth: from.wealth });
+    }
     setMoveCoinsSource(null);
     reload();
   }

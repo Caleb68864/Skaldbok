@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, beforeEach } from 'vitest';
 import { db } from '../db/client';
-import { getAll, getById, save, softDelete, restore } from './characterRepository';
+import { getAll, getById, save, softDelete, restore, patch } from './characterRepository';
 import { createLink, getLinksTo } from './entityLinkRepository';
 import { getPartyMembers } from './partyRepository';
 import { createBlankCharacter } from '../../features/characters/characterMappers';
@@ -105,5 +105,69 @@ describe('characterRepository soft delete cascade', () => {
     await restore('c1');
 
     expect(await getPartyMembers(party.id)).toHaveLength(0);
+  });
+});
+
+/**
+ * `patch` is the read-modify-write primitive that replaces "load, mutate, save
+ * the whole record". The pattern it replaces is how an inventory move could be
+ * reverted by the next autosave, and how two edits in the same tick lost one.
+ */
+describe('patch', () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+  });
+
+  it('merges the returned fields and stamps updatedAt', async () => {
+    const character = await seedCharacter('c1');
+    const before = character.updatedAt;
+
+    const updated = await patch('c1', () => ({ name: 'Renamed' }));
+
+    expect(updated?.name).toBe('Renamed');
+    expect((await getById('c1'))?.name).toBe('Renamed');
+    expect(updated?.updatedAt).not.toBe(before);
+  });
+
+  it('reads the stored record, not one the caller loaded earlier', async () => {
+    // The regression: a screen holds a copy from mount, another writer changes
+    // a different field, and the screen's whole-record save reverts it. The
+    // mutator must see the *current* row.
+    const stale = await seedCharacter('c1');
+    await save({ ...stale, name: 'Changed elsewhere' });
+
+    await patch('c1', current => ({ inventory: [...current.inventory, { id: 'i1', name: 'Rope', weight: 1, quantity: 1, description: '' }] }));
+
+    const stored = await getById('c1');
+    expect(stored?.name).toBe('Changed elsewhere');
+    expect(stored?.inventory).toHaveLength(1);
+  });
+
+  it('does not write when the mutator declines', async () => {
+    const character = await seedCharacter('c1');
+    const result = await patch('c1', () => null);
+    expect(result).toBeNull();
+    expect((await getById('c1'))?.updatedAt).toBe(character.updatedAt);
+  });
+
+  it('returns null for a missing character', async () => {
+    expect(await patch('nope', () => ({ name: 'x' }))).toBeNull();
+  });
+
+  it('refuses to write to a soft-deleted character', async () => {
+    // Restoring a character must not bring back edits made to its tombstone.
+    await seedCharacter('c1');
+    await softDelete('c1');
+    expect(await patch('c1', () => ({ name: 'Zombie' }))).toBeNull();
+    expect((await db.characters.get('c1'))?.name).not.toBe('Zombie');
+  });
+
+  it('applies sequential patches cumulatively', async () => {
+    await seedCharacter('c1');
+    await patch('c1', c => ({ inventory: [...c.inventory, { id: 'i1', name: 'Rope', weight: 1, quantity: 1, description: '' }] }));
+    await patch('c1', c => ({ inventory: [...c.inventory, { id: 'i2', name: 'Torch', weight: 1, quantity: 1, description: '' }] }));
+
+    expect((await getById('c1'))?.inventory.map(i => i.id)).toEqual(['i1', 'i2']);
   });
 });

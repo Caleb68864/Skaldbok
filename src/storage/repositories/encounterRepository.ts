@@ -111,14 +111,19 @@ export async function listByCampaign(campaignId: string, options?: { includeDele
  * @returns The updated encounter, or `undefined` if not found.
  */
 export async function update(id: string, patch: Partial<Encounter>): Promise<Encounter | undefined> {
-  const existing = await getById(id);
-  if (!existing) {
-    console.warn('encounterRepository.update: not found', id);
-    return undefined;
-  }
-  const updated: Encounter = { ...existing, ...patch, id, updatedAt: nowISO() };
-  await db.encounters.put(updated);
-  return updated;
+  // The read and the write are one transaction. Split apart, two edits landing
+  // in the same tick each read the pre-edit row and the second silently
+  // discards the first — two quick blurs in the combat view lost the earlier one.
+  return db.transaction('rw', db.encounters, async () => {
+    const existing = await db.encounters.get(id);
+    if (!existing || existing.deletedAt) {
+      console.warn('encounterRepository.update: not found', id);
+      return undefined;
+    }
+    const updated: Encounter = { ...existing, ...patch, id, updatedAt: nowISO() };
+    await db.encounters.put(updated);
+    return updated;
+  });
 }
 
 /**
@@ -150,15 +155,27 @@ export async function updateParticipant(
   participantId: string,
   patch: Partial<EncounterParticipant>
 ): Promise<Encounter | undefined> {
-  const existing = await getById(encounterId);
-  if (!existing) {
-    console.warn('encounterRepository.updateParticipant: encounter not found', encounterId);
-    return undefined;
-  }
-  const updatedParticipants = existing.participants.map((p) =>
-    p.id === participantId ? { ...p, ...patch } : p
-  );
-  return update(encounterId, { participants: updatedParticipants });
+  // One transaction covering the read of the participant list and the write of
+  // the merged one. Previously this read the encounter, mapped the list, and
+  // then `update` read it *again* and put the whole record — so two
+  // participants edited in the same tick each mapped the pre-edit list and the
+  // second write dropped the first participant's change.
+  return db.transaction('rw', db.encounters, async () => {
+    const existing = await db.encounters.get(encounterId);
+    if (!existing || existing.deletedAt) {
+      console.warn('encounterRepository.updateParticipant: encounter not found', encounterId);
+      return undefined;
+    }
+    const updated: Encounter = {
+      ...existing,
+      participants: existing.participants.map((p) =>
+        p.id === participantId ? { ...p, ...patch } : p,
+      ),
+      updatedAt: nowISO(),
+    };
+    await db.encounters.put(updated);
+    return updated;
+  });
 }
 
 /**

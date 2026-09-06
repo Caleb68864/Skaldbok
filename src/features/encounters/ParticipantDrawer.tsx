@@ -10,7 +10,6 @@ import { partitionCreatureStats, resolveCreatureStatFields } from '../bestiary/c
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
-import { nowISO } from '../../utils/dates';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 
@@ -109,15 +108,17 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
     if (currentHp === '' || !Number.isFinite(parsed)) return;
     const next = Math.max(0, Math.min(parsed, linkedResource.max));
 
-    const updated: CharacterRecord = {
-      ...linkedCharacter,
+    // patch, not save: this drawer holds a copy of the character loaded when it
+    // opened, so putting the whole record back reverted every other change made
+    // since — including the rest of *this* map when two participants' HP were
+    // edited in quick succession. The mutator reads the stored resources.
+    const updated = await characterRepository.patch(linkedCharacter.id, current => ({
       resources: {
-        ...linkedCharacter.resources,
-        [healthResourceId]: { ...linkedCharacter.resources[healthResourceId], current: next },
+        ...current.resources,
+        [healthResourceId]: { ...current.resources[healthResourceId], current: next },
       },
-      updatedAt: nowISO(),
-    };
-    await characterRepository.save(updated);
+    }));
+    if (!updated) return;
     setLinkedCharacter(updated);
 
     if (activeCharacter?.id === linkedCharacter.id) {

@@ -80,6 +80,52 @@ export async function save(character: CharacterRecord): Promise<void> {
 }
 
 /**
+ * Applies a change to one character as a single read-modify-write transaction.
+ *
+ * @remarks
+ * The safe alternative to `getById` → mutate → {@link save}. That pattern reads
+ * the record, awaits something, and writes the *whole* record back, so any
+ * field another writer changed in between is silently reverted — which is how
+ * moving an item into a party container could reappear on the character the
+ * next time the sheet autosaved.
+ *
+ * The mutator runs inside the transaction and is handed the row as stored, not
+ * a copy the caller loaded earlier. Return the fields to change, or `null` to
+ * make no write at all. `updatedAt` is stamped here, so callers must not.
+ *
+ * This does **not** solve the second half of the race: if the target is the
+ * *active* character, the in-memory record in `ActiveCharacterContext` is still
+ * stale and its next autosave will overwrite this write. Route changes to the
+ * active character through `updateCharacter`, or call `flushAll()` first.
+ *
+ * @param id - Character to change.
+ * @param mutate - Receives the stored record, returns a partial update or `null`.
+ * @returns The updated record, or `null` if the character was missing, deleted,
+ *   or the mutator declined.
+ */
+export async function patch(
+  id: string,
+  mutate: (current: CharacterRecord) => Partial<CharacterRecord> | null,
+): Promise<CharacterRecord | null> {
+  try {
+    return await db.transaction('rw', db.characters, async () => {
+      const current = await db.characters.get(id);
+      if (!current || current.deletedAt) return null;
+      const changes = mutate(current);
+      if (!changes) return null;
+      const next = normalizeCharacter({ ...current, ...changes, updatedAt: nowISO() });
+      await db.characters.put(next);
+      return next;
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'QuotaExceededError') {
+      throw new Error('Storage is full. Please free up space and try again.');
+    }
+    throw new Error(`Failed to update character: ${String(err)}`);
+  }
+}
+
+/**
  * Soft-deletes a character.
  *
  * @remarks

@@ -220,7 +220,7 @@ async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyW
  */
 export function CampaignProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
-  const { setCharacter, clearCharacter } = useActiveCharacter();
+  const { setCharacter, clearCharacter, updateCharacter } = useActiveCharacter();
   const { settings } = useAppState();
   // Latest active-character id, read inside the async reconcile without stale closures.
   const activeCharacterIdRef = useRef<string | null>(settings.activeCharacterId ?? null);
@@ -382,19 +382,30 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       .map(m => m.linkedCharacterId)
       .filter((id): id is string => Boolean(id));
 
+    // Any edit still sitting in the active character's autosave debounce has to
+    // land before we read, or the refresh computes against a stale record and
+    // the debounce then overwrites the refresh.
+    await flushAll();
+
     for (const id of memberIds) {
       try {
         const character = await characterRepository.getById(id);
         if (!character) continue;
         const system = await systemRepository.getById(character.systemId);
-        const patch = sessionRefreshPatch(system, character);
-        if (!patch) continue;
-        await characterRepository.save({ ...character, ...patch, updatedAt: nowISO() });
+        const refresh = sessionRefreshPatch(system, character);
+        if (!refresh) continue;
+        // patch, not save: a whole-record put would revert anything changed
+        // between the read above and this write.
+        await characterRepository.patch(id, () => refresh);
+        // The active character is held in memory by ActiveCharacterContext; its
+        // next autosave would write the un-refreshed record straight back over
+        // this, so the refilled Bennies were invisible and then lost.
+        if (activeCharacterIdRef.current === id) updateCharacter(refresh);
       } catch (e) {
         console.error('session resource refresh failed for', id, e);
       }
     }
-  }, [activeParty]);
+  }, [activeParty, updateCharacter]);
 
   const startSession = useCallback(async () => {
     if (!activeCampaign) {
