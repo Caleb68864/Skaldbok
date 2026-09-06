@@ -1,3 +1,4 @@
+import { readTextFile } from '../../utils/import/readTextFile';
 import { useRef, useState } from 'react';
 import { Button } from '../../components/primitives/Button';
 import { parseRouteImport } from '../../utils/route/parseRouteImport';
@@ -65,7 +66,13 @@ export function RouteImportModal({
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
-    handleText(await file.text());
+    // As in the ledger modal: a rejected read used to escape unhandled.
+    try {
+      handleText(await readTextFile(file));
+    } catch (err) {
+      console.error('RouteImportModal.handleFile failed:', err);
+      setError(err instanceof Error ? err.message : 'The file could not be read.');
+    }
   }
 
   async function commit(replace: boolean) {

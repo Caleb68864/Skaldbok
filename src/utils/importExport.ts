@@ -1,3 +1,4 @@
+import { readTextFile } from './import/readTextFile';
 import { migrateCharacter } from './migrations';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { generateId } from './ids';
@@ -122,7 +123,7 @@ export interface ImportResult {
 export async function importCharacter(file: File): Promise<ImportResult> {
   let raw: string;
   try {
-    raw = await file.text();
+    raw = await readTextFile(file);
   } catch {
     return { success: false, error: 'Could not read the file.' };
   }

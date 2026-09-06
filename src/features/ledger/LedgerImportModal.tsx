@@ -1,3 +1,4 @@
+import { readTextFile } from '../../utils/import/readTextFile';
 import { useRef, useState } from 'react';
 import { Button } from '../../components/primitives/Button';
 import { parseLedgerImport } from '../../utils/ledger/parseLedgerImport';
@@ -74,7 +75,14 @@ export function LedgerImportModal({ formatMoney, onCancel, onImport }: LedgerImp
 
   async function handleFile(file: File | undefined) {
     if (!file) return;
-    handleText(await file.text());
+    // The read can reject — an oversized file, or an unreadable one — and did so
+    // as an unhandled rejection with nothing shown to the user.
+    try {
+      handleText(await readTextFile(file));
+    } catch (err) {
+      console.error('LedgerImportModal.handleFile failed:', err);
+      setError(err instanceof Error ? err.message : 'The file could not be read.');
+    }
   }
 
   async function commit() {

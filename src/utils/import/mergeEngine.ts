@@ -299,13 +299,32 @@ async function mergeEntity(
   // entities were created at different times. Same-id + different-createdAt =
   // collision → keep the local row and report it rather than overwrite unrelated
   // data. (A rename keeps createdAt, so legitimate updates are unaffected.)
+  //
+  // A missing `createdAt` on either side is a collision too, not a pass. The
+  // guard used to require *both* to be present and to differ, so a bundle row
+  // with no `createdAt` and a far-future `updatedAt` sailed through it and
+  // overwrote the local row — the one shape an attacker or a careless
+  // hand-edited bundle would actually have.
   const bundleCreated = reparented.createdAt as string | undefined;
   const localCreated = existing.createdAt as string | undefined;
-  if (bundleCreated !== undefined && localCreated !== undefined && bundleCreated !== localCreated) {
+  if (bundleCreated === undefined || localCreated === undefined || bundleCreated !== localCreated) {
     report.errors.push({
       entityType,
       entityId: id,
-      message: `Id "${id}" already belongs to a different local ${String(entityType)} (created ${localCreated}, bundle's created ${bundleCreated}); kept local to avoid overwriting unrelated data`,
+      message: `Id "${id}" already belongs to a different local ${String(entityType)} (created ${localCreated ?? 'unknown'}, bundle's created ${bundleCreated ?? 'unknown'}); kept local to avoid overwriting unrelated data`,
+    });
+    return;
+  }
+
+  // A tombstoned local row is a collision as well. `existing` is read straight
+  // from the table, so a soft-deleted row is visible here; overwriting one
+  // resurrects a record the user deleted, under whatever content the bundle
+  // carries, with no trace that it had been deleted.
+  if (existing.deletedAt) {
+    report.errors.push({
+      entityType,
+      entityId: id,
+      message: `Id "${id}" belongs to a deleted local ${String(entityType)}; kept the deletion rather than resurrecting it from the bundle`,
     });
     return;
   }

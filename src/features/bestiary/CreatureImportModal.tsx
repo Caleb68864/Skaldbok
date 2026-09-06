@@ -1,3 +1,4 @@
+import { readTextFile } from '../../utils/import/readTextFile';
 import { useRef, useState } from 'react';
 import { Button } from '../../components/primitives/Button';
 import { parseCreatureImport } from '../../utils/bestiary/parseCreatureImport';
@@ -65,7 +66,7 @@ export function CreatureImportModal({ statFields, onCancel, onImport }: Creature
   async function handleFile(file: File | undefined) {
     if (!file) return;
     try {
-      handleText(await file.text());
+      handleText(await readTextFile(file));
     } catch (err) {
       console.error('CreatureImportModal.handleFile failed:', err);
       setError('The file could not be read.');

@@ -1,3 +1,4 @@
+import { readTextFile } from '../../utils/import/readTextFile';
 import { useState, useCallback } from 'react';
 import { parseBundle, verifyContentHash } from '../../utils/import/bundleParser';
 import { mergeBundle } from '../../utils/import/mergeEngine';
@@ -100,7 +101,7 @@ export function useImportActions() {
     let json: string;
     let result: ReturnType<typeof parseBundle>;
     try {
-      json = await file.text();
+      json = await readTextFile(file);
       result = parseBundle(json);
     } catch (err) {
       console.error('[useImportActions] startImport failed', err);

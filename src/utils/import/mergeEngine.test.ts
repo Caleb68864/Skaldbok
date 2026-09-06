@@ -115,21 +115,66 @@ describe('mergeBundle', () => {
   });
 
   it('dedups by PARSED timestamp — older import skips, newer updates', async () => {
-    await db.characters.put({ id: 'c3', name: 'Local', updatedAt: '2026-01-05T00:00:00.000Z' } as never);
+    // `createdAt` matches on both sides: this is the same entity, later edited.
+    // Every record the app writes carries one, and the id-collision guard now
+    // requires it — see the two tests below.
+    const created = '2026-01-01T00:00:00.000Z';
+    await db.characters.put({ id: 'c3', name: 'Local', createdAt: created, updatedAt: '2026-01-05T00:00:00.000Z' } as never);
 
     const older = await mergeBundle(
-      makeBundle({ characters: [{ id: 'c3', name: 'Old', updatedAt: '2026-01-01T00:00:00.000Z' }] }),
+      makeBundle({ characters: [{ id: 'c3', name: 'Old', createdAt: created, updatedAt: '2026-01-01T00:00:00.000Z' }] }),
       opts,
     );
     expect(older.skipped).toBe(1);
     expect(((await db.characters.get('c3')) as unknown as Record<string, unknown>).name).toBe('Local');
 
     const newer = await mergeBundle(
-      makeBundle({ characters: [{ id: 'c3', name: 'New', updatedAt: '2026-01-09T00:00:00.000Z' }] }),
+      makeBundle({ characters: [{ id: 'c3', name: 'New', createdAt: created, updatedAt: '2026-01-09T00:00:00.000Z' }] }),
       opts,
     );
     expect(newer.updated).toBe(1);
     expect(((await db.characters.get('c3')) as unknown as Record<string, unknown>).name).toBe('New');
+  });
+
+  it('treats a bundle row with no createdAt as an id collision', async () => {
+    // The bypass: the guard required *both* createdAt values to be present and
+    // to differ, so a row with none and a far-future updatedAt went straight
+    // past it and overwrote the local record. That is the exact shape a
+    // hand-edited bundle has.
+    await db.characters.put({
+      id: 'c-guard', name: 'Local', createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-05T00:00:00.000Z',
+    } as never);
+
+    const report = await mergeBundle(
+      makeBundle({ characters: [{ id: 'c-guard', name: 'Overwrite', updatedAt: '2099-01-01T00:00:00.000Z' }] }),
+      opts,
+    );
+
+    expect(report.updated).toBe(0);
+    expect(report.errors).toHaveLength(1);
+    expect(((await db.characters.get('c-guard')) as unknown as Record<string, unknown>).name).toBe('Local');
+  });
+
+  it('does not resurrect a soft-deleted local row', async () => {
+    // `existing` is read straight from the table, so a tombstone is visible
+    // here. Overwriting one brings back a record the user deleted, carrying
+    // whatever the bundle says, with no sign it had ever been deleted.
+    const created = '2026-01-01T00:00:00.000Z';
+    await db.characters.put({
+      id: 'c-dead', name: 'Deleted', createdAt: created,
+      updatedAt: '2026-01-05T00:00:00.000Z', deletedAt: '2026-01-06T00:00:00.000Z',
+    } as never);
+
+    const report = await mergeBundle(
+      makeBundle({ characters: [{ id: 'c-dead', name: 'Back', createdAt: created, updatedAt: '2026-01-09T00:00:00.000Z' }] }),
+      opts,
+    );
+
+    expect(report.updated).toBe(0);
+    expect(report.errors).toHaveLength(1);
+    const row = (await db.characters.get('c-dead')) as unknown as Record<string, unknown>;
+    expect(row.name).toBe('Deleted');
+    expect(row.deletedAt).toBe('2026-01-06T00:00:00.000Z');
   });
 
   it('applies a multi-entity bundle in one pass (all rows land)', async () => {

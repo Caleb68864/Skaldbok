@@ -1,3 +1,4 @@
+import { readTextFile } from '../utils/import/readTextFile';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -341,7 +342,7 @@ export default function ReferenceScreen() {
 
   async function handleImportFile(file: File) {
     try {
-      const bundle = JSON.parse(await file.text()) as ReferenceImportBundle;
+      const bundle = JSON.parse(await readTextFile(file)) as ReferenceImportBundle;
       const count = await referenceSectionRepository.importBundle(bundle);
       await loadSections();
       setError(`Imported ${count} reference section${count === 1 ? '' : 's'}.`);
