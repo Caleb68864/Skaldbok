@@ -302,6 +302,27 @@ export interface SystemLabels {
   abilitiesScreen: string | null;
   /** Title of the resources panel — "Resources" vs "Damage Track". */
   resourcesPanel: string;
+  /**
+   * Heading for the printed sheet's resource block, when the paper sheet names
+   * it differently from the screen. Falls back to {@link resourcesPanel}.
+   *
+   * @remarks
+   * The printed sheet said "Hit Points & Willpower" as a literal, with a comment
+   * explaining that `resourcesPanel` reads "Resources" and using it would change
+   * the Dragonbane sheet. Both statements are true; the conclusion was to leave
+   * one ruleset's words in shared code. Declaring it keeps the printed
+   * Dragonbane sheet identical and lets another system name its own block.
+   */
+  printResources?: string;
+  /**
+   * Heading for the printed sheet's abilities block. Falls back to
+   * {@link SystemTerms.abilities}.
+   *
+   * @remarks
+   * Same story: the sheet said "Abilities" rather than `terms.abilities`, which
+   * reads "Heroic Abilities" for classic-fantasy.
+   */
+  printAbilities?: string;
   /** Title of the attributes panel — "Attributes" vs "Characteristics". */
   attributesPanel: string;
   /** Title of the encumbrance panel. */
@@ -542,6 +563,17 @@ export interface DeathTrack {
   label: string;
   max: number;
   tone: 'danger' | 'success';
+  /**
+   * Column heading on the printed sheet, when paper wants a different word from
+   * the screen. Falls back to {@link label}.
+   *
+   * @remarks
+   * The plural "Failures"/"Successes" reads well in the play UI; the paper sheet
+   * has always used the singular. That was a `Record<string, string>` of
+   * Dragonbane track ids in the print component, so any other system's tracks
+   * fell through it — correctly, but by accident rather than by saying so.
+   */
+  printLabel?: string;
 }
 
 /** How a system models a downed/dying character. `null` when it has no such rules. */

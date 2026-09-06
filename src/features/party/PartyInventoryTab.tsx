@@ -784,6 +784,7 @@ export function PartyInventoryTab() {
         onClose={() => setItemEditorState(null)}
         item={itemEditorState?.item ?? null}
         onSave={handleItemEditorSave}
+        tinyItemLabel={engine.labels.tinyItems}
       />
     </div>
   );

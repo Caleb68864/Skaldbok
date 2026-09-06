@@ -811,8 +811,11 @@ export default function SheetScreen() {
                 attributeId={attrId}
                 abbreviation={attr?.abbreviation ?? attrId.toUpperCase()}
                 value={ev.effective}
-                min={attr?.min}
-                max={attr?.max}
+                // An attribute the system does not declare has no bounds to
+                // enforce, so the stepper is left open rather than clamped to
+                // Dragonbane's 3..18, which is what the component defaulted to.
+                min={attr?.min ?? Number.NEGATIVE_INFINITY}
+                max={attr?.max ?? Number.POSITIVE_INFINITY}
                 onChange={v => updateAttr(attrId, v)}
                 disabled={!attributesEditable}
                 modifierDelta={ev.isModified ? ev.modifiers.reduce((s, m) => s + m.delta, 0) : undefined}

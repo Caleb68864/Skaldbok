@@ -11,6 +11,18 @@ export interface InventoryItemEditorProps {
   onClose: () => void;
   item: InventoryItem | null;
   onSave: (item: InventoryItem) => void;
+  /**
+   * What this system calls a weightless item, or `null` when it has no such
+   * category and the control should not appear.
+   *
+   * @remarks
+   * From `engine.labels.tinyItems`. The checkbox was rendered unconditionally,
+   * labelled "Tiny item (no weight counted toward encumbrance)" — Dragonbane's
+   * rule and its wording. Traveller and Savage Worlds both declare `null` here,
+   * meaning a kilo is a kilo, and both were still offering players a checkbox
+   * that made an item weightless.
+   */
+  tinyItemLabel?: string | null;
 }
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
@@ -23,7 +35,7 @@ const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-bord
  * {@link generateId} on save. The same component covers both create and edit so the
  * two paths can't drift apart.
  */
-export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryItemEditorProps) {
+export function InventoryItemEditor({ open, onClose, item, onSave, tinyItemLabel }: InventoryItemEditorProps) {
   const [name, setName] = useState('');
   const [weight, setWeight] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -84,15 +96,19 @@ export function InventoryItemEditor({ open, onClose, item, onSave }: InventoryIt
             <input id={`${ids}-qty`} type="number" className={inputClasses} value={quantity} min={0} onChange={e => setQuantity(Number(e.target.value))} />
           </div>
         </div>
-        <label className="flex items-center gap-[var(--space-sm)] text-[var(--color-text)] text-[length:var(--font-size-md)] cursor-pointer">
-          <input
-            type="checkbox"
-            checked={tiny}
-            onChange={e => setTiny(e.target.checked)}
-            className="w-5 h-5 cursor-pointer"
-          />
-          Tiny item (no weight counted toward encumbrance)
-        </label>
+        {/* Only for a system that has a weightless-item category, and named the
+            way that system names it. */}
+        {tinyItemLabel && (
+          <label className="flex items-center gap-[var(--space-sm)] text-[var(--color-text)] text-[length:var(--font-size-md)] cursor-pointer">
+            <input
+              type="checkbox"
+              checked={tiny}
+              onChange={e => setTiny(e.target.checked)}
+              className="w-5 h-5 cursor-pointer"
+            />
+            {tinyItemLabel} (no weight counted toward encumbrance)
+          </label>
+        )}
         <label className="flex items-center gap-[var(--space-sm)] text-[var(--color-text)] text-[length:var(--font-size-md)] cursor-pointer">
           <input
             type="checkbox"

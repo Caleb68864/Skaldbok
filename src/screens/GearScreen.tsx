@@ -622,6 +622,7 @@ export default function GearScreen() {
         onClose={() => setInventoryDrawerOpen(false)}
         item={editingItem}
         onSave={handleInventorySave}
+        tinyItemLabel={engine.labels.tinyItems}
       />
 
       {/* Armor Edit Drawer */}

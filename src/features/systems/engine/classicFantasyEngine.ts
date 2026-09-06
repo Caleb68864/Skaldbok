@@ -219,6 +219,11 @@ export const classicFantasyEngine: SystemEngine = {
   labels: {
     abilitiesScreen: 'Abilities / Magic',
     resourcesPanel: 'Resources',
+    // The paper sheet names these blocks differently from the screen. Declared
+    // here so the printed Dragonbane sheet is unchanged while the strings stop
+    // being literals in shared print code.
+    printResources: 'Hit Points & Willpower',
+    printAbilities: 'Abilities',
     attributesPanel: 'Attributes',
     encumbrance: 'Encumbrance',
     participantHealth: 'Current HP',
@@ -273,8 +278,9 @@ export const classicFantasyEngine: SystemEngine = {
     deadLabel: 'DEAD',
     stabilizedLabel: 'Stabilized!',
     tracks: [
-      { id: 'deathRolls', label: 'Failures', max: 3, tone: 'danger' },
-      { id: 'deathSuccesses', label: 'Successes', max: 3, tone: 'success' },
+      // Plural on screen, singular as a printed column heading.
+      { id: 'deathRolls', label: 'Failures', max: 3, tone: 'danger', printLabel: 'Failure' },
+      { id: 'deathSuccesses', label: 'Successes', max: 3, tone: 'success', printLabel: 'Success' },
     ],
   },
   advancement: {

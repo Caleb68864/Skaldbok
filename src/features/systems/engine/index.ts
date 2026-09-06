@@ -6,6 +6,7 @@ import { travellerEngine } from './travellerEngine';
 import { savageWorldsEngine } from './savageWorldsEngine';
 import type { SystemEngine } from './types';
 import { makeFormatAmount } from '../../../utils/currency';
+import { DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 
 export type { SystemEngine, PanelKey, SystemTerms, SystemLabels, SkillDisplayContext } from './types';
 export { classicFantasyEngine } from './classicFantasyEngine';
@@ -112,7 +113,7 @@ export function getEngine(system: SystemDefinition | undefined | null): SystemEn
 /** Resolves the SystemEngine for the currently active character's system. */
 export function useSystemEngine(): SystemEngine {
   const { character } = useActiveCharacter();
-  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
   return getEngine(system);
 }
 
@@ -126,6 +127,6 @@ export function useSystemEngine(): SystemEngine {
  * campaign's system id here rather than using {@link useSystemEngine}.
  */
 export function useSystemEngineFor(systemId: string | undefined | null): SystemEngine {
-  const { system } = useSystemDefinition(systemId ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(systemId ?? DEFAULT_SYSTEM_ID);
   return getEngine(system);
 }

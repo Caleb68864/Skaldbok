@@ -21,10 +21,22 @@ import type { SystemEngine } from '../features/systems/engine';
  * dashboard show. Reading `character.skills[id].value` directly left every
  * `skill:` modifier invisible on paper. Empty when the skill has no entry.
  */
-function printedSkillValue(character: CharacterRecord, skillId: string): number | string {
+function printedSkillValue(
+  character: CharacterRecord,
+  skillId: string,
+  engine?: SystemEngine,
+  definition?: { baseChance: number; linkedAttributeId?: string },
+): number | string {
   const stored = character.skills?.[skillId]?.value;
-  if (stored == null) return '';
-  return resolveSkillValue(character, skillId, stored).effective;
+  if (stored != null) return resolveSkillValue(character, skillId, stored).effective;
+
+  // No stored entry does not mean no value. In a roll-under system an untrained
+  // skill still has a base chance derived from its attribute, and that is the
+  // number the player rolls against — printing a blank left it off the sheet
+  // entirely. The engine owns what an unset skill is worth.
+  if (!engine || !definition) return '';
+  const trained = character.skills?.[skillId]?.trained ?? false;
+  return engine.skill.computeValue(definition, character, trained);
 }
 
 
@@ -249,20 +261,23 @@ function AbilitiesSpells({
   character: CharacterRecord;
   engine: SystemEngine;
 }): React.ReactElement | null {
-  // Systems without magic have no ability/spell lists to print — rendering them
-  // would emit blank Dragonbane rows on, e.g., a Traveller sheet.
-  // The nullable model, not a parallel boolean — see guards.ts.
-  if (engine.magic === null) return null;
-
   const abilities: HeroicAbility[] = toHeroicAbilities(character.abilities);
   const spells: Spell[] = toSpells(character.abilities).sort(compareSpellsByRankThenName);
+  const hasMagic = engine.magic !== null;
+
+  // Abilities are not magic. This whole block used to return null for a system
+  // with no magic model, so a Traveller character's Talents never printed at
+  // all. Only the spell list depends on there being a magic economy; a system
+  // with neither prints nothing, as before.
+  if (!hasMagic && abilities.length === 0) return null;
 
   return (
     <div className="sheet-abilities-spells">
-      {/* NOTE: heading intentionally not `engine.terms.abilities` — that reads
-          "Heroic Abilities" for classic-fantasy and would change the printed
-          Dragonbane sheet. Override via `terms.abilities` in system.json. */}
-      <div className="sheet-section-header">Abilities</div>
+      {/* From the engine, defaulting to its own word for abilities. The literal
+          "Abilities" was here because `terms.abilities` reads "Heroic
+          Abilities" for classic-fantasy — true, and now declared as
+          `labels.printAbilities` instead of written into shared print code. */}
+      <div className="sheet-section-header">{engine.labels.printAbilities ?? engine.terms.abilities}</div>
       {abilities.map((ability, i) => (
         <div key={i} className="sheet-ability-row">
           {ability.name}
@@ -273,6 +288,8 @@ function AbilitiesSpells({
         <div key={`ability-blank-${i}`} className="sheet-ability-row sheet-blank-row">&nbsp;</div>
       ))}
 
+      {hasMagic && (
+        <>
       <div className="sheet-section-header">{engine.terms.spells}</div>
       {spells.map((spell, i) => (
         <div key={i} className="sheet-ability-row sheet-spell-row">
@@ -287,6 +304,8 @@ function AbilitiesSpells({
       {Array.from({ length: Math.max(0, SPELL_SLOTS - spells.length) }).map((_, i) => (
         <div key={`spell-blank-${i}`} className="sheet-ability-row sheet-blank-row">&nbsp;</div>
       ))}
+        </>
+      )}
     </div>
   );
 }
@@ -370,9 +389,11 @@ function SkillRow({
 function SkillsSection({
   character,
   system,
+  engine,
 }: {
   character: CharacterRecord;
   system: SystemDefinition | null;
+  engine: SystemEngine;
 }): React.ReactElement {
   // The character's own custom skills are merged in, so they print inside their
   // category like any declared skill instead of falling through to the
@@ -422,7 +443,7 @@ function SkillsSection({
               <SkillRow
                 key={skill.id}
                 name={skill.name}
-                value={printedSkillValue(character, skill.id)}
+                value={printedSkillValue(character, skill.id, engine, skill)}
                 trained={charSkill?.trained ?? false}
               />
             );
@@ -437,7 +458,7 @@ function SkillsSection({
           <SkillRow
             key={skill.id}
             name={skill.name}
-            value={printedSkillValue(character, skill.id)}
+            value={printedSkillValue(character, skill.id, engine, skill)}
             trained={charSkill?.trained ?? false}
           />
         );
@@ -450,7 +471,7 @@ function SkillsSection({
           <SkillRow
             key={skill.id}
             name={skill.name}
-            value={printedSkillValue(character, skill.id)}
+            value={printedSkillValue(character, skill.id, engine, skill)}
             trained={charSkill?.trained ?? false}
           />
         );
@@ -465,7 +486,9 @@ function SkillsSection({
           <SkillRow
             key={key ?? `secondary-${i}`}
             name={key ?? ''}
-            value={charSkill?.value ?? ''}
+            // Through the resolver like every other row. Read raw, a `skill:`
+            // temp modifier was invisible in this block alone.
+            value={key ? printedSkillValue(character, key) : ''}
             trained={charSkill?.trained ?? false}
           />
         );
@@ -682,20 +705,6 @@ function WeaponsTable({
 // Section 5 Right — Resource Trackers (SS-13)
 // ──────────────────────────────────────────────
 
-/**
- * Print-specific wording for the death tracks.
- *
- * @remarks
- * Same rationale as {@link PRINT_DERIVED_LABELS}: the engine's plural
- * "Failures"/"Successes" read well in the play UI, but the printed sheet has
- * always used the singular column headings. Unknown track ids print the
- * engine's label unchanged.
- */
-const PRINT_DEATH_TRACK_LABELS: Record<string, string> = {
-  deathSuccesses: 'Success',
-  deathRolls: 'Failure',
-};
-
 /** Prints a row of fillable dots/boxes for tracking a countable value (e.g. death-roll failures) by hand. */
 function DotTracker({
   label,
@@ -736,26 +745,28 @@ function ResourceTrackers({
   system: SystemDefinition | null;
   engine: SystemEngine;
 }): React.ReactElement {
-  // `hp` / `wp` are data keys (of `character.resources` and the derived struct),
-  // not labels — the user-facing text comes from the engine's terms.
-  const hasHpWpPools = engine.resourceIds.includes('hp') && engine.resourceIds.includes('wp');
+  // Which resource is health and which is the magic pool are the engine's to
+  // say. These were the literals `'hp'` and `'wp'` — Dragonbane's ids, used to
+  // pick a label, a maximum and a CSS class, so a system naming its pools
+  // anything else fell through every branch.
+  const healthId = engine.primaryHealthResourceId;
+  const magicId = engine.magic?.resourceId ?? null;
 
   const labelFor = (id: string): string => {
-    if (id === 'hp') return engine.terms.healthResource;
-    if (id === 'wp') return engine.terms.magicResource;
+    if (id === healthId) return engine.terms.healthResource;
+    if (id === magicId) return engine.terms.magicResource;
     return system?.resources?.find(r => r.id === id)?.name ?? id.toUpperCase();
   };
 
   const maxFor = (id: string): number => {
+    // The derived maxima are Dragonbane's two, keyed by its own ids; a resource
+    // outside that pair reads its stored max, as before.
     if (id === 'hp') return derived.hpMax;
     if (id === 'wp') return derived.wpMax;
     return character.resources?.[id]?.max ?? 0;
   };
 
-  // NOTE: not `engine.labels.resourcesPanel` for the HP/WP shape — that reads
-  // "Resources" for classic-fantasy and would change the printed Dragonbane
-  // sheet. Override via `labels.resourcesPanel` in system.json.
-  const heading = hasHpWpPools ? 'Hit Points & Willpower' : engine.labels.resourcesPanel;
+  const heading = engine.labels.printResources ?? engine.labels.resourcesPanel;
 
   return (
     <div className="sheet-resource-trackers">
@@ -767,7 +778,7 @@ function ResourceTrackers({
           label={labelFor(id)}
           current={character.resources?.[id]?.current ?? 0}
           max={maxFor(id)}
-          filledClass={id === 'wp' ? 'wp-dot-filled' : 'hp-dot-filled'}
+          filledClass={id === magicId ? 'wp-dot-filled' : 'hp-dot-filled'}
         />
       ))}
 
@@ -793,7 +804,7 @@ function ResourceTrackers({
             .sort((a, b) => Number(a.tone === 'danger') - Number(b.tone === 'danger'))
             .map(track => (
               <div key={track.id} className="sheet-death-roll-row">
-                <span className="sheet-death-label">{PRINT_DEATH_TRACK_LABELS[track.id] ?? track.label}</span>
+                <span className="sheet-death-label">{track.printLabel ?? track.label}</span>
                 {Array.from({ length: track.max }).map((_, i) => (
                   <span key={i} className="sheet-checkbox-box" />
                 ))}
@@ -850,7 +861,7 @@ export default function PrintableSheet({
 
         {/* Center: Skills */}
         <div className="print-col print-col--center">
-          <SkillsSection character={character} system={system} />
+          <SkillsSection character={character} system={system} engine={engine} />
         </div>
 
         {/* Right: Inventory */}

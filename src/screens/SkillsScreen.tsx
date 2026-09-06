@@ -6,7 +6,6 @@ import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useFieldEditable, FIELD_PATHS } from '../utils/modeGuards';
 import { useAutosave } from '../hooks/useAutosave';
-import { SkillList } from '../components/fields/SkillList';
 import { Chip } from '../components/primitives/Chip';
 import { GameIcon } from '../components/primitives/GameIcon';
 import { AddCustomSkillForm, type CustomSkillDraft } from '../components/fields/AddCustomSkillForm';
@@ -673,15 +672,7 @@ export default function SkillsScreen() {
             </p>
           )}
         </div>
-      ) : (
-        <SkillList
-          categories={[]}
-          characterSkills={character.skills}
-          onSkillChange={handleSkillChange}
-          disabled={!skillsEditable}
-          filter={filter}
-        />
-      )}
+      ) : null}
     </div>
   );
 }
