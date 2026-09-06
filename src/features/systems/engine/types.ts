@@ -682,7 +682,23 @@ export interface SystemEngine {
   resolveDamage?: (
     character: CharacterRecord,
     input: { total: number; ap?: number; raises?: number },
-  ) => { levels: Record<string, number>; setsConditions: string[]; noEffect?: boolean };
+  ) => {
+    levels: Record<string, number>;
+    setsConditions: string[];
+    noEffect?: boolean;
+    /**
+     * Why nothing landed, in this ruleset's own words — SWADE's "under
+     * Toughness". Read only when `noEffect` is set.
+     *
+     * @remarks
+     * The dashboard used to write that phrase itself, along with "Shaken" and
+     * "Wound", so a system whose damage bounced for a different reason, or whose
+     * tracks are called something else, would still have been told it was under
+     * Toughness. The rest of the message is assembled from `system.conditions`
+     * and `system.resources` names.
+     */
+    noEffectReason?: string;
+  };
   /**
    * How the attributes panel reads a stored attribute number: `'modifiers'`
    * (a signed DM like `+2`), `'value'` (plain `8`), or `'dice'` (Savage Worlds

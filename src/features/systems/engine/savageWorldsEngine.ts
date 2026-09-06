@@ -292,7 +292,11 @@ export const savageWorldsEngine: SystemEngine = {
   resolveDamage: (character, { total, ap = 0 }) => {
     const toughness = computeToughness(character, ap);
     const levels: Record<string, number> = {};
-    if (total < toughness) return { levels, setsConditions: [], noEffect: true };
+    // The reason travels with the result. The dashboard used to write "under
+    // Toughness" itself, which is this ruleset's phrase, not a general one.
+    if (total < toughness) {
+      return { levels, setsConditions: [], noEffect: true, noEffectReason: 'under Toughness' };
+    }
     const extraWounds = Math.floor((total - toughness) / 4);
     const alreadyShaken = !!character.conditions?.['shaken'];
     const wounds = (alreadyShaken ? 1 : 0) + extraWounds;

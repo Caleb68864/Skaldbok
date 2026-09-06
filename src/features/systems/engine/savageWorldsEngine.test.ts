@@ -37,6 +37,9 @@ describe('savageWorldsEngine.resolveDamage', () => {
     expect(r.noEffect).toBe(true);
     expect(r.levels).toEqual({});
     expect(r.setsConditions).toEqual([]);
+    // The reason travels with the result. The dashboard used to write "under
+    // Toughness" itself — this ruleset's phrase, in a shared screen.
+    expect(r.noEffectReason).toBe('under Toughness');
   });
   it('armor-piercing lowers Toughness so the same hit now Shakes', () => {
     // ap 4 strips all armor → Tough 5; total 8 >= 5, 0 extra wounds
