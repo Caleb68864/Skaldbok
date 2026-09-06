@@ -13,8 +13,8 @@ import { useInventoryContainerKinds } from '../../hooks/useConfigurableDefaults'
 import type { InventoryContainerKindConfig } from '../../config/defaults/inventoryContainerKinds';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import * as inventoryContainerRepository from '../../storage/repositories/inventoryContainerRepository';
-import { computeEncumbranceLimit } from '../../utils/derivedValues';
-import { useSystemEngine } from '../systems/engine';
+
+import { useSystemEngineFor } from '../systems/engine';
 import type { CurrencyDenomination } from '../systems/engine/types';
 import type { CharacterRecord, InventoryItem } from '../../types/character';
 import { containerWealth } from '../../types/inventoryContainer';
@@ -100,8 +100,21 @@ function makeChange(denoms: CurrencyDenomination[], amounts: Wealth): Wealth | n
   return next;
 }
 
+/**
+ * Weight of a pile of items.
+ *
+ * @remarks
+ * A container is not a character, so the engine's `encumbrance.load` (which
+ * takes one, and folds in worn armour) does not apply to it. The `tiny`
+ * exemption is kept here for that reason, and this figure is only ever compared
+ * against a container's own declared capacity.
+ *
+ * The `* 1` this used to end with dropped quantity entirely: ten 2 kg rations
+ * weighed 2. Character carry is read from the engine instead — see the carrier
+ * list below.
+ */
 function carrierWeight(items: InventoryItem[]): number {
-  return items.reduce((sum, i) => sum + (i.tiny ? 0 : i.weight) * 1, 0);
+  return items.reduce((sum, i) => sum + (i.tiny ? 0 : (i.weight ?? 0)) * (i.quantity ?? 1), 0);
 }
 
 /**
@@ -121,7 +134,11 @@ export function PartyInventoryTab() {
   const { activeCampaign, activeParty } = useCampaignContext();
   const { showToast } = useToast();
   const { character: activeCharacter, updateCharacter } = useActiveCharacter();
-  const engine = useSystemEngine();
+  // The campaign's system, not the active character's. This screen lists every
+  // party member, so binding it to whoever happens to be open on the sheet gave
+  // a Traveller party Dragonbane capacity — and, with no active character at
+  // all, Dragonbane coins.
+  const engine = useSystemEngineFor(activeCampaign?.system);
   const denominations = engine.currency.denominations;
 
   const [pcs, setPcs] = useState<CharacterRecord[]>([]);
@@ -191,7 +208,7 @@ export function PartyInventoryTab() {
         name: pc.name,
         items: pc.inventory,
         wealth: normalizeWealth(denominations, engine.currency.read(pc)),
-        capacity: computeEncumbranceLimit(pc),
+        capacity: engine.encumbrance?.limit(pc) ?? 0,
         character: pc,
       });
     }

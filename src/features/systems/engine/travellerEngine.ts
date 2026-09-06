@@ -75,6 +75,23 @@ export function computeTravellerCarryLimit(character: CharacterRecord): number {
   );
 }
 
+/**
+ * Mass carried, in kg.
+ *
+ * @remarks
+ * Traveller has no "tiny item is free" exemption — a kilo is a kilo — so this
+ * counts every item by quantity, plus worn armour. Dragonbane's `tiny` flag is
+ * simply not consulted, which is the point of each system owning its own load
+ * rule rather than sharing one inline sum.
+ */
+export function computeTravellerLoad(character: CharacterRecord): number {
+  const items = (character.inventory ?? []).reduce(
+    (sum, i) => sum + (i.weight ?? 0) * (i.quantity ?? 1),
+    0,
+  );
+  return items + (character.armor?.weight ?? 0) + (character.helmet?.weight ?? 0);
+}
+
 /** Formats a DM as a signed string, e.g. 2 -> '+2', -1 -> '-1'. */
 export function formatDM(dm: number): string {
   return dm >= 0 ? `+${dm}` : `${dm}`;
@@ -418,6 +435,10 @@ export const travellerEngine: SystemEngine = {
   },
   // Psionics exist but the app does not automate a PP economy yet.
   magic: null,
+  encumbrance: {
+    limit: computeTravellerCarryLimit,
+    load: computeTravellerLoad,
+  },
   // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
   rest: null,
   // No death-roll track; a downed character is handled by the damage track.

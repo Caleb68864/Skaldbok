@@ -336,6 +336,39 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
       }
     });
 
+    it('the encumbrance model returns usable numbers', () => {
+      // Three formulas used to live in three places with nothing tying them
+      // together, and only one honoured an item's capacityBonus.
+      if (engine.encumbrance === null) return;
+      const limit = engine.encumbrance.limit(character);
+      const load = engine.encumbrance.load(character);
+      expect(Number.isFinite(limit), `${system.id}: encumbrance.limit is not finite`).toBe(true);
+      expect(Number.isFinite(load), `${system.id}: encumbrance.load is not finite`).toBe(true);
+      expect(limit).toBeGreaterThanOrEqual(0);
+      expect(load).toBeGreaterThanOrEqual(0);
+    });
+
+    it('encumbrance.load counts an item by quantity', () => {
+      // The party screen summed weight with a literal `* 1` in place of the
+      // quantity, so ten 2 kg rations weighed 2.
+      if (engine.encumbrance === null) return;
+      const one = { ...character, inventory: [{ id: 'i1', name: 'Ration', weight: 2, quantity: 1, description: '' }] } as CharacterRecord;
+      const ten = { ...character, inventory: [{ id: 'i1', name: 'Ration', weight: 2, quantity: 10, description: '' }] } as CharacterRecord;
+      expect(engine.encumbrance.load(ten)).toBeGreaterThan(engine.encumbrance.load(one));
+    });
+
+    it('a system that declares an encumbrance limit also declares the field', () => {
+      // The panel reads the limit through resolveDerivedField, so the key has to
+      // exist in derivedStats or the override and modifier channels resolve to
+      // nothing and the screen silently reads 0.
+      if (engine.encumbrance === null) return;
+      const derived = engine.derivedStats(character, system) as unknown as Record<string, unknown>;
+      expect(
+        Object.prototype.hasOwnProperty.call(derived, 'encumbranceLimit'),
+        `${system.id}: declares an encumbrance model but derivedStats has no encumbranceLimit`,
+      ).toBe(true);
+    });
+
     it('timeUnits are non-empty with unique ids', () => {
       // AddModifierDrawer defaults its Duration row to timeUnits[0]; an empty
       // list would store an empty duration no consumer can resolve.

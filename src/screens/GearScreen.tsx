@@ -358,9 +358,10 @@ export default function GearScreen() {
     setHelmetDrawerOpen(true);
   }
 
-  const totalWeight = character.inventory.reduce((sum, i) => sum + (i.tiny ? 0 : i.weight), 0)
-    + (character.armor?.weight ?? 0)
-    + (character.helmet?.weight ?? 0);
+  // The load rule is the system's, not this screen's: which items are exempt
+  // (Dragonbane's tiny items) and whether quantity multiplies differ per
+  // ruleset, and this sum silently ignored quantity in every system.
+  const totalWeight = engine.encumbrance?.load(character) ?? 0;
   // The carry limit is engine-computed (e.g. STR+END for Traveller, ceil(STR/2)
   // for classic-fantasy) but the user may hand-tune it through the same
   // derivedOverrides channel the sheet uses, and a temp modifier may adjust it
@@ -377,9 +378,10 @@ export default function GearScreen() {
   });
   const encumbranceOverride = resolvedEncumbrance.override;
   const encumbranceLimit = typeof resolvedEncumbrance.display === 'number' ? resolvedEncumbrance.display : 0;
-  // A falsy limit means the active system does not track encumbrance — never
-  // flag the character as overloaded in that case.
-  const tracksEncumbrance = encumbranceLimit > 0;
+  // A system with no encumbrance model does not track carry at all; a falsy
+  // limit means it does but has nothing to measure yet. Neither may flag the
+  // character as overloaded.
+  const tracksEncumbrance = engine.encumbrance !== null && encumbranceLimit > 0;
   const isOverloaded = tracksEncumbrance && totalWeight > encumbranceLimit;
 
   const denominations = engine.currency.denominations;

@@ -445,6 +445,23 @@ export interface RestOutcome {
  * `id` doubles as the {@link types/character!TempModifier | TempModifier} duration key, so a modifier lasting
  * "until the next round rest" expires when the rest with `id: 'round'` runs.
  */
+/**
+ * A system's carry rules: what a character can carry, and what counts as
+ * carried.
+ *
+ * @remarks
+ * `load` is separate from `limit` because the exemptions differ per ruleset —
+ * Dragonbane's "tiny items are free", a system that ignores worn armour, one
+ * that counts coin weight. Both are base figures; overrides and modifiers are
+ * applied by the caller through the usual derived-field resolver.
+ */
+export interface EncumbranceModel {
+  /** Base carry limit before overrides and modifiers. */
+  limit: (character: CharacterRecord) => number;
+  /** Weight currently carried, with this system's exemptions applied. */
+  load: (character: CharacterRecord) => number;
+}
+
 export interface RestDefinition {
   id: string;
   label: string;
@@ -647,6 +664,24 @@ export interface SystemEngine {
      * `level * costPerLevel` would give. */
     trickCost: number;
   } | null;
+  /**
+   * How this system measures what a character can carry, or `null` when it does
+   * not track encumbrance at all — in which case the panel is hidden rather
+   * than shown reading zero.
+   *
+   * @remarks
+   * Three formulas existed with nothing tying them together — Dragonbane's
+   * `ceil(STR/2)` plus item `capacityBonus`, Traveller's `STR + END`, Savage
+   * Worlds' `Strength × 5` — and only the first honoured `capacityBonus`, so a
+   * backpack added capacity in exactly one system. Carried load was summed
+   * inline at each call site with its own copy of the `tiny` exemption.
+   *
+   * `limit` is the base figure only. Every screen must still put it through
+   * `resolveDerivedField(character, derived, { key: 'encumbranceLimit' })` so a
+   * user override and any `derived:encumbranceLimit` modifier apply in the
+   * usual computed → override → modifiers order.
+   */
+  encumbrance: EncumbranceModel | null;
   /** Rest/recovery actions, or `null` when the system has none. */
   rest: RestDefinition[] | null;
   /** Downed/dying rules, or `null` when the system has none. */

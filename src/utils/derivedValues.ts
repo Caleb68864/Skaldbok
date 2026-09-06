@@ -145,6 +145,22 @@ export function computeAGLDamageBonus(character: CharacterRecord): string {
  * Encumbrance Limit = ceil(STR / 2) plus capacity bonuses from carried items
  * (e.g. backpacks). Each item contributes `capacityBonus * quantity`.
  */
+/**
+ * Weight a character is carrying, with Dragonbane's "tiny items are free" rule.
+ *
+ * @remarks
+ * Was summed inline at three call sites, each with its own copy of the `tiny`
+ * exemption and its own idea of whether worn armour counts. Armour and helmet
+ * weight is included: the character is wearing it.
+ */
+export function computeCarriedWeight(character: CharacterRecord): number {
+  const items = (character.inventory ?? []).reduce(
+    (sum, i) => sum + (i.tiny ? 0 : (i.weight ?? 0) * (i.quantity ?? 1)),
+    0,
+  );
+  return items + (character.armor?.weight ?? 0) + (character.helmet?.weight ?? 0);
+}
+
 export function computeEncumbranceLimit(character: CharacterRecord): number {
   const str = effectiveAttribute(character, 'str', 10);
   const base = Math.ceil(str / 2);

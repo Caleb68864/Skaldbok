@@ -294,6 +294,18 @@ export const savageWorldsEngine: SystemEngine = {
   },
   // No Arcane Background in the base ruleset; a caster build adds a PP pool later.
   magic: null,
+  encumbrance: {
+    // Load Limit is Strength x5; a d12+1 Strength carries as a 13 would.
+    limit: character => {
+      const strength = traitDie(character, 'strength');
+      return (strength.sides + strength.bonus) * 5;
+    },
+    // SWADE weighs everything in pounds with no free-item tier.
+    load: character =>
+      (character.inventory ?? []).reduce((sum, i) => sum + (i.weight ?? 0) * (i.quantity ?? 1), 0) +
+      (character.armor?.weight ?? 0) +
+      (character.helmet?.weight ?? 0),
+  },
   rest: null,
   death: null,
   advancement: null,

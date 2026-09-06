@@ -1,4 +1,10 @@
-import { computeDerivedValues, computeSkillValue, effectiveAttribute } from '../../../utils/derivedValues';
+import {
+  computeCarriedWeight,
+  computeDerivedValues,
+  computeEncumbranceLimit,
+  computeSkillValue,
+  effectiveAttribute,
+} from '../../../utils/derivedValues';
 import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../../utils/boonBane';
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
@@ -213,6 +219,10 @@ export const classicFantasyEngine: SystemEngine = {
   // Willpower economy: a power level `n` spell costs `n * 2` WP; a magic trick
   // (power level 0) costs 1. Was hardcoded in the ability/magic modules. E11.
   magic: { resourceId: 'wp', powerLevels: [1, 2, 3], costPerLevel: 2, trickCost: 1 },
+  encumbrance: {
+    limit: computeEncumbranceLimit,
+    load: computeCarriedWeight,
+  },
   rest: classicFantasyRests,
   death: {
     triggerResourceId: 'hp',
