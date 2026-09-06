@@ -7,7 +7,7 @@ import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
 import { getSessionById, getSessionsByCampaign } from '../../storage/repositories/sessionRepository';
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
 import { renderNoteToMarkdown } from '../../utils/export/renderNote';
-import { renderAttachmentSidecar } from '../../utils/export/renderAttachmentSidecar';
+import { buildAttachmentFiles } from '../../utils/export/attachmentFiles';
 import { renderSessionBundle } from '../../utils/export/renderSession';
 import { renderCampaignIndex } from '../../utils/export/renderCampaignIndex';
 import { bundleToZip } from '../../utils/export/bundleToZip';
@@ -118,9 +118,8 @@ export function useExportActions() {
       } else {
         const filesMap = new Map<string, string | Blob>();
         filesMap.set(generateFilename(note), markdown);
-        for (const att of attachments) {
-          filesMap.set(`attachments/${att.filename}`, att.blob);
-          filesMap.set(`attachments/${att.filename.replace('.jpg', '.md')}`, renderAttachmentSidecar(att, note));
+        for (const [path, contents] of await buildAttachmentFiles([note], async () => attachments, 'attachments')) {
+          filesMap.set(path, contents);
         }
         const zipBlob = await bundleToZip(filesMap);
         await shareFile(zipBlob, generateFilename(note).replace('.md', '.zip'));
@@ -253,13 +252,15 @@ export function useExportActions() {
       const ledger = await buildLedgerMarkdown(activeCampaign);
       if (ledger) filesMap.set('ledger.md', ledger);
 
-      for (const note of linkedNotes) {
-        const attachments = await getAttachmentsByNote(note.id);
-        for (const att of attachments) {
-          filesMap.set(`attachments/${sessionSlug}/${att.filename}`, att.blob);
-          filesMap.set(`attachments/${sessionSlug}/${att.filename.replace('.jpg', '.md')}`, renderAttachmentSidecar(att, note));
-        }
-      }
+      // shareableNotes, not linkedNotes: a private note's photos and their
+      // sidecars (which carry the note's title) were being written into the ZIP
+      // even though the note's text was filtered out of the Markdown above.
+      const attachmentFiles = await buildAttachmentFiles(
+        shareableNotes,
+        getAttachmentsByNote,
+        `attachments/${sessionSlug}`,
+      );
+      for (const [path, contents] of attachmentFiles) filesMap.set(path, contents);
 
       const zipBlob = await bundleToZip(filesMap);
       const zipFilename = generateFilename({ title: session.title, id: session.id }).replace('.md', '.zip');
@@ -341,12 +342,11 @@ export function useExportActions() {
         const filename = generateFilename(note);
         filesMap.set(filename, markdown);
 
-        for (const att of attachments) {
-          const folder = note.sessionId
-            ? `attachments/${note.sessionId.slice(0, 8)}/`
-            : 'attachments/unsorted/';
-          filesMap.set(`${folder}${att.filename}`, att.blob);
-          filesMap.set(`${folder}${att.filename.replace('.jpg', '.md')}`, renderAttachmentSidecar(att, note));
+        const folder = note.sessionId
+          ? `attachments/${note.sessionId.slice(0, 8)}`
+          : 'attachments/unsorted';
+        for (const [path, contents] of await buildAttachmentFiles([note], async () => attachments, folder)) {
+          filesMap.set(path, contents);
         }
       }
 
