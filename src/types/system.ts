@@ -338,6 +338,56 @@ export const PANEL_KEYS = [
 /** One of the panels an engine may claim. See {@link PANEL_KEYS}. */
 export type PanelKey = (typeof PANEL_KEYS)[number];
 
+/** One column of a declared table panel. Mirrors `RepeatableColumn`. */
+export interface SheetPanelColumn {
+  key: string;
+  label: string;
+  /** CSS `flex` shorthand controlling the field's width. */
+  flex?: string;
+  type?: 'text' | 'number';
+}
+
+/**
+ * One block inside a declared sheet panel.
+ *
+ * @remarks
+ * Both kinds read and write a key in the character's `systemData` bag, which is
+ * how the hand-written versions of these panels already stored their values —
+ * so a system that declares its panels reads back every record written before
+ * they were declared.
+ */
+export type SheetPanelSection =
+  /** A free-text block: one `systemData` string. */
+  | {
+      kind: 'text';
+      key: string;
+      /** Heading above the field. Omit for a panel that is a single unlabelled box. */
+      label?: string;
+      placeholder?: string;
+      /** Minimum height in pixels. Defaults to 80. */
+      minHeight?: number;
+    }
+  /** A table: one `systemData` array of row records. */
+  | {
+      kind: 'rows';
+      key: string;
+      heading?: string;
+      columns: SheetPanelColumn[];
+      /** Noun on the add button, e.g. "Term". */
+      addLabel: string;
+      emptyLabel: string;
+    };
+
+/** A sheet panel a ruleset declares rather than the sheet hardcoding. */
+export interface SheetPanelDefinition {
+  /** The `panels` key this fills, e.g. `careers`. */
+  id: PanelKey;
+  title: string;
+  /** `GameIcon` name shown beside the title. */
+  icon?: string;
+  sections: SheetPanelSection[];
+}
+
 export interface SystemDefinition {
   id: string;
   version: number;
@@ -395,6 +445,21 @@ export interface SystemDefinition {
    * without naming anybody's money.
    */
   financeFields?: FinanceField[];
+  /**
+   * Sheet panels this ruleset adds, declared rather than written into the sheet.
+   *
+   * @remarks
+   * Traveller's Careers, Decorations, Training, Connections and Augments panels,
+   * and Savage Worlds' Edges and Hindrances, were ~175 lines of JSX in
+   * `SheetScreen` keyed off panel ids, with their column layouts as module
+   * constants beside them. Every one binds a `systemData` key to either a text
+   * area or a table of rows — the same shape `identityFields` and
+   * `financeFields` already declare for their own fields.
+   *
+   * A panel's `id` must be one of the keys the ruleset lists in `panels`, which
+   * is what decides whether it renders and where.
+   */
+  sheetPanels?: SheetPanelDefinition[];
   /**
    * Declares this ruleset's vehicle sheet. Absent = no vehicles, and the Ships
    * screen and its nav entry disappear. See {@link VehicleModel}.
