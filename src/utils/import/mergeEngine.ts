@@ -104,7 +104,10 @@ async function danglingLinkEndpoint(link: Record<string, unknown>): Promise<stri
     const type = link[typeKey] as string | undefined;
     const entityId = link[idKey] as string | undefined;
     if (!type || !entityId) continue;
-    const table = LINK_ENDPOINT_TABLES[type];
+    // An own-property check, not plain indexing: `type` comes from the imported file, and
+    // `"constructor"` would otherwise resolve to a function that `db.table`
+    // then throws on. It failed safe only because the throw was caught.
+    const table = Object.prototype.hasOwnProperty.call(LINK_ENDPOINT_TABLES, type) ? LINK_ENDPOINT_TABLES[type] : undefined;
     if (!table) continue; // unverifiable endpoint type — don't reject on it
     const exists = await db.table(table).get(entityId);
     if (!exists) return `${type} "${entityId}"`;

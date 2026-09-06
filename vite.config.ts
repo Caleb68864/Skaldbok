@@ -6,11 +6,69 @@ import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
 
 // https://vite.dev/config/
+/**
+ * The policy the built app runs under.
+ *
+ * @remarks
+ * Defence in depth for a local-first app that makes no network requests of its
+ * own: `connect-src 'self'` means an imported character or note cannot phone
+ * home, and `img-src` without a scheme wildcard blocks a tracking pixel smuggled
+ * in as a portrait URL — the same hole `importablePortraitUri` closes on the
+ * import path, closed again at the browser.
+ *
+ * `'unsafe-inline'` is present for styles only: Tailwind and Tiptap both write
+ * inline style attributes. Scripts are bundled files, so `script-src 'self'`
+ * needs no exception. `object-src 'none'` and `base-uri 'none'` remove two
+ * injection surfaces the app never uses.
+ */
+const CONTENT_SECURITY_POLICY = [
+  "default-src 'self'",
+  "img-src 'self' data: blob:",
+  "media-src 'self' blob:",
+  "font-src 'self' data:",
+  "style-src 'self' 'unsafe-inline'",
+  "script-src 'self'",
+  "worker-src 'self'",
+  "connect-src 'self'",
+  "manifest-src 'self'",
+  "object-src 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  // `frame-ancestors` is deliberately absent: it is ignored when the policy is
+  // delivered in a <meta> element, and including it only logs an error on every
+  // load. Framing protection needs an HTTP header, which a static bundle served
+  // off a LAN address has no way to set.
+].join('; ');
+
+/**
+ * Injects the CSP into the built `index.html`.
+ *
+ * @remarks
+ * Build only. Applying it in dev would break Vite's HMR client, which injects
+ * inline scripts — and a policy that has to be loosened for the dev server is
+ * not the policy that ships.
+ */
+function contentSecurityPolicy(): import('vite').Plugin {
+  return {
+    name: 'skaldbok-csp',
+    apply: 'build',
+    transformIndexHtml: {
+      order: 'post',
+      handler: (html: string) =>
+        html.replace(
+          '<head>',
+          `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CONTENT_SECURITY_POLICY}" />`,
+        ),
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     tailwindcss(),
     react(),
     basicSsl(),
+    contentSecurityPolicy(),
     VitePWA({
       registerType: 'prompt',
       includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png'],
