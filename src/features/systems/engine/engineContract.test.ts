@@ -102,13 +102,31 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
  * Values are arbitrary but in-range; these assertions are about a function
  * running and returning the right *shape*, not about specific arithmetic.
  */
+/**
+ * A mid-range value for one attribute, on its ladder if it has one.
+ *
+ * @remarks
+ * These used to be seeded at `a.max`, which quietly defeated the modifier probe
+ * below: every formula that steps at a threshold (Dragonbane's damage bonus at
+ * 13 and 17, the skill base-chance table, a Savage Worlds die ladder) is already
+ * saturated at the maximum, so a +3 probe moved nothing and the test could not
+ * tell a saturated threshold from a modifier no consumer reads.
+ */
+function midRangeAttribute(a: SystemDefinition['attributes'][number]): number {
+  const mid = Math.round(((a.min ?? 1) + (a.max ?? 18)) / 2);
+  const ladder = a.scale?.kind === 'die-ladder' ? a.scale.ladder : null;
+  if (!ladder || ladder.length === 0) return mid;
+  const below = ladder.filter(rung => rung <= mid);
+  return below.length > 0 ? Math.max(...below) : Math.min(...ladder);
+}
+
 function syntheticCharacter(system: SystemDefinition): CharacterRecord {
   return {
     id: 'contract-test',
     name: 'Contract',
     systemId: system.id,
     schemaVersion: 99,
-    attributes: Object.fromEntries(system.attributes.map(a => [a.id, a.max ?? 10])),
+    attributes: Object.fromEntries(system.attributes.map(a => [a.id, midRangeAttribute(a)])),
     resources: Object.fromEntries(
       system.resources.map(r => [r.id, { current: 1, max: 5 }]),
     ),
@@ -217,7 +235,7 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
         helmet: { name: 'Test helm', rating: 2 },
       } as CharacterRecord;
 
-      const fingerprint = (c: CharacterRecord): string => {
+      const fingerprint = (c: CharacterRecord, options?: { withoutAttrs?: boolean }): string => {
         const derived = engine.derivedStats(c, system) as unknown as Record<string, unknown>;
         return JSON.stringify({
           derived,
@@ -225,8 +243,13 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
           fields: engine.derivedFields.map(f => resolveDerivedField(c, derived as Record<string, number | string | undefined>, f).display),
           armor: resolveArmorRating(c, 'armor'),
           helmet: resolveArmorRating(c, 'helmet'),
-          // Every attribute as the sheet reads it.
-          attrs: engine.attributeIds.map(id => getEffectiveValue(attrKey(id), c).effective),
+          // Every attribute as the sheet reads it. Omitted by the downstream
+          // probe below, because this line alone moves for any `attr:` target
+          // and so cannot tell "the attribute display changed" from "something
+          // computed from the attribute changed".
+          attrs: options?.withoutAttrs
+            ? null
+            : engine.attributeIds.map(id => getEffectiveValue(attrKey(id), c).effective),
           // The skills screen's own line. Function-valued and previously never
           // invoked here, so a state penalty that feeds only the roll display
           // (SWADE's wound/fatigue penalty) was invisible to this suite.
@@ -238,6 +261,14 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
           skills: system.skillCategories
             .flatMap(cat => cat.skills)
             .map(s => resolveSkillValue(c, s.id, engine.skill.defaultValue).effective),
+          // The engine's own skill formula. `resolveSkillValue` above folds
+          // modifiers into a *stored* value and never calls this, so a skill
+          // computed from a linked attribute — Dragonbane's whole skill list —
+          // was outside the fingerprint entirely. Without it an `attr:` target
+          // whose only consumers are skills reads as inert.
+          computedSkills: system.skillCategories
+            .flatMap(cat => cat.skills)
+            .map(s => engine.skill.computeValue(s, c, false)),
         });
       };
 
@@ -262,6 +293,36 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
           `a +3 modifier on "${stat.id}" (${stat.label}) changes nothing the app displays — ` +
             `it is offered by the modifier picker but no consumer reads it`,
         ).not.toBe(before);
+      }
+
+      // The stricter half. The fingerprint above includes every attribute's own
+      // effective value, so an `attr:` target moves it whatever else happens —
+      // which is why the original test passed while a +2 CON left HP max, a +2
+      // STR left the damage bonus, and a +2 Vigor left Toughness all unmoved.
+      // Re-run the attribute targets against a fingerprint with that line
+      // removed, so the modifier has to reach something computed *from* the
+      // attribute: a derived stat, a badge, or a skill.
+      const beforeDownstream = fingerprint(equipped, { withoutAttrs: true });
+
+      for (const stat of engine.modifiableStats(system).filter(s => s.id.startsWith('attr:'))) {
+        const withModifier = {
+          ...equipped,
+          tempModifiers: [
+            {
+              id: `probe-${stat.id}`,
+              label: 'Probe',
+              effects: [{ stat: stat.id, delta: 3 }],
+              duration: 'scene',
+              createdAt: '2026-08-08T00:00:00.000Z',
+            },
+          ],
+        } as unknown as CharacterRecord;
+
+        expect(
+          fingerprint(withModifier, { withoutAttrs: true }),
+          `a +3 modifier on "${stat.id}" (${stat.label}) moves the attribute's own display and ` +
+            `nothing else — no derived stat, badge or skill computed from it reads the modifier`,
+        ).not.toBe(beforeDownstream);
       }
     });
 

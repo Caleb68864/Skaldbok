@@ -1,5 +1,5 @@
 import type { CharacterRecord } from '../../../types/character';
-import { resolveArmorRating, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
+import { effectiveAttribute, resolveArmorRating, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
 import { dieCode, traitChance, decodeTraitDie, traitLadder, SAVAGE_TOP_DIE } from '../../../systems/savage-worlds/savageMath';
 import { attrKey, resKey } from '../../../utils/statKeys';
 import type { SystemEngine } from './types';
@@ -45,7 +45,10 @@ const SAVAGE_MAX_FATIGUE_LEVELS = 2;
  * better than the rule allows at every target.
  */
 function traitDie(character: CharacterRecord, id: string) {
-  return decodeTraitDie(character.attributes?.[id] ?? SAVAGE_UNSKILLED_DIE);
+  // Through the resolver, so an `attr:` modifier reaches Toughness, Parry, Load
+  // Limit and the attribute badge. Read raw, a "+2 Vigor" buff moved the
+  // attribute's own display and none of the four numbers computed from it.
+  return decodeTraitDie(effectiveAttribute(character, id, SAVAGE_UNSKILLED_DIE));
 }
 
 /** Half a trait die, the step used by Parry and Toughness. The flat bonus adds whole. */
@@ -161,7 +164,10 @@ export const savageWorldsEngine: SystemEngine = {
   attributeBadge: (attributeId, character) => {
     const sides = character.attributes?.[attributeId];
     if (sides === undefined || sides === null) return null;
-    const die = decodeTraitDie(sides);
+    // Through the resolver, so the badge agrees with the four numbers computed
+    // from the same trait die. Read raw, a +2 Agility buff moved Parry but left
+    // the die code beside it saying d6.
+    const die = decodeTraitDie(effectiveAttribute(character, attributeId, SAVAGE_UNSKILLED_DIE));
     return dieCode(die.sides, die.bonus);
   },
   attributeIds: SAVAGE_WORLDS_ATTRIBUTE_IDS,

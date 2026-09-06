@@ -1,5 +1,5 @@
 import type { CharacterRecord, StatKey } from '../types/character';
-import { parseStatKey, statKey, type StatNamespace } from './statKeys';
+import { attrKey, parseStatKey, statKey, type StatNamespace } from './statKeys';
 import type { SystemDefinition } from '../types/system';
 
 /**
@@ -76,14 +76,43 @@ export function computeSkillValue(attributeValue: number, trained: boolean): num
   return trained ? base * 2 : base;
 }
 
+/**
+ * An attribute's value after temporary modifiers, for use inside a formula.
+ *
+ * @remarks
+ * Every derived formula below used to read `character.attributes[id]` straight
+ * off the record, so the `attr:` targets the modifier picker offers moved the
+ * attribute's own display and nothing downstream: a +2 CON buff did not move
+ * HP max, and a +2 STR buff did not move the damage bonus or carry limit.
+ * Reading through {@link getEffectiveValue} is what makes those targets reach a
+ * consumer, which the engine contract requires of any target it offers.
+ *
+ * `derived` is deliberately not passed: no attribute resolves off a derived
+ * value, and threading it here would let a formula depend on its own output.
+ *
+ * @param character - The character to read from.
+ * @param id - Attribute id, unprefixed.
+ * @param fallback - Value when the character has no such attribute.
+ */
+export function effectiveAttribute(
+  character: CharacterRecord,
+  id: string,
+  fallback: number,
+): number {
+  if (character.attributes?.[id] === undefined || character.attributes?.[id] === null) {
+    return fallback;
+  }
+  return getEffectiveValue(attrKey(id), character).effective;
+}
+
 /** HP Max = CON attribute value. */
 export function computeHPMax(character: CharacterRecord): number {
-  return character.attributes['con'] ?? 10;
+  return effectiveAttribute(character, 'con', 10);
 }
 
 /** WP Max = WIL attribute value. */
 export function computeWPMax(character: CharacterRecord): number {
-  return character.attributes['wil'] ?? 10;
+  return effectiveAttribute(character, 'wil', 10);
 }
 
 /** Base movement = 10. */
@@ -95,7 +124,7 @@ export function computeMovement(_character: CharacterRecord): number {
  * Damage Bonus: STR 17+ → +D6, STR 13-16 → +D4, STR ≤12 → +0.
  */
 export function computeDamageBonus(character: CharacterRecord): string {
-  const str = character.attributes['str'] ?? 10;
+  const str = effectiveAttribute(character, 'str', 10);
   if (str >= 17) return '+D6';
   if (str >= 13) return '+D4';
   return '+0';
@@ -106,7 +135,7 @@ export function computeDamageBonus(character: CharacterRecord): string {
  * Uses the same threshold logic as STR damage bonus.
  */
 export function computeAGLDamageBonus(character: CharacterRecord): string {
-  const agl = character.attributes['agl'] ?? 10;
+  const agl = effectiveAttribute(character, 'agl', 10);
   if (agl >= 17) return '+D6';
   if (agl >= 13) return '+D4';
   return '+0';
@@ -117,7 +146,7 @@ export function computeAGLDamageBonus(character: CharacterRecord): string {
  * (e.g. backpacks). Each item contributes `capacityBonus * quantity`.
  */
 export function computeEncumbranceLimit(character: CharacterRecord): number {
-  const str = character.attributes['str'] ?? 10;
+  const str = effectiveAttribute(character, 'str', 10);
   const base = Math.ceil(str / 2);
   const bonus = (character.inventory ?? []).reduce(
     (sum, i) => sum + (i.capacityBonus ?? 0) * (i.quantity ?? 0),
@@ -150,7 +179,7 @@ export function getSkillBaseChance(attributeValue: number): number {
 export function computeMaxPreparedSpells(character: CharacterRecord): number {
   const int = character.attributes['int'];
   if (int === undefined || int === null) return 5;
-  return getSkillBaseChance(int);
+  return getSkillBaseChance(effectiveAttribute(character, 'int', 10));
 }
 
 /**

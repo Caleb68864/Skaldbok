@@ -1,4 +1,4 @@
-import { computeDerivedValues, computeSkillValue } from '../../../utils/derivedValues';
+import { computeDerivedValues, computeSkillValue, effectiveAttribute } from '../../../utils/derivedValues';
 import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../../utils/boonBane';
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
@@ -126,7 +126,9 @@ export const classicFantasyEngine: SystemEngine = {
     isRelevant: skill => !!skill && (skill.value > 0 || skill.trained),
     computeValue: (skill, character, trained) =>
       skill.linkedAttributeId
-        ? computeSkillValue(character.attributes?.[skill.linkedAttributeId] ?? 10, trained)
+        // Through the resolver: read raw, an `attr:` modifier moved the
+        // attribute's own display and left every skill derived from it alone.
+        ? computeSkillValue(effectiveAttribute(character, skill.linkedAttributeId, 10), trained)
         : trained
           ? Math.max(skill.baseChance * 2, 1)
           : skill.baseChance,

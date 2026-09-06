@@ -1,5 +1,5 @@
 import type { CharacterRecord } from '../../../types/character';
-import { getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
+import { effectiveAttribute, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
 import {
   characteristicToDM,
   twoD6SuccessProbability,
@@ -60,15 +60,19 @@ export function effectiveCharacteristic(character: CharacterRecord, id: string):
  *
  * @remarks
  * Deliberately a simple, legible default rather than an imported encumbrance
- * table — bundling the tables is what this project avoids. It reads the *base*
- * characteristics, not the damaged ones, so a hit mid-fight does not silently
- * make a character encumbered; and any character can override the computed
- * value from the sheet if a group plays it differently.
+ * table — bundling the tables is what this project avoids. Any character can
+ * override the computed value from the sheet if a group plays it differently.
+ *
+ * Reads the characteristics, not the damage track. In Traveller the two share
+ * ids, which is exactly why stat keys are namespaced: `attr:str` is the
+ * characteristic and `res:str` is the damage taken to it. So an `attr:` buff (a
+ * powered exoskeleton) moves the limit, while a hit mid-fight still does not
+ * silently make a character encumbered.
  */
 export function computeTravellerCarryLimit(character: CharacterRecord): number {
-  const str = character.attributes?.['str'] ?? 0;
-  const end = character.attributes?.['end'] ?? 0;
-  return str + end;
+  return (
+    effectiveAttribute(character, 'str', 0) + effectiveAttribute(character, 'end', 0)
+  );
 }
 
 /** Formats a DM as a signed string, e.g. 2 -> '+2', -1 -> '-1'. */
