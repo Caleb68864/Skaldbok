@@ -3857,3 +3857,186 @@ b"` with a real break parses as a broken
 - Verified: build clean; 1242 tests; E2E promote flow (type picker) 14/14;
   KB tabs All/People/Places/Loot/Notes render in the browser.
 - Commit: refactor(config) — note types and KB tabs come from configuration.
+
+## 2026-09-06 — Roadmap items A2–A7, B3, C1, D1, D2
+
+Nine changes from `docs/backlog/2026-09-04-improvement-roadmap.md`, worked in
+the order that document proposes. Each is its own commit; this entry records
+what they share and the decisions that are not obvious from the diffs.
+
+### A derived override was seeded with the buff (A2)
+
+- Symptom: `DerivedFieldDisplay` was handed the *effective* value as
+  `computedValue` whenever a temp modifier was active, and its edit input
+  seeded from it. Tap Movement while Hasted, tap away, and
+  `derivedOverrides.movement` was persisted with the buff inside — the exact
+  case CLAUDE.md warns about under "bind editable inputs to the stored value".
+- Fix: `modifiedValue` is a separate, display-only prop. The input always seeds
+  from override-else-computed, with a "(base N)" adornment beside the headline
+  number. Committing the seed unchanged is also a no-op now, so tap-and-leave
+  no longer mints an override that pins the stat to today's number.
+- Watch: the two decisions are exported as pure functions (`splitDerivedValues`,
+  `commitOverrideValue`) and tested there. There is still no DOM test setup, so
+  the component wiring itself is covered only by the build and by hand.
+- Commit: fix(sheet) — a derived override starts from the stored value.
+
+### Private notes' photos shipped in the session ZIP (B3)
+
+- Symptom: `exportSessionBundle` filtered private notes out of the rendered
+  Markdown and then looped the *unfiltered* list to collect attachments. The
+  images shipped, along with sidecars carrying the note's title and type.
+- Fix: assembly moved to `utils/export/attachmentFiles.ts`, which filters
+  nothing itself — the caller passes the notes it has already vetted, so the
+  policy cannot be half-applied. All three export paths use it.
+- Watch also: the same loops named sidecars with
+  `filename.replace('.jpg', '.md')`, which left a `.png` or `.webp` name
+  untouched — the sidecar then took the image's own key in the ZIP and
+  overwrote it. The extension is now replaced whatever it is.
+- Commit: fix(export) — a private note's photos stay out of the session ZIP.
+
+### Schema v19: three faults that never announced themselves (A6, A7, B8)
+
+- Symptom: (1) `referenceSections` never declared a `softDeletedBy` index, but
+  `restoreGroup` queries it — Dexie throws `SchemaError` on an undeclared
+  index, so restoring a reference card would have failed the first time anyone
+  tried; nothing calls it yet, which is the only reason it had not fired.
+  (2) The v7 note backfill was added to the **v7** block in `1b5e70a`, when the
+  schema was already at v14; Dexie runs an upgrade once on the way past its
+  version, so every database already above v7 skipped it. (3) The v8 rework
+  dumped every table into `localStorage['forge:backup:…']` and nothing ever
+  removed it — it survives campaign deletion and "clear all data", sits outside
+  the soft-delete model, and holds note bodies verbatim.
+- Fix: one `version(19)` block. Index added; backfill re-run, touching only
+  genuinely absent fields so it is idempotent and leaves an edited note alone;
+  dump cleared, guarded so a browser that blocks site data cannot abort the
+  upgrade transaction.
+- Watch: the upgrade is **exported** and tested directly, as `upgradeReference
+  GroupsToV14` is — a copy of a migration in a test passes while the shipped one
+  drifts. There is also an integration test that builds a real v18 database
+  under the real name and lets Dexie walk it up, because a migration that
+  throws leaves the app unable to open at all and re-runs the same failing
+  upgrade on every load.
+- Watch also: A7 and B8 ride in the same block as A6. The next schema change is
+  `version(20)`; do not edit 19.
+- Commit: fix(storage) — schema v19 closes three faults.
+
+### Load, mutate, save the whole record (A3)
+
+- Symptom: four places read a character, awaited something, then `put` the
+  whole record back. Anything another writer changed in between was silently
+  reverted. Move an item off your own PC into a party container, edit the
+  sheet, and the item was back on the PC *and* still in the container.
+- Fix: `characterRepository.patch(id, mutate)` runs the mutator inside the
+  transaction against the stored row. Callers that touch the *active* character
+  additionally `flushAll()` first and merge the same fields into
+  `ActiveCharacterContext`, because its next autosave would otherwise write the
+  pre-patch record back. `encounterRepository.update`/`updateParticipant` are
+  now single transactions.
+- Surfaces: PartyInventoryTab, CampaignContext.refreshPartyResources,
+  ParticipantDrawer, encounterRepository.
+- Watch: item and coin moves are now all-or-nothing — a failure between the two
+  writes used to destroy the item. The compensating write is a second
+  repository call rather than one transaction, because the two carriers may be
+  a character and a container in different tables.
+- Verified: tests reproduce both concurrency failures against the old code.
+- Commit: fix(storage) — a write reads the row it is writing.
+
+### Dragonbane's attribute range applied to every system (A4)
+
+- Symptom: `normalizeCharacter` runs on every save and clamped every attribute
+  to `1..30`, defaulting to `10`. A Traveller characteristic legitimately at 0
+  was rewritten to 1 on the next save, and 10 is not a rung on a Savage Worlds
+  die ladder.
+- Fix: bounds come from the character's own `AttributeDefinition`. A die-ladder
+  attribute snaps to the nearest rung at or below the value; `allowsPlus` keeps
+  d12+ as written. With no system available the value is only made finite and
+  integral — imposing bounds from a ruleset the character does not use is what
+  caused this.
+- Watch: the system is loaded *before* the write transaction opens, because
+  `db.systems` is not in a character transaction's scope.
+- Watch also: the skill ceiling is a separate `skillMax` option, still
+  defaulting to 20, rather than read from `engine.skill.range`. `engine/index`
+  imports `ActiveCharacterContext`, which imports this module, so reading the
+  engine here would close a cycle. Nothing passes the option yet.
+- Commit: fix(storage) — an attribute is clamped to its own system's range.
+
+### Attribute modifiers reached nothing (C1, F3)
+
+- Symptom: every derived formula read `character.attributes[id]` raw, so the
+  `attr:` targets the picker offers moved the attribute's own display and
+  nothing downstream — +2 CON did not move HP max, +2 STR did not move the
+  damage bonus or carry limit, +2 Vigor did not move Toughness, and a Dragonbane
+  attribute buff left every skill linked to it alone.
+- Fix: a shared `effectiveAttribute` helper, used by the Dragonbane derived
+  block and skill formula, Savage Worlds' trait die and attribute badge, and
+  Traveller's carry limit.
+- Watch: Traveller's carry limit still ignores damage. `attr:str` and `res:str`
+  are separate keys — that is the whole reason stat keys are namespaced — so an
+  exoskeleton buff moves the limit while a hit mid-fight does not.
+- Watch also: the contract test could not have caught any of this, and the
+  reason is worth remembering. Its fingerprint included each attribute's own
+  effective value, so an `attr:` target moved it whatever else happened. Three
+  changes fix that: a second probe runs the `attr:` targets against a
+  fingerprint with that line removed; the fingerprint now calls the engine's own
+  `skill.computeValue`, which `resolveSkillValue` never invokes; and the
+  synthetic character is seeded mid-range rather than at each attribute's
+  maximum, where every threshold formula is already saturated and a +3 probe
+  moves nothing.
+- Commit: fix(engine) — an attribute modifier reaches what is computed from it.
+
+### Three encumbrance formulas, one on the wrong engine (D1)
+
+- Symptom: Dragonbane's `ceil(STR/2)` plus item `capacityBonus`, Traveller's
+  `STR + END` and SWADE's `Strength × 5` lived in three places with nothing
+  tying them together, and only the first honoured `capacityBonus` — so a
+  backpack added capacity in exactly one system. Carried load was summed inline
+  at each call site with its own copy of the `tiny` exemption.
+- Fix: `engine.encumbrance: { limit, load } | null`; `null` hides the panel
+  rather than showing it reading zero. Each adapter states its own load rule.
+- Watch: `PartyInventoryTab` imported Dragonbane's `computeEncumbranceLimit`
+  directly and called `useSystemEngine()`, which resolves the *active
+  character's* system. On a screen listing every party member that is the wrong
+  engine — a Traveller party got Dragonbane capacity, and with no active
+  character at all, Dragonbane coins. It now uses the campaign's system.
+- Watch also: both weight sums ignored quantity, one via a literal `* 1`, so
+  ten 2 kg rations weighed 2.
+- Watch also: a container is not a character, so `carrierWeight` stays local for
+  containers; `encumbrance.load` takes a character and folds in worn armour.
+- Commit: feat(engine) — carry rules belong to the system, not the screen.
+
+### Nothing expired a modifier outside Dragonbane (D2)
+
+- Symptom: the only expiry path was pressing a rest button whose id matched the
+  modifier's `duration`. Traveller and Savage Worlds declare `rest: null`, so in
+  those systems nothing could expire anything and every buff was permanent in
+  practice. A `scene` modifier expired nowhere in any system, because no rest is
+  called scene. Traveller relabels `stretch`/`shift` as Watch/Day, neither of
+  which has a rest to press.
+- Fix: `TimeUnit.expiresOn` says what ends a unit — a named rest, session start,
+  or encounter end — and all three adapters declare it. `modifiersEndingOn` is
+  pure so the confirmation prompt and the write path agree;
+  `expirePartyModifiers` applies it per character against that character's own
+  system, since a party may mix them.
+- Watch: a unit with **no** `expiresOn` never expires on its own. That silence
+  is deliberate — dropping a buff nobody asked to drop is worse than leaving one
+  the player can remove by hand — and it is also what a user-authored system
+  that forgets the field gets. Likewise a `duration` naming no declared unit is
+  left alone rather than guessed at.
+- Watch also: the active character's in-memory record is updated alongside the
+  stored one, or its next autosave writes the expired modifiers back.
+- Watch also: a contract test rejects a time unit that expires on a rest its
+  system does not define. Nothing yet asserts that every non-permanent unit has
+  *some* expiry, because "permanent" is legitimately expiry-free and the two are
+  not distinguishable from the data.
+- Commit: feat(engine) — a modifier expires when its own time unit ends.
+
+### Verification for all nine
+
+- `tsc -b` clean; 1318 tests (up from 1242), including new suites for the
+  derived-override rules, attachment assembly, the v19 upgrade (unit and
+  real-database integration), `characterRepository.patch`, encounter
+  concurrency, attribute normalisation, and modifier expiry.
+- Several tests were checked against the pre-fix code and fail there: the
+  `SchemaError` on `restoreGroup`, both encounter lost-write races, and both
+  halves of the attribute-modifier probe.
+- Playwright E2E on the dev server: 14/14 across all phases, 0 crashes.

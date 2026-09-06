@@ -27,7 +27,7 @@ suggested order of attack across workstreams is at the end.
 
 These produce wrong persisted data today. Fix before anything else.
 
-### A1. Character delete is a hard delete — OPEN (V)
+### A1. Character delete is a hard delete — DONE (743c828, with Trash in 435feb6)
 - **Where:** `src/features/characters/useCharacterActions.ts:57-58`;
   `src/storage/repositories/characterRepository.ts:98` (`remove`) and `:115`
   (`softDelete`, no callers). Caller `CharacterLibraryScreen.tsx:192` comments
@@ -47,7 +47,7 @@ These produce wrong persisted data today. Fix before anything else.
   `campaign.activeCharacterMemberId` dangling) and `ReferenceScreen.tsx:369`
   (`referenceNoteRepository.remove`; `ReferenceNote` has no `deletedAt`).
 
-### A2. Derived-stat override bakes in temporary modifiers — OPEN (V)
+### A2. Derived-stat override bakes in temporary modifiers — DONE (0159487)
 - **Where:** `src/screens/SheetScreen.tsx:1235`
   (`computedValue={resolved.isModified ? resolved.display : resolved.computed}`);
   `src/screens/GearScreen.tsx:590-594`; `src/components/fields/DerivedFieldDisplay.tsx:29,65`.
@@ -61,7 +61,7 @@ These produce wrong persisted data today. Fix before anything else.
   In `DerivedFieldDisplay`, skip `onOverride` when the committed value equals
   the seed so a tap-and-leave is a no-op.
 
-### A3. Stale full-record puts race the active character's autosave — OPEN (V for A3a, R for others)
+### A3. Stale full-record puts race the active character's autosave — DONE (55e259d)
 Root cause shared by four sites: code loads a character from the DB, mutates,
 and `put`s the whole record while `ActiveCharacterContext` still holds the
 previous in-memory record. The next autosave (or the next `updateCharacter`)
@@ -87,7 +87,7 @@ writes the stale record back.
   active character, route through `updateCharacter`; otherwise `flushAll()`
   first, then patch. Wrap multi-row moves in one transaction.
 
-### A4. Attribute normalisation clamps to Dragonbane's range — OPEN (V)
+### A4. Attribute normalisation clamps to Dragonbane's range — DONE (33cca29)
 - **Where:** `src/utils/characterNormalization.ts:53`
   `clampNumber(value, 1, 30, 10)`; `:17` clamps skills to `0..20`; applied on
   every save at `characterRepository.ts:72`.
@@ -107,7 +107,7 @@ writes the stale record back.
   `version()` block and soft-delete them in the same `txId`; or keep the blob
   and reclaim it from a purge keyed on `note.deletedAt` age.
 
-### A6. Latent crash: `restoreGroup` queries an index that does not exist — OPEN (V)
+### A6. Latent crash: `restoreGroup` queries an index that does not exist — DONE (5601188)
 - **Where:** `src/storage/repositories/referenceSectionRepository.ts:76`
   `where('softDeletedBy')`; `src/storage/db/client.ts:572` declares
   `referenceSections: 'id, category, groupId, order, updatedAt, deletedAt'`.
@@ -116,7 +116,7 @@ writes the stale record back.
 - **Fix:** `version(19).stores({ referenceSections: '…, softDeletedBy' })` and a
   round-trip test (soft-delete group → restore → sections back).
 
-### A7. v7 migration body was edited after later versions shipped — OPEN (V)
+### A7. v7 migration body was edited after later versions shipped — DONE (5601188)
 - **Where:** `src/storage/db/client.ts:309-342`; commit `1b5e70a` added the
   `campaignId`/`body`/`status`/`pinned` backfill inside `version(7)` while the
   schema was already at v14. No later version re-runs the backfill (checked
@@ -235,7 +235,7 @@ is on the **import** path, where data is untrusted.
   `filename` on import (as `attachmentRepository.ts:25` does) or
   `basename`+slugify at export.
 
-### B3. Session ZIP export leaks private notes' attachments — OPEN (V)
+### B3. Session ZIP export leaks private notes' attachments — DONE (d7bea56)
 - **Where:** `src/features/export/useExportActions.ts:237` computes
   `shareableNotes = excludePrivateNotes(linkedNotes)`; the attachment loop at
   `:256` iterates `linkedNotes`. The sidecar (`renderAttachmentSidecar.ts:16`)
@@ -278,7 +278,7 @@ is on the **import** path, where data is untrusted.
   script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'">`.
   Verify Tailwind/Tiptap inline styles and the PWA manifest still load.
 
-### B8. Full DB dump left in localStorage forever — OPEN (R)
+### B8. Full DB dump left in localStorage forever — DONE (5601188)
 - `src/storage/db/migrations/pre-encounter-rework-backup.ts:44-48` writes every
   domain table to `localStorage["forge:backup:…"]` during the v8 upgrade.
   Nothing removes it; it survives campaign deletion and sits outside the
@@ -311,7 +311,7 @@ The engine contract says a modifier target must reach a consumer. The
 attribute values, so any `attr:` target trivially "moves" the fingerprint even
 when no derived number changes.
 
-### C1. Attribute modifiers never reach derived stats — OPEN (V)
+### C1. Attribute modifiers never reach derived stats — DONE (80c510d)
 - **Where:** `src/utils/derivedValues.ts:81,86,98,109,120,151` read
   `character.attributes['con'|'wil'|'str'|'agl'|'int']` raw;
   `savageWorldsEngine.ts:47-49` `traitDie` reads `character.attributes[id]` raw
@@ -376,7 +376,7 @@ generic code, in one adapter's private helper, or as a `systemId ===` branch in
 disguise. The fix pattern is the same every time: add the engine field, make
 every adapter declare it, make the screen read it.
 
-### D1. Encumbrance: three formulas, one wired to the wrong engine — OPEN (V for the import, R for details)
+### D1. Encumbrance: three formulas, one wired to the wrong engine — DONE (2a48cf0)
 - **Where:** classic `ceil(STR/2) + capacityBonus` (`derivedValues.ts:119-127`);
   Traveller `STR + END` (`travellerEngine.ts:68-72`); Savage `(sides+bonus) × 5`
   (`savageWorldsEngine.ts:103`). Only classic honours `capacityBonus`, so a
@@ -390,7 +390,7 @@ every adapter declare it, make the screen read it.
   `null` hides the panel. Party screens use
   `useSystemEngineFor(activeCampaign?.system)`.
 
-### D2. Modifier expiry is coupled to rest ids — OPEN (V)
+### D2. Modifier expiry is coupled to rest ids — DONE (0ee0e82)
 - **Where:** `SheetScreen.tsx:533-553` expires modifiers whose `duration ===
   rest.id` when that rest button is pressed. That is the *only* expiry path.
 - **What:** Traveller and Savage have `rest: null`, so no modifier ever expires
@@ -637,7 +637,7 @@ It catches `systemId ===` but not `engine.resolution ===`, `supportsMarks` as
 a proxy, `'characteristicDMs' in derived`, or `!engine.damageTrack` as a layout
 switch. Add those patterns.
 
-### F3. Make the contract fingerprint honest — OPEN (V)
+### F3. Make the contract fingerprint honest — DONE (80c510d)
 `engineContract.test.ts:229` includes `attrs` via `getEffectiveValue`, so any
 `attr:` target moves the fingerprint even when no derived value changes. Either
 drop that line, or assert per target that at least one of `derived`, `badges`,
@@ -994,3 +994,22 @@ with `npm run build` + `npm test` + a walk through the app.
 
 When an item is closed, change its status line to `DONE (<commit>)` and leave
 the evidence in place so the next scan can confirm it did not regress.
+
+---
+
+## Progress
+
+Steps 1 to 9 of the order of attack are closed: A1, A2, A3, A4, A6, A7, B3,
+B8, C1, C2, D1, D2 and F3. Everything from step 10 (**D6 + F2**) onward is
+still open, as is all of workstreams H, I and J.
+
+Two things a future reader should know before picking up the rest:
+
+- **A7 and B8 shipped as part of the same `version(19)` block as A6.** A future
+  schema change adds `version(20)`; do not edit 19.
+- **A4 left the skill clamp at 20.** Attribute bounds now come from the system
+  definition, but the skill ceiling is still a default rather than
+  `engine.skill.range.max`, because `engine/index` imports
+  `ActiveCharacterContext`, which imports the normaliser — reading the engine
+  there closes a cycle. `normalizeCharacter` takes a `skillMax` option for a
+  caller that holds an engine; nothing passes it yet.
