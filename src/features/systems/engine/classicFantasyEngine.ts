@@ -127,14 +127,12 @@ const classicFantasyRests: RestDefinition[] = [
  * (HP is a single pool) and death is handled by the {@link features/systems/engine/types!DeathModel | DeathModel} instead.
  */
 export const classicFantasyEngine: SystemEngine = {
-  hasMagic: true,
   attributeBadge: () => null,
   attributeIds: ['str', 'con', 'agl', 'int', 'wil', 'cha'],
   skill: {
     valueLabel: 'Value',
     range: { min: 0, max: 20 },
     // Dragonbane advancement stops at 18 even though the sheet accepts 20.
-    advancementMax: 18,
     defaultValue: 0,
     display: (value: number) => `${value}`,
     // Roll-under: the target number stands alone, with the odds beneath it.

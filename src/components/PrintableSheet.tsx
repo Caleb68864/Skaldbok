@@ -251,7 +251,8 @@ function AbilitiesSpells({
 }): React.ReactElement | null {
   // Systems without magic have no ability/spell lists to print — rendering them
   // would emit blank Dragonbane rows on, e.g., a Traveller sheet.
-  if (!engine.hasMagic) return null;
+  // The nullable model, not a parallel boolean — see guards.ts.
+  if (engine.magic === null) return null;
 
   const abilities: HeroicAbility[] = toHeroicAbilities(character.abilities);
   const spells: Spell[] = toSpells(character.abilities).sort(compareSpellsByRankThenName);

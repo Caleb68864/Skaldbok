@@ -116,7 +116,7 @@ export default function MagicScreen() {
   const spellsTerm = engine.terms.spells;
   const magicResourceTerm = engine.terms.magicResource;
 
-  if (!engine.hasMagic) {
+  if (engine.magic === null) {
     return (
       <div className="p-[var(--space-md)]">
         <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] mb-[var(--space-md)]">

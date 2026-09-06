@@ -31,9 +31,16 @@ describe('GUARDS', () => {
     expect(GUARDS.always(fakeEngine())).toBe(true);
   });
 
-  it('hasMagic reflects engine.hasMagic', () => {
-    expect(GUARDS.hasMagic(fakeEngine({ hasMagic: true }))).toBe(true);
-    expect(GUARDS.hasMagic(fakeEngine({ hasMagic: false }))).toBe(false);
+  it('hasMagic is true only when engine.magic is non-null', () => {
+    // Was `engine.hasMagic`, a second boolean saying what the nullable model
+    // already said, which two engines had to keep in agreement by hand. The
+    // guard name is unchanged because it is stored in every sheet.json.
+    expect(GUARDS.hasMagic(fakeEngine({ magic: null }))).toBe(false);
+    expect(
+      GUARDS.hasMagic(
+        fakeEngine({ magic: { resourceId: 'wp', powerLevels: [1], costPerLevel: 2, trickCost: 1 } }),
+      ),
+    ).toBe(true);
   });
 
   it('hasRest is true only when engine.rest is non-null', () => {

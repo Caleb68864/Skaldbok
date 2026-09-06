@@ -84,11 +84,19 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
       expect(new Set(keys).size).toBe(keys.length);
     });
 
-    it('skill defaultValue and advancementMax are within range', () => {
-      const { range, defaultValue, advancementMax } = engine.skill;
+    it('skill defaultValue is within range', () => {
+      const { range, defaultValue } = engine.skill;
       expect(defaultValue).toBeGreaterThanOrEqual(range.min);
       expect(defaultValue).toBeLessThanOrEqual(range.max);
-      expect(advancementMax).toBeLessThanOrEqual(range.max);
+    });
+
+    it('the advancement ceiling is within the skill range', () => {
+      // Was `skill.advancementMax`, a second ceiling beside
+      // `advancement.maxSkillValue` that no code read — classic-fantasy
+      // declared 18 in both places, and the two could have drifted with nothing
+      // to notice. The advancement model's is the one advancement uses.
+      if (engine.advancement === null) return;
+      expect(engine.advancement.maxSkillValue).toBeLessThanOrEqual(engine.skill.range.max);
     });
   },
 );
@@ -403,8 +411,15 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
 
     // ── Capability coherence ─────────────────────────────────────────
 
-    it('hasMagic agrees with the nullable magic model', () => {
-      expect(engine.hasMagic).toBe(engine.magic !== null);
+    it('magic presence agrees with the panel the system claims', () => {
+      // `engine.hasMagic` used to sit beside `magic` saying the same thing, and
+      // this test asserted the two agreed — which is the tell that one of them
+      // was redundant. The boolean is gone; what is left worth checking is that
+      // a system claiming the magic panel actually has a magic model, since the
+      // panel list and the nullable models are maintained separately.
+      if (engine.panels.includes('magic')) {
+        expect(engine.magic, `${system.id}: claims the magic panel but has no magic model`).not.toBeNull();
+      }
     });
 
     it('damage thresholds are reachable within the track', () => {

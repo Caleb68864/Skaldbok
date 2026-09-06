@@ -175,7 +175,6 @@ export function formatSavageSkill(value: number, penalty = 0, wild = true): stri
  * rolls and its dying rules are status-plus-table, not a fixed procedure.
  */
 export const savageWorldsEngine: SystemEngine = {
-  hasMagic: false,
   attributeBadge: (attributeId, character) => {
     const sides = character.attributes?.[attributeId];
     if (sides === undefined || sides === null) return null;
@@ -199,7 +198,6 @@ export const savageWorldsEngine: SystemEngine = {
     // Legendary advance the first time the field is touched.
     range: { min: SAVAGE_UNSKILLED_DIE, max: SAVAGE_TOP_DIE + SAVAGE_MAX_DIE_BONUS },
     ladder: traitLadder([SAVAGE_UNSKILLED_DIE, 6, 8, 10, SAVAGE_TOP_DIE], true, SAVAGE_MAX_DIE_BONUS),
-    advancementMax: SAVAGE_TOP_DIE + SAVAGE_MAX_DIE_BONUS,
     defaultValue: SAVAGE_UNSKILLED_DIE,
     display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character, context.system) : 0),
     // The stored number is die *sides*: "8" alone is meaningless, "d8" is the

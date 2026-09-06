@@ -297,7 +297,6 @@ function travellerRollContext(
  * is how those panels get hidden.
  */
 export const travellerEngine: SystemEngine = {
-  hasMagic: false,
   attributeBadge: (attributeId, character) => {
     const score = character.attributes?.[attributeId];
     if (score === undefined || score === null) return null;
@@ -319,7 +318,6 @@ export const travellerEngine: SystemEngine = {
   skill: {
     valueLabel: 'Level',
     range: { min: 0, max: 6 },
-    advancementMax: 6,
     defaultValue: 0,
     display: (value, context) => {
       const { dm, unskilled, unskilledDM } = travellerRollContext(value, context);

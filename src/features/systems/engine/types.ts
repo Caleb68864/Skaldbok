@@ -184,15 +184,6 @@ export interface SkillEngineConfig {
    * never lands on a nonexistent d5/d7. Absent = any integer in {@link range}.
    */
   ladder?: number[];
-  /**
-   * Ceiling an end-of-session advancement roll may raise a skill to.
-   *
-   * @remarks
-   * Distinct from {@link range}: Dragonbane accepts values up to 20 on the
-   * sheet but advancement stops at 18, so reusing `range.max` here would
-   * silently raise the ceiling.
-   */
-  advancementMax: number;
   defaultValue: number;
   /**
    * Renders a skill's user-facing value string. `context` is optional so
@@ -646,7 +637,6 @@ export interface DerivedFieldDef {
 }
 
 export interface SystemEngine {
-  hasMagic: boolean;
   attributeBadge: (attributeId: string, character: CharacterRecord) => string | null;
   attributeIds: string[];
   skill: SkillEngineConfig;
