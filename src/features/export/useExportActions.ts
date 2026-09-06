@@ -8,6 +8,7 @@ import { getSessionById, getSessionsByCampaign } from '../../storage/repositorie
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
 import { renderNoteToMarkdown } from '../../utils/export/renderNote';
 import { buildAttachmentFiles } from '../../utils/export/attachmentFiles';
+import { safeAttachmentFilename } from '../../utils/attachmentFilename';
 import { renderSessionBundle } from '../../utils/export/renderSession';
 import { renderCampaignIndex } from '../../utils/export/renderCampaignIndex';
 import { bundleToZip } from '../../utils/export/bundleToZip';
@@ -109,7 +110,9 @@ export function useExportActions() {
       ] as EntityLink[];
       const allNotes = await getNotesByCampaign(activeCampaign.id);
       const attachments = await getAttachmentsByNote(noteId);
-      const attachmentFilenames = attachments.map(a => a.filename);
+      // Must match the ZIP entry names, which are sanitised — see
+      // safeAttachmentFilename — or the wiki-links point at files that are not there.
+      const attachmentFilenames = attachments.map(a => safeAttachmentFilename(a.filename));
       const markdown = renderNoteToMarkdown(note, links, allNotes, attachmentFilenames);
 
       if (attachments.length === 0) {
@@ -337,7 +340,9 @@ export function useExportActions() {
           ...(await getLinksFrom(note.id, 'contains')),
         ] as EntityLink[];
         const attachments = await getAttachmentsByNote(note.id);
-        const attachmentFilenames = attachments.map(a => a.filename);
+        // Must match the ZIP entry names, which are sanitised — see
+      // safeAttachmentFilename — or the wiki-links point at files that are not there.
+      const attachmentFilenames = attachments.map(a => safeAttachmentFilename(a.filename));
         const markdown = renderNoteToMarkdown(note, links, allNotes, attachmentFilenames);
         const filename = generateFilename(note);
         filesMap.set(filename, markdown);

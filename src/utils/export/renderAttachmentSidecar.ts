@@ -1,6 +1,7 @@
 import type { Attachment } from '../../types/attachment';
 import type { Note } from '../../types/note';
 import { yamlValue } from './yamlValue';
+import { safeAttachmentFilename } from '../attachmentFilename';
 
 
 /**
@@ -26,5 +27,7 @@ export function renderAttachmentSidecar(attachment: Attachment, parentNote: Note
   const lines = Object.entries(fields)
     .map(([key, value]) => `${key}: ${yamlValue(value)}`);
 
-  return `---\n${lines.join('\n')}\n---\n\nSidecar metadata for ![[${attachment.filename}]]\n`;
+  // The embed has to name the file as it was actually written into the archive.
+  // `originalFilename` above keeps the raw value for provenance.
+  return `---\n${lines.join('\n')}\n---\n\nSidecar metadata for ![[${safeAttachmentFilename(attachment.filename)}]]\n`;
 }

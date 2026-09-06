@@ -99,6 +99,34 @@ describe('buildAttachmentFiles', () => {
     ]);
   });
 
+  it('cannot write outside the attachments folder', async () => {
+    // Zip-slip. The filename can have come from an imported bundle, and it
+    // becomes the entry path in the archive the user then shares.
+    const files = await buildAttachmentFiles(
+      [note('n1', 'Trap')],
+      async () => [attachment('a6', 'n1', '../../../.ssh/authorized_keys.jpg')],
+      'attachments/session-1',
+    );
+    for (const path of files.keys()) {
+      expect(path.startsWith('attachments/session-1/')).toBe(true);
+      expect(path).not.toContain('..');
+    }
+  });
+
+  it('names the file in its sidecar as the file was actually written', async () => {
+    // The sidecar embeds the attachment by name; if it used the raw value the
+    // link would point at a file that is not in the archive.
+    const files = await buildAttachmentFiles(
+      [note('n1', 'Trap')],
+      async () => [attachment('a7', 'n1', '../evil name.png')],
+      'attachments/session-1',
+    );
+    const sidecar = files.get('attachments/session-1/evil-name.md') as string;
+    expect(sidecar).toContain('![[evil-name.png]]');
+    // Provenance is kept, so the original is still recoverable.
+    expect(sidecar).toContain('../evil name.png');
+  });
+
   it('returns nothing for a note with no attachments', async () => {
     const files = await buildAttachmentFiles([note('empty', 'Nothing')], load, 'attachments/session-1');
     expect(files.size).toBe(0);

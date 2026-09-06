@@ -1,6 +1,7 @@
 import type { Attachment } from '../../types/attachment';
 import type { Note } from '../../types/note';
 import { renderAttachmentSidecar } from './renderAttachmentSidecar';
+import { safeAttachmentFilename } from '../attachmentFilename';
 
 /**
  * Builds the `attachments/` entries of a session ZIP from the notes that are
@@ -28,7 +29,12 @@ export async function buildAttachmentFiles(
   for (const note of notes) {
     const folder = typeof folderFor === 'string' ? folderFor : folderFor(note);
     for (const att of await attachmentsFor(note.id)) {
-      const base = folder ? `${folder}/${att.filename}` : att.filename;
+      // The stored name can have come from an imported bundle, and this string
+      // becomes an entry path inside the ZIP. `../../x.jpg` would be written
+      // outside the intended directory by whatever extracts it — aimed not at
+      // this app but at whoever the user shares the bundle with.
+      const name = safeAttachmentFilename(att.filename);
+      const base = folder ? `${folder}/${name}` : name;
       files.set(base, att.blob);
       files.set(sidecarPath(base), renderAttachmentSidecar(att, note));
     }
