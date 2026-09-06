@@ -4234,3 +4234,91 @@ into code every ruleset runs.
 ### Verification for all four
 
 - `tsc -b` clean; 1373 tests (up from 1352); Playwright 14/14 after each change.
+
+## 2026-09-06 — Roadmap step 13: the screen-by-screen vocabulary sweep
+
+Three commits. Everything here is a ruleset's own words or rules sitting in code
+that every ruleset runs, which is the same shape as step 12 but spread across
+surfaces rather than concentrated in a model.
+
+### The printed sheet, and widening the leak test (D7, F1, part of D12)
+
+- Symptom: the sheet said "Hit Points & Willpower" and "Abilities" as literals,
+  each with a comment explaining that reading the engine would change the
+  Dragonbane sheet. Both statements were true; the conclusion — leave one
+  ruleset's words in shared print code — was not. Four more in the same file:
+  the whole abilities-and-spells block returned `null` when a system had no
+  magic model, so Traveller's Talents never printed; labels, maxima and the dot
+  CSS class were chosen by comparing the resource id to `'hp'`/`'wp'`; an
+  untrained skill printed blank though it still has a base chance; the
+  secondary-skill rows read the stored value raw, so a `skill:` modifier was
+  invisible there alone; the death-track headings were a map of Dragonbane ids.
+- Fix: `labels.printResources` / `labels.printAbilities` and
+  `DeathTrack.printLabel`, all declared by the classic adapter with the strings
+  the sheet already used, so the printed Dragonbane sheet is byte-identical.
+  Identity comes from `primaryHealthResourceId` and `magic.resourceId`.
+  `printedSkillValue` falls back to `engine.skill.computeValue`.
+- Watch: `F1` widened `vocabularyLeaks.test.ts` to `src/screens` and
+  `src/components` and added WP/Willpower/Bennies. Verified by reverting the
+  print sheet and watching it name the exact line. `BenniesModule` is
+  allowlisted: it is a panel that exists only for the ruleset whose word that is.
+- Also from D12: `AttributeField` defaulted `min`/`max` to 3 and 18 —
+  Dragonbane's range — while the sheet passes `attr?.min`, so an undeclared
+  attribute was clamped to bounds the component had no way to know were wrong.
+  The "Tiny item" checkbox rendered for every system with Dragonbane's wording,
+  though Traveller and Savage Worlds both declare `labels.tinyItems: null`.
+  `SkillList`/`SkillRow` are deleted — 105 lines whose only caller passed
+  `categories={[]}`.
+- Commit: fix(print) — the paper sheet reads the engine, and the leak test widens.
+
+### Creature headings had two sources that disagreed (D9, part of D10)
+
+- Symptom: Traveller's `system.json` declared "Hits" / "Armour" / "Speed (m)"
+  while `labels.creatureHealth` / `creatureArmor` / `creatureMovement` said
+  "END" / "Armour" / "Mv" — the same creature, described differently on the
+  bestiary card and in the encounter view opened from it. Savage Worlds had the
+  same split ("HP" vs "Wounds").
+- Fix: `creatureStatLabel` resolves headings from `creatures.statFields`; the
+  three engine labels are deleted. Savage Worlds declared no `creatures` block
+  at all, so it gains one carrying the labels its adapter used to hold —
+  otherwise deriving would have lost vocabulary rather than unified it.
+- Watch: `system.json` version bumped for that, per the cache gate.
+- Also from D10: a resource change logged its id shouted — "Took 1 BENNIES
+  damage", "3/3 WOUNDS" — readable only because Dragonbane's ids happen to be
+  the abbreviations players use. And the coin line said "Coins", Dragonbane's
+  word for the purse. Both read through **refs**: the flush callbacks are
+  debounced and registered once, so closing over the definition would pin
+  whichever system was active when the buffer opened, not the one it flushes
+  under.
+- Commit: fix(engine) — one source for creature headings, and the log says the noun.
+
+### A ruleset declares its own sheet panels (D8)
+
+- Symptom: Traveller's Careers, Decorations, Training, Connections and Augments
+  panels and Savage Worlds' Edges and Hindrances were ~175 lines of JSX in
+  `SheetScreen` keyed off panel ids, with their column layouts as module
+  constants beside them. A fourth system could add nothing to the sheet without
+  editing the sheet.
+- Fix: `sheetPanels` in `system.json`, rendered by one `SystemDataPanel`. Every
+  panel was already binding a `systemData` key to a text area or a table of
+  rows — the shape `identityFields` and `financeFields` declare — so the markup
+  is unchanged and the keys are the ones the hand-written panels used. A
+  character recorded before this reads back identically.
+- Watch: both `system.json` versions bumped, and the Zod schema extended. A
+  field on the type but not in the schema silently vanishes for *imported*
+  systems while working for bundled ones; that trap is documented in CLAUDE.md
+  for skills and applies here too.
+- Watch also: **the main E2E suite never leaves the default system.** It creates
+  characters without touching the system picker, so it could not exercise any of
+  this. `tests/panels_check.py` drives a Traveller and a Savage Worlds sheet in a
+  browser — eleven assertions including adding a career term, zero console
+  errors. Its first run reported three false failures from case-sensitivity
+  (headings are `text-transform: uppercase`, and `inner_text` returns rendered
+  casing) and three more because creating a second character does not make it
+  active. Both are noted in the script.
+- Commit: refactor(engine) — a ruleset declares its own sheet panels.
+
+### Verification
+
+- `tsc -b` clean; 1483 tests (up from 1373); Playwright suite 14/14 after each
+  change, plus the new panel check 11/11.

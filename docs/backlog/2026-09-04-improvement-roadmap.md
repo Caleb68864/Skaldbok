@@ -460,7 +460,7 @@ every adapter declare it, make the screen read it.
   currency card in `sheet.json`; log all `resourceIds`. Extend
   `engineConsumers.test.ts` to flag these patterns (F2).
 
-### D7. Print sheet is a Dragonbane skeleton — OPEN (R)
+### D7. Print sheet is a Dragonbane skeleton — DONE (1411b67)
 - `src/components/PrintableSheet.tsx`: `:238` abilities gated on `hasMagic`
   (Traveller Talents never print); `:140` raw attributes; `:403-410`
   `charSkill?.value ?? ''` (untrained skills print blank); `:724-753`
@@ -474,7 +474,7 @@ every adapter declare it, make the screen read it.
   `resolveSkillValue`, `engine.skill.computeValue`; iterate
   `resolveSkillCategories`; gate abilities on `labels.abilitiesScreen !== null`.
 
-### D8. System-specific sheet panels in code — OPEN (R)
+### D8. System-specific sheet panels in code — DONE (a0d2af5)
 - `SheetScreen.tsx:120-155,969-1138` Traveller career/connection columns,
   Savage Edges/Hindrances titles and placeholders, `systemData` keys
   (`careerTerms`, `allies`, `edges`, …) all in code, while
@@ -486,7 +486,7 @@ every adapter declare it, make the screen read it.
 - **Fix:** `sheetPanels` in `system.json` rendered by one generic repeatable-rows
   panel; alias the two panel keys.
 
-### D9. Creature stats and encounter defaults (R)
+### D9. Creature stats and encounter defaults — DONE (7fb7d3f)
 - `useEncounter.ts:121-123` `template.stats?.hp`;
   `EncounterParticipantPicker.tsx:107` `{hp, armor: 0, movement: 0}`;
   `CombatEncounterView.tsx:245`; `QuickCreateParticipantFlow.tsx:23`
@@ -497,7 +497,7 @@ every adapter declare it, make the screen read it.
 - **Fix:** Derive everything from `resolveCreatureStatFields(system)`; delete
   the three `labels.creature*` keys.
 
-### D10. Session log vocabulary (R)
+### D10. Session log vocabulary — MOSTLY DONE (7fb7d3f); "Death Roll #n" remains
 - `useSessionLog.ts:278-290,306` `'success'|'failure'|'dragon'|'demon'`,
   `tags.push('Boon'|'Bane'|'Pushed')` (dead but exported; `formatSkillCheckTitle.ts`
   already uses `engine.outcomes`); `:387` `resourceId = 'hp'`; `:108-112`
@@ -515,7 +515,7 @@ hasMagic`). `skill.advancementMax` duplicates `advancement.maxSkillValue`.
 - **Fix:** `engine.health { resourceId, label, downLabel, deadLabel }`; derive
   `hasMagic` from `magic !== null`; drop `advancementMax`.
 
-### D12. Smaller leaks (R)
+### D12. Smaller leaks — MOSTLY DONE (1411b67); see the Progress note
 - `AttributeField.tsx:36` defaults `min = 3, max = 18`; `SheetScreen.tsx:801-808`
   passes `attr?.min` so an undeclared attribute silently gets 3..18. Make
   required.
@@ -626,7 +626,7 @@ to the same shape.
 
 ## Workstream F — Tests that would have caught the above
 
-### F1. Widen `vocabularyLeaks.test.ts` — OPEN (V)
+### F1. Widen `vocabularyLeaks.test.ts` — DONE (1411b67)
 `:23` scans only `features/encounters` and `features/playDashboard` for
 `HP|Hit Points`. Add `src/screens` and `src/components`; it catches
 `PrintableSheet.tsx:741` immediately. Add `WP`, `Bennies`, `Wounds`, `DM`,
@@ -999,13 +999,36 @@ the evidence in place so the next scan can confirm it did not regress.
 
 ## Progress
 
-Steps 1 to 12 of the order of attack are closed: A1–A4, A6, A7, B1–B9, C1, C2,
-D1–D6, D11 (in part), F2, F3 and F4. Workstream B is finished apart from
-**B10**, the unvalidated reference-import JSON. Step 13 is next — the
-screen-by-screen vocabulary cleanup, **D7 to D12**, with **F1** widened first
-so regressions fail. Workstreams E, G, H, I and J remain untouched.
+Steps 1 to 13 of the order of attack are closed: A1–A4, A6, A7, B1–B9, C1, C2,
+D1–D12 (two small parts remain, below), F1–F4. Workstream D is effectively
+finished; workstream B is finished apart from **B10**, the unvalidated
+reference-import JSON. Step 14 is next — **E1 to E6**, moving adapter data into
+JSON, which the D-work has already made easier by thinning the adapters.
+Workstreams G, H, I and J remain untouched.
 
-Five things a future reader should know before picking up the rest:
+What step 13 deliberately left:
+
+- **D10:** `logDeathRoll` still writes "Death Roll #n". Sourcing that phrase
+  means a new field on a death model only Dragonbane declares, read from a panel
+  that only renders when that model exists. Over-fitting for one string.
+- **D12:** the dragon/demon mark glyphs, their colours and the marked-count
+  badge are still Dragonbane's, written into `SkillsScreen`. That wants
+  `skill.marks?: [{ id, label, glyph }]` and a rewrite of the mark cycle.
+  Also still open from D12: `WeaponEditor`'s grip and damage-type lists,
+  `remakeCurrency` bypassing `engine.currency`, the `bennies` card key, and the
+  `StatKey`/`restsUsed` unions in `types/character.ts`.
+
+Seven things a future reader should know before picking up the rest:
+
+- **The E2E suite never leaves the default system.** It creates characters
+  without touching the system picker, so nothing it does exercises Traveller or
+  Savage Worlds. `tests/panels_check.py` was written for D8 and drives both
+  sheets in a browser; extend it rather than assuming the main suite covers a
+  system-specific change.
+- **Two more engine fields were deleted for having no reader**, following the
+  pattern from step 10: `labels.creature{Health,Armor,Movement}` duplicated
+  `creatures.statFields` and disagreed with it, and `skill.advancementMax`
+  duplicated `advancement.maxSkillValue`.
 
 - **D11's health consolidation was declined, not forgotten.** Folding
   `terms.healthResource` and `labels.participantHealth` into an
