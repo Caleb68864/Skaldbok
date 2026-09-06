@@ -133,6 +133,17 @@ export interface TimeUnit {
 export interface SkillDisplayContext {
   character: CharacterRecord;
   /**
+   * The active system definition.
+   *
+   * @remarks
+   * Needed by any engine whose display folds in a rule declared in JSON rather
+   * than written into the adapter — condition penalties, in particular. Optional
+   * because the adapters that ignore context entirely should not have to be
+   * handed one, but a screen that has a system should always pass it: without
+   * it, declared condition effects contribute nothing.
+   */
+  system?: SystemDefinition | null;
+  /**
    * Id of the skill being displayed.
    *
    * @remarks

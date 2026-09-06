@@ -70,6 +70,9 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
     const autoBane = conditionImposesBane(system, character, linkedAttributeId);
     const displayContext = {
       character,
+      // Without the system, an engine folding in a JSON-declared condition
+      // effect sees no conditions at all and quotes unpenalised odds.
+      system,
       skillId: skill.id,
       linkedAttributeId,
       boonBane: (autoBane ? 'bane' : 'none') as 'boon' | 'none' | 'bane',

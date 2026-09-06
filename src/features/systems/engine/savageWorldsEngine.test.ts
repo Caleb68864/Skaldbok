@@ -7,6 +7,7 @@ import {
   computeSavageWorldsDerivedValues,
   formatSavageSkill,
 } from './savageWorldsEngine';
+import { savageWorldsSystem } from '../../../systems/savage-worlds';
 import { decodeTraitDie, traitLadder, traitChance } from '../../../systems/savage-worlds/savageMath';
 import { BUNDLED_SYSTEMS } from '../../../systems/registry';
 
@@ -65,10 +66,46 @@ describe('savageTraitPenalty', () => {
       resources: { wounds: { current: 1 }, fatigue: { current: 0 } },
       conditions: { distracted: true, entangled: true },
     } as never;
-    expect(savageTraitPenalty(c)).toBe(-5); // -1 wound, -2, -2
+    expect(savageTraitPenalty(c, savageWorldsSystem)).toBe(-5); // -1 wound, -2, -2
   });
+
+  it('takes the condition penalty from the declaration, not from this adapter', () => {
+    // The regression: `distracted` and `entangled` were matched by id and their
+    // -2 written into the adapter, while system.json declared the same rule in
+    // `conditions[].effect` and nothing read it. Editing the declaration changed
+    // the description a player reads and not the number they roll.
+    const edited = {
+      ...savageWorldsSystem,
+      conditions: savageWorldsSystem.conditions.map(condition =>
+        condition.id === 'distracted'
+          ? { ...condition, effect: { scope: 'all-traits' as const, modifier: -6 } }
+          : condition,
+      ),
+    };
+    const c = { resources: {}, conditions: { distracted: true } } as never;
+    expect(savageTraitPenalty(c, edited)).toBe(-6);
+  });
+
+  it('honours a condition the adapter never named', () => {
+    // A fourth condition added to the JSON used to do nothing at all.
+    const withNew = {
+      ...savageWorldsSystem,
+      conditions: [
+        ...savageWorldsSystem.conditions,
+        {
+          id: 'encumbered',
+          name: 'Encumbered',
+          description: 'Carrying too much.',
+          effect: { scope: 'all-traits' as const, modifier: -1 },
+        },
+      ],
+    };
+    const c = { resources: {}, conditions: { encumbered: true } } as never;
+    expect(savageTraitPenalty(c, withNew)).toBe(-1);
+  });
+
   it('is 0 for an undamaged, unconditioned character', () => {
-    expect(savageTraitPenalty({ resources: {}, conditions: {} } as never)).toBe(0);
+    expect(savageTraitPenalty({ resources: {}, conditions: {} } as never, savageWorldsSystem)).toBe(0);
   });
 });
 

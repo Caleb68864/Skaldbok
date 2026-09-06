@@ -2,6 +2,8 @@ import type { CharacterRecord } from '../../../types/character';
 import { effectiveAttribute, resolveArmorRating, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
 import { dieCode, traitChance, decodeTraitDie, traitLadder, SAVAGE_TOP_DIE } from '../../../systems/savage-worlds/savageMath';
 import { attrKey, resKey } from '../../../utils/statKeys';
+import { conditionPenalty } from '../../../utils/conditionEffects';
+import type { SystemDefinition } from '../../../types/system';
 import type { SystemEngine } from './types';
 
 export const SAVAGE_WORLDS_ATTRIBUTE_IDS = ['agility', 'smarts', 'spirit', 'strength', 'vigor'];
@@ -114,12 +116,27 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
 }
 
 /**
- * The flat penalty on every trait roll from the character's current state: −1 per
- * Wound and per Fatigue level, −2 Distracted, −2 Entangled. Wounds/Fatigue read
- * the level tracks; the two conditions are SWADE's own, so listing them here (in
- * the SWADE adapter) is the ruleset stating its own rule, not a cross-system leak.
+ * The flat penalty on every trait roll from the character's current state: −1
+ * per Wound and per Fatigue level, plus whatever the active conditions declare.
+ *
+ * @remarks
+ * The condition half used to be `if (conditions['distracted']) mod -= 2` and the
+ * same for `entangled` — both id and magnitude written into this adapter, while
+ * `system.json` declared exactly the same rule as
+ * `effect: { scope: 'all-traits', modifier: -2 }` and nothing read it. Editing
+ * the declaration changed the description a player reads and not the number they
+ * roll, and a fourth condition added to the JSON did nothing at all.
+ *
+ * Wounds and Fatigue stay here: they are level tracks, not conditions, and the
+ * per-level penalty is a SWADE constant this adapter owns.
+ *
+ * @param character - Whose state is being measured.
+ * @param system - The active definition, for its declared condition effects.
  */
-export function savageTraitPenalty(character: CharacterRecord): number {
+export function savageTraitPenalty(
+  character: CharacterRecord,
+  system?: SystemDefinition | null,
+): number {
   let mod = 0;
   // The damage-track model already bounds these, but clamp here too so a
   // hand-edited or imported over-max value can't produce a runaway penalty.
@@ -130,8 +147,7 @@ export function savageTraitPenalty(character: CharacterRecord): number {
     character.resources?.[id] ? Math.max(0, getEffectiveValue(resKey(id), character).effective) : 0;
   mod += SAVAGE_PENALTY_PER_LEVEL * Math.min(track('wounds'), SAVAGE_MAX_WOUND_LEVELS);
   mod += SAVAGE_PENALTY_PER_LEVEL * Math.min(track('fatigue'), SAVAGE_MAX_FATIGUE_LEVELS);
-  if (character.conditions?.['distracted']) mod -= 2;
-  if (character.conditions?.['entangled']) mod -= 2;
+  mod += conditionPenalty(system, character).modifier;
   return mod;
 }
 
@@ -185,12 +201,12 @@ export const savageWorldsEngine: SystemEngine = {
     ladder: traitLadder([SAVAGE_UNSKILLED_DIE, 6, 8, 10, SAVAGE_TOP_DIE], true, SAVAGE_MAX_DIE_BONUS),
     advancementMax: SAVAGE_TOP_DIE + SAVAGE_MAX_DIE_BONUS,
     defaultValue: SAVAGE_UNSKILLED_DIE,
-    display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character) : 0),
+    display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character, context.system) : 0),
     // The stored number is die *sides*: "8" alone is meaningless, "d8" is the
     // value. So no standalone headline — the die code leads the detail line.
     describe: (value, context) => ({
       headline: null,
-      detail: formatSavageSkill(value, context ? savageTraitPenalty(context.character) : 0),
+      detail: formatSavageSkill(value, context ? savageTraitPenalty(context.character, context.system) : 0),
     }),
     supportsMarks: false,
     // A skill "counts" once the character has trained it (bought a die above the
@@ -323,7 +339,7 @@ export const savageWorldsEngine: SystemEngine = {
     chance: (value, _state, context) =>
       ((die => traitChance(die.sides, 4, {
         wild: true,
-        bonus: (context ? savageTraitPenalty(context.character) : 0) + die.bonus,
+        bonus: (context ? savageTraitPenalty(context.character, context.system) : 0) + die.bonus,
       }))(decodeTraitDie(value))),
   },
   derivedFields: [

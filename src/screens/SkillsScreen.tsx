@@ -193,7 +193,7 @@ export default function SkillsScreen() {
     const described = engine.skill.describe(
       value,
       character
-        ? { character, skillId, linkedAttributeId, boonBane: effective, trained, target: rollTarget }
+        ? { character, system, skillId, linkedAttributeId, boonBane: effective, trained, target: rollTarget }
         : undefined,
     );
     const active = (described.alternatives ?? []).find(alt => alt.id === effective);
