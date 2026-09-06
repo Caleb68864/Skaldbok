@@ -159,7 +159,6 @@ export function formatSavageSkill(value: number, penalty = 0, wild = true): stri
  * rolls and its dying rules are status-plus-table, not a fixed procedure.
  */
 export const savageWorldsEngine: SystemEngine = {
-  resolution: 'trait-die-vs-tn',
   hasMagic: false,
   attributeBadge: (attributeId, character) => {
     const sides = character.attributes?.[attributeId];
@@ -187,6 +186,12 @@ export const savageWorldsEngine: SystemEngine = {
     advancementMax: SAVAGE_TOP_DIE + SAVAGE_MAX_DIE_BONUS,
     defaultValue: SAVAGE_UNSKILLED_DIE,
     display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character) : 0),
+    // The stored number is die *sides*: "8" alone is meaningless, "d8" is the
+    // value. So no standalone headline — the die code leads the detail line.
+    describe: (value, context) => ({
+      headline: null,
+      detail: formatSavageSkill(value, context ? savageTraitPenalty(context.character) : 0),
+    }),
     supportsMarks: false,
     // A skill "counts" once the character has trained it (bought a die above the
     // unskilled d4 baseline).

@@ -3,21 +3,14 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
-import { formatProb } from '../../utils/boonBane';
 import { conditionImposesBane } from '../../utils/conditionEffects';
 import { cn } from '../../lib/utils';
 import type { CharacterSkill } from '../../types/character';
 import { clamp, type PlayModuleProps } from './types';
-import { getEngine, type SystemEngine, type SkillDisplayContext } from '../systems/engine';
+import { getEngine } from '../systems/engine';
 import { resolveSkillCategories } from '../characters/customSkills';
 import { resolveSkillValue } from '../../utils/derivedValues';
 import { useAppState } from '../../context/AppStateContext';
-
-/** Normal / boon / bane odds line, with the maths owned by the active engine. */
-function probability(engine: SystemEngine, value: number, context?: SkillDisplayContext): string {
-  const chance = (state: 'boon' | 'none' | 'bane') => formatProb(engine.probability.chance(value, state, context));
-  return `${chance('none')} / boon ${chance('boon')} / bane ${chance('bane')}`;
-}
 
 type SkillRow = {
   id: string;
@@ -33,9 +26,6 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
   if (!system) return null;
 
   const engine = getEngine(system);
-  // Roll-under systems render a bare target number plus a boon/bane odds line;
-  // other resolutions let the engine format the whole thing into one string.
-  const rollsUnder = engine.resolution === 'd20-roll-under';
 
   // Merged so a player-authored skill appears here like any declared one.
   const skillDefs: SkillRow[] = resolveSkillCategories(system, character).flatMap(category =>
@@ -88,17 +78,26 @@ export function SkillModule({ character, system, updateCharacter }: PlayModulePr
       // quote different odds for the same roll.
       target: sessionState.rollTarget ?? engine.probability.difficulty?.defaultValue,
     };
-    const displayValue = engine.skill.display(value, displayContext);
+    // The engine says which parts this row has. Branching on
+    // `resolution === 'd20-roll-under'` here was a systemId check in disguise.
+    // The dashboard lists every advantage state, since a player at the table is
+    // deciding whether a boon is worth spending.
+    const described = engine.skill.describe(value, displayContext);
+    const headline = described.headline;
+    const detail = [
+      described.detail,
+      ...(described.alternatives ?? []).map(alt => `${alt.label} ${alt.detail}`),
+    ].join(' / ');
     return (
       <div key={skill.id} className="flex flex-col gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] p-[var(--space-sm)] min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <p className="m-0 font-semibold text-[var(--color-text)]">{skill.name}</p>
-            {rollsUnder && (
-              <span className="text-[length:var(--font-size-lg)] font-bold text-[var(--color-accent)] leading-none">{displayValue}</span>
+            {headline !== null && (
+              <span className="text-[length:var(--font-size-lg)] font-bold text-[var(--color-accent)] leading-none">{headline}</span>
             )}
           </div>
-          <p className="m-0 text-xs text-[var(--color-text-muted)]">{rollsUnder ? probability(engine, value, displayContext) : displayValue}</p>
+          <p className="m-0 text-xs text-[var(--color-text-muted)]">{detail}</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap min-[520px]:shrink-0">
           {engine.skill.supportsMarks && (

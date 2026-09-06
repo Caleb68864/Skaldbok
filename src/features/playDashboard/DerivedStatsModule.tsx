@@ -5,51 +5,28 @@ import type { PlayModuleProps } from './types';
 
 type StatEntry = { label: string; value: string | number; note?: string };
 
-/**
- * Formats a dice modifier as a signed string, e.g. 2 -> '+2', -1 -> '-1'.
- */
-function formatModifier(dm: number): string {
-  return dm >= 0 ? `+${dm}` : `${dm}`;
-}
-
 export function DerivedStatsModule({ character, system }: PlayModuleProps) {
   const engine = getEngine(system);
   const derived = engine.derivedStats(character, system ?? undefined);
-
-  // Structural check rather than a system-id branch: engines whose resolution
-  // is modifier-based return a per-attribute modifier map alongside the shared
-  // derived values, and we render that grid instead of the flat stat list.
-  const attributeModifiers =
-    'characteristicDMs' in derived
-      ? (derived as { characteristicDMs?: Record<string, number> }).characteristicDMs
-      : undefined;
-
-  // The scores those modifiers were computed from, when the engine publishes
-  // them. Present => the tile leads with the score and shows the modifier
-  // beside it, because the score is the number a player is asked for as often
-  // as the DM. Absent => modifier only, as before.
-  const attributeScores =
-    'characteristicScores' in derived
-      ? (derived as { characteristicScores?: Record<string, number> }).characteristicScores
-      : undefined;
 
   // The flat list is driven by the engine's declared derived fields; the dense
   // dashboard tile prefers the short label when the engine supplies one.
   const derivedValues = derived as unknown as Record<string, string | number | undefined>;
 
-  // The two lists are additive, not either/or. Rendering only the modifier grid
-  // silently dropped every declared field a modifier-based system had —
-  // Traveller's Initiative DM and Carry Limit never reached the dashboard.
-  const modifierStats: StatEntry[] = attributeModifiers
-    ? Object.entries(attributeModifiers).map(([id, dm]) => {
-        const score = attributeScores?.[id];
-        return {
-          label: system?.attributes.find(attr => attr.id === id)?.abbreviation ?? id.toUpperCase(),
-          value: score ?? formatModifier(dm),
-          note: score === undefined ? undefined : formatModifier(dm),
-        };
-      })
-    : [];
+  // The engine says whether it has per-attribute rows to show here, already
+  // labelled and formatted. This was `'characteristicDMs' in derived` — a key
+  // only Traveller's derived block has, so the "structural" check named one
+  // ruleset without saying so.
+  //
+  // The two lists are additive, not either/or. Rendering only the attribute grid
+  // silently dropped every declared field such a system had — Traveller's
+  // Initiative DM and Carry Limit never reached the dashboard.
+  const modifierStats: StatEntry[] =
+    engine.attributeSummary?.(character, system ?? undefined)?.map(row => ({
+      label: row.label,
+      value: row.value,
+      note: row.note,
+    })) ?? [];
 
   const fieldStats: StatEntry[] = engine.derivedFields
     .filter(field => !field.surfaces || field.surfaces.includes('dashboard'))

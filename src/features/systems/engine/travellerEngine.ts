@@ -297,7 +297,6 @@ function travellerRollContext(
  * is how those panels get hidden.
  */
 export const travellerEngine: SystemEngine = {
-  resolution: '2d6-plus',
   hasMagic: false,
   attributeBadge: (attributeId, character) => {
     const score = character.attributes?.[attributeId];
@@ -305,6 +304,18 @@ export const travellerEngine: SystemEngine = {
     return formatDM(characteristicToDM(effectiveCharacteristic(character, attributeId)));
   },
   attributeIds: TRAVELLER_ATTRIBUTE_IDS,
+  // The dashboard leads each characteristic with its score and shows the DM
+  // beside it: a player is asked for "END 7" as often as for "+0", and the two
+  // must come from one number or they disagree the moment damage lands.
+  attributeSummary: (character, system) => {
+    const derived = computeTravellerDerivedValues(character);
+    return TRAVELLER_ATTRIBUTE_IDS.map(id => ({
+      id,
+      label: system?.attributes.find(attr => attr.id === id)?.abbreviation ?? id.toUpperCase(),
+      value: derived.characteristicScores[id] ?? 0,
+      note: formatDM(derived.characteristicDMs[id] ?? 0),
+    }));
+  },
   skill: {
     valueLabel: 'Level',
     range: { min: 0, max: 6 },
@@ -317,6 +328,13 @@ export const travellerEngine: SystemEngine = {
         context?.target ?? TRAVELLER_DEFAULT_TARGET,
       );
     },
+    // A bare level is not a target number — "1" means nothing without the DM and
+    // the odds beside it — so there is no standalone headline; the formatted
+    // string carries the whole row.
+    describe: (value, context) => ({
+      headline: null,
+      detail: travellerEngine.skill.display(value, context),
+    }),
     supportsMarks: false,
     // Traveller level 0 is a real (trained) skill, so presence of the trained
     // flag matters as much as a non-zero level.

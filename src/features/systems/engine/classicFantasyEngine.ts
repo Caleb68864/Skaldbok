@@ -19,6 +19,18 @@ const classicFantasyCoinDenominations: CurrencyDenomination[] = [
   { id: 'copper', label: 'Copper', abbr: 'c', value: 1 },
 ];
 
+/**
+ * Skill value at or below which a roll cannot fail.
+ *
+ * @remarks
+ * A natural 1 always succeeds, so a skill of 1 succeeds on exactly the roll it
+ * needs and can never miss. Named rather than written inline because the skills
+ * screen used to compute it as `supportsMarks && value === 1` — an unrelated
+ * capability standing in for "is this roll-under", with the threshold hardcoded
+ * beside it. The rule is Dragonbane's, so it belongs here.
+ */
+const CLASSIC_AUTO_SUCCESS_AT = 1;
+
 /** Formats a skill's success probability string for the current boon/bane state. */
 export function formatSkillProbability(value: number, state: BoonBaneState): string {
   const prob =
@@ -115,7 +127,6 @@ const classicFantasyRests: RestDefinition[] = [
  * (HP is a single pool) and death is handled by the {@link features/systems/engine/types!DeathModel | DeathModel} instead.
  */
 export const classicFantasyEngine: SystemEngine = {
-  resolution: 'd20-roll-under',
   hasMagic: true,
   attributeBadge: () => null,
   attributeIds: ['str', 'con', 'agl', 'int', 'wil', 'cha'],
@@ -126,6 +137,22 @@ export const classicFantasyEngine: SystemEngine = {
     advancementMax: 18,
     defaultValue: 0,
     display: (value: number) => `${value}`,
+    // Roll-under: the target number stands alone, with the odds beneath it.
+    // `formatSkillProbability` above existed with no caller; this is it.
+    //
+    // `detail` is always the unmodified chance, so a screen can lead with it and
+    // name the state that applies; boon and bane are offered as alternatives
+    // rather than folded in, which is what lets the dashboard list all three and
+    // the skills screen pick one.
+    describe: (value: number) => ({
+      headline: `${value}`,
+      detail: formatSkillProbability(value, 'none'),
+      alternatives: [
+        { id: 'boon', label: 'boon', detail: formatSkillProbability(value, 'boon') },
+        { id: 'bane', label: 'bane', detail: formatSkillProbability(value, 'bane') },
+      ],
+      note: value <= CLASSIC_AUTO_SUCCESS_AT ? 'auto-success' : undefined,
+    }),
     supportsMarks: true,
     supportsBoonBane: true,
     // Roll-under: 0 means untrained, so a skill matters once trained or raised.

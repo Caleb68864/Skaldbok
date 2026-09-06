@@ -11,10 +11,15 @@ export function CombatModule({ character, system, updateCharacter }: PlayModuleP
   const engine = getEngine(system);
   const currency = engine.currency;
   const adjustCoin = useCoinAdjuster(currency, character, updateCharacter);
-  // Damage-track systems (Traveller) show the purse under Vitals via
-  // CurrencyModule, so it is not repeated here. Pool systems (Dragonbane) keep
-  // their coins in Ready Gear.
-  const showCoins = currency.denominations.length > 0 && !engine.damageTrack;
+  // A system that claims the `finances` panel shows its purse there, so Ready
+  // Gear must not repeat it; one that does not keeps its coins here.
+  //
+  // This was `!engine.damageTrack` — whether a system has a cascading damage
+  // track says nothing about where its money is displayed. The two happened to
+  // coincide across the two systems that shipped, which is what a systemId
+  // branch in disguise looks like. `panels` is the right source: unlike rest,
+  // death and magic it has no nullable model to contradict it.
+  const showCoins = currency.denominations.length > 0 && !engine.panels.includes('finances');
   // Durability is a Dragonbane mechanic; systems that hide the field have no
   // notion of a weapon being "damaged", so the toggle must not appear.
   const usesDurability = !(system?.itemFields?.hiddenBuiltIns?.weapon ?? []).includes('durability');

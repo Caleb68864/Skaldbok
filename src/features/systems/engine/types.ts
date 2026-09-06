@@ -8,7 +8,6 @@ import type { DerivedValues } from '../../../utils/derivedValues';
 import type { PanelKey } from '../../../types/system';
 export type { PanelKey };
 
-export type ResolutionMethod = 'd20-roll-under' | '2d6-plus' | 'trait-die-vs-tn';
 
 export type CurrencyMode = 'coins' | 'abstract' | 'single';
 
@@ -189,6 +188,39 @@ export interface SkillEngineConfig {
    * engines that need no character state (classic-fantasy) can ignore it.
    */
   display: (value: number, context?: SkillDisplayContext) => string;
+  /**
+   * A skill row split into the parts a screen lays out, so the screen never has
+   * to know which resolution mechanic is in play.
+   *
+   * @remarks
+   * The play dashboard used to branch on `engine.resolution === 'd20-roll-under'`
+   * to decide whether to show a big target number with a separate odds line, or
+   * one formatted string. That is a `systemId ===` branch in disguise: a fourth
+   * system rolling under would have had to be named there too. Which parts exist
+   * is now the ruleset's own statement.
+   *
+   * `headline` is a number that stands on its own — a roll-under target — and is
+   * `null` for systems whose value only means something with its notation
+   * attached (a die code, a signed modifier). `detail` is the supporting line and
+   * is always present, describing the roll as it stands.
+   *
+   * `alternatives` are the same roll under the *other* advantage states a system
+   * offers, so a screen can either list them all (the dashboard's
+   * "38% / boon 62% / bane 14%") or pick out the one currently in effect (the
+   * skills screen's "38% (62% with boon)") without knowing what states exist.
+   * Empty for a system whose `display` already folds the state into `detail`.
+   *
+   * `note` is a qualifier on the roll itself, such as an automatic success.
+   */
+  describe: (
+    value: number,
+    context?: SkillDisplayContext,
+  ) => {
+    headline: string | null;
+    detail: string;
+    alternatives?: { id: string; label: string; detail: string }[];
+    note?: string;
+  };
   supportsMarks: boolean;
   supportsBoonBane: boolean;
   /**
@@ -603,7 +635,6 @@ export interface DerivedFieldDef {
 }
 
 export interface SystemEngine {
-  resolution: ResolutionMethod;
   hasMagic: boolean;
   attributeBadge: (attributeId: string, character: CharacterRecord) => string | null;
   attributeIds: string[];
@@ -662,6 +693,25 @@ export interface SystemEngine {
     mode: 'modifiers' | 'value' | 'dice';
     format: (value: number, bonus?: number) => string;
   };
+  /**
+   * Per-attribute rows the dashboard shows above its derived fields, or `null`
+   * when the system has nothing to add there.
+   *
+   * @remarks
+   * The dashboard used to duck-type this: `'characteristicDMs' in derived`, with
+   * a comment calling it "a structural check rather than a system-id branch". It
+   * is a system-id branch — `characteristicDMs` is a key only Traveller's
+   * derived block has, so the test names one ruleset without saying so, and a
+   * second modifier-based system would have had to adopt Traveller's key name to
+   * get the same layout.
+   *
+   * Returning the rows already labelled and formatted keeps the "score leads,
+   * modifier follows" decision with the ruleset that has an opinion about it.
+   */
+  attributeSummary?: (
+    character: CharacterRecord,
+    system?: SystemDefinition,
+  ) => { id: string; label: string; value: string | number; note?: string }[] | null;
   /**
    * Resource that generic damage/healing applies to, or `null` when the system
    * has no single health pool (consumers must then defer to the system's own UI).
