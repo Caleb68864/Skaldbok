@@ -4040,3 +4040,107 @@ what they share and the decisions that are not obvious from the diffs.
   `SchemaError` on `restoreGroup`, both encounter lost-write races, and both
   halves of the attribute-modifier probe.
 - Playwright E2E on the dev server: 14/14 across all phases, 0 crashes.
+
+## 2026-09-06 — Roadmap steps 10 and 11: proxy branches, and the import surface
+
+Two more items from the roadmap, worked in its proposed order. Four commits.
+
+### Five screens asked one question to answer another (D6, F2)
+
+- Symptom: each of these read a real capability and used it to decide something
+  it had nothing to do with, so each named exactly one shipped system while
+  looking generic. `SkillModule` branched on
+  `engine.resolution === 'd20-roll-under'` for layout. `SkillsScreen` used
+  `!engine.skill.supportsMarks` to mean "not a d20 system" when choosing an odds
+  format, and computed auto-success as `supportsMarks && value === 1`.
+  `DerivedStatsModule` tested `'characteristicDMs' in derived` — commented as a
+  structural check, but only Traveller's derived block has that key, so a second
+  modifier-based system would have had to adopt Traveller's key name to get the
+  same layout. `CombatModule` hid the purse on `!engine.damageTrack`.
+  `ResourceModule` gated session logging on `id === 'hp' || id === 'wp'`, so
+  Wounds, Fatigue, Bennies and any user-authored pool changed silently and never
+  reached the log; its damage-track readout also assumed accumulating, so a
+  depleting resource would read as wounded at full health.
+- Fix: `skill.describe(value, ctx)` returns a row's parts — `headline`, `detail`,
+  `alternatives`, `note` — so the dashboard can list every advantage state and
+  the skills screen can name just the one in effect, neither knowing the
+  mechanic. `attributeSummary` returns per-attribute rows already labelled.
+  The purse follows the declared `finances` panel. Logging uses
+  `engine.resourceIds`; "wounded" uses `ResourceDefinition.direction`.
+- Surfaces: features/playDashboard/{SkillModule,DerivedStatsModule,CombatModule,
+  ResourceModule}.tsx, screens/SkillsScreen.tsx, engine/types.ts and all three
+  adapters.
+- Watch: `engine.resolution` is **deleted**, not kept. Its only use was being
+  branched on, and `declaredCapabilities.test.ts` flagged it the moment the last
+  reader went. The same happened to a `skill.autoSuccessAt` field added during
+  this change — `describe`'s `note` already carried the rule, and a second
+  source of it would only drift. Both deletions were the guard doing its job.
+- Watch also: the skills-screen mark vocabulary (dragon/demon glyphs, colours,
+  the marked-count badge) is still Dragonbane's, written into the screen. It
+  wants `skill.marks` and a rewrite of the mark cycle; left rather than
+  half-done, and recorded in the roadmap.
+- Watch also: one new consumer guard had to be withdrawn. Forbidding
+  `!engine.skill.supportsMarks` outright flagged the legitimate use that guards
+  the mark control itself. The rule that replaced it is positive and crisp:
+  outside the engine directory nothing calls `probability.chance` — a skill row
+  comes from `describe`.
+- Verified: four new guards in `engineConsumers.test.ts`, all four failing
+  against the pre-fix code; 1323 tests; Playwright 14/14.
+- Commit: fix(engine) — stop asking one question to answer another.
+
+### The import surface (B2, B4, B5, B6, B7, B9)
+
+- Symptom, and the one that mattered: `CardRenderer` looked a template's `when`
+  string up in `GUARDS` by plain indexing. Sheet templates are importable, so
+  `when: "constructor"` resolved to `Object`, `Object(engine)` returned a truthy
+  object, and the guard whose entire purpose is to fail closed failed **open**,
+  rendering a card the template said to hide. Three sibling lookups had the same
+  shape and failed safe only by accident: the entity-link table lookup threw
+  inside `db.table` and was caught; the system-id alias table let
+  `systemId: "__proto__"` persist a character whose `systemId` was an object; and
+  `sanitizeDeep` built its output with a plain literal, so assigning the key
+  `__proto__` replaced the prototype instead of adding a property.
+- Symptom: the id-collision guard compared `createdAt` to tell "a newer version
+  of this entity" from "a different entity reusing its id", but only when both
+  sides had one — so a bundle row with **no** `createdAt` and a far-future
+  `updatedAt` skipped the guard entirely and overwrote the local record. That is
+  the exact shape a hand-edited bundle has. A soft-deleted local row was also
+  overwritable, resurrecting a record the user had deleted with no sign it ever
+  had been.
+- Symptom: all six import entry points called `file.text()` with no size check.
+- Fix: own-property checks at all four lookup sites (`hasOwnProperty.call`, to
+  match the codebase and the ES2020 target). Missing-or-differing `createdAt` and
+  a tombstoned local row are both collisions now. One `readTextFile` helper
+  checks `file.size` first and every path shares its limit and message.
+  `importablePortraitUri` narrowed from any `data:image/*` — which admits
+  `svg+xml`, a document carrying its own script — to raster types, capped at
+  8 MB. `safeAttachmentFilename` reduces a stored name to one path segment
+  wherever it becomes a path or a link.
+- Surfaces: features/systems/cards/CardRenderer.tsx, utils/import/{mergeEngine,
+  portraitUri,readTextFile}.ts, utils/importExport.ts, utils/attachmentFilename.ts,
+  utils/export/{attachmentFiles,renderAttachmentSidecar}.ts, the six import
+  entry points, vite.config.ts.
+- Watch: the ZIP entry name, the wiki-links in the exported Markdown and the
+  sidecar's own embed must all agree, or the links point at files that are not
+  in the archive. All three are sanitised; the sidecar still records the raw
+  value as `originalFilename` so provenance survives.
+- Watch also: zip-slip strips **both** separators. A bundle written on Windows
+  carries backslashes, which a POSIX extractor does not treat as separators, so
+  stripping only `/` leaves `..\..\x.jpg` intact.
+- Watch also: the CSP is injected at **build** only. Applying it in dev breaks
+  Vite's HMR client, which injects inline scripts, and a policy that has to be
+  loosened for the dev server is not the policy that ships. `frame-ancestors` is
+  deliberately absent — it is ignored in a `<meta>` element and only logs an
+  error on every load; real framing protection needs an HTTP header, which a
+  static bundle on a LAN address cannot set.
+- Watch also: the existing dedup test's fixture carried no `createdAt`, so the
+  stricter guard reclassified it as a collision. Real records always have one;
+  the fixture was corrected rather than the guard loosened.
+- Verified: 1352 tests, including the guard-map shape, the portrait whitelist,
+  the read limit and traversal-proof export paths; the **built** bundle under
+  the real CSP passes Playwright 14/14 with no policy violations. The SSL and
+  service-worker errors in that run are Chromium rejecting the preview server's
+  self-signed certificate, not the policy — a CSP refusal reads "Refused to…".
+- Commits: fix(security) — prototype keys, portrait sources, and a policy;
+  fix(import) — close the id-collision bypass and bound what gets read;
+  fix(export) — an attachment name cannot escape the archive.

@@ -205,7 +205,7 @@ The app has no eval, no `dangerouslySetInnerHTML`, no network calls, no CDN
 scripts, all object URLs are revoked, and exports skip deleted rows. Every gap
 is on the **import** path, where data is untrusted.
 
-### B1. Legacy bare-character import skips validation — OPEN (V)
+### B1. Legacy bare-character import skips validation — DONE (7bf2a4e)
 - **Where:** `src/utils/import/bundleParser.ts:67-68` routes any JSON without a
   `version` key to `handleLegacySkaldbok` (`:144-171`), which never calls
   `migrateCharacter`. `validateContentsEntities` (`:177`) runs only on the
@@ -218,7 +218,7 @@ is on the **import** path, where data is untrusted.
 - **Fix:** Run `migrateCharacter` inside `handleLegacySkaldbok` and return a
   failure result on throw.
 
-### B2. Bundle attachments are never validated; filename reaches ZIP paths — OPEN (R)
+### B2. Bundle attachments are never validated; filename reaches ZIP paths — DONE (7bf2a4e mime/size, 1f7c538 filename)
 - **Where:** `bundleParser.ts:251` claims attachments are "validated via
   bundleContentsSchema already", but the parser uses
   `bundleEnvelopeParseSchema` whose `contents` is `z.record(z.any())`
@@ -242,7 +242,7 @@ is on the **import** path, where data is untrusted.
   also includes the private note's title.
 - **Fix:** Loop over `shareableNotes`.
 
-### B4. Id-collision guard is bypassable — OPEN (R)
+### B4. Id-collision guard is bypassable — DONE (91a1722)
 - **Where:** `mergeEngine.ts:282-291` treats a same-id row as a collision only
   when *both* `createdAt` exist and differ. A record with no `createdAt` and a
   far-future `updatedAt` passes `:297` and `:317` and overwrites the local row
@@ -251,7 +251,7 @@ is on the **import** path, where data is untrusted.
 - **Fix:** Mint a fresh id when `createdAt` is absent or differs (as
   `importExport.ts:149-152` does). Treat a tombstoned local row as a collision.
 
-### B5. Prototype-key lookups on attacker-controlled strings — OPEN (R)
+### B5. Prototype-key lookups on attacker-controlled strings — DONE (ce28c51)
 - `importExport.ts:29` `SYSTEM_ID_ALIASES[normalized]` — `systemId:
   "__proto__"` persists `systemId: {}`.
 - `mergeEngine.ts:106` `LINK_ENDPOINT_TABLES[type]` — throws inside `db.table`,
@@ -262,7 +262,7 @@ is on the **import** path, where data is untrusted.
   guard fails **open**.
 - **Fix:** `Object.hasOwn` at every site, or `Object.create(null)` maps.
 
-### B6. Remote-URL portrait makes a network request — OPEN (R)
+### B6. Remote-URL portrait makes a network request — DONE (db42a26, tightened in ce28c51)
 - **Where:** `portraitUri` (`src/types/character.ts:490`) is unconstrained
   (`schemas/character.schema.ts:135-139` is `passthrough()`), rendered as
   `<img src>` at `CharacterPortrait.tsx:139,208` and `ProfileScreen.tsx:146`.
@@ -271,7 +271,7 @@ is on the **import** path, where data is untrusted.
 - **Fix:** `z.string().regex(/^data:image\/(jpeg|png|webp|gif);base64,/).max(N)`,
   plus B7.
 
-### B7. No Content-Security-Policy — OPEN (R)
+### B7. No Content-Security-Policy — DONE (ce28c51)
 - `index.html` has none. Defence in depth, and it neutralises B6 via `img-src`.
 - **Fix:** `<meta http-equiv="Content-Security-Policy" content="default-src
   'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline';
@@ -285,7 +285,7 @@ is on the **import** path, where data is untrusted.
   soft-delete model.
 - **Fix:** Clear the key in the next `version()` upgrade.
 
-### B9. Unbounded input sizes on the bundle path — OPEN (R)
+### B9. Unbounded input sizes on the bundle path — DONE (91a1722)
 - `useImportActions.ts:98` `file.text()` with no size check; `parseBundle`
   parses, then `verifyContentHash` (`bundleParser.ts:291`) re-parses; pre-v1
   bundles are re-serialised and re-parsed (`:85`). `baseNoteSchema.body` is
@@ -438,7 +438,7 @@ every adapter declare it, make the screen read it.
   Make `damageTrack.kind` and `attributeReadout` required rather than
   duck-typed.
 
-### D6. `systemId ===` branches in disguise — OPEN (V for SkillModule, R for rest)
+### D6. `systemId ===` branches in disguise — MOSTLY DONE (c45865e); skill marks remain
 - `SkillModule.tsx:38` `engine.resolution === 'd20-roll-under'` decides layout.
 - `SkillsScreen.tsx:187-219` `!engine.skill.supportsMarks` as "not d20";
   `supportsMarks && value === 1` for auto-success; imports
@@ -632,7 +632,7 @@ to the same shape.
 `PrintableSheet.tsx:741` immediately. Add `WP`, `Bennies`, `Wounds`, `DM`,
 `Cr`, `gold` with an allowlist for adapters and `system.json`.
 
-### F2. Extend `engineConsumers.test.ts` — OPEN (V)
+### F2. Extend `engineConsumers.test.ts` — DONE (c45865e)
 It catches `systemId ===` but not `engine.resolution ===`, `supportsMarks` as
 a proxy, `'characteristicDMs' in derived`, or `!engine.damageTrack` as a layout
 switch. Add those patterns.
@@ -999,11 +999,26 @@ the evidence in place so the next scan can confirm it did not regress.
 
 ## Progress
 
-Steps 1 to 9 of the order of attack are closed: A1, A2, A3, A4, A6, A7, B3,
-B8, C1, C2, D1, D2 and F3. Everything from step 10 (**D6 + F2**) onward is
-still open, as is all of workstreams H, I and J.
+Steps 1 to 11 of the order of attack are closed: A1–A4, A6, A7, B1–B9, C1, C2,
+D1, D2, D6 (all but one part), F2 and F3. Workstream B is finished apart from
+**B10**, the unvalidated reference-import JSON. Step 12 (**D3, D4, D5, D11**)
+is next, and all of workstreams H, I and J remain.
 
-Two things a future reader should know before picking up the rest:
+Four things a future reader should know before picking up the rest:
+
+- **D6 is closed except for skill marks.** The dragon/demon glyphs, their
+  colours and the marked-count badge are still Dragonbane vocabulary written
+  into `SkillsScreen`. That wants `skill.marks?: [{ id, label, glyph }]` and a
+  rewrite of the mark cycle, which is a bigger change than the branch removals
+  around it and was left rather than half-done.
+- **Two engine fields were deleted rather than kept.** `engine.resolution` and a
+  proposed `skill.autoSuccessAt` both ended up with no reader once the thing
+  that had branched on them was fixed, and `declaredCapabilities.test.ts`
+  flagged each immediately. A descriptive label whose only use is to be branched
+  on invites the next person to branch on it again.
+- **The CSP is applied at build only.** Adding it in dev breaks Vite's HMR
+  client, and a policy loosened for the dev server is not the policy that ships.
+  It is verified by running the Playwright suite against `npm run preview`.
 
 - **A7 and B8 shipped as part of the same `version(19)` block as A6.** A future
   schema change adds `version(20)`; do not edit 19.
