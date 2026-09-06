@@ -101,6 +101,27 @@ export interface TimeUnit {
   label: string;
   /** Compact form for chips, e.g. `RND`. */
   abbrev: string;
+  /**
+   * What ends a modifier measured in this unit.
+   *
+   * @remarks
+   * A modifier's `duration` is a TimeUnit id, and the only thing that ever
+   * expired one was pressing a Dragonbane rest button whose id happened to
+   * match. Traveller and Savage Worlds have `rest: null`, so nothing in either
+   * system could expire anything — a scene-long buff lasted the campaign. And
+   * `scene` expired nowhere, in any system, because no rest is called "scene".
+   *
+   * Absent means the unit never expires on its own (Dragonbane's `permanent`),
+   * so it has to be removed by hand.
+   */
+  expiresOn?: {
+    /** Id of a rest that ends it, when the system has a rest ladder. */
+    rest?: string;
+    /** Ends when a session starts. */
+    sessionStart?: boolean;
+    /** Ends when an encounter ends — the closest thing to "the scene". */
+    encounterEnd?: boolean;
+  };
 }
 
 /**

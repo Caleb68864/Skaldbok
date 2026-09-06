@@ -8,6 +8,7 @@ import { DebtList } from '../components/fields/DebtList';
 import { StoryBeatModal } from '../components/fields/StoryBeatModal';
 import { addDebt, settleDebt, payDebt, reopenDebt, removeDebt } from '../features/characters/debts';
 import { resolveSkillCategories } from '../features/characters/customSkills';
+import { modifiersEndingOn } from '../features/characters/modifierExpiry';
 import {
   advancementCandidates,
   toggleSessionEvent,
@@ -531,10 +532,17 @@ export default function SheetScreen() {
     }
   }
 
-  /** Modifier `duration` values are rest ids, so a rest expires the modifiers keyed to it. */
+  /**
+   * The modifiers this rest ends.
+   *
+   * @remarks
+   * Was `m.duration === def.id`, which coupled expiry to a rest sharing the
+   * unit's id. The engine's own `timeUnits[].expiresOn` says what ends what, so
+   * a system with no rest ladder can still expire things — see
+   * `features/characters/modifierExpiry`.
+   */
   function getExpiringModifiers(def: RestDefinition): TempModifier[] {
-    if (!character) return [];
-    return (character.tempModifiers ?? []).filter(m => m.duration === def.id);
+    return modifiersEndingOn(character, engine, { kind: 'rest', restId: def.id }).expiring ?? [];
   }
 
   function handleRestClick(def: RestDefinition) {

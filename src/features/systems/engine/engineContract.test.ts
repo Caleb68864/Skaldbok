@@ -378,6 +378,22 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
       expect(ids.every(id => id.length > 0)).toBe(true);
     });
 
+    it('every time unit either expires on something or says it is permanent', () => {
+      // A modifier's duration is a TimeUnit id, and expiry used to happen only
+      // when a rest of the same id was pressed. Traveller and Savage Worlds
+      // declare rest: null, so a duration there could never end. A unit with no
+      // `expiresOn` is a deliberate never-expires; a unit naming a rest that
+      // does not exist is a modifier the user can never be rid of.
+      for (const unit of engine.timeUnits) {
+        const restId = unit.expiresOn?.rest;
+        if (restId === undefined) continue;
+        expect(
+          (engine.rest ?? []).some(r => r.id === restId),
+          `${system.id}: time unit "${unit.id}" expires on rest "${restId}", which this system does not define`,
+        ).toBe(true);
+      }
+    });
+
     it('outcome and rollModifier ids are unique', () => {
       const outcomeIds = engine.outcomes.map(o => o.id);
       expect(new Set(outcomeIds).size).toBe(outcomeIds.length);

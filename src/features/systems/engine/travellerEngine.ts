@@ -361,10 +361,13 @@ export const travellerEngine: SystemEngine = {
   ],
   // Reuses the existing TempModifier duration ids, relabelled for a sci-fi setting.
   timeUnits: [
-    { id: 'round', label: 'Round', abbrev: 'RND' },
-    { id: 'stretch', label: 'Watch', abbrev: 'WCH' },
-    { id: 'shift', label: 'Day', abbrev: 'DAY' },
-    { id: 'scene', label: 'Scene', abbrev: 'SCN' },
+    // Traveller has `rest: null`, so the rest-button expiry path never fired
+    // here: a Watch- or Day-long modifier lasted for ever. The `stretch`/`shift`
+    // ids are relabelled Watch/Day and no rest of either id exists to press.
+    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { encounterEnd: true } },
+    { id: 'stretch', label: 'Watch', abbrev: 'WCH', expiresOn: { sessionStart: true } },
+    { id: 'shift', label: 'Day', abbrev: 'DAY', expiresOn: { sessionStart: true } },
+    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
     { id: 'permanent', label: 'Permanent', abbrev: '∞' },
   ],
   terms: {

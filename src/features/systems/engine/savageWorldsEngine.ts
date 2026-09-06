@@ -225,9 +225,12 @@ export const savageWorldsEngine: SystemEngine = {
     { id: 'wild-attack', label: 'Wild Attack (+2)' },
   ],
   timeUnits: [
-    { id: 'round', label: 'Round', abbrev: 'RND' },
-    { id: 'scene', label: 'Scene', abbrev: 'SCN' },
-    { id: 'session', label: 'Session', abbrev: 'SES' },
+    // SWADE has no rest ladder, so before `expiresOn` nothing in this system
+    // could expire a modifier at all — every buff was permanent in practice.
+    // A round ends with the fight it was in.
+    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { encounterEnd: true } },
+    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
+    { id: 'session', label: 'Session', abbrev: 'SES', expiresOn: { sessionStart: true } },
     { id: 'permanent', label: 'Permanent', abbrev: '∞' },
   ],
   terms: {

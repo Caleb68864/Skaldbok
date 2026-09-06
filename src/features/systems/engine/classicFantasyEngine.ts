@@ -173,10 +173,12 @@ export const classicFantasyEngine: SystemEngine = {
     { id: 'pushed', label: 'Pushed' },
   ],
   timeUnits: [
-    { id: 'round', label: 'Round', abbrev: 'RND' },
-    { id: 'stretch', label: 'Stretch', abbrev: 'STR' },
-    { id: 'shift', label: 'Shift', abbrev: 'SHI' },
-    { id: 'scene', label: 'Scene', abbrev: 'SCN' },
+    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { rest: 'round' } },
+    { id: 'stretch', label: 'Stretch', abbrev: 'STR', expiresOn: { rest: 'stretch' } },
+    { id: 'shift', label: 'Shift', abbrev: 'SHI', expiresOn: { rest: 'shift' } },
+    // A scene is an encounter here; nothing expired this before.
+    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
+    // No expiry: removed by hand.
     { id: 'permanent', label: 'Permanent', abbrev: '∞' },
   ],
   terms: {

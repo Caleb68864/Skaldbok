@@ -12,6 +12,8 @@ import * as metadataRepository from '../../storage/repositories/metadataReposito
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import * as systemRepository from '../../storage/repositories/systemRepository';
 import { sessionRefreshPatch } from '../characters/sessionRefresh';
+import { modifiersEndingOn, expirePartyModifiers } from '../characters/modifierExpiry';
+import { getEngine } from '../systems/engine';
 import * as campaignRepository from '../../storage/repositories/campaignRepository';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useAppState } from '../../context/AppStateContext';
@@ -142,6 +144,17 @@ export interface CampaignContextValue {
    * members or the active-character designation.
    */
   refreshParty: () => Promise<void>;
+  /**
+   * Expires every party character's modifiers that end when an encounter does.
+   *
+   * @remarks
+   * Lives here because this is the only context holding the party. Call it from
+   * every path that ends an encounter — before this existed, a modifier could
+   * only be expired by pressing a Dragonbane rest button, so a scene-long buff
+   * outlived the scene in every system and never expired at all in the two with
+   * no rest ladder.
+   */
+  expireEncounterModifiers: () => Promise<void>;
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
@@ -377,10 +390,36 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
    * Best-effort and non-blocking: one unreadable character must not stop the
    * others, and none of it should delay the session actually starting.
    */
+  /** Linked character ids of every seat in the active party. */
+  const partyCharacterIds = useCallback(
+    () =>
+      (activeParty?.members ?? [])
+        .map(m => m.linkedCharacterId)
+        .filter((id): id is string => Boolean(id)),
+    [activeParty],
+  );
+
+  const expireEncounterModifiers = useCallback(async () => {
+    const ids = partyCharacterIds();
+    if (ids.length === 0) return;
+    // Land any pending sheet edits first; the expiry patches the stored record.
+    await flushAll();
+    const expired = await expirePartyModifiers(ids, { kind: 'encounterEnd' });
+    for (const { characterName, expired: mods } of expired) {
+      // The active character's in-memory copy would otherwise autosave the
+      // expired modifiers straight back.
+      if (activeCharacterIdRef.current) {
+        const ids2 = new Set(mods.map(m => m.id));
+        updateCharacter(current => ({
+          tempModifiers: (current.tempModifiers ?? []).filter(m => !ids2.has(m.id)),
+        }));
+      }
+      showToast(`${characterName}: ${mods.map(m => m.label).join(', ')} expired`);
+    }
+  }, [partyCharacterIds, updateCharacter, showToast]);
+
   const refreshPartyResources = useCallback(async () => {
-    const memberIds = (activeParty?.members ?? [])
-      .map(m => m.linkedCharacterId)
-      .filter((id): id is string => Boolean(id));
+    const memberIds = partyCharacterIds();
 
     // Any edit still sitting in the active character's autosave debounce has to
     // land before we read, or the refresh computes against a stale record and
@@ -392,8 +431,20 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         const character = await characterRepository.getById(id);
         if (!character) continue;
         const system = await systemRepository.getById(character.systemId);
-        const refresh = sessionRefreshPatch(system, character);
-        if (!refresh) continue;
+        // Expire session-length modifiers at the same moment resources refill.
+        // Before `timeUnits[].expiresOn` the only expiry path was pressing a
+        // Dragonbane rest button, so a session-long buff in Traveller or Savage
+        // Worlds — neither of which has a rest ladder — never ended at all.
+        const { expiring, remaining } = modifiersEndingOn(
+          character,
+          getEngine(system ?? undefined),
+          { kind: 'sessionStart' },
+        );
+        const refresh = {
+          ...(sessionRefreshPatch(system, character) ?? {}),
+          ...(expiring.length > 0 ? { tempModifiers: remaining } : {}),
+        };
+        if (Object.keys(refresh).length === 0) continue;
         // patch, not save: a whole-record put would revert anything changed
         // between the read above and this write.
         await characterRepository.patch(id, () => refresh);
@@ -624,6 +675,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         resumeSession,
         setActiveCampaign,
         refreshParty,
+        expireEncounterModifiers,
       }}
     >
       {children}
