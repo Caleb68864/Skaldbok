@@ -1,6 +1,6 @@
 {
   "id": "savage-worlds",
-  "version": 5,
+  "version": 6,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
   "attributes": [
@@ -171,6 +171,15 @@
       }
     }
   ],
+  "creatures": {
+    "healthStatId": "hp",
+    "armorStatId": "armor",
+    "statFields": [
+      { "id": "hp", "label": "Wounds", "abbr": "Wounds", "summary": true },
+      { "id": "armor", "label": "Armor", "abbr": "Armor", "summary": true },
+      { "id": "movement", "label": "Pace", "abbr": "Pace", "summary": true }
+    ]
+  },
   "resources": [
     {
       "id": "wounds",

@@ -94,7 +94,8 @@ describe('engine vocabulary is not hardcoded in shared UI', () => {
     expect(
       offenders,
       `${relative(process.cwd(), file)} hardcodes a health noun. Read it from ` +
-        `engine.labels (participantHealth / creatureHealth) so a Traveller ` +
+        `engine.labels.participantHealth, or creatureStatLabel() for a ` +
+        `creature stat, so a Traveller ` +
         `encounter says END:\n` +
         offenders.map(o => `  line ${o.number}: ${o.line}`).join('\n'),
     ).toEqual([]);

@@ -6,7 +6,7 @@ import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
 import { useSystemEngineFor } from '../systems/engine';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
-import { partitionCreatureStats, resolveCreatureStatFields } from '../bestiary/creatureStats';
+import { partitionCreatureStats, resolveCreatureStatFields, creatureStatLabel, resolveCreatureHealthStatId } from '../bestiary/creatureStats';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
@@ -213,8 +213,8 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setCurrentHp(e.target.value)}
               onBlur={linkedCharacter ? handleLinkedHealthBlur : handleHpBlur}
               className={inputClass}
-              aria-label={engine.labels.creatureHealth}
-              placeholder={engine.labels.creatureHealth}
+              aria-label={creatureStatLabel(system, resolveCreatureHealthStatId(system))}
+              placeholder={creatureStatLabel(system, resolveCreatureHealthStatId(system))}
             />
           </div>
           <div>

@@ -33,6 +33,33 @@ export function resolveCreatureStatFields(
 }
 
 /**
+ * The heading for one creature stat, from the fields the system declares.
+ *
+ * @remarks
+ * There were two sources for these three headings and they disagreed. Traveller's
+ * `statFields` said "Hits" / "Armour" / "Speed (m)" while the engine's
+ * `labels.creatureHealth` / `creatureArmor` / `creatureMovement` said "END" /
+ * "Armour" / "Mv" — for the same system, on adjacent screens. Savage Worlds had
+ * the same split: "HP" on the bestiary card, "Wounds" in the encounter view.
+ *
+ * `statFields` wins because it is where the ruleset already describes its own
+ * creature block, and because every other bestiary surface reads it.
+ *
+ * @param system - The active definition.
+ * @param statId - Stat to label.
+ * @param options - `short` prefers the compact form for dense rows.
+ */
+export function creatureStatLabel(
+  system: SystemDefinition | null | undefined,
+  statId: string,
+  options?: { short?: boolean },
+): string {
+  const field = resolveCreatureStatFields(system).find(f => f.id === statId);
+  if (!field) return statId.toUpperCase();
+  return options?.short ? (field.abbr ?? field.label) : field.label;
+}
+
+/**
  * Id of the stat an encounter participant's health is seeded from.
  *
  * @remarks

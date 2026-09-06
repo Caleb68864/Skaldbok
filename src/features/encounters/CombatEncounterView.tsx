@@ -18,6 +18,7 @@ import {
   readCreatureStat,
   resolveCreatureArmorStatId,
   resolveCreatureHealthStatId,
+  creatureStatLabel,
 } from '../bestiary/creatureStats';
 import { useSessionLog } from '../session/useSessionLog';
 import { useSessionRefreshSafe } from '../session/SessionRefreshContext';
@@ -50,11 +51,14 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   // ParticipantDrawer — opened from this very list — already read the engine
   // label, so a Traveller encounter contradicted itself between the row and
   // the drawer it opens.
-  const engine = useSystemEngineFor(activeCampaign?.system);
   const { system: campaignSystem } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const healthStatId = resolveCreatureHealthStatId(campaignSystem);
   const armorStatId = resolveCreatureArmorStatId(campaignSystem);
-  const healthNoun = engine.labels.creatureHealth;
+  // One source for these headings: the stat fields the system declares. The
+  // engine carried a parallel `labels.creature*` trio that disagreed with them
+  // — Traveller said "Hits" on the bestiary card and "END" here, for the same
+  // creature.
+  const healthNoun = creatureStatLabel(campaignSystem, healthStatId);
   const [encounter, setEncounter] = useState<Encounter>(initialEncounter);
   const [selectedParticipant, setSelectedParticipant] = useState<EncounterParticipant | null>(null);
   const [templateCache, setTemplateCache] = useState<Record<string, CreatureTemplate>>({});
@@ -361,7 +365,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
                     <div className="flex items-center gap-3">
                       {template && (
                         <span className="text-[var(--color-text-muted)] text-[10px]">
-                          {engine.labels.creatureArmor} {readCreatureStat(template, armorStatId)}
+                          {creatureStatLabel(campaignSystem, armorStatId, { short: true })} {readCreatureStat(template, armorStatId)}
                         </span>
                       )}
                       {p.instanceState.currentHp !== undefined && (
@@ -454,9 +458,9 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
           onSubmit={handleQuickCreate}
           onCancel={() => setShowQuickCreate(false)}
           labels={{
-            health: engine.labels.creatureHealth,
-            armor: engine.labels.creatureArmor,
-            movement: engine.labels.creatureMovement,
+            health: creatureStatLabel(campaignSystem, healthStatId),
+            armor: creatureStatLabel(campaignSystem, armorStatId),
+            movement: creatureStatLabel(campaignSystem, 'movement'),
           }}
         />
       )}
