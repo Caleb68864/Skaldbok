@@ -751,6 +751,37 @@ export interface SystemEngine {
     /** Flat cost of a level-0 trick / cantrip, used instead of the `0` that
      * `level * costPerLevel` would give. */
     trickCost: number;
+    /**
+     * How many spells the character may keep prepared, or `undefined` when the
+     * system does not limit it.
+     *
+     * @remarks
+     * The magic screen called `computeMaxPreparedSpells`, which reads
+     * `attributes['int']` and runs it through Dragonbane's base-chance table —
+     * a Dragonbane rule applied to whatever system happened to be open.
+     */
+    maxPrepared?: (character: CharacterRecord) => number;
+    /**
+     * Why casting is impaired right now, in this ruleset's words, or `null`.
+     *
+     * @remarks
+     * Dragonbane's "metal armour blocks casting". The screen imported
+     * `isMetalEquipped` directly and rendered its own warning, so every system
+     * with magic inherited the rule whether or not it has it.
+     */
+    castingImpairment?: (character: CharacterRecord) => string | null;
+    /**
+     * School names that mark a spell as a trick, lowercased.
+     *
+     * @remarks
+     * Tricks were detected as `school.toLowerCase().includes('trick')` in three
+     * places — a naming convention in the bundled content, treated as a rule. A
+     * system whose cantrips are called something else got none of the trick
+     * handling; one with a school legitimately containing the word got it by
+     * accident. An explicit `powerLevel` of 0 still marks a trick in every
+     * system, which is the part that is genuinely general.
+     */
+    trickSchools?: string[];
   } | null;
   /**
    * How this system measures what a character can carry, or `null` when it does

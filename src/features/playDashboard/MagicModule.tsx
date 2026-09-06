@@ -2,16 +2,12 @@ import { useState } from 'react';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nowISO } from '../../utils/dates';
-import { compareSpellsByRankThenName, formatCastingTime } from '../../utils/spells';
+import { compareSpellsByRankThenName, formatCastingTime, isMagicTrick } from '../../utils/spells';
 import { toSpells } from '../../utils/abilities';
 import { clamp, type PlayModuleProps } from './types';
 import { useToast } from '../../context/ToastContext';
 import { getEngine } from '../systems/engine';
 import { cn } from '../../lib/utils';
-
-function isMagicTrick(powerLevel: number, school: string): boolean {
-  return powerLevel === 0 || school.toLowerCase().includes('trick');
-}
 
 /**
  * Prepared-spell caster panel. The pool spent, its cost curve, and the trick
@@ -53,7 +49,10 @@ export function MagicModule({ character, system, updateCharacter }: PlayModulePr
     <SectionPanel title={`Prepared ${engine.terms.spells}`} collapsible defaultOpen>
       <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr))]">
         {spells.map(spell => {
-          const trick = isMagicTrick(spell.powerLevel, spell.school);
+          // The shared helper, with the system's own trick schools. This module
+          // had a private copy testing `school.includes('trick')`, so the two
+          // surfaces could disagree about what a trick is.
+          const trick = isMagicTrick(spell, magic?.trickSchools);
           const powerLevel = powerLevels[spell.id] ?? 1;
           const cost = trick ? magic.trickCost : powerLevel * magic.costPerLevel;
           return (

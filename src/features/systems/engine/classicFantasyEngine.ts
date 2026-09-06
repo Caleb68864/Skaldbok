@@ -2,9 +2,11 @@ import {
   computeCarriedWeight,
   computeDerivedValues,
   computeEncumbranceLimit,
+  computeMaxPreparedSpells,
   computeSkillValue,
   effectiveAttribute,
 } from '../../../utils/derivedValues';
+import { isMetalEquipped } from '../../../utils/metalDetection';
 import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../../utils/boonBane';
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
@@ -245,7 +247,20 @@ export const classicFantasyEngine: SystemEngine = {
   damageTrack: null,
   // Willpower economy: a power level `n` spell costs `n * 2` WP; a magic trick
   // (power level 0) costs 1. Was hardcoded in the ability/magic modules. E11.
-  magic: { resourceId: 'wp', powerLevels: [1, 2, 3], costPerLevel: 2, trickCost: 1 },
+  magic: {
+    resourceId: 'wp',
+    powerLevels: [1, 2, 3],
+    costPerLevel: 2,
+    trickCost: 1,
+    // INT's base chance caps prepared spells. Was computed by the magic screen
+    // for every system, Dragonbane rule and all.
+    maxPrepared: computeMaxPreparedSpells,
+    // Metal armour blocks casting. The screen imported the check directly and
+    // wrote its own warning, so every magical system inherited the rule.
+    castingImpairment: character =>
+      isMetalEquipped(character) ? 'Metal armour blocks spellcasting' : null,
+    trickSchools: ['trick', 'magic tricks'],
+  },
   encumbrance: {
     limit: computeEncumbranceLimit,
     load: computeCarriedWeight,
