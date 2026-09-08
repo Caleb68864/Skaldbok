@@ -428,7 +428,7 @@ export default function SheetScreen() {
     if (!character) return;
     const newMod: TempModifier = {
       ...partial,
-      id: crypto.randomUUID(),
+      id: generateId(),
       createdAt: nowISO(),
     };
     updateCharacter({ tempModifiers: [...(character.tempModifiers ?? []), newMod], updatedAt: nowISO() });

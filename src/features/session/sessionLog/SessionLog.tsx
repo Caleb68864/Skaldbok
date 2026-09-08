@@ -6,6 +6,7 @@ import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useToast } from '../../../context/ToastContext';
 import * as noteRepository from '../../../storage/repositories/noteRepository';
 import { generateSoftDeleteTxId } from '../../../utils/softDelete';
+import { generateId } from '../../../utils/ids';
 import { createPenObservationTracker, detectPenCapability } from '../../notes/ink/penCapability';
 import { deserializeStrokePage, strokeBounds, type Stroke, type StrokePage } from '../../notes/ink/strokeModel';
 import { textToDoc, docToText } from '../../notes/textToDoc';
@@ -126,7 +127,7 @@ function tabId(): string {
   try {
     const existing = sessionStorage.getItem(KEY);
     if (existing) return existing;
-    const fresh = crypto.randomUUID();
+    const fresh = generateId();
     sessionStorage.setItem(KEY, fresh);
     return fresh;
   } catch {

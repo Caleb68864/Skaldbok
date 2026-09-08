@@ -5,6 +5,7 @@ import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { flushAll } from '../persistence/autosaveFlush';
+import { generateId } from '../../utils/ids';
 import { Button } from '../../components/primitives/Button';
 import { Drawer } from '../../components/primitives/Drawer';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
@@ -389,7 +390,7 @@ export function PartyInventoryTab() {
     } else {
       toItems = [
         ...to.items,
-        { ...item, id: crypto.randomUUID(), quantity: move },
+        { ...item, id: generateId(), quantity: move },
       ];
     }
     // Both halves or neither: these used to be two independent writes, so a

@@ -273,7 +273,7 @@ export default function MagicScreen() {
         byDuration.set(eff.duration, arr);
       }
       const newModifiers: TempModifier[] = Array.from(byDuration.entries()).map(([dur, effs]) => ({
-        id: crypto.randomUUID(),
+        id: generateId(),
         label: spell.name,
         effects: effs.map(e => ({ stat: e.stat, delta: e.delta })),
         duration: dur as TempModifier['duration'],
