@@ -84,13 +84,17 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
   }, [settings.activeCharacterId, settingsLoading]);
 
   const setCharacter = useCallback(async (id: string) => {
+    // Flush FIRST, then read. The flush and the read used to be the other way
+    // round, which quietly undid the edit it was added to protect: re-selecting
+    // the character already open read the row, the flush then wrote the pending
+    // edit to that same row, and the pre-flush snapshot was installed over it.
+    // The sheet reverted to the value the user had just changed away from.
+    //
+    // Mirrors clearCharacter; matters because campaign-switch reconciliation
+    // calls setCharacter in place while the sheet stays mounted.
+    await flushAll();
     const char = await characterRepository.getById(id);
     if (char) {
-      // Flush the outgoing character's pending autosave before switching, so a
-      // debounced edit can't fire against — or be dropped in favour of — the new
-      // character. Mirrors clearCharacter; matters now that campaign-switch
-      // reconciliation calls setCharacter in place while the sheet stays mounted.
-      await flushAll();
       const system = await systemRepository.getById(char.systemId).catch(() => null);
       setCharacterState(normalizeCharacter(char, { system }));
       await updateSettings({ activeCharacterId: id });
