@@ -617,6 +617,12 @@ export class SkaldbokDatabase extends Dexie {
         referenceSections: 'id, category, groupId, order, updatedAt, deletedAt, softDeletedBy',
       })
       .upgrade(upgradeNotesAndClearBackupsToV19);
+    // Attachments join the soft-delete convention. `softDeletedBy` is indexed
+    // because restoring a note has to find every attachment that went down with
+    // it by cascade id, exactly as entity links are restored.
+    this.version(20).stores({
+      attachments: 'id, noteId, campaignId, createdAt, deletedAt, softDeletedBy',
+    });
   }
 }
 

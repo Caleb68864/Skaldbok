@@ -64,7 +64,11 @@ beforeAll(async () => {
 describe('opening a v18 database with the shipped schema', () => {
   it('upgrades without throwing', () => {
     expect(db.isOpen()).toBe(true);
-    expect(db.verno).toBe(19);
+    // Past v18 and onto whatever the client currently declares. Pinning the
+    // exact number made every later `version(n)` block fail this test for a
+    // reason unrelated to what it checks, which is that the v19 upgrade does
+    // not brick the open.
+    expect(db.verno).toBeGreaterThanOrEqual(19);
   });
 
   it('backfills the legacy reference note', async () => {

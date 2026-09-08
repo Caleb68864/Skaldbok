@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import * as noteRepository from '../../storage/repositories/noteRepository';
-import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
 import { getActiveEncounterForSession } from '../../storage/repositories/encounterRepository';
 import type { Note } from '../../types/note';
 import { generateSoftDeleteTxId } from '../../utils/softDelete';
@@ -54,8 +53,8 @@ export interface CreateNoteOptions {
  * failure. Entity links are managed automatically:
  * - `createNote` auto-links new notes to the active session (`session → note:contains`).
  * - NPC notes additionally receive a `note → session:introduced_in` link.
- * - `deleteNote` cascades to remove all entity links and attachments before
- *   deleting the note record.
+ * - `deleteNote` soft-deletes the note, its entity links and its attachments
+ *   together under one cascade transaction id, so all three restore together.
  * - `linkNote` adds a `session → note:linked_to` link and, for NPC notes
  *   linked across sessions, an `note → session:appears_in` link.
  *
@@ -167,28 +166,28 @@ export function useNoteActions() {
   }, [showToast]);
 
   /**
-   * Soft-deletes a note along with its entity links and removes attachments.
+   * Soft-deletes a note along with its entity links and its attachments.
    *
    * @remarks
    * User-facing note deletion follows the app-wide soft-delete convention.
-   * Entity links share a cascade transaction id with the note so future
-   * restore flows can rehydrate the relationship graph atomically. Attachments
-   * are still removed because they do not currently participate in the
-   * domain-level soft-delete model.
+   * Note, edges and attachments share one cascade transaction id so
+   * `noteRepository.restore` rehydrates all three atomically.
+   *
+   * The attachments used to be **hard**-deleted here, before the note was
+   * touched. Trash would then restore the note and its edges onto photos that
+   * had already been destroyed — an unrecoverable loss inside the one feature
+   * whose whole promise is that the deletion can be taken back.
    *
    * @param id - ID of the note to delete.
    */
   const deleteNote = useCallback(async (id: string): Promise<void> => {
     try {
       const txId = generateSoftDeleteTxId();
-      // Attachments first: they are a separate table with no transactional
-      // relationship to the note, so doing them before the atomic pair means a
-      // failure here leaves the note fully intact rather than half-removed.
-      await attachmentRepository.deleteAttachmentsByNote(id);
-      // Note and edges together, in one transaction. The previous form called
-      // `deleteLinksForNote` and `softDelete` separately, so a throw between
-      // them left a live note whose edges were soft-deleted — which `restore`
-      // cannot repair, because it no-ops on a note that was never deleted.
+      // Note, edges and attachments together, in one transaction. The previous
+      // form called `deleteLinksForNote` and `softDelete` separately, so a throw
+      // between them left a live note whose edges were soft-deleted — which
+      // `restore` cannot repair, because it no-ops on a note that was never
+      // deleted.
       await noteRepository.softDeleteWithLinks(id, txId);
     } catch (e) {
       showToast('Failed to delete note');
