@@ -91,13 +91,70 @@ describe('normalizeCharacter attributes', () => {
 });
 
 describe('normalizeCharacter skills', () => {
-  it('clamps to the ceiling the caller supplies', () => {
+  const wideSkill = (value: number): CharacterRecord => ({
+    ...createBlankCharacter('classic-fantasy'),
+    skills: { axes: { value, trained: false, dragonMarked: false, demonMarked: false } },
+  } as unknown as CharacterRecord);
+
+  it('clamps to the range the caller supplies', () => {
+    expect(normalizeCharacter(wideSkill(99), { skillRange: { min: 0, max: 5 } }).skills.axes.value).toBe(5);
+  });
+
+  it('leaves a value alone when no ruleset declares a range', () => {
+    // The default used to be `0..20` — Dragonbane's ladder, applied on every
+    // save. A user-authored percentile system was truncated from 75 to 20 with
+    // no message, in the app whose headline feature is authoring your own
+    // system.
+    expect(normalizeCharacter(wideSkill(75)).skills.axes.value).toBe(75);
+  });
+
+  it('still coerces a malformed skill value to a number', () => {
     const character = {
       ...createBlankCharacter('classic-fantasy'),
-      skills: { axes: { value: 99, trained: false, dragonMarked: false, demonMarked: false } },
+      skills: { axes: { value: 'not a number', trained: false, dragonMarked: false, demonMarked: false } },
     } as unknown as CharacterRecord;
+    expect(normalizeCharacter(character).skills.axes.value).toBe(0);
+  });
+});
 
-    expect(normalizeCharacter(character, { skillMax: 5 }).skills.axes.value).toBe(5);
-    expect(normalizeCharacter(character).skills.axes.value).toBe(20);
+describe('normalizeCharacter wealth', () => {
+  const withWealth = (wealth: Record<string, unknown>): CharacterRecord =>
+    ({ ...createBlankCharacter('classic-fantasy'), wealth } as unknown as CharacterRecord);
+
+  it('keeps an amount past the old six-digit ceiling', () => {
+    // 999,999 is a plausible Dragonbane hoard and roughly one Traveller trade
+    // run. The literal truncated the purse on every save, silently.
+    expect(normalizeCharacter(withWealth({ credits: 2_400_000 })).wealth.credits).toBe(2_400_000);
+  });
+
+  it('still rejects negatives and non-numbers', () => {
+    const out = normalizeCharacter(withWealth({ credits: -50, silver: 'lots' }));
+    expect(out.wealth.credits).toBe(0);
+    expect(out.wealth.silver).toBe(0);
+  });
+});
+
+describe('normalizeCharacter resources', () => {
+  const withResources = (resources: Record<string, unknown>): CharacterRecord =>
+    ({ ...createBlankCharacter('classic-fantasy'), resources } as unknown as CharacterRecord);
+
+  it('keeps a pool past the old three-digit ceiling', () => {
+    const out = normalizeCharacter(withResources({ hp: { current: 4000, max: 5000 } }));
+    expect(out.resources.hp).toEqual({ current: 4000, max: 5000 });
+  });
+
+  it('holds current inside the pair, which is structural rather than a ruleset rule', () => {
+    const out = normalizeCharacter(withResources({ hp: { current: 99, max: 10 } }));
+    expect(out.resources.hp).toEqual({ current: 10, max: 10 });
+  });
+
+  it('takes the floor from the resource definition when the system declares one', () => {
+    const system = {
+      id: 'custom',
+      attributes: [],
+      resources: [{ id: 'morale', name: 'Morale', min: 5, defaultMax: 20 }],
+    } as unknown as SystemDefinition;
+    const out = normalizeCharacter(withResources({ morale: { current: 0, max: 20 } }), { system });
+    expect(out.resources.morale).toEqual({ current: 5, max: 20 });
   });
 });
