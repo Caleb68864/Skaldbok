@@ -6,7 +6,18 @@ consistency** (rules that still live in screens or in one ruleset's helpers
 instead of the `SystemEngine`), and **functionality / storage conventions**
 (workstreams A–G). A second pass added **product gaps and reachability**,
 **build, tooling, tests and performance**, and **documentation drift**
-(workstreams H–J). Nothing in this document has been fixed yet.
+(workstreams H–J).
+
+> **Reconciled 2026-09-08** by a five-pass re-audit (notes in `vault/`,
+> gitignored; cross-project view in `../../../ROADMAP.md`). Two entries were
+> checked against the tree and found wrong rather than merely stale:
+> **H1 is withdrawn** (the Knowledge Base is reachable from the Session tab)
+> and **H3 is rescoped** (four entity types already restore, not one). Acting
+> on either as originally written would have deleted a live feature or
+> mis-scoped the work. Baseline on that date: `tsc -b` clean, `vitest run`
+> 1483 tests green across 86 files, `vite build` passing. The many **DONE**
+> markers below were added as that work landed and were not re-verified in
+> this pass.
 
 Status values: **OPEN** · **DONE** (record the commit) · **BLOCKED** (needs a
 product decision) · **WONTFIX** (record why).
@@ -710,19 +721,24 @@ For each repository with `softDelete`: delete → not in default reads → resto
 Findings from the second sweep: features that exist in code but cannot be
 reached, and safety or UX gaps that no single bug explains.
 
-### H1. The Knowledge Base is unreachable from the UI — OPEN (V)
-- **Where:** `src/routes/index.tsx:82-83` mounts `/kb` and `/kb/:nodeId`. The
-  only `navigate('/kb')` calls are inside the feature itself
-  (`src/features/kb/VaultBrowser.tsx:326,362`, `GraphView.tsx:273`). None of
-  the four navigation surfaces link to it: `BottomNav.tsx:14-16` (three tabs),
-  `CampaignHeader.tsx:186-221` (ships, settings, reference, library, profile),
-  `SessionSubNav.tsx:32-34,89` (session, log, ledger, route), `MoreScreen.tsx`.
-- **What:** `KnowledgeBaseScreen`, `VaultBrowser`, `NoteReader`, `GraphView`,
-  the d3 graph renderer and the `useKBSearch` MiniSearch index (~2 000 lines
-  and three d3 packages) are only reachable by typing the URL.
-- **Fix:** Either add it to the header menu / session sub-nav, or, if session
-  notes have superseded it, delete the feature and the d3 dependencies.
-  Decide before spending any more effort on it.
+### H1. The Knowledge Base is unreachable from the UI — WITHDRAWN (2026-09-08 audit)
+**This finding was wrong and no work should be scheduled against it.** The
+Knowledge Base *is* reachable without typing a URL. `SessionScreen.tsx:290`
+mounts `<VaultBrowser campaignId={...} compact />` (and again at `:600`), and
+`VaultBrowser`'s compact branch renders an "Open Knowledge Base →" button that
+calls `navigate('/kb')`. The original entry read the `navigate('/kb')` call
+sites as internal to the feature; the relevant fact is that the *component
+containing them* is mounted on the Session tab, so the path from a running app
+to `/kb` exists and is two taps.
+
+Verified 2026-09-08: `SessionScreen.tsx:14,290,600,603`,
+`VaultBrowser.tsx:314-326`, `KnowledgeBaseScreen.tsx:18,111`.
+
+The genuine orphan the entry was reaching for is **`MoreScreen`**, which really
+does have no link site — `/more` appears only as its own route definition at
+`routes/index.tsx:103`. That is already H2's territory; H2 stands and is where
+this belongs. Do not delete the KB feature or the d3 dependencies on the
+strength of this entry.
 
 ### H2. Navigation is five hand-maintained lists, one of them dead — OPEN (V)
 - **Where:** `BottomNav.tsx:14-16`, `CampaignHeader.tsx:186-221`,
@@ -737,9 +753,16 @@ reached, and safety or UX gaps that no single bug explains.
   surface) read through a hook, per the configuration rule. Delete
   `MoreScreen`. This is the natural home for the A8 bottom-nav toggles.
 
-### H3. Every soft-deleted entity except creatures is unrestorable — OPEN (V)
-Extends G5 with the list. Repositories that implement `restore` but have no UI
-calling it: `session`, `party` / `partyMember`, `ship`, `route`, `routePlan`,
+### H3. Many soft-deleted entities are unrestorable — OPEN, RESCOPED (2026-09-08 audit)
+**The original title and premise were stale.** Four types restore from the
+trash screen today, not one: `TrashScreen.tsx:80,91,102,113` wires Restore for
+characters, sessions, notes **and** creatures, and its empty-state text at
+`:172` says so. Sessions in particular are listed below as unrestorable and are
+not. The remaining work is real but smaller than written — re-verify each type
+below against `TrashScreen.tsx` before scoping.
+
+Repositories that implement `restore` but have no UI
+calling it (list as originally written, now known to over-count): `session`, `party` / `partyMember`, `ship`, `route`, `routePlan`,
 `ledger`, `ledgerSplit`, `ledgerAccount`, `recurringBill`,
 `inventoryContainer`, `referenceSection` (`restoreGroup` too). Callers of
 `restore` outside `storage/`: `TrashScreen.tsx:31` (creatures),
@@ -776,12 +799,16 @@ is a hard delete from the user's point of view.
 - **Fix:** A `useConfirm()` hook over the existing Modal primitive; a small link
   popover for Tiptap.
 
-### H6. Pinch zoom is disabled — OPEN (V)
+### H6. Pinch zoom is disabled — DONE (a41d237)
 - **Where:** `index.html:8` `maximum-scale=1.0, user-scalable=no`.
 - **What:** Fails WCAG 1.4.4 on Android (iOS ignores the attribute). For a
   tablet app with small stat tiles this matters.
 - **Fix:** Drop both attributes; use `touch-action: manipulation` on buttons to
   kill the double-tap delay instead.
+- **Closed:** Both attributes dropped, `viewport-fit=cover` added while the tag
+  was open. `src/pwa/viewport.test.ts` asserts neither property returns — this
+  is a line that gets re-added by reflex, as the standard cure for iOS
+  focus-zoom on inputs (the actual cure being a 16px input font size).
 
 ### H7. One error boundary for the whole app — OPEN (V)
 - **Where:** `src/app/App.tsx:20` wraps the routes in the only `ErrorBoundary`
@@ -814,7 +841,7 @@ is a hard delete from the user's point of view.
   is a per-mount index built with `addAllAsync`. KB nodes are synced from notes
   by `linkSyncEngine` (`noteRepository.ts:12-15`).
 - **Fix:** One search service, built once, incrementally maintained, exposed to
-  both screens. Relevant only if H1 keeps the KB.
+  both screens. (H1 is withdrawn — the KB is staying, so this applies.)
 
 ---
 
@@ -913,11 +940,16 @@ is a hard delete from the user's point of view.
   diagnostics" button on Settings that dumps it with app version, schema
   version and `storage.estimate()`.
 
-### I10. No continuous integration — OPEN (V)
+### I10. No continuous integration — DONE (bfdf641)
 - **Where:** No `.github/` directory; nothing runs `tsc -b`, `vitest` or the
   Playwright script on push.
 - **Fix:** One workflow: `npm ci`, `npm run build`, `npm test`. Add `lint`
   once I1 lands.
+- **Closed:** `.github/workflows/ci.yml` runs `npx tsc -b`, `npx vitest run` and
+  `npx vite build` on every branch push and pull request, typecheck first
+  because it is fastest and fails most often. The Playwright script is not
+  wired in — see I11, it does not run unattended in its current shape. Add
+  `lint` here once I1 lands.
 
 ### I11. The E2E suite is a stale Python script with a committed report — OPEN (V)
 - **Where:** `tests/e2e_full_test.py` (last touched 2026-07-30) still describes
@@ -955,6 +987,110 @@ is a hard delete from the user's point of view.
 
 ---
 
+## Workstream K — Closed by the 2026-09-08 audit pass
+
+Findings from the re-audit that had no entry above, fixed in the same pass.
+Each was re-verified against the source before it was touched; every one of the
+ten in the brief was real. Each fix has a test that fails without it unless the
+line says otherwise.
+
+### K1. The campaign export was not a complete backup — DONE (cf471d7)
+- **Where:** `types/bundle.ts` and `utils/export/collectors.ts`.
+- **What:** `StorageSafetyCard.tsx:102` calls a campaign export "the only copy
+  that survives this device". It omitted **twelve of the twenty-six Dexie
+  tables**: `ships`, `ledgerEntries`, `ledgerAccounts`, `ledgerSplits`,
+  `recurringBills`, `routeStops`, `routePlans`, `kb_nodes`, `kb_edges`,
+  `referenceSections`, `referenceGroups`, and `systems`. A user-authored ruleset
+  in particular exists only in the local `systems` table, so a restore pointed
+  the campaign at a system the new device had never seen.
+- **Cause:** four hand-maintained copies of the entity-type list — the bundle
+  schema, the collector, the merge engine, and the import dialog's labels.
+- **Fix:** one registry, `types/bundleTables.ts`, that all four read, recording
+  both the mapping and the reason each excluded table (`appSettings`,
+  `metadata`, the legacy `referenceNotes`) stays behind.
+
+### K2. Nothing enforced Dexie-schema ↔ bundle-schema parity — DONE (cf471d7)
+- **What:** K1's real cause, and the reason it would have recurred on the next
+  table.
+- **Fix:** `utils/export/bundleParity.test.ts` walks `db.tables` at runtime and
+  fails on any table that is neither mapped into a bundle nor excluded with a
+  stated reason; seeds one row in every mapped table and fails if
+  `collectCampaignBundle` does not emit it; and runs a full export → wipe →
+  import round trip asserting every table comes back. A mapping with no
+  collector behind it fails as loudly as no mapping. Also pins that collection
+  is read-only — `ledgerSplitRepository` and `routePlanRepository` gained
+  `listByCampaign` because their only read path, `getOrCreateForCampaign`,
+  writes on a miss.
+- **Related:** this is most of **F5** (the import path now has round-trip
+  coverage for every entity type), though F5's four specific B-series cases are
+  still unwritten.
+
+### K3. Deleting a note hard-deleted its attachments — DONE (e092476)
+- **Where:** `useNoteActions.ts:187`, `attachmentRepository.ts:105`.
+- **What:** Trash restored the note and its edges; the photos were already
+  gone. Unrecoverable loss inside the one feature whose promise is that the
+  deletion can be taken back.
+- **Fix:** attachments carry `deletedAt`/`softDeletedBy` (schema `version(20)`
+  indexes both) and cascade inside `noteRepository.softDeleteWithLinks` under
+  the note's own transaction id. `deleteAttachment` stays a hard delete on
+  purpose — that is the per-photo remove control, where freeing the space is
+  the point. This is one entity type's worth of **F6**.
+
+### K4. `normalizeCharacter` capped money, skills and resources — DONE (49a541f)
+- **Where:** `utils/characterNormalization.ts`.
+- **What:** every save clamped money to 999,999, skills to 20 and resource pools
+  to 999. All three were literals. A Traveller purse at 2.4 million credits was
+  rewritten on the next save, and a user-authored percentile system lost every
+  skill above 20 — in the app whose headline feature is authoring your own
+  system.
+- **Fix:** bounds come from the system definition where it states them
+  (`ResourceDefinition.min`) and nowhere else; `skillMax` becomes `skillRange`
+  and has no default. This closes the A4 caveat recorded under Progress below.
+
+### K5. Five call sites bypassed `generateId()` — DONE (e95b966)
+- **Where:** `ToastContext.tsx:53`, `SheetScreen.tsx:431`, `MagicScreen.tsx:276`,
+  `PartyInventoryTab.tsx:392`, `SessionLog.tsx:129`.
+- **What:** `ids.ts` exists because `crypto.randomUUID` is undefined over the
+  project's own documented plain-http LAN tablet flow. One of the five was
+  `showToast`, so on that flow the app threw on every toast — including the
+  toast reporting the error that caused it.
+- **Fix:** all five call `generateId()`; `utils/ids.test.ts` scans `src` so the
+  fallback protects code not yet written.
+
+### K6. `setCharacter` read the record before flushing autosave — DONE (56eb4c5)
+- **Where:** `ActiveCharacterContext.tsx:87-95`.
+- **What:** the read saw the pre-flush row, the flush then wrote the pending
+  edit to that same row, and the stale snapshot went into state on top of it —
+  reverting the edit the flush existed to protect.
+- **Fix:** flush, then read. **Untested**: this is a React hook callback and
+  there is no DOM test environment here (see I5), so there is nothing to mount
+  it in. Recorded rather than faked.
+
+### K7. `creatureTemplateRepository.getDeleted` was unscoped — DONE (e014a71)
+- **What:** it read the whole table, so a creature deleted in one campaign
+  appeared in another campaign's Trash — and restoring it there put it back
+  where the GM who deleted it was not looking.
+- **Fix:** takes a `campaignId`, matching `sessionRepository.getDeleted` and
+  `noteRepository.getDeleted`.
+
+### K8. Five encounter writes bypassed the repository's soft-delete guard — DONE (444d984)
+- **Where:** `useEncounter.ts` — description, body, summary, tags, location.
+- **What:** each skipped both things `encounterRepository.update` exists for:
+  the `deletedAt` check, so an autosave landing after deletion wrote into a
+  tombstoned row nobody can reach; and the single read-modify-write
+  transaction. `updateParticipant` in the same hook always used the repository,
+  which is why the guard was tested there and absent here. CLAUDE.md states the
+  rule these broke: hooks call repositories, never the Dexie tables.
+- **Fix:** all five delegate. The two participant paths in the same hook need
+  their own transaction (they touch `entityLinks` too) and now make the
+  `deletedAt` check themselves.
+- **Still open:** four further direct writers of the same shape outside this
+  hook — `CombatEncounterView.tsx:274`, `addPartyCharactersToEncounter.ts:79`,
+  `BestiaryScreen.tsx:399`, `useSessionEncounter.ts:177`. Same bug class, left
+  as out of scope for that pass.
+
+---
+
 ## Suggested order of attack
 
 Each line is a self-contained change that can ship on its own and be verified
@@ -980,9 +1116,10 @@ with `npm run build` + `npm test` + a walk through the app.
 14. **E1–E6** the data-into-JSON refactor. Best done after D-work so the
     adapters are already thin.
 15. **A8–A10, G** as filler.
-16. **H1** decide the Knowledge Base's fate before any other H work, then
-    **H2** the navigation catalogue (absorbs A8's toggles) and **H3** the
-    generic trash screen.
+16. **H1 is withdrawn** — the KB is reachable, so there is no fate to decide.
+    Go straight to **H2** the navigation catalogue (absorbs A8's toggles, and
+    is where the genuinely orphaned `MoreScreen` is dealt with), then **H3**
+    the generic trash screen — rescoped, since four types already restore.
 17. **I1 + I10** linter and CI first, so **I3, I4, I6** are one-time fixes
     that stay fixed. **I8** is a one-line delete; do it with I1.
 18. **H4** backup banner and snapshots, **H7** shell-level error boundary,
@@ -1004,7 +1141,11 @@ D1–D12 (two small parts remain, below), F1–F4. Workstream D is effectively
 finished; workstream B is finished apart from **B10**, the unvalidated
 reference-import JSON. Step 14 is next — **E1 to E6**, moving adapter data into
 JSON, which the D-work has already made easier by thinning the adapters.
-Workstreams G, H, I and J remain untouched.
+
+The 2026-09-08 audit pass then closed **workstream K** (eight findings that had
+no entry here, including the incomplete export and the parity test that keeps it
+complete), plus **H6** and **I10**. Workstreams G, H, I and J are otherwise
+untouched.
 
 What step 13 deliberately left:
 
@@ -1052,11 +1193,13 @@ Seven things a future reader should know before picking up the rest:
   client, and a policy loosened for the dev server is not the policy that ships.
   It is verified by running the Playwright suite against `npm run preview`.
 
-- **A7 and B8 shipped as part of the same `version(19)` block as A6.** A future
-  schema change adds `version(20)`; do not edit 19.
-- **A4 left the skill clamp at 20.** Attribute bounds now come from the system
-  definition, but the skill ceiling is still a default rather than
-  `engine.skill.range.max`, because `engine/index` imports
-  `ActiveCharacterContext`, which imports the normaliser — reading the engine
-  there closes a cycle. `normalizeCharacter` takes a `skillMax` option for a
-  caller that holds an engine; nothing passes it yet.
+- **A7 and B8 shipped as part of the same `version(19)` block as A6.**
+  `version(20)` is now taken too — K3's attachment soft-delete indexes. A future
+  schema change adds `version(21)`; do not edit either.
+- **A4 left the skill clamp at 20. K4 removed it** (49a541f). The cycle
+  described here is real and unchanged — `engine/index` imports
+  `ActiveCharacterContext`, which imports the normaliser — so the resolution was
+  not to reach for the engine but to stop inventing a ceiling: with no declared
+  range there is now no cap, exactly as `normalizeAttribute` already treated an
+  undeclared attribute. The option is `skillRange` rather than `skillMax`, and
+  still nothing passes it.
