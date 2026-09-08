@@ -151,12 +151,22 @@ export async function restore(id: string): Promise<void> {
 }
 
 /**
- * Returns every soft-deleted creature template, sorted by most-recent
- * deletion first. Used by TrashScreen to populate the restore UI.
+ * Soft-deleted creature templates for one campaign, most recently deleted
+ * first. Feeds the Trash screen.
+ *
+ * @remarks
+ * The scope used to be every campaign at once, so a creature deleted while
+ * running one game appeared in another game's Trash — and restoring it there
+ * put it back in the campaign it came from, where the GM was not looking.
+ * Bestiary reads have always been per-campaign (`listByCampaign`); this is the
+ * one that was not, matching `sessionRepository.getDeleted` and
+ * `noteRepository.getDeleted` now.
+ *
+ * @param campaignId - Campaign whose trash is being listed.
  */
-export async function getDeleted(): Promise<CreatureTemplate[]> {
+export async function getDeleted(campaignId: string): Promise<CreatureTemplate[]> {
   try {
-    const rows = await db.creatureTemplates.toArray();
+    const rows = await db.creatureTemplates.where('campaignId').equals(campaignId).toArray();
     return rows
       .filter((r): r is CreatureTemplate => !!(r as CreatureTemplate).deletedAt)
       .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));

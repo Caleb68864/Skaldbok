@@ -64,7 +64,7 @@ export default function TrashScreen() {
       const campaignId = activeCampaign?.id;
       const [characters, creatures, sessions, notes] = await Promise.all([
         characterRepository.getDeleted(),
-        creatureTemplateRepository.getDeleted(),
+        campaignId ? creatureTemplateRepository.getDeleted(campaignId) : Promise.resolve([] as CreatureTemplate[]),
         campaignId ? sessionRepository.getDeleted(campaignId) : Promise.resolve([] as Session[]),
         campaignId ? noteRepository.getDeleted(campaignId) : Promise.resolve([] as Note[]),
       ]);
