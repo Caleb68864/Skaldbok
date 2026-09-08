@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 import { describe, expect, it, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { db } from '../db/client';
 import { create, getById, update, updateParticipant, addParticipant } from './encounterRepository';
 
@@ -85,4 +86,46 @@ describe('update', () => {
     expect(stored?.title).toBe('Ambush at the Ford');
     expect(stored?.location).toBe('Riverside');
   });
+
+  it('will not write to a soft-deleted encounter', async () => {
+    const encounter = await seedEncounter();
+    await db.encounters.update(encounter.id, { deletedAt: '2026-01-01T00:00:00.000Z' });
+
+    expect(await update(encounter.id, { title: 'Resurrected' })).toBeUndefined();
+    const stored = await db.encounters.get(encounter.id);
+    expect(stored?.title).toBe('Ambush');
+  });
+});
+
+/**
+ * The guard above only guards what goes through it.
+ *
+ * @remarks
+ * Five field editors in `useEncounter` wrote `db.encounters.update(...)`
+ * directly — description, body, summary, tags and location. Each skipped both
+ * things this repository method exists for: the soft-delete check, so an
+ * autosave landing after the encounter was deleted wrote content into a
+ * tombstoned row nobody can see; and the single read-modify-write transaction
+ * that keeps two edits in the same tick from discarding one another.
+ * `updateParticipant`, sitting in the same hook, always used the repository —
+ * which is why the guard was tested on that one path and absent on these five.
+ *
+ * The hook is a React hook and there is no DOM test environment here, so this
+ * asserts the wiring in the source rather than the behaviour at runtime. It is
+ * the assertion that fails if any of the five is written by hand again.
+ */
+describe('useEncounter field editors go through this repository', () => {
+  const source = readFileSync('src/features/encounters/useEncounter.ts', 'utf8');
+
+  it.each(['updateDescription', 'updateBody', 'updateSummary', 'updateTags', 'updateLocation'])(
+    '%s calls encounterRepository.update',
+    (fnName) => {
+      // The editor body, from its declaration to the end of its useCallback.
+      const start = source.indexOf(`const ${fnName} = useCallback`);
+      expect(start, `${fnName} not found in useEncounter.ts`).toBeGreaterThan(-1);
+      const body = source.slice(start, source.indexOf('}, [encounterId', start));
+      expect(body).toContain('encounterRepository.update(encounterId');
+      expect(body).not.toContain('db.encounters.update');
+    },
+  );
 });

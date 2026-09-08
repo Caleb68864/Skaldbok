@@ -95,6 +95,11 @@ export function useEncounter(encounterId: string | null) {
       await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
         const enc = await db.encounters.get(encounterId);
         if (!enc) throw new Error(`encounter ${encounterId} not found`);
+        // A tombstoned encounter is invisible in the UI, so writing to one adds
+        // a participant nobody can see or remove. The repository's `update`
+        // refuses this; the participant paths need their own transaction (they
+        // touch entityLinks too), so they have to make the same check.
+        if (enc.deletedAt) return;
 
         const participantType: EncounterParticipant['type'] = isCreature
           ? ((template as CreatureTemplate).category === 'monster' ? 'monster' : 'npc')
@@ -181,7 +186,7 @@ export function useEncounter(encounterId: string | null) {
 
       await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
         const enc = await db.encounters.get(encounterId);
-        if (!enc || !enc.participants) return;
+        if (!enc || enc.deletedAt || !enc.participants) return;
 
         const updatedParticipants = enc.participants.filter((p) => p.id !== participantId);
         await db.encounters.update(encounterId, {
@@ -222,53 +227,49 @@ export function useEncounter(encounterId: string | null) {
     [encounterId, encounter]
   );
 
+  /*
+   * The five field editors below go through `encounterRepository.update`, not
+   * `db.encounters.update`. Reaching past the repository skipped both of the
+   * things that method exists for: the soft-delete guard, so an autosave
+   * arriving after the encounter was deleted resurrected content into a
+   * tombstoned row invisible in the UI; and the single read-modify-write
+   * transaction, so two blurs in the same tick each read the pre-edit row and
+   * the second silently discarded the first. `updateParticipant` beside them
+   * always used the repository, and is the path that was tested.
+   */
+
   /** Updates the encounter's `description` narrative field (ProseMirror JSON). */
   const updateDescription = useCallback(async (description: unknown) => {
     if (!encounterId) return;
-    await db.encounters.update(encounterId, {
-      description,
-      updatedAt: nowISO(),
-    });
+    await encounterRepository.update(encounterId, { description });
     await loadEncounter();
   }, [encounterId, loadEncounter]);
 
   /** Updates the encounter's `body` narrative field (ProseMirror JSON). */
   const updateBody = useCallback(async (body: unknown) => {
     if (!encounterId) return;
-    await db.encounters.update(encounterId, {
-      body,
-      updatedAt: nowISO(),
-    });
+    await encounterRepository.update(encounterId, { body });
     await loadEncounter();
   }, [encounterId, loadEncounter]);
 
   /** Updates the encounter's `summary` narrative field (ProseMirror JSON). */
   const updateSummary = useCallback(async (summary: unknown) => {
     if (!encounterId) return;
-    await db.encounters.update(encounterId, {
-      summary,
-      updatedAt: nowISO(),
-    });
+    await encounterRepository.update(encounterId, { summary });
     await loadEncounter();
   }, [encounterId, loadEncounter]);
 
   /** Updates the encounter's free-form tag list. */
   const updateTags = useCallback(async (tags: string[]) => {
     if (!encounterId) return;
-    await db.encounters.update(encounterId, {
-      tags,
-      updatedAt: nowISO(),
-    });
+    await encounterRepository.update(encounterId, { tags });
     await loadEncounter();
   }, [encounterId, loadEncounter]);
 
   /** Updates the encounter's optional location string. */
   const updateLocation = useCallback(async (location: string | undefined) => {
     if (!encounterId) return;
-    await db.encounters.update(encounterId, {
-      location,
-      updatedAt: nowISO(),
-    });
+    await encounterRepository.update(encounterId, { location });
     await loadEncounter();
   }, [encounterId, loadEncounter]);
 
