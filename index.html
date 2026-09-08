@@ -5,7 +5,16 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#111a17" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!--
+      No `maximum-scale` or `user-scalable=no`. Both were here, which disables
+      pinch-zoom site-wide: a WCAG 1.4.4 failure (text must be resizable to
+      200%) on exactly the device class this app is built for — a tablet on a
+      table, read at arm's length, often by someone who would like the stat
+      block bigger. Suppressing the zoom to stop iOS focus-zoom trades an
+      accessibility guarantee for a cosmetic one; the input font sizes are the
+      right place to solve that.
+    -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- Fonts are bundled locally in src/styles/fonts.css for offline PWA support -->
     <title>Skaldbok: The Adventurer's Ledger</title>
   </head>
