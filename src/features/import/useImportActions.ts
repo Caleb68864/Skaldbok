@@ -7,21 +7,16 @@ import type { MergeOptions } from '../../utils/import/mergeEngine';
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
 import { useToast } from '../../context/ToastContext';
 import { db } from '../../storage/db/client';
+import { BUNDLE_TABLE_BY_KEY } from '../../types/bundleTables';
 
-/** Maps bundle entity type keys to their Dexie table names. */
-const TABLE_NAMES: Record<string, string> = {
-  campaign: 'campaigns',
-  sessions: 'sessions',
-  parties: 'parties',
-  partyMembers: 'partyMembers',
-  characters: 'characters',
-  creatureTemplates: 'creatureTemplates',
-  encounters: 'encounters',
-  inventoryContainers: 'inventoryContainers',
-  notes: 'notes',
-  entityLinks: 'entityLinks',
-  attachments: 'attachments',
-};
+/**
+ * Maps bundle entity type keys to their Dexie table names.
+ *
+ * @remarks
+ * Read from the shared registry rather than restated here — a local copy is how
+ * conflict detection came to be silently blind to whole entity types.
+ */
+const TABLE_NAMES = BUNDLE_TABLE_BY_KEY;
 
 /** A conflict detected between a bundle entity and a local entity. */
 export interface ImportConflict {

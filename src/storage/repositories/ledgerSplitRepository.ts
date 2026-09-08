@@ -62,6 +62,23 @@ export async function getOrCreateForCampaign(campaignId: string): Promise<Payout
   });
 }
 
+/**
+ * Lists a campaign's split rows without creating one.
+ *
+ * @remarks
+ * `getOrCreateForCampaign` writes on a miss, which is right for a screen about
+ * to render the split and wrong for anything that only reads — an export must
+ * not manufacture rows in the database it is backing up. Returns an empty array
+ * for a campaign that has never opened the split screen.
+ */
+export async function listByCampaign(
+  campaignId: string,
+  options?: { includeDeleted?: boolean },
+): Promise<PayoutSplit[]> {
+  const rows = await db.ledgerSplits.where('campaignId').equals(campaignId).toArray();
+  return options?.includeDeleted ? rows : excludeDeleted(rows);
+}
+
 /** Fetches one split by id; a soft-deleted row reads as absent unless opted in. */
 export async function getById(
   id: string,

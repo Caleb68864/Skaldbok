@@ -11,6 +11,16 @@ import { campaignSchema } from '../../types/campaign';
 import { partySchema, partyMemberSchema } from '../../types/party';
 import { entityLinkSchema } from '../../types/entityLink';
 import { inventoryContainerSchema } from '../../types/inventoryContainer';
+import { shipSchema } from '../../types/ship';
+import { ledgerEntrySchema } from '../../types/ledger';
+import { ledgerAccountSchema } from '../../types/ledgerAccount';
+import { payoutSplitSchema } from '../../types/payoutSplit';
+import { recurringBillSchema } from '../../types/recurringBill';
+import { routeStopSchema } from '../../types/routeStop';
+import { routePlanSchema } from '../../types/routePlan';
+import { referenceGroupSchema, referenceSectionSchema } from '../../types/reference';
+import { kbNodeSchema, kbEdgeSchema } from '../../types/knowledgeBase';
+import { systemDefinitionSchema } from '../../../schemas/system.schema';
 import { migrateCharacter } from '../migrations';
 
 /**
@@ -222,6 +232,25 @@ function validateContentsEntities(
   validated.partyMembers = validateArray(contents.partyMembers, 'partyMembers', partyMemberSchema);
   validated.entityLinks = validateArray(contents.entityLinks, 'entityLinks', entityLinkSchema);
   validated.inventoryContainers = validateArray(contents.inventoryContainers, 'inventoryContainers', inventoryContainerSchema);
+  // Tables added to the bundle after the export gap was found. Each gets the
+  // same warn-and-skip treatment as everything above — a malformed row is
+  // dropped with a warning rather than rejecting the whole restore.
+  validated.ships = validateArray(contents.ships, 'ships', shipSchema);
+  validated.ledgerAccounts = validateArray(contents.ledgerAccounts, 'ledgerAccounts', ledgerAccountSchema);
+  validated.ledgerEntries = validateArray(contents.ledgerEntries, 'ledgerEntries', ledgerEntrySchema);
+  validated.ledgerSplits = validateArray(contents.ledgerSplits, 'ledgerSplits', payoutSplitSchema);
+  validated.recurringBills = validateArray(contents.recurringBills, 'recurringBills', recurringBillSchema);
+  validated.routeStops = validateArray(contents.routeStops, 'routeStops', routeStopSchema);
+  validated.routePlans = validateArray(contents.routePlans, 'routePlans', routePlanSchema);
+  validated.referenceGroups = validateArray(contents.referenceGroups, 'referenceGroups', referenceGroupSchema);
+  validated.referenceSections = validateArray(contents.referenceSections, 'referenceSections', referenceSectionSchema);
+  validated.kbNodes = validateArray(contents.kbNodes, 'kbNodes', kbNodeSchema);
+  validated.kbEdges = validateArray(contents.kbEdges, 'kbEdges', kbEdgeSchema);
+  // A system definition is the one bundle payload that can change how every
+  // character in the restore is interpreted, so it is validated against the full
+  // cross-referencing `systemDefinitionSchema` — the same one the bundled
+  // rulesets are held to — rather than a structural check.
+  validated.systems = validateArray(contents.systems, 'systems', systemDefinitionSchema);
 
   // Campaign is a single object, not an array
   if (contents.campaign) {

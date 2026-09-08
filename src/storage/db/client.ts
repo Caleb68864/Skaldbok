@@ -20,6 +20,7 @@ import type { RouteStop } from '../../types/routeStop';
 import type { RoutePlan } from '../../types/routePlan';
 import type { LedgerAccount } from '../../types/ledgerAccount';
 import type { RecurringBill } from '../../types/recurringBill';
+import type { KBNode, KBEdge } from '../../types/knowledgeBase';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
@@ -40,40 +41,16 @@ export interface ReferenceNote {
 }
 
 /**
- * A node in the per-campaign knowledge-base graph.
+ * The knowledge-base graph row types.
  *
  * @remarks
- * Derived content: nodes are projected from notes and their mentions, not
- * authored directly. `sourceId` points back at the entity a node was materialised
- * from; `scope` distinguishes campaign-local nodes from shared ones.
+ * These were declared here as bare interfaces, which left KB rows as the only
+ * bundle content with no schema to validate against on import. They now live in
+ * `types/knowledgeBase.ts` as Zod schemas with the types inferred from them, and
+ * are re-exported here so every existing `from '.../db/client'` import still
+ * resolves.
  */
-export interface KBNode {
-  id: string;
-  type: 'note' | 'character' | 'location' | 'item' | 'tag' | 'unresolved';
-  label: string;
-  scope: 'campaign' | 'shared';
-  campaignId: string;
-  sourceId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * A directed edge in the knowledge-base graph, linking two {@link KBNode}s.
- *
- * @remarks
- * Distinct from the domain `entityLinks` table: KB edges model the derived
- * wiki-link/mention/descriptor graph rendered in the KB view, whereas
- * `entityLinks` express authored domain relationships.
- */
-export interface KBEdge {
-  id: string;
-  fromId: string;
-  toId: string;
-  type: 'wikilink' | 'mention' | 'descriptor';
-  campaignId: string;
-  createdAt: string;
-}
+export type { KBNode, KBEdge } from '../../types/knowledgeBase';
 
 /**
  * The app's single Dexie/IndexedDB database.

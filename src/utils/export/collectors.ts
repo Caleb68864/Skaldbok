@@ -14,6 +14,17 @@ import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepos
 import { getById as getCreatureTemplateById, listByCampaign as listCreatureTemplatesByCampaign } from '../../storage/repositories/creatureTemplateRepository';
 import { listBySession as listEncountersBySession, listByCampaign as listEncountersByCampaign } from '../../storage/repositories/encounterRepository';
 import { list as listInventoryContainersByCampaign } from '../../storage/repositories/inventoryContainerRepository';
+import { listByCampaign as listShipsByCampaign } from '../../storage/repositories/shipRepository';
+import { listByCampaign as listLedgerEntriesByCampaign } from '../../storage/repositories/ledgerRepository';
+import { listByCampaign as listLedgerAccountsByCampaign } from '../../storage/repositories/ledgerAccountRepository';
+import { listByCampaign as listLedgerSplitsByCampaign } from '../../storage/repositories/ledgerSplitRepository';
+import { listByCampaign as listRecurringBillsByCampaign } from '../../storage/repositories/recurringBillRepository';
+import { listByCampaign as listRouteStopsByCampaign } from '../../storage/repositories/routeRepository';
+import { listByCampaign as listRoutePlansByCampaign } from '../../storage/repositories/routePlanRepository';
+import { getNodesByCampaign as listKBNodesByCampaign } from '../../storage/repositories/kbNodeRepository';
+import { getEdgesByCampaign as listKBEdgesByCampaign } from '../../storage/repositories/kbEdgeRepository';
+import { getAll as getAllReferenceSections, getGroups as getAllReferenceGroups } from '../../storage/repositories/referenceSectionRepository';
+import { getById as getSystemById } from '../../storage/repositories/systemRepository';
 
 /**
  * Result of a scope collection operation.
@@ -246,9 +257,17 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
 /**
  * Collects all entities belonging to a campaign export scope.
  *
- * Includes: everything — campaign, all sessions, all parties/members,
- * all notes, all characters, all creature templates, all encounters,
- * all entity links, and all attachments.
+ * @remarks
+ * This is the app's backup: the settings screen calls a campaign export "the
+ * only copy that survives this device", so the standard for this function is
+ * every table, not every table someone remembered. The mapping it has to satisfy
+ * is `BUNDLE_TABLE_BY_KEY` in `types/bundleTables.ts`, and `bundleParity.test.ts`
+ * seeds one row in each of those tables and fails if any of them does not come
+ * back out of here.
+ *
+ * Three tables are deliberately absent, with reasons recorded in
+ * `TABLES_OUTSIDE_BUNDLE`: `appSettings`, `metadata` and the legacy
+ * `referenceNotes`.
  *
  * @param campaignId - The ID of the campaign to export.
  */
@@ -307,8 +326,52 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
     // 10. All inventory containers (party coffer, pack animals, hirelings).
     const inventoryContainers = await listInventoryContainersByCampaign(campaignId);
 
+    // 11. Everything else the campaign owns. These tables existed for several
+    //     releases without ever reaching a bundle, so a "complete" export
+    //     silently dropped every ship, the entire ledger, the route plan and
+    //     the knowledge-base graph. `bundleParity.test.ts` now walks `db.tables`
+    //     against `BUNDLE_TABLE_BY_KEY` so the next table cannot repeat it.
+    const [
+      ships,
+      ledgerAccounts,
+      ledgerEntries,
+      ledgerSplits,
+      recurringBills,
+      routeStops,
+      routePlans,
+      kbNodes,
+      kbEdges,
+    ] = await Promise.all([
+      listShipsByCampaign(campaignId),
+      listLedgerAccountsByCampaign(campaignId),
+      listLedgerEntriesByCampaign(campaignId),
+      listLedgerSplitsByCampaign(campaignId),
+      listRecurringBillsByCampaign(campaignId),
+      listRouteStopsByCampaign(campaignId),
+      listRoutePlansByCampaign(campaignId),
+      listKBNodesByCampaign(campaignId),
+      listKBEdgesByCampaign(campaignId),
+    ]);
+
+    // 12. The reference library. Device-global rather than campaign-scoped, but
+    //     a campaign export is the app's only export, so leaving it out means
+    //     hand-authored rules content has no backup path at all. Soft-deleted
+    //     rows are excluded by default, matching every other collector.
+    const [referenceSections, referenceGroups] = await Promise.all([
+      getAllReferenceSections(),
+      getAllReferenceGroups(),
+    ]);
+
+    // 13. The campaign's system definition. A user-authored ruleset lives only
+    //     in the local `systems` table; without it a restored campaign points at
+    //     a system the importing device has never seen. Bundled systems ship
+    //     with the app, so an absent row is simply nothing to carry.
+    const systemDefinition = await getSystemById(campaign.system);
+    const systems = systemDefinition ? [systemDefinition as unknown as Record<string, unknown>] : [];
+
     const assembled = {
         campaign,
+        systems,
         sessions,
         notes,
         creatureTemplates,
@@ -320,6 +383,17 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
         entityLinks,
         attachments: attachments.map(toBundleAttachment),
         inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
+        ships,
+        ledgerAccounts,
+        ledgerEntries,
+        ledgerSplits,
+        recurringBills,
+        routeStops,
+        routePlans,
+        referenceGroups,
+        referenceSections,
+        kbNodes,
+        kbEdges,
       };
     const closed = closeBundleReferences(assembled as unknown as BundleContents);
     if (closed.droppedLinks > 0) {

@@ -2,6 +2,7 @@ import { db } from '../../storage/db/client';
 import type { BundleEnvelope, BundleContents } from '../../types/bundle';
 import { getById as getCreatureTemplateById } from '../../storage/repositories/creatureTemplateRepository';
 import { importablePortraitUri } from './portraitUri';
+import { BUNDLE_PROCESSING_ORDER, BUNDLE_TABLE_BY_KEY } from '../../types/bundleTables';
 
 /**
  * Options controlling how a bundle is merged into local IndexedDB.
@@ -35,37 +36,16 @@ export interface MergeReport {
 /**
  * FK-safe processing order. Entities must be imported in this order so that
  * foreign key references resolve correctly (e.g. campaigns before sessions).
+ *
+ * @remarks
+ * Both this and the table mapping used to be maintained here by hand, and were
+ * one of the four copies of the same list that let the campaign export omit six
+ * tables. They now come from the single registry in `types/bundleTables.ts`.
  */
-const PROCESSING_ORDER: (keyof BundleContents)[] = [
-  'campaign',
-  'sessions',
-  'parties',
-  'partyMembers',
-  'characters',
-  'creatureTemplates',
-  'encounters',
-  'inventoryContainers',
-  'notes',
-  'entityLinks',
-  'attachments',
-];
+const PROCESSING_ORDER = BUNDLE_PROCESSING_ORDER;
 
-/**
- * Maps entity type keys to their Dexie table names.
- */
-const TABLE_NAMES: Record<string, string> = {
-  campaign: 'campaigns',
-  sessions: 'sessions',
-  parties: 'parties',
-  partyMembers: 'partyMembers',
-  characters: 'characters',
-  creatureTemplates: 'creatureTemplates',
-  encounters: 'encounters',
-  inventoryContainers: 'inventoryContainers',
-  notes: 'notes',
-  entityLinks: 'entityLinks',
-  attachments: 'attachments',
-};
+/** Maps entity type keys to their Dexie table names. */
+const TABLE_NAMES = BUNDLE_TABLE_BY_KEY;
 
 /**
  * Maps an entityLink endpoint TYPE (the free-string `fromEntityType`/
@@ -144,13 +124,13 @@ export async function mergeBundle(
     // individual entities (e.g. an unrestorable attachment) are still collected
     // as per-entity errors and skipped so one bad row doesn't abort the import;
     // only DB-fatal errors are re-thrown to trigger the rollback.
+    // The table list is derived from the registry rather than written out, so a
+    // newly-exported table cannot arrive in a bundle that the transaction has no
+    // lock on — Dexie throws `NotFoundError` on the first write to an unlisted
+    // table, which `isFatalMergeError` would not have recognised.
     await db.transaction(
       'rw',
-      [
-        db.campaigns, db.sessions, db.parties, db.partyMembers, db.characters,
-        db.creatureTemplates, db.encounters, db.inventoryContainers, db.notes,
-        db.entityLinks, db.attachments,
-      ],
+      BUNDLE_PROCESSING_ORDER.map((key) => db.table(BUNDLE_TABLE_BY_KEY[key])),
       async () => {
         for (const entityType of PROCESSING_ORDER) {
           if (!options.selectedEntityTypes.has(entityType)) continue;
@@ -288,6 +268,25 @@ async function mergeEntity(
     // commits (it reads a repository, which must not run inside the tx).
     if (entityType === 'encounters') {
       encountersToCheck.push(reparented);
+    }
+    return;
+  }
+
+  // A system definition carries neither `createdAt` nor `updatedAt` — it is
+  // versioned by its own integer `version`, the same counter `useSystemDefinition`
+  // gates its IndexedDB cache on. Sent down the timestamp path below, every
+  // re-import of an already-installed ruleset would be reported as an id
+  // collision. Overwrite only on a strictly higher version, matching the cache.
+  if (entityType === 'systems') {
+    const bundleVersion = reparented.version;
+    const localVersion = existing.version;
+    if (typeof bundleVersion === 'number' && typeof localVersion === 'number' && bundleVersion > localVersion) {
+      await db.table(tableName).put(reparented);
+      report.updated++;
+      console.info(`[merge] update ${entityType} ${id}`);
+    } else {
+      report.skipped++;
+      console.info(`[merge] skip ${entityType} ${id}`);
     }
     return;
   }
