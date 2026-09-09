@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CharacterRecord } from '../types/character';
-import { registerFlush } from '../features/persistence/autosaveFlush';
+import { registerFlush, trackPendingWrite } from '../features/persistence/autosaveFlush';
 import { useToast } from '../context/ToastContext';
 
 export function useAutosave(
@@ -89,7 +89,13 @@ export function useAutosave(
         // mid-edit. A console-only failure here loses that edit and tells
         // nobody, on the one save path with no later retry: the component is
         // gone, so there is no next tick and no inline banner left to render.
-        saveFn(pendingRef.current).catch(e => {
+        //
+        // Tracked, because this is the one write nobody can await: the
+        // component that started it no longer exists. Without that, a caller
+        // of `flushAll()` — the error boundary's recovery button, endSession,
+        // clearCharacter — could see "nothing pending" and navigate or mutate
+        // while this write was still on its way to IndexedDB.
+        trackPendingWrite(saveFn(pendingRef.current)).catch(e => {
           console.error(e);
           showToastRef.current(`Couldn't save your last change — ${String(e)}`, 'error', {
             duration: 8000,

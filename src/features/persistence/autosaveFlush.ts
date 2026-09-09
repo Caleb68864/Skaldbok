@@ -16,6 +16,20 @@ import { generateId } from '../../utils/ids';
 const registry = new Map<string, () => Promise<void>>();
 
 /**
+ * Writes that have already been started and have not settled yet.
+ *
+ * @remarks
+ * A registered flush covers a write that has not begun. This covers the other
+ * half: a write already in flight, started by a component that has since
+ * unmounted and so has nobody left to await it. `useAutosave`'s unmount flush
+ * is exactly that — fire-and-forget by necessity, because the component is
+ * gone — and until this existed, `flushAll()` could resolve while the last
+ * edit was still on its way to IndexedDB. Every caller of `flushAll` means
+ * "everything is on disk"; this is what makes that true.
+ */
+const inFlight = new Set<Promise<unknown>>();
+
+/**
  * Registers a pending-write flush callback and returns its unregister handle.
  *
  * @remarks
@@ -48,5 +62,34 @@ export function registerFlush(fn: () => Promise<void>): {
 export function flushAll(): Promise<PromiseSettledResult<void>[]> {
   // Snapshot at entry — late unregisters don't affect the in-flight batch.
   const snapshot = Array.from(registry.values());
-  return Promise.allSettled(snapshot.map((fn) => fn()));
+  const started = Array.from(inFlight);
+  return Promise.allSettled([
+    ...snapshot.map((fn) => fn()),
+    // Already-started writes are awaited too, so `flushAll()` resolving means
+    // the data is written, not merely that nothing new was queued.
+    ...started.map((promise) => promise.then(() => undefined)),
+  ]);
+}
+
+/**
+ * Registers an already-started write so {@link flushAll} waits for it.
+ *
+ * @remarks
+ * For writes with no owner left to await them — chiefly `useAutosave`'s
+ * unmount flush, which fires precisely when the user navigates away mid-edit.
+ * The promise is removed once it settles, and a rejection is neither swallowed
+ * nor re-raised here: the caller keeps its own error handling, and `flushAll`
+ * uses `allSettled` so one failed write cannot abort the rest.
+ *
+ * @param promise - The write in progress.
+ * @returns The same promise, so this can wrap a call in place.
+ */
+export function trackPendingWrite<T>(promise: Promise<T>): Promise<T> {
+  inFlight.add(promise);
+  // `finally` rather than `then`, so a rejection still clears the entry — and
+  // the catch keeps this bookkeeping from raising an unhandled rejection of its
+  // own when the caller has already attached a handler to `promise`.
+  const settled = promise.finally(() => { inFlight.delete(promise); });
+  settled.catch(() => {});
+  return promise;
 }
