@@ -125,7 +125,7 @@ export async function getDeleted(campaignId: string): Promise<RecurringBill[]> {
     const rows = await db.recurringBills.where('campaignId').equals(campaignId).toArray();
     return onlyDeleted(rows);
   } catch (e) {
-    throw new Error(`recurringBillRepository.getDeleted failed: ${e}`);
+    throw new Error(`recurringBillRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 

@@ -213,7 +213,7 @@ export async function getDeleted(campaignId: string): Promise<RouteStop[]> {
     const rows = await db.routeStops.where('campaignId').equals(campaignId).toArray();
     return onlyDeleted(rows);
   } catch (e) {
-    throw new Error(`routeRepository.getDeleted failed: ${e}`);
+    throw new Error(`routeRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 

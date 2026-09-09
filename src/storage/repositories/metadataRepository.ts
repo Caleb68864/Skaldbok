@@ -15,9 +15,9 @@ export async function get(key: string): Promise<string | undefined> {
     return record?.value;
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to get metadata: ${String(err)}`);
+    throw new Error(`Failed to get metadata: ${String(err)}`, { cause: err });
   }
 }
 
@@ -32,8 +32,8 @@ export async function set(key: string, value: string): Promise<void> {
     }
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to set metadata: ${String(err)}`);
+    throw new Error(`Failed to set metadata: ${String(err)}`, { cause: err });
   }
 }

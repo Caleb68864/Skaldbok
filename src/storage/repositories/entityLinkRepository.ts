@@ -40,7 +40,7 @@ export async function getLinksFrom(fromEntityId: string, relationshipType: strin
       .filter((l): l is EntityLink => l !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`entityLinkRepository.getLinksFrom failed: ${e}`);
+    throw new Error(`entityLinkRepository.getLinksFrom failed: ${e}`, { cause: e });
   }
 }
 
@@ -69,7 +69,7 @@ export async function getLinksTo(toEntityId: string, relationshipType: string, o
       .filter((l): l is EntityLink => l !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`entityLinkRepository.getLinksTo failed: ${e}`);
+    throw new Error(`entityLinkRepository.getLinksTo failed: ${e}`, { cause: e });
   }
 }
 
@@ -91,7 +91,7 @@ export async function getAllLinksFrom(fromEntityId: string, options?: { includeD
       .filter((l): l is EntityLink => l !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`entityLinkRepository.getAllLinksFrom failed: ${e}`);
+    throw new Error(`entityLinkRepository.getAllLinksFrom failed: ${e}`, { cause: e });
   }
 }
 
@@ -113,7 +113,7 @@ export async function getAllLinksTo(toEntityId: string, options?: { includeDelet
       .filter((l): l is EntityLink => l !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`entityLinkRepository.getAllLinksTo failed: ${e}`);
+    throw new Error(`entityLinkRepository.getAllLinksTo failed: ${e}`, { cause: e });
   }
 }
 
@@ -139,7 +139,7 @@ export async function createLink(data: Omit<EntityLink, 'id' | 'createdAt' | 'up
     await db.entityLinks.add(link);
     return link;
   } catch (e) {
-    throw new Error(`entityLinkRepository.createLink failed: ${e}`);
+    throw new Error(`entityLinkRepository.createLink failed: ${e}`, { cause: e });
   }
 }
 
@@ -170,7 +170,7 @@ export async function deleteLinksForNote(noteId: string, txId?: string): Promise
       await db.entityLinks.bulkUpdate(changes);
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.deleteLinksForNote failed: ${e}`);
+    throw new Error(`entityLinkRepository.deleteLinksForNote failed: ${e}`, { cause: e });
   }
 }
 
@@ -230,7 +230,7 @@ export async function softDeleteLinksForEncounter(
       });
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.softDeleteLinksForEncounter failed: ${e}`);
+    throw new Error(`entityLinkRepository.softDeleteLinksForEncounter failed: ${e}`, { cause: e });
   }
 }
 
@@ -264,7 +264,7 @@ export async function softDeleteLinksForCreature(
       });
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.softDeleteLinksForCreature failed: ${e}`);
+    throw new Error(`entityLinkRepository.softDeleteLinksForCreature failed: ${e}`, { cause: e });
   }
 }
 
@@ -287,7 +287,7 @@ export async function restoreLinksForTxId(txId: string): Promise<void> {
       });
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.restoreLinksForTxId failed: ${e}`);
+    throw new Error(`entityLinkRepository.restoreLinksForTxId failed: ${e}`, { cause: e });
   }
 }
 
@@ -305,7 +305,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       updatedAt: now,
     });
   } catch (e) {
-    throw new Error(`entityLinkRepository.softDelete failed: ${e}`);
+    throw new Error(`entityLinkRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -321,7 +321,7 @@ export async function restore(id: string): Promise<void> {
       updatedAt: nowISO(),
     });
   } catch (e) {
-    throw new Error(`entityLinkRepository.restore failed: ${e}`);
+    throw new Error(`entityLinkRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -330,6 +330,6 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.entityLinks.delete(id);
   } catch (e) {
-    throw new Error(`entityLinkRepository.hardDelete failed: ${e}`);
+    throw new Error(`entityLinkRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }

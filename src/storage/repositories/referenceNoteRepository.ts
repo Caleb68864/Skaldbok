@@ -28,9 +28,9 @@ export async function save(note: ReferenceNote): Promise<void> {
     await db.referenceNotes.put(note);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to save reference note: ${String(err)}`);
+    throw new Error(`Failed to save reference note: ${String(err)}`, { cause: err });
   }
 }
 
@@ -55,7 +55,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       updatedAt: now,
     });
   } catch (err) {
-    throw new Error(`Failed to delete reference note: ${String(err)}`);
+    throw new Error(`Failed to delete reference note: ${String(err)}`, { cause: err });
   }
 }
 
@@ -70,7 +70,7 @@ export async function restore(id: string): Promise<void> {
       updatedAt: nowISO(),
     });
   } catch (err) {
-    throw new Error(`Failed to restore reference note: ${String(err)}`);
+    throw new Error(`Failed to restore reference note: ${String(err)}`, { cause: err });
   }
 }
 
@@ -88,6 +88,6 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.referenceNotes.delete(id);
   } catch (err) {
-    throw new Error(`Failed to hard-delete reference note: ${String(err)}`);
+    throw new Error(`Failed to hard-delete reference note: ${String(err)}`, { cause: err });
   }
 }

@@ -23,7 +23,8 @@ export async function getEdgesFromNode(fromId: string): Promise<KBEdge[]> {
     return raw.map((r) => kbEdgeSchema.parse(r) as KBEdge);
   } catch (err) {
     throw new Error(
-      `kbEdgeRepository.getEdgesFromNode(${fromId}): ${err instanceof Error ? err.message : String(err)}`
+      `kbEdgeRepository.getEdgesFromNode(${fromId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -37,7 +38,8 @@ export async function getEdgesToNode(toId: string): Promise<KBEdge[]> {
     return raw.map((r) => kbEdgeSchema.parse(r) as KBEdge);
   } catch (err) {
     throw new Error(
-      `kbEdgeRepository.getEdgesToNode(${toId}): ${err instanceof Error ? err.message : String(err)}`
+      `kbEdgeRepository.getEdgesToNode(${toId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -51,7 +53,8 @@ export async function getEdgesByCampaign(campaignId: string): Promise<KBEdge[]> 
     return raw.map((r) => kbEdgeSchema.parse(r) as KBEdge);
   } catch (err) {
     throw new Error(
-      `kbEdgeRepository.getEdgesByCampaign(${campaignId}): ${err instanceof Error ? err.message : String(err)}`
+      `kbEdgeRepository.getEdgesByCampaign(${campaignId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -64,7 +67,8 @@ export async function upsertEdge(edge: KBEdge): Promise<void> {
     await db.kb_edges.put(edge);
   } catch (err) {
     throw new Error(
-      `kbEdgeRepository.upsertEdge(${edge.id}): ${err instanceof Error ? err.message : String(err)}`
+      `kbEdgeRepository.upsertEdge(${edge.id}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -77,7 +81,8 @@ export async function deleteEdge(id: string): Promise<void> {
     await db.kb_edges.delete(id);
   } catch (err) {
     throw new Error(
-      `kbEdgeRepository.deleteEdge(${id}): ${err instanceof Error ? err.message : String(err)}`
+      `kbEdgeRepository.deleteEdge(${id}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -90,7 +95,8 @@ export async function deleteEdgesFromNode(nodeId: string): Promise<void> {
     await db.kb_edges.where('fromId').equals(nodeId).delete();
   } catch (err) {
     throw new Error(
-      `kbEdgeRepository.deleteEdgesFromNode(${nodeId}): ${err instanceof Error ? err.message : String(err)}`
+      `kbEdgeRepository.deleteEdgesFromNode(${nodeId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -103,7 +109,8 @@ export async function deleteEdgesToNode(nodeId: string): Promise<void> {
     await db.kb_edges.where('toId').equals(nodeId).delete();
   } catch (err) {
     throw new Error(
-      `kbEdgeRepository.deleteEdgesToNode(${nodeId}): ${err instanceof Error ? err.message : String(err)}`
+      `kbEdgeRepository.deleteEdgesToNode(${nodeId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }

@@ -15,8 +15,8 @@ export async function save(settings: AppSettings): Promise<void> {
     await db.appSettings.put({ ...settings, id: SETTINGS_ID });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to save settings: ${String(err)}`);
+    throw new Error(`Failed to save settings: ${String(err)}`, { cause: err });
   }
 }

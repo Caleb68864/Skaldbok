@@ -36,7 +36,7 @@ export async function getSessionById(id: string, options?: { includeDeleted?: bo
     if (!options?.includeDeleted && parsed.data.deletedAt) return undefined;
     return parsed.data;
   } catch (e) {
-    throw new Error(`sessionRepository.getSessionById failed: ${e}`);
+    throw new Error(`sessionRepository.getSessionById failed: ${e}`, { cause: e });
   }
 }
 
@@ -73,7 +73,7 @@ export async function getSessionsByCampaign(campaignId: string, options?: { incl
       .filter((s): s is Session => s !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`sessionRepository.getSessionsByCampaign failed: ${e}`);
+    throw new Error(`sessionRepository.getSessionsByCampaign failed: ${e}`, { cause: e });
   }
 }
 
@@ -111,7 +111,7 @@ export async function getActiveSession(campaignId: string): Promise<Session | un
     }
     return undefined;
   } catch (e) {
-    throw new Error(`sessionRepository.getActiveSession failed: ${e}`);
+    throw new Error(`sessionRepository.getActiveSession failed: ${e}`, { cause: e });
   }
 }
 
@@ -151,7 +151,7 @@ export async function createSession(data: Omit<Session, 'id' | 'createdAt' | 'up
     await db.sessions.add(session);
     return session;
   } catch (e) {
-    throw new Error(`sessionRepository.createSession failed: ${e}`);
+    throw new Error(`sessionRepository.createSession failed: ${e}`, { cause: e });
   }
 }
 
@@ -186,7 +186,7 @@ export async function updateSession(id: string, data: Partial<Session>): Promise
     if (!updated) throw new Error(`sessionRepository.updateSession: session ${id} not found after update`);
     return updated as Session;
   } catch (e) {
-    throw new Error(`sessionRepository.updateSession failed: ${e}`);
+    throw new Error(`sessionRepository.updateSession failed: ${e}`, { cause: e });
   }
 }
 
@@ -216,7 +216,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       await softDeleteLinksForEntity(id, finalTxId, now);
     });
   } catch (e) {
-    throw new Error(`sessionRepository.softDelete failed: ${e}`);
+    throw new Error(`sessionRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -236,7 +236,7 @@ export async function restore(id: string): Promise<void> {
       if (txId) await restoreLinksForTxId(txId);
     });
   } catch (e) {
-    throw new Error(`sessionRepository.restore failed: ${e}`);
+    throw new Error(`sessionRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -248,7 +248,7 @@ export async function getDeleted(campaignId: string): Promise<Session[]> {
       .filter((r) => r.campaignId === campaignId)
       .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
   } catch (e) {
-    throw new Error(`sessionRepository.getDeleted failed: ${e}`);
+    throw new Error(`sessionRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 
@@ -257,6 +257,6 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.sessions.delete(id);
   } catch (e) {
-    throw new Error(`sessionRepository.hardDelete failed: ${e}`);
+    throw new Error(`sessionRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }

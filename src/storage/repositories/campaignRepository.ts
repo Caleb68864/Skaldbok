@@ -18,7 +18,7 @@ export async function getCampaignById(id: string, options?: { includeDeleted?: b
     if (!options?.includeDeleted && parsed.data.deletedAt) return undefined;
     return parsed.data;
   } catch (e) {
-    throw new Error(`campaignRepository.getCampaignById failed: ${e}`);
+    throw new Error(`campaignRepository.getCampaignById failed: ${e}`, { cause: e });
   }
 }
 
@@ -38,7 +38,7 @@ export async function getAllCampaigns(options?: { includeDeleted?: boolean }): P
       .filter((c): c is Campaign => c !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`campaignRepository.getAllCampaigns failed: ${e}`);
+    throw new Error(`campaignRepository.getAllCampaigns failed: ${e}`, { cause: e });
   }
 }
 
@@ -56,7 +56,7 @@ export async function createCampaign(data: Omit<Campaign, 'id' | 'createdAt' | '
     await db.campaigns.add(campaign);
     return campaign;
   } catch (e) {
-    throw new Error(`campaignRepository.createCampaign failed: ${e}`);
+    throw new Error(`campaignRepository.createCampaign failed: ${e}`, { cause: e });
   }
 }
 
@@ -69,7 +69,7 @@ export async function updateCampaign(id: string, data: Partial<Campaign>): Promi
     if (!updated) throw new Error(`campaignRepository.updateCampaign: campaign ${id} not found after update`);
     return updated as Campaign;
   } catch (e) {
-    throw new Error(`campaignRepository.updateCampaign failed: ${e}`);
+    throw new Error(`campaignRepository.updateCampaign failed: ${e}`, { cause: e });
   }
 }
 
@@ -87,7 +87,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       updatedAt: now,
     });
   } catch (e) {
-    throw new Error(`campaignRepository.softDelete failed: ${e}`);
+    throw new Error(`campaignRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -103,7 +103,7 @@ export async function restore(id: string): Promise<void> {
       updatedAt: nowISO(),
     });
   } catch (e) {
-    throw new Error(`campaignRepository.restore failed: ${e}`);
+    throw new Error(`campaignRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -112,6 +112,6 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.campaigns.delete(id);
   } catch (e) {
-    throw new Error(`campaignRepository.hardDelete failed: ${e}`);
+    throw new Error(`campaignRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }

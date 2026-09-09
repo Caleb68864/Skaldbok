@@ -56,14 +56,21 @@ export default tseslint.config(
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
 
-      // Off, deliberately, and the single largest thing this config does not
-      // enforce: 119 sites across the repositories rethrow as
-      // `throw new Error(\`Failed to …: ${String(err)}\`)` rather than passing
-      // `{ cause }`. The rule is right — the stack of the original is lost —
-      // but turning it on means 119 mechanical rewrites of error-handling code
-      // in the same change that introduces the linter, which is how a linter
-      // gets reverted. Tracked as a follow-up in the roadmap.
-      'preserve-caught-error': 'off',
+      // On. This was deferred when the config landed — 129 mechanical rewrites
+      // of error handling in the same change that introduces a linter is how a
+      // linter gets reverted — and taken afterwards, as its own commit, once
+      // the config was green.
+      //
+      // It matters more here than the rule's name suggests. Every one of those
+      // sites was in `src/storage/repositories/`, and every one interpolated the
+      // caught error into a string: `` `${e}` `` renders a Dexie failure as
+      // "ConstraintError: Key already exists" and throws away both the stack and
+      // `err.name`. In an app whose only copy of the user's data is one
+      // IndexedDB database, that is the difference between a bug report saying
+      // "saving failed" and one that distinguishes a `QuotaExceededError` — the
+      // device is out of room, act now — from a validation failure. `cause` is
+      // additive: the message the user sees is unchanged.
+      'preserve-caught-error': 'error',
     },
   },
   {

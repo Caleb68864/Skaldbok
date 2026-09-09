@@ -26,7 +26,7 @@ export async function getPartyByCampaign(campaignId: string, options?: { include
     }
     return undefined;
   } catch (e) {
-    throw new Error(`partyRepository.getPartyByCampaign failed: ${e}`);
+    throw new Error(`partyRepository.getPartyByCampaign failed: ${e}`, { cause: e });
   }
 }
 
@@ -44,7 +44,7 @@ export async function createParty(data: Omit<Party, 'id' | 'createdAt' | 'update
     await db.parties.add(party);
     return party;
   } catch (e) {
-    throw new Error(`partyRepository.createParty failed: ${e}`);
+    throw new Error(`partyRepository.createParty failed: ${e}`, { cause: e });
   }
 }
 
@@ -64,7 +64,7 @@ export async function getPartyMembers(partyId: string, options?: { includeDelete
       .filter((m): m is PartyMember => m !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`partyRepository.getPartyMembers failed: ${e}`);
+    throw new Error(`partyRepository.getPartyMembers failed: ${e}`, { cause: e });
   }
 }
 
@@ -82,7 +82,7 @@ export async function addPartyMember(data: Omit<PartyMember, 'id' | 'createdAt' 
     await db.partyMembers.add(member);
     return member;
   } catch (e) {
-    throw new Error(`partyRepository.addPartyMember failed: ${e}`);
+    throw new Error(`partyRepository.addPartyMember failed: ${e}`, { cause: e });
   }
 }
 
@@ -97,7 +97,7 @@ export async function removePartyMember(memberId: string): Promise<void> {
   try {
     await db.partyMembers.delete(memberId);
   } catch (e) {
-    throw new Error(`partyRepository.removePartyMember failed: ${e}`);
+    throw new Error(`partyRepository.removePartyMember failed: ${e}`, { cause: e });
   }
 }
 
@@ -115,7 +115,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       updatedAt: now,
     });
   } catch (e) {
-    throw new Error(`partyRepository.softDelete failed: ${e}`);
+    throw new Error(`partyRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -131,7 +131,7 @@ export async function restore(id: string): Promise<void> {
       updatedAt: nowISO(),
     });
   } catch (e) {
-    throw new Error(`partyRepository.restore failed: ${e}`);
+    throw new Error(`partyRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -140,7 +140,7 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.parties.delete(id);
   } catch (e) {
-    throw new Error(`partyRepository.hardDelete failed: ${e}`);
+    throw new Error(`partyRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -158,7 +158,7 @@ export async function softDeletePartyMember(memberId: string, txId?: string): Pr
       updatedAt: now,
     });
   } catch (e) {
-    throw new Error(`partyRepository.softDeletePartyMember failed: ${e}`);
+    throw new Error(`partyRepository.softDeletePartyMember failed: ${e}`, { cause: e });
   }
 }
 
@@ -184,7 +184,7 @@ export async function getDeletedMembers(campaignId: string): Promise<PartyMember
     const rows = await db.partyMembers.where('partyId').equals(party.id).toArray();
     return onlyDeleted(rows as PartyMember[]);
   } catch (e) {
-    throw new Error(`partyRepository.getDeletedMembers failed: ${e}`);
+    throw new Error(`partyRepository.getDeletedMembers failed: ${e}`, { cause: e });
   }
 }
 
@@ -200,6 +200,6 @@ export async function restorePartyMember(memberId: string): Promise<void> {
       updatedAt: nowISO(),
     });
   } catch (e) {
-    throw new Error(`partyRepository.restorePartyMember failed: ${e}`);
+    throw new Error(`partyRepository.restorePartyMember failed: ${e}`, { cause: e });
   }
 }
