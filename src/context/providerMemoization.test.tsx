@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from 'vitest';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { render, act, cleanup } from '@testing-library/react';
 import { ToastProvider, useToast } from './ToastContext';
 import { ThemeProvider, useTheme } from '../theme/ThemeProvider';
@@ -104,13 +106,64 @@ describe('ThemeProvider value identity', () => {
     );
 
     const before = seen[seen.length - 1];
+    // The test switches *to* parchment, so it only measures a change if the
+    // default is something else. Stated as a precondition rather than folded
+    // into the assertion: this line used to read
+    // `expect(after).not.toBe(before === 'parchment' ? after : before)`, which
+    // degenerates to `expect(after).not.toBe(after)` — always failing — the day
+    // DEFAULT_THEME becomes 'parchment'. That would have failed for a reason
+    // with nothing to do with memoisation, in the file least likely to be
+    // suspected.
+    expect(before, 'the default theme is now the one this test switches to').not.toBe('parchment');
+
     await act(async () => { getByRole('button', { name: 'switch' }).click(); });
     const after = seen[seen.length - 1];
 
     expect(after).toBe('parchment');
-    expect(after).not.toBe(before === 'parchment' ? after : before);
+    expect(after).not.toBe(before);
   });
 });
+
+/** Every file under `src` rendering `<Something.Provider value={…}>`. */
+function providerFiles(): string[] {
+  const found: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.tsx$/.test(entry.name) && !/\.test\.tsx$/.test(entry.name)) {
+        if (/\.Provider\s+value=\{/.test(readFileSync(full, 'utf8'))) {
+          found.push(relative(process.cwd(), full).split('\\').join('/'));
+        }
+      }
+    }
+  };
+  walk(join(process.cwd(), 'src'));
+  return found.sort();
+}
+
+/** The identifier passed as `value` to the provider, e.g. `value` in `value={value}`. */
+function providerValueName(source: string): string | null {
+  return /\.Provider\s+value=\{\s*([A-Za-z_$][\w$]*)\s*\}/.exec(source)?.[1] ?? null;
+}
+
+/**
+ * The `useMemo` that builds the named value, as `[body, deps]`.
+ *
+ * @remarks
+ * Matched by name — `const <name> = useMemo(...)` — or, when the value comes
+ * out of a hook, by `return useMemo(...)`. The previous version took the first
+ * object-returning `useMemo` anywhere in the file, so in a provider with more
+ * than one it checked the dependency array of something else entirely.
+ */
+function valueMemo(source: string, name: string | null): [string, string] | null {
+  const memo = String.raw`useMemo(?:<[^>]*>)?\(\s*\(\)\s*=>\s*\(\{([\s\S]*?)\}\),\s*\[([\s\S]*?)\],?\s*\)`;
+  const named = name
+    ? new RegExp(String.raw`(?:const|let)\s+${name}\s*(?::[^=]+)?=\s*` + memo).exec(source)
+    : null;
+  const match = named ?? new RegExp(String.raw`return\s+` + memo).exec(source);
+  return match ? [match[1], match[2]] : null;
+}
 
 /**
  * The providers that need a whole app around them to mount are covered by
@@ -120,33 +173,76 @@ describe('ThemeProvider value identity', () => {
  * runtime until someone notices the screen not updating.
  */
 describe('every memoised provider lists every member', () => {
-  const FILES = [
-    'src/context/AppStateContext.tsx',
-    'src/context/ActiveCharacterContext.tsx',
-    'src/context/ToastContext.tsx',
-    'src/theme/ThemeProvider.tsx',
-    'src/features/campaign/CampaignContext.tsx',
-    'src/features/kb/KnowledgeBaseContext.tsx',
-    'src/features/session/SessionRefreshContext.tsx',
-  ];
+  /**
+   * Discovered, not listed.
+   *
+   * @remarks
+   * This was a hand-maintained array of seven paths, and there were eight
+   * providers — `features/session/SessionEncounterContext.tsx` was missing, and
+   * its value did come from an unmemoised object literal (one level down, in
+   * `useSessionEncounter`). A parallel list guarding against parallel lists is
+   * the one place the omission is least likely to be noticed, so the set is now
+   * derived from the source: any file rendering `<X.Provider value={…}>`.
+   */
+  const PROVIDER_FILES = providerFiles();
 
-  it.each(FILES)('%s memoises its context value', async file => {
+  /**
+   * Providers whose value is built by a hook rather than by a `useMemo` in the
+   * provider file itself. The memoisation obligation moves to the hook, and the
+   * named file is checked in its place.
+   */
+  const VALUE_FROM_HOOK: Record<string, string> = {
+    'src/features/session/SessionEncounterContext.tsx': 'src/features/session/useSessionEncounter.ts',
+  };
+
+  /** Where the `value={…}` identifier for a provider is actually built. */
+  function memoSourceFor(file: string): string {
+    return VALUE_FROM_HOOK[file] ?? file;
+  }
+
+  it('found every provider in the app', () => {
+    // The discovery replacing the old list has to be at least as wide as it was.
+    expect(PROVIDER_FILES.length).toBeGreaterThanOrEqual(8);
+    expect(PROVIDER_FILES).toContain('src/features/session/SessionEncounterContext.tsx');
+  });
+
+  it.each(PROVIDER_FILES)('%s memoises its context value', async file => {
     const { readFileSync } = await import('node:fs');
     const source = readFileSync(file, 'utf8');
     // The provider must not build the value inline in the JSX any more.
     expect(source, `${file} still builds its context value inline`)
       .not.toMatch(/\.Provider\s+value=\{\{/);
-    expect(source).toMatch(/useMemo/);
+
+    // This used to be `expect(source).toMatch(/useMemo/)`, which passes on any
+    // file containing the string anywhere — a comment mentioning memoisation
+    // satisfied it. What matters is that the identifier actually handed to
+    // `.Provider value={…}` is the one a `useMemo` produces.
+    const name = providerValueName(source);
+    expect(name, `${file}: could not read the identifier out of .Provider value={…}`).not.toBeNull();
+
+    const memoSource = readFileSync(memoSourceFor(file), 'utf8');
+    const bound = new RegExp(
+      `(?:const|let)\\s+${name}\\s*(?::[^=]+)?=\\s*useMemo`,
+    ).test(memoSource) || (memoSourceFor(file) !== file && /return useMemo\(/.test(memoSource));
+    expect(
+      bound,
+      `${file}: value={${name}} is not produced by a useMemo in ` +
+      `${memoSourceFor(file)}. A useMemo somewhere else in the file does not ` +
+      'stop consumers re-rendering on every provider render.',
+    ).toBe(true);
   });
 
-  it.each(FILES)('%s lists every value member as a dependency', async file => {
+  it.each(PROVIDER_FILES)('%s lists every value member as a dependency', async file => {
     const { readFileSync } = await import('node:fs');
-    const source = readFileSync(file, 'utf8');
+    const source = readFileSync(memoSourceFor(file), 'utf8');
 
-    // Pull the `useMemo(() => ({ ... }), [ ... ])` that builds the value.
-    const match = /useMemo(?:<[^>]*>)?\(\s*\(\)\s*=>\s*\(\{([\s\S]*?)\}\),\s*\[([\s\S]*?)\],?\s*\)/.exec(source);
-    expect(match, `no value useMemo found in ${file}`).not.toBeNull();
-    const [, body, deps] = match!;
+    // The `useMemo(() => ({ ... }), [ ... ])` that builds *this* value — matched
+    // by the identifier the Provider is given, not simply the first one in the
+    // file. `RegExp.exec` returned whichever object-returning useMemo came
+    // first, with nothing tying it to `.Provider value={…}`.
+    const match = valueMemo(source, providerValueName(readFileSync(file, 'utf8')));
+    expect(match, `no value useMemo found in ${memoSourceFor(file)}`).not.toBeNull();
+    const [body, deps] = match!;
 
     // Flat object literals, so splitting on commas is safe. `key` or
     // `key: value` — the dependency is the value side when the member is

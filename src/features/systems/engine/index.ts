@@ -19,9 +19,15 @@ export { savageWorldsEngine } from './savageWorldsEngine';
  * @remarks
  * A map rather than a chain of `if (system.id === …)` so that "does this system
  * have an adapter?" is a question the code can answer, not just a fallthrough.
- * `engineRegistryParity.test.ts` asserts this stays in lockstep with
- * `BUNDLED_SYSTEMS`; CLAUDE.md names these as two hand-maintained lists, and a
- * bundled system registered without an adapter used to be invisible.
+ * `fallbackAdapter.test.ts` asserts this stays in lockstep with
+ * `BUNDLED_SYSTEMS`, in both directions; CLAUDE.md names these as two
+ * hand-maintained lists, and a bundled system registered without an adapter
+ * used to be invisible.
+ *
+ * This comment used to credit an `engineRegistryParity` test that has never
+ * existed — worse than no citation, because it stops the next reader looking
+ * for the guard that does. `testCitations.test.ts` now fails on a comment
+ * naming a test file that is not there.
  */
 export const SYSTEM_ADAPTERS: Record<string, SystemEngine> = {
   'classic-fantasy': classicFantasyEngine,
