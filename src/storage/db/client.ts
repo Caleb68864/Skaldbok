@@ -57,7 +57,10 @@ export type { KBNode, KBEdge } from '../../types/knowledgeBase';
  *
  * @remarks
  * Each `version(n).stores(...)` block is an append-only migration — never edit an
- * existing block; add a new one. Schema changes that add a new lookup pattern
+ * existing block; add a new one. That is not just a convention any more:
+ * `releasedSchemaVersions.test.ts` fingerprints every released block, including
+ * its inline `.upgrade(...)` body, and fails on any edit. Adding a version means
+ * adding its fingerprint there in the same commit. Schema changes that add a new lookup pattern
  * should add a matching (often compound) index, mirroring the `entityLinks`
  * indexes. Repositories are the only code that touches these tables; UI and hooks
  * go through repositories, never the tables directly.
