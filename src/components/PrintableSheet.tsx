@@ -1,6 +1,7 @@
-// PrintableSheet — SS-03: Pure render component (zero interactivity, zero side-effects)
+// PrintableSheet — SS-03: render-only component (zero interactivity; the one
+// effect is a post-layout measurement that marks clipped columns, see PrintColumn)
 
-import React from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import type {
   CharacterRecord,
   Spell,
@@ -61,6 +62,85 @@ export interface PrintableSheetProps {
   derived: PrintDerivedValues;
   colorMode: 'color' | 'bw';
   engine: SystemEngine;
+}
+
+/**
+ * Marks rows this sheet has room for but does not print.
+ *
+ * @remarks
+ * Three sections render a fixed number of slots — ten inventory rows, three
+ * weapon rows, six secondary-skill rows — and anything past the last slot was
+ * simply not drawn. On screen that is invisible; on paper it is worse than
+ * invisible, because the sheet is the artefact taken to the table and it looks
+ * complete. A player with twelve items got ten and no way to know.
+ *
+ * Printing the overflow is not an option at a fixed page size, so the sheet
+ * says what it left out instead. Silence is the one answer that is wrong.
+ */
+function TruncationNotice({ hidden, noun }: { hidden: number; noun: string }): React.ReactElement | null {
+  if (hidden <= 0) return null;
+  return (
+    <div className="sheet-truncated" role="note">
+      + {hidden} more {noun}{hidden === 1 ? '' : 's'} not printed
+    </div>
+  );
+}
+
+/**
+ * Sub-pixel slack, so a rounding difference is not reported as lost content.
+ */
+const CLIP_TOLERANCE_PX = 1;
+
+/**
+ * One column of the printed body, which says so when its content is clipped.
+ *
+ * @remarks
+ * `.print-col`, `.print-body-columns` and `.print-lower-columns` all carry
+ * `overflow: hidden` at a fixed height, because the sheet is pinned to a single
+ * letter page (see the SS-15 notes in `print-sheet.css` — Chrome emitted a
+ * blank second page otherwise). That constraint is deliberate; clipping without
+ * a mark is not. A character with more skills than fit lost the tail of the
+ * list with nothing on the page to suggest anything was missing.
+ *
+ * Measured rather than predicted: the content is text at print sizes, wrapping
+ * depends on the resolved font, and any estimate would be wrong in exactly the
+ * cases that matter. The marker is absolutely positioned so it is not itself
+ * clipped by the container it is reporting on, and so it cannot change the
+ * measurement that produced it.
+ */
+function PrintColumn({
+  variant,
+  children,
+}: {
+  variant: 'left' | 'center' | 'right';
+  children: React.ReactNode;
+}): React.ReactElement {
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [clipped, setClipped] = useState(false);
+
+  // No dependency array: the measurement depends on laid-out text, not on any
+  // value this component can list. The rule's warning about an infinite chain
+  // is the right warning to raise and is answered by the equality guard below —
+  // the second pass computes the same value, writes nothing, and stops. The
+  // marker is absolutely positioned, so it cannot change the measurement either.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const isClipped = el.scrollHeight > el.clientHeight + CLIP_TOLERANCE_PX;
+    setClipped(prev => (prev === isClipped ? prev : isClipped));
+  });
+
+  return (
+    <div ref={ref} className={`print-col print-col--${variant}`}>
+      {children}
+      {clipped && (
+        <div className="print-col-clipped" role="note">
+          ⚠ Cut off — more than fits on this page
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ──────────────────────────────────────────────
@@ -493,6 +573,10 @@ function SkillsSection({
           />
         );
       })}
+      <TruncationNotice
+        hidden={Math.max(0, secondarySkills.length - secondarySlots)}
+        noun="secondary skill"
+      />
     </div>
   );
 }
@@ -500,6 +584,12 @@ function SkillsSection({
 // ──────────────────────────────────────────────
 // Section 4 Right — Inventory (SS-10)
 // ──────────────────────────────────────────────
+
+/** Numbered inventory rows the sheet has room for. */
+const INVENTORY_SLOTS = 10;
+
+/** Weapon rows the lower band has room for. */
+const WEAPON_SLOTS = 3;
 
 /** Prints carried inventory with a few blank rows for additions. */
 function InventorySection({
@@ -514,7 +604,7 @@ function InventorySection({
       <div className="sheet-section-header">Inventory</div>
 
       {/* 10 numbered slots */}
-      {Array.from({ length: 10 }).map((_, i) => {
+      {Array.from({ length: INVENTORY_SLOTS }).map((_, i) => {
         const item = character.inventory?.[i];
         return (
           <div key={i} className="sheet-inventory-slot">
@@ -523,6 +613,10 @@ function InventorySection({
           </div>
         );
       })}
+      <TruncationNotice
+        hidden={Math.max(0, (character.inventory?.length ?? 0) - INVENTORY_SLOTS)}
+        noun="item"
+      />
 
       {/* Keepsake slot — hidden for systems with no such concept. */}
       {engine.labels.memento && (
@@ -685,7 +779,7 @@ function WeaponsTable({
           </tr>
         </thead>
         <tbody>
-          {Array.from({ length: 3 }).map((_, i) => {
+          {Array.from({ length: WEAPON_SLOTS }).map((_, i) => {
             const weapon = character.weapons?.[i];
             return (
               <tr key={i} className={weapon ? '' : 'sheet-blank-row'}>
@@ -697,6 +791,10 @@ function WeaponsTable({
           })}
         </tbody>
       </table>
+      <TruncationNotice
+        hidden={Math.max(0, (character.weapons?.length ?? 0) - WEAPON_SLOTS)}
+        noun="weapon"
+      />
     </div>
   );
 }
@@ -821,11 +919,14 @@ function ResourceTrackers({
 // ══════════════════════════════════════════════
 
 /**
- * Full print layout for a character sheet — a pure, side-effect-free render.
+ * Full print layout for a character sheet.
  *
  * @remarks
  * Composes the section sub-components (header, attribute band, derived row, and the
- * three-column body/lower sections) into a single printable page. Everything that
+ * three-column body/lower sections) into a single printable page. Render-only
+ * apart from {@link PrintColumn}'s post-layout measurement, which marks a column
+ * whose content the fixed page size has clipped; nothing here loads or writes
+ * data. Everything that
  * varies by ruleset is resolved through the passed-in {@link SystemEngine} and
  * `system` definition rather than any Dragonbane-specific logic, so a different
  * system prints its own fields, currency, and stats. Interactivity and data loading
@@ -854,33 +955,33 @@ export default function PrintableSheet({
       {/* 4. Three-column body */}
       <div className="print-body-columns">
         {/* Left: Abilities/Spells + Currency */}
-        <div className="print-col print-col--left">
+        <PrintColumn variant="left">
           <AbilitiesSpells character={character} engine={engine} />
           <Currency character={character} engine={engine} system={system} />
-        </div>
+        </PrintColumn>
 
         {/* Center: Skills */}
-        <div className="print-col print-col--center">
+        <PrintColumn variant="center">
           <SkillsSection character={character} system={system} engine={engine} />
-        </div>
+        </PrintColumn>
 
         {/* Right: Inventory */}
-        <div className="print-col print-col--right">
+        <PrintColumn variant="right">
           <InventorySection character={character} engine={engine} />
-        </div>
+        </PrintColumn>
       </div>
 
       {/* 5. Lower section (3 columns) */}
       <div className="print-lower-columns">
-        <div className="print-col print-col--left">
+        <PrintColumn variant="left">
           <ArmorHelmet character={character} engine={engine} />
-        </div>
-        <div className="print-col print-col--center">
+        </PrintColumn>
+        <PrintColumn variant="center">
           <WeaponsTable character={character} system={system} />
-        </div>
-        <div className="print-col print-col--right">
+        </PrintColumn>
+        <PrintColumn variant="right">
           <ResourceTrackers character={character} derived={derived} system={system} engine={engine} />
-        </div>
+        </PrintColumn>
       </div>
     </div>
   );

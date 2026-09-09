@@ -761,9 +761,49 @@
 }
 
 /* ---- Column base: clip overflow within each column ---- */
+/*
+  The clip is deliberate — the whole sheet is pinned to one letter page, see
+  the SS-15 note above. What was not deliberate is clipping in silence: a
+  character with more skills than fit lost the tail of the list and the printed
+  page looked complete. `PrintColumn` measures each column after layout and
+  drops `.print-col-clipped` in when content was cut. `position: relative` is
+  what lets that marker sit at the bottom of the column instead of being
+  clipped by the very overflow it is reporting.
+*/
 .print-col {
   overflow: hidden;
   min-width: 0;
+  position: relative;
+}
+
+.print-col-clipped {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1px 2px;
+  font-size: 6.5pt;
+  font-weight: bold;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+  text-align: center;
+  color: #000;
+  background: rgba(255, 255, 255, 0.92);
+  border-top: 0.5px solid rgba(0, 0, 0, 0.55);
+}
+
+/*
+  Renderer-level truncation, as opposed to the CSS clip above: the inventory
+  prints ten slots, the weapons table three rows and the secondary-skill block
+  six, and anything past the last slot was never drawn at all. Inline rather
+  than absolute, because these sit inside their section's normal flow.
+*/
+.sheet-truncated {
+  font-size: 6.5pt;
+  font-style: italic;
+  font-weight: bold;
+  font-family: var(--font-text, 'Source Sans 3', sans-serif);
+  padding: 1px 2px;
+  color: #000;
 }
 
 /* ---- Mitigation A: Reduce font sizes in dense sections ---- */
