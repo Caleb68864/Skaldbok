@@ -7,6 +7,7 @@ import { useSheetTemplate } from '../features/systems/useSheetTemplate';
 import { useToast } from '../context/ToastContext';
 import { getEngine } from '../features/systems/engine';
 import { CardRenderer } from '../features/systems/cards/CardRenderer';
+import { componentRegistryOf } from '../features/systems/cards/resolveComponent';
 import { useAutosave } from '../hooks/useAutosave';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { ResourceModule } from '../features/playDashboard/ResourceModule';
@@ -78,6 +79,11 @@ export default function PlayDashboardScreen() {
   const hasRest = (getEngine(system).rest?.length ?? 0) > 0;
 
   const playTemplate = template?.play;
+  // Reusable components the template declares, expanded by CardRenderer. Empty
+  // for every bundled template, which is why this plumbing was missing: the
+  // whole `$prop` subsystem was written, hardened and tested with no way for a
+  // sheet.json to declare a component and no caller passing a registry.
+  const componentRegistry = componentRegistryOf(template);
 
   return (
     <div className="p-[var(--space-xs)] md:p-[var(--space-sm)]">
@@ -89,7 +95,7 @@ export default function PlayDashboardScreen() {
               // Full-width column: a vertical stack of cards.
               <div key={index} className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)]">
                 {region.map((entry, entryIndex) => (
-                  <CardRenderer key={entryIndex} entry={entry} {...moduleProps} />
+                  <CardRenderer key={entryIndex} entry={entry} componentRegistry={componentRegistry} {...moduleProps} />
                 ))}
               </div>
             ) : (
@@ -109,7 +115,7 @@ export default function PlayDashboardScreen() {
                   // min-content width instead of forcing the row to overflow.
                   <div key={cellIndex} className="flex flex-col gap-[var(--space-xs)] md:gap-[var(--space-sm)] min-w-0">
                     {cell.map((entry, entryIndex) => (
-                      <CardRenderer key={entryIndex} entry={entry} {...moduleProps} />
+                      <CardRenderer key={entryIndex} entry={entry} componentRegistry={componentRegistry} {...moduleProps} />
                     ))}
                   </div>
                 ))}

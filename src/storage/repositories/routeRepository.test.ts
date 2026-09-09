@@ -9,6 +9,7 @@ import {
   restore,
   update,
 } from './routeRepository';
+import { resetDatabase } from '../../test-utils/resetDatabase';
 
 /**
  * Route ordering is dense — `order` runs 0..n-1 with no gaps — and every
@@ -35,7 +36,7 @@ async function seedRoute(): Promise<string[]> {
 
 describe('routeRepository', () => {
   beforeEach(async () => {
-    await db.routeStops.clear();
+    await resetDatabase();
   });
 
   it('appends each new stop at the end, densely', async () => {

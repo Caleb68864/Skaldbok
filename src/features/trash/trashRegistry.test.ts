@@ -3,8 +3,8 @@ import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { db } from '../../storage/db/client';
 import { RESTORE_WITHOUT_LISTING, TRASH_ENTITY_TYPES } from './trashRegistry';
+import { resetDatabase } from '../../test-utils/resetDatabase';
 import * as shipRepository from '../../storage/repositories/shipRepository';
 import * as inventoryContainerRepository from '../../storage/repositories/inventoryContainerRepository';
 import * as ledgerRepository from '../../storage/repositories/ledgerRepository';
@@ -32,7 +32,7 @@ const CAMPAIGN = 'camp-trash';
 const REPO_DIR = join(process.cwd(), 'src/storage/repositories');
 
 beforeEach(async () => {
-  await Promise.all(db.tables.map((table) => table.clear()));
+  await resetDatabase();
 });
 
 describe('registry completeness', () => {

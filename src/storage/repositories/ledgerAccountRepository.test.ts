@@ -4,6 +4,7 @@ import { db } from '../db/client';
 import { create, ensureForCampaign, listByCampaign, softDelete } from './ledgerAccountRepository';
 import { create as createEntry, softDelete as softDeleteEntry } from './ledgerRepository';
 import { create as createBill } from './recurringBillRepository';
+import { resetDatabase } from '../../test-utils/resetDatabase';
 
 /**
  * The rule these tests exist for: **an account with entries cannot be deleted.**
@@ -17,9 +18,7 @@ import { create as createBill } from './recurringBillRepository';
  */
 
 beforeEach(async () => {
-  await db.ledgerAccounts.clear();
-  await db.ledgerEntries.clear();
-  await db.recurringBills.clear();
+  await resetDatabase();
 });
 
 async function cashAndSavings() {
