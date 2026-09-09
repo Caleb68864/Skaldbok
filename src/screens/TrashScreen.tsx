@@ -1,25 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import * as creatureTemplateRepository from '../storage/repositories/creatureTemplateRepository';
-import * as characterRepository from '../storage/repositories/characterRepository';
-import * as sessionRepository from '../storage/repositories/sessionRepository';
-import * as noteRepository from '../storage/repositories/noteRepository';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { useToast } from '../context/ToastContext';
-import { docToText } from '../features/notes/textToDoc';
-import type { CreatureTemplate } from '../types/creatureTemplate';
-import type { CharacterRecord } from '../types/character';
-import type { Session } from '../types/session';
-import type { Note } from '../types/note';
-
-/** One restorable row, whatever table it came from. */
-interface TrashRow {
-  id: string;
-  title: string;
-  detail: string;
-  deletedAt?: string;
-  restore: () => Promise<void>;
-}
+import { TRASH_ENTITY_TYPES, type TrashRow } from '../features/trash/trashRegistry';
 
 interface TrashSection {
   id: string;
@@ -27,28 +10,24 @@ interface TrashSection {
   rows: TrashRow[];
 }
 
-/** Leading characters of a note body used as a title fallback. */
-const TITLE_FALLBACK_LENGTH = 40;
-
-function noteTitle(note: Note): string {
-  if (note.title?.trim()) return note.title;
-  const text = docToText(note.body).trim();
-  return text ? text.slice(0, TITLE_FALLBACK_LENGTH) + (text.length > TITLE_FALLBACK_LENGTH ? '…' : '') : 'Untitled note';
-}
-
 /**
  * Everything that has been soft-deleted, with a per-row Restore.
  *
  * @remarks
- * Started as a creatures-only list under the bestiary; characters were the
- * one entity with no way back at all once their delete became a soft delete.
- * Characters are global, so they always show; sessions and notes are scoped to
- * the active campaign, because that is the only campaign whose trash the rest
- * of the UI can make sense of.
+ * Started as a creatures-only list under the bestiary, and grew by having each
+ * new entity type hand-written into this file. Four types made it in; nine did
+ * not, and every one of those nine already had a working `restore` sitting in
+ * its repository with no caller. Deleting a ship, the party's shared container,
+ * a ledger entry or a reference card destroyed it as far as the user was
+ * concerned — some of those without even a confirmation.
+ *
+ * The list now lives in `features/trash/trashRegistry.ts`, and a test fails if
+ * a repository grows a `getDeleted` without an entry there. This screen is only
+ * the rendering.
  *
  * Restore goes through each repository's `restore`, which brings back whatever
- * that entity's delete cascaded to (a character's party seat and encounter
- * edges; a note's links and KB node).
+ * that entity's delete cascaded to — a character's party seat and encounter
+ * edges, a note's links and KB node, a reference card's sections.
  */
 export default function TrashScreen() {
   const navigate = useNavigate();
@@ -62,59 +41,33 @@ export default function TrashScreen() {
     setLoading(true);
     try {
       const campaignId = activeCampaign?.id;
-      const [characters, creatures, sessions, notes] = await Promise.all([
-        characterRepository.getDeleted(),
-        campaignId ? creatureTemplateRepository.getDeleted(campaignId) : Promise.resolve([] as CreatureTemplate[]),
-        campaignId ? sessionRepository.getDeleted(campaignId) : Promise.resolve([] as Session[]),
-        campaignId ? noteRepository.getDeleted(campaignId) : Promise.resolve([] as Note[]),
-      ]);
-      const next: TrashSection[] = [
-        {
-          id: 'characters',
-          heading: 'Characters',
-          rows: characters.map((c: CharacterRecord) => ({
-            id: c.id,
-            title: c.name,
-            detail: c.systemId,
-            deletedAt: c.deletedAt,
-            restore: () => characterRepository.restore(c.id),
-          })),
-        },
-        {
-          id: 'sessions',
-          heading: 'Sessions',
-          rows: sessions.map((s: Session) => ({
-            id: s.id,
-            title: s.title,
-            detail: s.date,
-            deletedAt: s.deletedAt,
-            restore: () => sessionRepository.restore(s.id),
-          })),
-        },
-        {
-          id: 'notes',
-          heading: 'Notes',
-          rows: notes.map((n: Note) => ({
-            id: n.id,
-            title: noteTitle(n),
-            detail: n.type,
-            deletedAt: n.deletedAt,
-            restore: () => noteRepository.restore(n.id),
-          })),
-        },
-        {
-          id: 'creatures',
-          heading: 'Creatures',
-          rows: creatures.map((c: CreatureTemplate) => ({
-            id: c.id,
-            title: c.name,
-            detail: c.category,
-            deletedAt: c.deletedAt,
-            restore: () => creatureTemplateRepository.restore(c.id),
-          })),
-        },
-      ];
+      // A campaign-scoped listing needs an id, so those entries are skipped
+      // rather than called with `undefined` when no campaign is active.
+      const applicable = TRASH_ENTITY_TYPES.filter(
+        (entity) => entity.scope === 'global' || campaignId !== undefined,
+      );
+      // `allSettled`, not `all`: one repository throwing must not blank the
+      // whole Trash and strand every other restorable row with it.
+      const results = await Promise.allSettled(
+        applicable.map((entity) => entity.load(campaignId)),
+      );
+
+      const next: TrashSection[] = [];
+      const failed: string[] = [];
+      results.forEach((result, index) => {
+        const entity = applicable[index]!;
+        if (result.status === 'fulfilled') {
+          next.push({ id: entity.key, heading: entity.heading, rows: result.value });
+        } else {
+          failed.push(entity.heading);
+          console.error(`TrashScreen: ${entity.key} failed to load`, result.reason);
+        }
+      });
+
       setSections(next.filter((section) => section.rows.length > 0));
+      if (failed.length > 0) {
+        showToast(`Could not load: ${failed.join(', ')}`, 'error');
+      }
     } catch (e) {
       console.error('TrashScreen.refresh failed:', e);
       showToast('Could not load the trash', 'error');
@@ -169,8 +122,8 @@ export default function TrashScreen() {
       <div className="p-4">
         {header}
         <div className="mt-6 p-6 border border-[var(--color-border)] rounded-lg text-center text-[var(--color-text-muted)] text-sm">
-          Nothing deleted. Deleted characters, sessions, notes and creatures show up here with a Restore button.
-          {!activeCampaign && ' Select a campaign to see its sessions and notes.'}
+          Nothing deleted. Anything you delete shows up here with a Restore button.
+          {!activeCampaign && ' Select a campaign to see everything scoped to it.'}
         </div>
       </div>
     );

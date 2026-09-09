@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useAppSettings } from '../features/settings/useAppSettings';
 import { useTheme } from '../theme/ThemeProvider';
@@ -72,16 +72,25 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
     }).catch(console.error);
   }, []);
 
-  function toggleMode() {
+  // These five were plain functions, redefined on every render. That is what
+  // made the context value below a new object every time regardless of whether
+  // anything had changed, and 20 files consume this context.
+  //
+  // Four of them touch nothing but `setSessionState`, which React guarantees is
+  // stable, so `[]` is exact. `toggleMode` reads `settings.mode` and calls
+  // `updateSettings`, so both are listed — reading a wider slice such as
+  // `settings` would be correct too but would defeat the memo on every
+  // unrelated settings change.
+  const toggleMode = useCallback(() => {
     const newMode: ModeName = settings.mode === 'play' ? 'edit' : 'play';
     updateSettings({ mode: newMode }).catch(console.error);
-  }
+  }, [settings.mode, updateSettings]);
 
-  function setGlobalBoonBane(value: BoonBaneState) {
+  const setGlobalBoonBane = useCallback((value: BoonBaneState) => {
     setSessionState(prev => ({ ...prev, globalBoonBane: value }));
-  }
+  }, []);
 
-  function setSkillOverride(skillId: string, value: 'boon' | 'bane' | undefined) {
+  const setSkillOverride = useCallback((skillId: string, value: 'boon' | 'bane' | undefined) => {
     setSessionState(prev => {
       const overrides = { ...prev.skillOverrides };
       if (value === undefined) {
@@ -91,13 +100,13 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       }
       return { ...prev, skillOverrides: overrides };
     });
-  }
+  }, []);
 
-  function setRollTarget(target: number | undefined) {
+  const setRollTarget = useCallback((target: number | undefined) => {
     setSessionState(prev => ({ ...prev, rollTarget: target }));
-  }
+  }, []);
 
-  function setSkillAttributeOverride(skillId: string, attributeId: string | undefined) {
+  const setSkillAttributeOverride = useCallback((skillId: string, attributeId: string | undefined) => {
     setSessionState(prev => {
       const overrides = { ...prev.skillAttributeOverrides };
       if (attributeId === undefined) {
@@ -107,24 +116,39 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       }
       return { ...prev, skillAttributeOverrides: overrides };
     });
-  }
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      settings,
+      updateSettings,
+      isLoading,
+      settingsError,
+      storageError,
+      toggleMode,
+      sessionState,
+      setGlobalBoonBane,
+      setSkillOverride,
+      setSkillAttributeOverride,
+      setRollTarget,
+    }),
+    [
+      settings,
+      updateSettings,
+      isLoading,
+      settingsError,
+      storageError,
+      toggleMode,
+      sessionState,
+      setGlobalBoonBane,
+      setSkillOverride,
+      setSkillAttributeOverride,
+      setRollTarget,
+    ],
+  );
 
   return (
-    <AppStateContext.Provider
-      value={{
-        settings,
-        updateSettings,
-        isLoading,
-        settingsError,
-        storageError,
-        toggleMode,
-        sessionState,
-        setGlobalBoonBane,
-        setSkillOverride,
-        setSkillAttributeOverride,
-        setRollTarget,
-      }}
-    >
+    <AppStateContext.Provider value={value}>
       {children}
     </AppStateContext.Provider>
   );

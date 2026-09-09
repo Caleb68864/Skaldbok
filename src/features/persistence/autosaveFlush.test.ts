@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { registerFlush, flushAll } from './autosaveFlush';
+import { registerFlush, flushAll, trackPendingWrite } from './autosaveFlush';
 
 /**
  * The flush registry is the mechanism every lifecycle operation relies on to
@@ -91,5 +91,91 @@ describe('autosaveFlush registry', () => {
 
   it('resolves to an empty array when nothing is registered', async () => {
     await expect(flushAll()).resolves.toEqual([]);
+  });
+});
+
+/**
+ * A registered flush covers a write that has not started. This covers the other
+ * half — a write already in flight whose owner has unmounted, which is what
+ * `useAutosave`'s unmount flush is. Without it, `flushAll()` could resolve
+ * while the user's last edit was still on its way to IndexedDB, and every
+ * caller of `flushAll` treats it as "the data is safe now".
+ */
+describe('in-flight writes', () => {
+  /** A promise the test settles by hand. */
+  function deferred(): { promise: Promise<void>; resolve: () => void; reject: (e: unknown) => void } {
+    let resolve!: () => void;
+    let reject!: (e: unknown) => void;
+    const promise = new Promise<void>((res, rej) => { resolve = res; reject = rej; });
+    return { promise, resolve, reject };
+  }
+
+  it('flushAll does not resolve until a tracked write settles', async () => {
+    const gate = deferred();
+    trackPendingWrite(gate.promise);
+
+    let done = false;
+    const flushing = flushAll().then(() => { done = true; });
+    await Promise.resolve();
+    expect(done).toBe(false);
+
+    gate.resolve();
+    await flushing;
+    expect(done).toBe(true);
+  });
+
+  it('returns the same promise, so it can wrap a call in place', async () => {
+    const promise = Promise.resolve('written');
+    expect(trackPendingWrite(promise)).toBe(promise);
+    await expect(promise).resolves.toBe('written');
+  });
+
+  it('stops waiting for a write once it has settled', async () => {
+    await trackPendingWrite(Promise.resolve());
+    // Give the internal `finally` a turn to clear the entry.
+    await Promise.resolve();
+    await expect(flushAll()).resolves.toEqual([]);
+  });
+
+  it('a failed write is waited for, reported, and then forgotten', async () => {
+    const gate = deferred();
+    // The caller owns the error; this is only bookkeeping.
+    trackPendingWrite(gate.promise).catch(() => {});
+
+    let done = false;
+    const flushing = flushAll().then(() => { done = true; });
+    await Promise.resolve();
+    expect(done).toBe(false);
+
+    gate.reject(new Error('quota exceeded'));
+    const results = await flushing;
+    expect(done).toBe(true);
+    void results;
+
+    // …and the entry is gone, so the next flush is not stuck behind it.
+    await Promise.resolve();
+    await expect(flushAll()).resolves.toEqual([]);
+  });
+
+  it('waits for a registered flush and an in-flight write together', async () => {
+    const order: string[] = [];
+    const writeGate = deferred();
+    const flushGate = deferred();
+    trackPendingWrite(writeGate.promise.then(() => { order.push('write'); }));
+    const handle = registerFlush(async () => {
+      await flushGate.promise;
+      order.push('flush');
+    });
+
+    let done = false;
+    const flushing = flushAll().then(() => { done = true; });
+    flushGate.resolve();
+    await Promise.resolve();
+    expect(done, 'resolved before the in-flight write finished').toBe(false);
+
+    writeGate.resolve();
+    await flushing;
+    expect(order.sort()).toEqual(['flush', 'write']);
+    handle.unregister();
   });
 });

@@ -3,7 +3,7 @@ import { partySchema, partyMemberSchema } from '../../types/party';
 import type { Party, PartyMember } from '../../types/party';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
-import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
+import { excludeDeleted, generateSoftDeleteTxId, onlyDeleted } from '../../utils/softDelete';
 
 /**
  * The party for a campaign, if one exists.
@@ -159,6 +159,32 @@ export async function softDeletePartyMember(memberId: string, txId?: string): Pr
     });
   } catch (e) {
     throw new Error(`partyRepository.softDeletePartyMember failed: ${e}`);
+  }
+}
+
+/**
+ * Every soft-deleted member of a campaign's party, newest deletion first.
+ *
+ * @remarks
+ * `PartyMember` carries a `partyId`, not a `campaignId`, so the campaign scope
+ * has to come through the party — and through the *deleted-inclusive* lookup,
+ * because a party that was itself soft-deleted still owns the members the user
+ * is looking for. Returns nothing when the campaign has no party at all.
+ *
+ * Removing a member from the party drawer has always been a soft delete; there
+ * was simply nothing that listed the result, so the seat was unrecoverable in
+ * practice.
+ *
+ * @param campaignId - Campaign whose trash is being listed.
+ */
+export async function getDeletedMembers(campaignId: string): Promise<PartyMember[]> {
+  try {
+    const party = await getPartyByCampaign(campaignId, { includeDeleted: true });
+    if (!party) return [];
+    const rows = await db.partyMembers.where('partyId').equals(party.id).toArray();
+    return onlyDeleted(rows as PartyMember[]);
+  } catch (e) {
+    throw new Error(`partyRepository.getDeletedMembers failed: ${e}`);
   }
 }
 

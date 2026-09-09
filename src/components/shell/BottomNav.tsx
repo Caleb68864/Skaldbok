@@ -2,19 +2,38 @@ import { useLocation, Link } from 'react-router-dom';
 import { Scroll, Flame, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SESSION_SECTION_PREFIXES } from './SessionSubNav';
+import { destinationsFor } from './navigationCatalogue';
 
 /**
- * Top-level navigation tabs rendered inside {@link BottomNav}.
+ * Icon per destination. The paths and their order come from the catalogue.
  *
- * Each entry defines the route `to` path and the human-readable `label` shown
- * in the tab bar. The array is `as const` so TypeScript can narrow the literal
- * types when computing the active state.
+ * @remarks
+ * Only the icon lives here: which destinations exist and in what order is a
+ * navigation decision, and it was previously made independently in five files.
  */
-const NAV_TABS = [
-  { to: '/character/sheet', label: 'Characters', icon: Scroll },
-  { to: '/session', label: 'Session', icon: Flame },
-  { to: '/reference', label: 'Reference', icon: BookOpen },
-] as const;
+const BOTTOM_NAV_ICONS: Record<string, typeof Scroll> = {
+  '/character/sheet': Scroll,
+  '/session': Flame,
+  '/reference': BookOpen,
+};
+
+/**
+ * The bottom bar's label for a destination.
+ *
+ * @remarks
+ * "Characters" rather than the catalogue's "Sheet": this tab stands for the
+ * whole character section, not the one screen it happens to land on.
+ */
+const BOTTOM_NAV_LABELS: Record<string, string> = {
+  '/character/sheet': 'Characters',
+};
+
+/** Top-level navigation tabs, taken from the shared catalogue. */
+const NAV_TABS = destinationsFor('bottom').map((destination) => ({
+  to: destination.path,
+  label: BOTTOM_NAV_LABELS[destination.path] ?? destination.label,
+  icon: BOTTOM_NAV_ICONS[destination.path] ?? Scroll,
+}));
 
 /**
  * Persistent bottom navigation bar rendered by {@link components/shell/ShellLayout!ShellLayout | ShellLayout} on every

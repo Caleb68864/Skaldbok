@@ -4,7 +4,7 @@ import { parseReferenceBundle } from '../../utils/import/referenceBundleParser';
 import type { ValidationWarning } from '../../utils/import/bundleParser';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
 
 /** Every user-owned reference section, sorted by explicit order then category then title. */
 export async function getAll(options?: { includeDeleted?: boolean }): Promise<ReferenceSection[]> {
@@ -144,6 +144,44 @@ export async function restore(id: string): Promise<void> {
     await db.referenceSections.update(id, { deletedAt: undefined, softDeletedBy: undefined });
   } catch (err) {
     throw new Error(`Failed to restore reference section: ${String(err)}`);
+  }
+}
+
+/**
+ * Every soft-deleted reference section, newest deletion first.
+ *
+ * @remarks
+ * The reference library is campaign-independent — it is the user's own house
+ * rules, shared across every campaign — so this listing is global, like
+ * `characterRepository.getDeleted`, rather than campaign-scoped.
+ *
+ * A section deleted on its own is restored on its own. A section that went down
+ * with its card is restored by {@link restoreGroup}, which matches on the
+ * cascade id; restoring one of those individually is still correct, it just
+ * brings back one section rather than the set.
+ */
+export async function getDeleted(): Promise<ReferenceSection[]> {
+  try {
+    return onlyDeleted(await db.referenceSections.toArray());
+  } catch (err) {
+    throw new Error(`Failed to list deleted reference sections: ${String(err)}`);
+  }
+}
+
+/**
+ * Every soft-deleted reference card, newest deletion first.
+ *
+ * @remarks
+ * Restoring one of these goes through {@link restoreGroup}, which brings back
+ * every section that went down with the card in the same cascade. That path
+ * queries `referenceSections.softDeletedBy`, an index that only became legal at
+ * schema v19 — until the Trash listed cards, nothing had ever called it.
+ */
+export async function getDeletedGroups(): Promise<ReferenceGroup[]> {
+  try {
+    return onlyDeleted(await db.referenceGroups.toArray());
+  } catch (err) {
+    throw new Error(`Failed to list deleted reference cards: ${String(err)}`);
   }
 }
 

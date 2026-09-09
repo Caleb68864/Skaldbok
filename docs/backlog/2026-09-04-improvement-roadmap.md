@@ -766,7 +766,7 @@ does have no link site — `/more` appears only as its own route definition at
 this belongs. Do not delete the KB feature or the d3 dependencies on the
 strength of this entry.
 
-### H2. Navigation is five hand-maintained lists, one of them dead — OPEN (V)
+### H2. Navigation is five hand-maintained lists, one of them dead — DONE (3f88005)
 - **Where:** `BottomNav.tsx:14-16`, `CampaignHeader.tsx:186-221`,
   `SessionSubNav.tsx:32-34,89`, `MoreScreen.tsx:25-29`, plus an ad-hoc bestiary
   button at `SessionScreen.tsx:216,519`. `MoreScreen` has no link site anywhere
@@ -778,8 +778,25 @@ strength of this entry.
 - **Fix:** One `config/defaults/navigation.ts` catalogue (id, path, label, icon,
   surface) read through a hook, per the configuration rule. Delete
   `MoreScreen`. This is the natural home for the A8 bottom-nav toggles.
+- **Closed** as `components/shell/navigationCatalogue.ts` — a manifest of every
+  destination with the surfaces that offer it, read by all four nav surfaces.
+  Deliberately **not** a renderer: the three tab rows have engine-driven
+  labels, conditional tabs and longest-prefix active matching, and collapsing
+  them into one component would trade a real bug for a worse abstraction. Only
+  the duplicated list of destinations moved. `MoreScreen` and `/more` deleted.
+- **`navigationCatalogue.test.ts` is the part that matters.** It parses the real
+  route table, skips redirects, and fails on any concrete route that neither
+  appears in the catalogue nor is recorded as a deliberate exception with a
+  reason — plus the reverse, a catalogue entry or an exception naming a route
+  that no longer exists. It found three orphans on its first run, one of them
+  unknown: **`/ships` had no recorded way in.** It is reachable, from the
+  vehicles panel on the sheet, but nothing said so and nothing would have
+  noticed if that link went.
+- **Still open:** the A8 bottom-nav toggles. `settings.bottomNavTabs` is written
+  by the Settings screen and read by nothing; the catalogue is now the place
+  that could filter it, but wiring it is a separate change.
 
-### H3. Many soft-deleted entities are unrestorable — OPEN, RESCOPED (2026-09-08 audit)
+### H3. Many soft-deleted entities are unrestorable — DONE (52f1b43), RESCOPED (2026-09-08 audit)
 **The original title and premise were stale.** Four types restore from the
 trash screen today, not one: `TrashScreen.tsx:80,91,102,113` wires Restore for
 characters, sessions, notes **and** creatures, and its empty-state text at
@@ -799,6 +816,36 @@ is a hard delete from the user's point of view.
   `{ label, getDeleted, restore }` per repository, replacing
   `/bestiary/trash`. Include `deletedAt` and a purge action that calls
   `hardDelete`.
+- **Closed, and the count was nine, not twelve.** Re-verified repository by
+  repository before scoping, since the list above was known to over-count. The
+  nine genuinely unrecoverable-from-the-UI types were ships, inventory
+  containers, party members, ledger entries, ledger accounts, recurring bills,
+  route stops, reference sections and reference cards. `routePlan` and
+  `ledgerSplit` were dropped from the list: one row per campaign, created
+  lazily, with no user-facing delete at all — a restore for them would be dead
+  code. Sessions, encounters, campaigns and parties likewise have no user-facing
+  delete; the Trash's Sessions section is currently unreachable in normal use
+  and was left in place rather than removed.
+- **What was missing was never `restore`** — all nine already had one, sitting
+  in the repository with no caller. It was the `getDeleted` listing and the
+  surface. Nine listings added (`getDeletedGroups` for cards,
+  `getDeletedMembers` for party seats, which scope through the party since a
+  `PartyMember` has no `campaignId`), plus `onlyDeleted` in `utils/softDelete`
+  as the shared body — the four existing listings had already drifted, two
+  sorting and two not.
+- **`features/trash/trashRegistry.ts`** holds the list as data; `TrashScreen` is
+  now only the rendering, and loads with `allSettled` so one repository throwing
+  cannot blank the whole Trash. `trashRegistry.test.ts` reads the repository
+  directory, finds every exported `getDeleted*`, and fails if the registry does
+  not *call* it — checked on the call rather than the import, so a leftover
+  import cannot pass while rows stay stranded. Then thirteen tests run the real
+  loop per type against `fake-indexeddb`.
+- **Not done:** the purge action calling `hardDelete`. Deliberately: there is no
+  way back from it, the Trash has no confirmation flow, and nothing is asking
+  for the space yet.
+- **First exercise of a latent path:** restoring a reference card cascades to
+  the sections that went down with it, through a `softDeletedBy` query that only
+  became legal at schema v19 and that nothing had ever called.
 
 ### H4. A campaign export is the only backup, and only Settings knows — OPEN (V)
 - **Where:** `lastBackupAt` is written in exactly one place,
@@ -836,7 +883,7 @@ is a hard delete from the user's point of view.
   is a line that gets re-added by reflex, as the standard cure for iOS
   focus-zoom on inputs (the actual cure being a 16px input font size).
 
-### H7. One error boundary for the whole app — OPEN (V)
+### H7. One error boundary for the whole app — PARTLY DONE (835d16d); the extra boundary remains
 - **Where:** `src/app/App.tsx:20` wraps the routes in the only `ErrorBoundary`
   (`app/ErrorBoundary.tsx`); the only other boundary is per-card inside
   `CardRenderer.tsx:17`.
@@ -848,6 +895,21 @@ is a hard delete from the user's point of view.
 - **Fix:** A boundary inside `ShellLayout` around the outlet so the bottom nav
   survives; flush autosave (`features/persistence/autosaveFlush`) before
   navigating away; include the route in the error report.
+- **Done: the data loss.** A test written before the fix established what was
+  actually happening, which was not quite what this entry says. React *does*
+  unmount the subtree that threw, so the `useAutosave` unmount flush fires —
+  but it is fire-and-forget, with nobody left to await it, and
+  `window.location.assign` went ahead while the write was still in flight.
+  Separately `flushAll()` was never called on this path at all, so a
+  registration outside the crashed subtree was not flushed either.
+- `autosaveFlush` gains `trackPendingWrite`, and `flushAll` now waits for
+  already-started writes as well as registered flushes. That makes `flushAll()`
+  mean what all four of its callers assume — the data is on disk, not merely
+  that nothing new was queued — so `endSession`, `clearCharacter`,
+  `deleteCharacter` and `setCharacter` inherit the guarantee too. The recovery
+  button awaits it, and both buttons disable while it runs.
+- **Still open:** the boundary inside `ShellLayout` so the nav survives a panel
+  throw, and the route in the error report.
 
 ### H8. Portraits live inline on the character record — OPEN (V)
 - **Where:** `types/character.ts:490-491` `portraitUri` is a base64 data URL;
@@ -1244,6 +1306,47 @@ build` passing. After: 1595 tests / 99 files, plus `eslint .` at 0 errors.
 
 ---
 
+## Workstream M — Closed by the 2026-09-09 pass (part two)
+
+The expensive tail: four items that all scored near zero on this file's own
+formula — blast radius 4–5 against moderate impact — because they are refactors
+where *changing no behaviour* is most of the work. Three had entries above
+(**H2**, **H3**, **H7**) and are marked there. The fourth is here.
+
+Baseline before: 1595 tests / 99 files. After: 1649 tests / 103 files, with
+`tsc -b`, `eslint .` (0 errors) and `vite build` green throughout.
+
+### M1. No provider memoized its `value=` prop — DONE (907e7a1)
+- **Where:** `CampaignContext.tsx:665`, `AppStateContext.tsx:113`,
+  `ActiveCharacterContext.tsx:121`, `ToastContext.tsx:64`,
+  `ThemeProvider.tsx:49`, `KnowledgeBaseContext.tsx:139`.
+- **What:** each built its context value as an object literal in the render
+  body, so it was a new identity on every render whether or not anything in it
+  had changed. React compares context values by identity, so every consumer
+  re-rendered — 31 files consume `CampaignContext`, 34 consume `useToast`, 20
+  consume `useAppState`.
+- **The audit was wrong about one:** `SessionRefreshContext` already memoized.
+  `SessionEncounterContext` passes a hook result straight through and was left
+  alone.
+- **Measured, not assumed.** `ToastProvider` holds the toast queue, so it
+  re-renders whenever a toast is shown and again when each expires. With 20
+  consumers mounted and one toast shown: **20 consumer re-renders before, 0
+  after**, and the test asserts the zero.
+- **Worth recording:** the first version of that measurement re-rendered the
+  provider's *parent*, which does not re-render the provider at all — `children`
+  is the same element reference — and so passed with and without the memo. A
+  harness that cannot fail is worse than no harness.
+- **The risk was never the memo**, it was a dependency array that omits a member
+  and freezes a value consumers depend on. Every provider lists every member, so
+  identity changes exactly when the value does; and a test parses each
+  provider's value `useMemo` out of its own source and fails if a member is
+  missing from the deps, which is otherwise invisible until someone notices a
+  screen not updating. `AppStateContext`'s five plain functions and
+  `ThemeProvider`'s `setTheme` became `useCallback`s first — a function
+  redefined every render makes any surrounding memo a no-op.
+
+---
+
 ## Suggested order of attack
 
 Each line is a self-contained change that can ship on its own and be verified
@@ -1270,9 +1373,10 @@ with `npm run build` + `npm test` + a walk through the app.
     adapters are already thin.
 15. **A8–A10, G** as filler.
 16. **H1 is withdrawn** — the KB is reachable, so there is no fate to decide.
-    Go straight to **H2** the navigation catalogue (absorbs A8's toggles, and
-    is where the genuinely orphaned `MoreScreen` is dealt with), then **H3**
-    the generic trash screen — rescoped, since four types already restore.
+    **H2** (the navigation catalogue, with `MoreScreen` deleted) and **H3** (the
+    registry-driven trash) are both now done. What they left behind is A8's
+    bottom-nav toggles, which the catalogue is now the natural place to filter,
+    and a purge action for the Trash, which was declined rather than forgotten.
 17. **I1 + I10** linter and CI — both now done, so **I3, I4, I6** are one-time
     fixes that stay fixed. **I8** is a one-line delete. When picking up I4 and
     I6, add their `no-restricted-syntax` / `no-restricted-properties` rules to
@@ -1308,7 +1412,14 @@ found (L4) — together with **I1** (the linter itself), **B10** (the reference
 import, apart from the in-app editor bodies), and partial progress on **E4**
 (the unknown-system fallback is now loud and guarded, but adapter selection is
 still by id) and **I5** (a DOM environment exists; shared setup and coverage do
-not). Workstreams G, H and J are otherwise untouched.
+not).
+
+A second 2026-09-09 pass then took the expensive tail — the items scoring near
+zero on this file's own formula, where changing no behaviour is most of the
+work. It closed **H2** (the navigation catalogue, and `/more` with it), **H3**
+(nine entity types given a way back, not the twelve this file claimed), and
+**workstream M** (provider memoization), and took **H7** as far as the data
+loss goes. Workstreams G and J are otherwise untouched.
 
 What step 13 deliberately left:
 

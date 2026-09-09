@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { useAppState } from './AppStateContext';
 import * as characterRepository from '../storage/repositories/characterRepository';
@@ -117,8 +117,16 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
     await updateSettings({ activeCharacterId: null });
   }, [updateSettings]);
 
+  // Every member is listed, so the identity changes exactly when one of them
+  // does — the memo can never hand a consumer a stale `character`, which is the
+  // one way a memoised context value does real damage.
+  const value = useMemo(
+    () => ({ character, setCharacter, updateCharacter, clearCharacter, isLoading }),
+    [character, setCharacter, updateCharacter, clearCharacter, isLoading],
+  );
+
   return (
-    <ActiveCharacterContext.Provider value={{ character, setCharacter, updateCharacter, clearCharacter, isLoading }}>
+    <ActiveCharacterContext.Provider value={value}>
       {children}
     </ActiveCharacterContext.Provider>
   );

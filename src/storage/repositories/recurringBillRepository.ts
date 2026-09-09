@@ -1,6 +1,6 @@
 import { db } from '../db/client';
 import type { RecurringBill } from '../../types/recurringBill';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
 
@@ -108,6 +108,25 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
 /** Restores a soft-deleted bill. */
 export async function restore(id: string): Promise<void> {
   await db.recurringBills.update(id, { deletedAt: undefined, softDeletedBy: undefined });
+}
+
+/**
+ * Every soft-deleted RecurringBill in a campaign, newest deletion first.
+ *
+ * @remarks
+ * Feeds the Trash screen, which is the only way a user gets one of these back.
+ * A restored bill keeps its schedule and its last-posted marker, so it does
+ * not re-post everything it missed.
+ *
+ * @param campaignId - Campaign whose trash is being listed.
+ */
+export async function getDeleted(campaignId: string): Promise<RecurringBill[]> {
+  try {
+    const rows = await db.recurringBills.where('campaignId').equals(campaignId).toArray();
+    return onlyDeleted(rows);
+  } catch (e) {
+    throw new Error(`recurringBillRepository.getDeleted failed: ${e}`);
+  }
 }
 
 /** Permanently removes a bill. Internal — never call from UI. */

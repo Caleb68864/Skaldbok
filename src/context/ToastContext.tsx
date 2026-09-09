@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
 import { Toaster } from '../components/ui/toaster';
 import { generateId } from '../utils/ids';
 import type { ToastAction, ToastItem, ToastVariant } from '../components/ui/toaster';
@@ -60,8 +60,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // A fresh object literal here made all 34 `useToast` consumers re-render on
+  // every toast shown and every toast expiring — this provider holds the queue,
+  // so it re-renders on a timer. `showToast` is the only member and is already
+  // stable, so the memo is exact: the identity changes when the value does and
+  // at no other time.
+  const value = useMemo(() => ({ showToast }), [showToast]);
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={value}>
       {children}
       <Toaster toasts={toasts} />
     </ToastContext.Provider>
