@@ -1,7 +1,7 @@
 import { db } from '../db/client';
 import type { Ship } from '../../types/ship';
 import { CURRENT_SHIP_SCHEMA_VERSION, upgradeShip } from '../../types/ship';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
 
@@ -109,6 +109,25 @@ export async function softDelete(id: string): Promise<void> {
 /** Restores a soft-deleted ship. */
 export async function restore(id: string): Promise<void> {
   await db.ships.update(id, { deletedAt: undefined, softDeletedBy: undefined });
+}
+
+/**
+ * Every soft-deleted Ship in a campaign, newest deletion first.
+ *
+ * @remarks
+ * Feeds the Trash screen, which is the only way a user gets one of these back.
+ * Deleting a ship is a soft delete with no cascade, so the row and its
+ * counters come back exactly as they were.
+ *
+ * @param campaignId - Campaign whose trash is being listed.
+ */
+export async function getDeleted(campaignId: string): Promise<Ship[]> {
+  try {
+    const rows = await db.ships.where('campaignId').equals(campaignId).toArray();
+    return onlyDeleted(rows);
+  } catch (e) {
+    throw new Error(`shipRepository.getDeleted failed: ${e}`);
+  }
 }
 
 /** Permanently removes a ship. Internal — never call from UI. */

@@ -1,6 +1,6 @@
 import { db } from '../db/client';
 import type { RouteStop } from '../../types/routeStop';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
 
@@ -196,6 +196,25 @@ export async function restore(id: string): Promise<void> {
       updatedAt: nowISO(),
     });
   });
+}
+
+/**
+ * Every soft-deleted RouteStop in a campaign, newest deletion first.
+ *
+ * @remarks
+ * Feeds the Trash screen, which is the only way a user gets one of these back.
+ * `restore` appends the stop to the end of the running order rather than
+ * guessing its old position, since the stops around it have re-densified.
+ *
+ * @param campaignId - Campaign whose trash is being listed.
+ */
+export async function getDeleted(campaignId: string): Promise<RouteStop[]> {
+  try {
+    const rows = await db.routeStops.where('campaignId').equals(campaignId).toArray();
+    return onlyDeleted(rows);
+  } catch (e) {
+    throw new Error(`routeRepository.getDeleted failed: ${e}`);
+  }
 }
 
 /** Permanently removes a stop. Internal — never call from UI. */

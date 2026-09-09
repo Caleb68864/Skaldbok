@@ -1,6 +1,6 @@
 import { db } from '../db/client';
 import type { InventoryContainer } from '../../types/inventoryContainer';
-import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
+import { excludeDeleted, onlyDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
 
@@ -96,6 +96,25 @@ export async function restore(id: string): Promise<void> {
     softDeletedBy: undefined,
     updatedAt: nowISO(),
   });
+}
+
+/**
+ * Every soft-deleted InventoryContainer in a campaign, newest deletion first.
+ *
+ * @remarks
+ * Feeds the Trash screen, which is the only way a user gets one of these back.
+ * A container holds the party's shared coin and items inline on the row,
+ * so restoring the container restores the lot.
+ *
+ * @param campaignId - Campaign whose trash is being listed.
+ */
+export async function getDeleted(campaignId: string): Promise<InventoryContainer[]> {
+  try {
+    const rows = await db.inventoryContainers.where('campaignId').equals(campaignId).toArray();
+    return onlyDeleted(rows);
+  } catch (e) {
+    throw new Error(`inventoryContainerRepository.getDeleted failed: ${e}`);
+  }
 }
 
 /** Permanently removes a container row. Internal only — never called from UI, which soft-deletes. */

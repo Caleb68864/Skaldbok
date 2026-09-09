@@ -1,7 +1,7 @@
 import { db } from '../db/client';
 import type { LedgerAccount } from '../../types/ledgerAccount';
 import { DEFAULT_PRIMARY_ACCOUNT_NAME } from '../../config/defaults/ledger';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
 
@@ -186,6 +186,25 @@ export async function softDelete(
 /** Restores a soft-deleted account. */
 export async function restore(id: string): Promise<void> {
   await db.ledgerAccounts.update(id, { deletedAt: undefined, softDeletedBy: undefined });
+}
+
+/**
+ * Every soft-deleted LedgerAccount in a campaign, newest deletion first.
+ *
+ * @remarks
+ * Feeds the Trash screen, which is the only way a user gets one of these back.
+ * Account deletion is already refused while entries or bills point at the
+ * account, so a restorable account is one that was empty when it went.
+ *
+ * @param campaignId - Campaign whose trash is being listed.
+ */
+export async function getDeleted(campaignId: string): Promise<LedgerAccount[]> {
+  try {
+    const rows = await db.ledgerAccounts.where('campaignId').equals(campaignId).toArray();
+    return onlyDeleted(rows);
+  } catch (e) {
+    throw new Error(`ledgerAccountRepository.getDeleted failed: ${e}`);
+  }
 }
 
 /** Permanently removes an account. Internal — never call from UI. */
