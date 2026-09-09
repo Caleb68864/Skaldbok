@@ -11,16 +11,26 @@ Skaldbok is a local-first, offline-capable PWA for tabletop RPG play. It ships w
 ## Commands
 
 - `npm run dev` — Vite dev server (HTTPS via self-signed cert).
-- `npm run build` — `tsc -b` project references build, then `vite build`. **This is the only type-check command** — there is no standalone `lint` or `typecheck` script; rely on `tsc -b` via build.
+- `npm run build` — `tsc -b` project references build, then `vite build`. **This is the only type-check command** — there is no standalone `typecheck` script; rely on `tsc -b` via build.
+- `npm run lint` — ESLint (flat config in `eslint.config.js`). Errors fail; the
+  standing warnings are fast-refresh boundaries and deliberate dependency-array
+  omissions. CI runs it between typecheck and test.
 - `npm run preview` — serve the built bundle (used by `build-and-run.bat` for LAN tablet testing on port 4173).
 - `npm run docs` / `npm run docs:open` — TypeDoc API docs into `docs/api/`.
 - `npm test` — Vitest, run once. `npm run test:watch` for watch mode.
 
-`npm test` covers **pure logic only** — schema migrations, stat-key resolution,
-ability projections, container wealth. It is deliberately scoped: these are the
-places where a bug silently corrupts saved characters rather than failing to
-compile. There is no component/DOM test setup, so UI changes are still verified
-by `npm run build` plus running the app.
+`npm test` is mostly **pure logic** — schema migrations, stat-key resolution,
+ability projections, container wealth — plus repository tests against
+`fake-indexeddb`. These are the places where a bug silently corrupts saved
+characters rather than failing to compile.
+
+A **DOM environment exists but is opted into per file**: put
+`// @vitest-environment jsdom` on the first line and use
+`@testing-library/react`. There is no global switch, deliberately — the ~90 pure
+files keep the node environment and their speed. Testing Library's auto-cleanup
+only runs when Vitest globals are on, and they are not, so every DOM test file
+must call `cleanup()` in its own `afterEach` or renders stack up in one
+document. See `hooks/useAutosave.test.tsx` for the pattern.
 
 The `tests/` directory additionally contains a Python Playwright E2E script
 (`e2e_full_test.py`) that drives the running app against the dev server.
@@ -32,7 +42,7 @@ The `tests/` directory additionally contains a Python Playwright E2E script
 - Routes live in `src/routes/index.tsx`. Two layers: a shell-less `/print` route, and everything else under `<ShellLayout />` (persistent bottom-nav shell). Legacy `/sheet`, `/skills`, `/gear`, `/magic`, `/combat` are permanent redirects into `/character/*` — keep them.
 
 ### Storage layer (Dexie / IndexedDB)
-- `src/storage/db/client.ts` defines the `SkaldbokDatabase` Dexie class and all `version(n).stores(...)` migrations. **Schema changes = add a new `version()` block; never edit an old one.** See the existing compound indexes on `entityLinks` (`[fromEntityId+relationshipType]`, `[toEntityId+relationshipType]`) — any new link-lookup pattern wants a matching compound index.
+- `src/storage/db/client.ts` defines the `SkaldbokDatabase` Dexie class and all `version(n).stores(...)` migrations. **Schema changes = add a new `version()` block; never edit an old one.** That is enforced: `releasedSchemaVersions.test.ts` fingerprints every released block including its inline `.upgrade(...)` body, and adding a version means adding its fingerprint there in the same commit. See the existing compound indexes on `entityLinks` (`[fromEntityId+relationshipType]`, `[toEntityId+relationshipType]`) — any new link-lookup pattern wants a matching compound index.
 - Every domain entity is accessed through a repository in `src/storage/repositories/*.ts`. UI code and hooks call repositories; they **never** touch the Dexie tables directly. If you find yourself reaching into `db.notes.where(...)` from a component, stop and add/extend a repo method.
 - Shared utilities live in `src/utils/` — notably `softDelete.ts` (`excludeDeleted` helper) and `ids.ts` (`generateId`). The ID generator is used for both entity IDs and soft-delete transaction IDs.
 
@@ -61,8 +71,12 @@ rulesets — vocabulary, panels, formulas, rest and death rules, currency,
 probability — is resolved through a **`SystemEngine`**, never hardcoded in a
 screen and never branched on `systemId`.
 
-Source: `src/features/systems/engine/`. Two adapters ship today:
-`classicFantasyEngine` (Dragonbane-like) and `travellerEngine`.
+Source: `src/features/systems/engine/`. Three adapters ship today:
+`classicFantasyEngine` (Dragonbane-like), `travellerEngine` and
+`savageWorldsEngine`, registered in the `SYSTEM_ADAPTERS` map in
+`engine/index.ts`. A system with no adapter falls back to classic-fantasy,
+which is not a neutral default — it brings Dragonbane's formulas with it — so
+the engine sets `fallbackRulesFor` and `CharacterSubNav` says so on screen.
 
 ### The rule
 
@@ -150,11 +164,12 @@ scene-long buff in permanently. `resolveSkillValue` returns `base` and
 
 1. Add `src/systems/<id>/system.json` + `index.ts`, and register it in
    `src/systems/registry.ts` (this drives the character-creation picker).
-2. Add an engine adapter under `src/features/systems/engine/` and add a
-   `system.id === '<id>'` branch to `baseEngineFor` in `engine/index.ts` — the
-   one sanctioned place for a systemId branch (the "no `systemId ===`" rule
-   applies everywhere *else*). The `registry.ts` list and this branch are two
-   hand-maintained lists that must stay in lockstep.
+2. Add an engine adapter under `src/features/systems/engine/` and add it to the
+   `SYSTEM_ADAPTERS` map in `engine/index.ts` — the one sanctioned place for a
+   systemId-to-behaviour mapping (the "no `systemId ===`" rule applies
+   everywhere *else*). The `registry.ts` list and that map are two
+   hand-maintained lists that must stay in lockstep;
+   `fallbackAdapter.test.ts` fails if they drift.
 3. **Bump the `version` whenever you edit a bundled `system.json` — AND bump
    `sheet.json`'s *separate* `version` whenever you edit that file.** Both are
    cached in IndexedDB behind independent version gates (`useSystemDefinition`

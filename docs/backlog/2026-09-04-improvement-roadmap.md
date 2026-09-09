@@ -305,13 +305,25 @@ is on the **import** path, where data is untrusted.
 - **Fix:** Reject on `file.size` above a cap before `text()`; gate images as
   `CharacterPortrait.tsx:14-15` already does.
 
-### B10. Reference import and editor bodies are unvalidated JSON — OPEN (R)
+### B10. Reference import and editor bodies are unvalidated JSON — MOSTLY DONE (4d6d9e7); editor bodies remain
 - `src/screens/ReferenceScreen.tsx:328` `JSON.parse(...) as ReferenceImportBundle`
   → `referenceSectionRepository.importBundle` (`:160-200`) stores
   `columns/rows/items/paragraphs` as-is; `parseEditorBody` (`:60,:64`) casts.
   Rendering is React text so no XSS; a malformed shape is a render error and a
   stuck section.
 - **Fix:** Zod schemas for `ReferenceImportBundle` and the table/kv bodies.
+- **Closed for the import path.** `importBundle` now takes `unknown` and
+  validates it itself, so the enforcement is at the repository rather than at a
+  cast in one screen. `referenceImportSectionSchema` / `…GroupSchema` /
+  `…PageSchema` in `types/reference.ts` follow the row-schema pattern already
+  there; `utils/import/referenceBundleParser.ts` filters row by row with
+  `safeParse` and returns warnings, mirroring `bundleParser`. A bad row is
+  dropped and reported in the screen's status line instead of being written and
+  crashing the screen on the next visit — which the id-keyed `bulkPut` made
+  permanent, since a malformed row could land on a good one. Six tests in
+  `referenceSectionRepository.test.ts`; five fail with the validation bypassed.
+- **Still open:** `parseEditorBody`'s two casts (`:60`, `:64`) — the in-app
+  table/key-value editor bodies. Same shape, different entry point.
 
 ---
 
@@ -600,7 +612,7 @@ counters; declare that on the resource (`ResourceDefinition.role: 'track' |
 restate `defaultMax`/`scale.ladder`; `scale.allowsPlus` and
 `damageTrack.penaltyPerLevel` are unread.
 
-### E4. Base adapter by declaration, not by id — OPEN (V)
+### E4. Base adapter by declaration, not by id — PARTLY DONE (518238d); selection by declaration remains
 `baseEngineFor` (`engine/index.ts:16-27`) maps by `system.id`, so a
 user-imported system silently gets Dragonbane formulas (d20 roll-under, HP/WP
 rests, death rolls). Let `system.json` declare `engine: 'd20-roll-under' |
@@ -608,6 +620,20 @@ rests, death rolls). Let `system.json` declare `engine: 'd20-roll-under' |
 and pick the adapter from that. This also removes the hand-maintained lockstep
 between `registry.ts` and `baseEngineFor`. Warn loudly (not just in DEV) when
 an unknown id falls back.
+
+**Done:** the loud warning, and more than a warning. The `if (system.id === …)`
+chain is now `SYSTEM_ADAPTERS`, a map, so "does this system have an adapter?" is
+answerable rather than a fallthrough; the warning fires in every environment
+(once per id, since this runs during render); `SystemEngine.fallbackRulesFor`
+carries the unsupported id and `CharacterSubNav` — the one component every
+character screen passes through — names the system and says the numbers below
+came from classic-fantasy's rules. `fallbackAdapter.test.ts` also enforces the
+`registry.ts` ↔ adapter lockstep CLAUDE.md describes, so a bundled system
+registered without an adapter now fails CI instead of shipping as Dragonbane.
+
+**Still open:** picking the adapter from a declared `engine:` discriminator
+rather than from the id, which is what would remove the lockstep rather than
+merely guard it.
 
 ### E5. Classic-fantasy helpers into `systems/classic-fantasy/classicMath.ts` — OPEN (R)
 Mirror `travellerMath.ts` and `savageMath.ts`: the `compute*` family in
@@ -847,7 +873,7 @@ is a hard delete from the user's point of view.
 
 ## Workstream I — Build, tooling, tests and performance (second pass)
 
-### I1. No linter, but ten lint suppressions — OPEN (V)
+### I1. No linter, but ten lint suppressions — DONE (6f3a37f)
 - **Where:** `package.json` has no `eslint`, no config file exists at the root,
   and there is no `lint` script. Yet
   `eslint-disable-next-line react-hooks/exhaustive-deps` appears ten times:
@@ -863,6 +889,31 @@ is a hard delete from the user's point of view.
   `eslint-plugin-react-hooks`, a `lint` script, and run it in the same place as
   `tsc -b`. Add `no-restricted-properties` for I6 and `no-restricted-syntax`
   for I4 while there. Prettier or an `.editorconfig` would also be new.
+- **Closed.** `eslint.config.js` (flat, ESLint 10) with `@eslint/js`
+  recommended, `typescript-eslint` recommended, `rules-of-hooks` (error),
+  `exhaustive-deps` (warn) and `react-refresh/only-export-components` (warn);
+  a `lint` script; a CI step between typecheck and test. Deliberately the rules
+  the tree already passes, so it is green the day it lands.
+- **It found a real crash on its first run.** `ManagePartyDrawer` called
+  `useModalBehaviour` after `if (!activeCampaign) return null`, so the drawer
+  threw "Rendered more hooks than during the previous render" whenever the
+  campaign context resolved after the drawer mounted — see L4.
+- **What it flags and this pass did not fix:** `preserve-caught-error` (new in
+  ESLint 10) at 119 sites where the repositories rethrow as
+  `Failed to …: ${String(err)}` with no `{ cause }`; turned **off** in the
+  config with that reason recorded, because 119 mechanical rewrites of
+  error-handling code in the commit that introduces a linter is how a linter
+  gets reverted. Worth doing as its own change. Also 35 warnings left standing:
+  25 `react-refresh/only-export-components` (context modules exporting a
+  provider beside its hook) and 10 `exhaustive-deps`. `no-explicit-any` is off
+  in `*.test.*` only, where `any` builds the deliberately malformed input the
+  test is about; it is an error in shipped source, where the single remaining
+  `any` (`CARD_REGISTRY`'s `ComponentType<any>`) now carries a live disable
+  comment explaining that `ComponentType` is contravariant in its props.
+- **Not done:** `no-restricted-properties` for I6, `no-restricted-syntax` for
+  I4, and the React Compiler rules that `eslint-plugin-react-hooks` v7 now
+  turns on in `recommended` (`purity`, `immutability`, `set-state-in-effect`,
+  `refs`, …). Those are refactors, not configuration.
 
 ### I2. No code splitting; every screen is in the first chunk — OPEN (V)
 - **Where:** `src/routes/index.tsx:3-22` imports all 21 screens statically.
@@ -894,7 +945,7 @@ is a hard delete from the user's point of view.
 - **Fix:** Move to tokens; guard with an ESLint `no-restricted-syntax` regex on
   `#[0-9a-f]{6}` in JSX.
 
-### I5. Test infrastructure is implicit — OPEN (V)
+### I5. Test infrastructure is implicit — PARTLY DONE (3e1d307); shared setup and coverage remain
 - **Where:** No `vitest.config.ts` (defaults: node environment, no
   `setupFiles`, no coverage), so each of the repository tests wires
   `fake-indexeddb` itself. 71 test files exist.
@@ -902,6 +953,13 @@ is a hard delete from the user's point of view.
   coverage on `src/storage/**` and `src/utils/migrations.ts` with a threshold,
   and a `typecheck` script so type errors are not only found by `build`.
   Update CLAUDE.md (see J1) — it still says tests cover "pure logic only".
+- **Done:** a DOM environment now exists (L1), opted into per file with an
+  `@vitest-environment jsdom` docblock rather than globally, so the pure files
+  keep the node environment and their speed. A `lint` script exists (I1);
+  `tsc -b` is still reached through `build` rather than a `typecheck` script.
+- **Still open:** the shared `setupFiles` for `fake-indexeddb/auto`, and
+  coverage with a threshold. Note that a global `setupFiles` would run for every
+  file including the pure ones, which is the trade-off that kept this per-file.
 
 ### I6. Bypassed shared helpers — OPEN (V)
 - **Ids:** `crypto.randomUUID()` called directly at `ToastContext.tsx:53`,
@@ -1091,6 +1149,101 @@ line says otherwise.
 
 ---
 
+## Workstream L — Closed by the 2026-09-09 pass
+
+Six items from the same re-audit, plus one crash the linter found on its first
+run. Each was verified in the source before being touched, and each fix has a
+test that fails when the fix is reverted — verified by reverting it. The items
+that already had entries above are marked there instead: **B10** (reference
+import validation), **I1** (linter), **I5** (DOM environment, in part), **E4**
+(the unknown-system fallback, in part).
+
+Baseline before: `tsc -b` clean, `vitest run` 1515 tests / 91 files, `vite
+build` passing. After: 1595 tests / 99 files, plus `eslint .` at 0 errors.
+
+### L1. No DOM test environment, so autosave had zero tests — DONE (3e1d307)
+- **Where:** `hooks/useAutosave.ts`, `features/persistence/autosaveFlush.ts`.
+  No `jsdom` in devDependencies, no `test.environment` configured.
+- **What:** the code that decides whether a user's edit survives could not be
+  tested at all, because no hook that renders could be mounted. The
+  flush-before-read fix in `ActiveCharacterContext` (K6, 56eb4c5) shipped
+  untested for exactly this reason.
+- **Fix:** `jsdom` and `@testing-library/react` as devDependencies, opted into
+  **per file** with an `@vitest-environment jsdom` docblock rather than a global
+  switch — the other 91 test files are pure and keep the node environment.
+  Three test files, 29 tests: the flush registry's `allSettled` and
+  entry-snapshot contracts; the unmount flush gated on the dirty flag rather
+  than the timer, the "already saved, don't re-write" clear, the record arriving
+  mid-save staying dirty, once-per-streak error toasts, and the
+  register/unregister lifecycle; and the K6 regression asserted on both call
+  order and value, which fails if the two statements are swapped back.
+- **Note for the next reader:** Testing Library only auto-cleans when Vitest
+  globals are on, and they are not — every DOM test file calls `cleanup()` in
+  its own `afterEach`. Without it renders stack up in one document and
+  `getByRole` starts finding duplicates.
+
+### L2. Nothing guarded already-released `version(n)` blocks — DONE (e80bd7b)
+- **Where:** `storage/db/client.ts`, whose header comment says "never edit an
+  existing block".
+- **What:** Dexie runs an upgrade once, on the way past that version, so
+  editing a released block changes what a *fresh install* gets and nothing else.
+  A7 records this having already happened: the v7 note backfill was added at
+  v14, every existing database skipped it, and `version(19)` exists solely to
+  re-run it. Only the comment stood between that and a third occurrence — the
+  same enforce-nothing shape as I1's ten inert suppressions.
+- **Fix:** `releasedSchemaVersions.test.ts` fingerprints all twenty released
+  blocks from the source, covering each block's `.stores(...)` **and** its
+  inline `.upgrade(...)` body (the v7 incident was an upgrade-body edit, not a
+  schema-string one). Comments and indentation are stripped first. It also
+  asserts versions are contiguous from 1 and in source order, that none has been
+  deleted, and that a newly added version gets its fingerprint in the same
+  commit. The failure message says which case it is and what to do instead.
+- **Not fingerprinted, deliberately:** the two upgrades that live in exported
+  functions, since they are exported precisely so their own tests run the
+  shipped function and a change already fails on behaviour.
+
+### L3. The printed sheet dropped rows with no marker — DONE (8c5f6f4)
+- **Where:** `styles/print-sheet.css:22-25,374-377,744-761`,
+  `components/PrintableSheet.tsx`.
+- **What:** two mechanisms, both silent. The renderer prints a fixed number of
+  slots — ten inventory rows, three weapons, six secondary skills — and never
+  drew the rest; a player carrying fourteen items got ten on a page that looked
+  complete. Separately `.print-col` clips at a fixed height under
+  `overflow: hidden`, so a long skills list lost its tail.
+- **Fix:** each capped section ends with "+ n more items not printed"; and
+  `PrintColumn` measures each column after layout and drops a "⚠ Cut off" band
+  at its foot, absolutely positioned so it is neither clipped by the overflow it
+  reports nor able to change the measurement that produced it. Eight tests; the
+  clipping ones stub `scrollHeight`/`clientHeight` because jsdom performs no
+  layout.
+- **Full pagination was not attempted, and is a separate decision.** The
+  single-page constraint is load-bearing rather than incidental: `.print-sheet`
+  is a fixed 10.5in box with `page-break-inside/after: avoid` (the SS-15 notes
+  record Chrome emitting a blank second page without them), and the two
+  three-column bands are fixed-height grids whose font sizes were tuned down to
+  fit inside them. Flowing to page two means giving up the fixed heights, which
+  means giving up the `avoid` rules, which means re-tuning the density
+  mitigations that only make sense against a known budget. That is a rewrite of
+  the print layout and it needs a decision about what a two-page sheet should
+  look like first.
+
+### L4. `ManagePartyDrawer` called a hook after an early return — DONE (6f3a37f)
+- **Where:** `features/campaign/ManagePartyDrawer.tsx` — `useModalBehaviour`
+  sat below `if (!activeCampaign) return null`.
+- **What:** the drawer opens from a header that renders while `CampaignContext`
+  is still reading IndexedDB, so it renders null first and then renders again
+  with the campaign — at which point React sees more hooks than the previous
+  render and throws, taking the screen to the error boundary. The reverse
+  direction (campaign cleared while the drawer is open) throws "Rendered fewer
+  hooks than expected".
+- **Found by:** `react-hooks/rules-of-hooks`, on the linter's first run. Nothing
+  else in the repo could have found it, and it is the clearest argument for I1
+  that this pass produced.
+- **Fix:** the hook moves above the early return, with both directions covered
+  by tests that fail if it moves back down.
+
+---
+
 ## Suggested order of attack
 
 Each line is a self-contained change that can ship on its own and be verified
@@ -1120,8 +1273,10 @@ with `npm run build` + `npm test` + a walk through the app.
     Go straight to **H2** the navigation catalogue (absorbs A8's toggles, and
     is where the genuinely orphaned `MoreScreen` is dealt with), then **H3**
     the generic trash screen — rescoped, since four types already restore.
-17. **I1 + I10** linter and CI first, so **I3, I4, I6** are one-time fixes
-    that stay fixed. **I8** is a one-line delete; do it with I1.
+17. **I1 + I10** linter and CI — both now done, so **I3, I4, I6** are one-time
+    fixes that stay fixed. **I8** is a one-line delete. When picking up I4 and
+    I6, add their `no-restricted-syntax` / `no-restricted-properties` rules to
+    `eslint.config.js` in the same change, which is what makes them stay fixed.
 18. **H4** backup banner and snapshots, **H7** shell-level error boundary,
     **H8** portraits out of the record. Each is a user-visible safety win.
 19. **I2** code splitting once **npm ci** is possible and sizes can be
@@ -1144,8 +1299,16 @@ JSON, which the D-work has already made easier by thinning the adapters.
 
 The 2026-09-08 audit pass then closed **workstream K** (eight findings that had
 no entry here, including the incomplete export and the parity test that keeps it
-complete), plus **H6** and **I10**. Workstreams G, H, I and J are otherwise
-untouched.
+complete), plus **H6** and **I10**.
+
+The 2026-09-09 pass closed **workstream L** — a DOM test environment and the
+autosave tests it made possible (L1), the released-`version(n)` guard (L2), the
+printed sheet's silent truncation (L3), and a hook-order crash the new linter
+found (L4) — together with **I1** (the linter itself), **B10** (the reference
+import, apart from the in-app editor bodies), and partial progress on **E4**
+(the unknown-system fallback is now loud and guarded, but adapter selection is
+still by id) and **I5** (a DOM environment exists; shared setup and coverage do
+not). Workstreams G, H and J are otherwise untouched.
 
 What step 13 deliberately left:
 
