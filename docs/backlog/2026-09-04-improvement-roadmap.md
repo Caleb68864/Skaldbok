@@ -1489,6 +1489,67 @@ type that exists in every database that came up through v6 and is in no list.
 
 ---
 
+## Workstream O — Import without a campaign, and the maintainability tail
+
+Baseline before: 1872 tests / 112 files, `tsc -b` clean, `eslint .` at 0 errors
+/ 35 standing warnings, `vite build` passing. Every item below was reverted and
+re-run to confirm its test fails without the fix.
+
+### O1. Import was gated on an active campaign — DONE
+- **Where:** `components/shell/CampaignHeader.tsx` (the Import button inside
+  `{activeCampaign && ( … )}`); `components/import/ImportPreview.tsx:76`
+  (`needsCampaignSelector = bundle.type === 'session' || 'character'`).
+  Recorded in the README under *Known gap* rather than fixed.
+- **What:** on a genuinely fresh install the Import action did not render, so a
+  campaign had to be **created** before one could be **restored** — the recovery
+  path gated on the thing being recovered. The second half was worse: even with
+  the button reachable, a `character` bundle demanded a target campaign chosen
+  from a list that on a fresh install is empty, so a character could not be
+  imported at all. That demand was never right on its own terms —
+  `CharacterRecord` has no `campaignId`; a character is a device-global row that
+  joins a campaign through a party seat.
+- **Fix, in three parts.**
+  1. **Import left the campaign gate.** It is a device-level action; the
+     *exports* stay gated because there is genuinely nothing to export. The
+     campaign selector's empty state offers "Import a backup" beside "Create
+     Campaign", and `NoCampaignPrompt` names restoring as well as creating.
+  2. **The requirement is computed from the rows, not the label.**
+     `utils/import/importCampaignTarget.ts` answers one question — does anything
+     the user selected carry a `campaignId`, and does the bundle bring a campaign
+     of its own to satisfy it? `CAMPAIGN_SCOPED_BUNDLE_KEYS` is *derived from
+     `bundleContentsSchema`* rather than written out, for the reason
+     `types/bundleTables.ts` exists: a hand-copied list of which entities are
+     campaign-scoped is one more thing to forget when a table is added. The
+     derived set is pinned by a test so a Zod upgrade that breaks introspection
+     fails loudly instead of silently yielding "nothing needs a campaign".
+  3. **Create where there is one sane answer; ask where the choice is real.**
+     A campaign bundle *creates* — it is restored under its own id, and made
+     active when no campaign was open, because a fresh-install user who restores
+     2,000 rows and still sees "No campaign" cannot tell that from an import that
+     did nothing. Re-importing the same file updates that campaign rather than
+     creating a second copy (the merge engine's `createdAt` collision guard
+     already did the work; a test now pins it). A character bundle asks nothing,
+     because nothing in it is campaign-scoped. Sessions, and the notes that
+     travel with a character, do carry a `campaignId` with no campaign in the
+     bundle to satisfy them — there the dialog *asks*, naming the groups, and
+     unticking them lets the rest through. Inventing a campaign to hold someone
+     else's session, with a name and a ruleset guessed on their behalf, would be
+     fabricating data on the recovery path.
+- **Atomicity.** `mergeBundle` already runs the whole import in one Dexie
+  transaction; a test now closes the database under it and asserts a fresh
+  install is left empty rather than half-restored.
+- **Tests:** `utils/import/importCampaignTarget.test.ts` (the decision, 10),
+  `utils/import/freshInstallRestore.test.ts` (seed → export → wipe the database →
+  resolve → merge, including the character case and the rollback, 5),
+  `components/import/ImportPreview.test.tsx` (the dialog rendered for real,
+  because the regression is a disabled button, 5),
+  `components/shell/importReachability.test.ts` (a source scan in the style of
+  `navigationCatalogue`/`trashRegistry`: `startImport()` must not sit inside any
+  `activeCampaign` conditional; brace-balanced rather than regex, so
+  reformatting cannot quietly disable it, 3).
+
+---
+
 ## Suggested order of attack
 
 Each line is a self-contained change that can ship on its own and be verified

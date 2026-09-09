@@ -118,6 +118,16 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
               No campaigns yet
             </div>
           )}
+          {campaigns.length === 0 && (
+            /* The second half of the fresh-install answer: someone whose device
+               died is here to restore, not to author. Offered next to Create so
+               the two starting points are equally reachable. */
+            <DropdownMenuItem
+              onClick={() => { startImport(); setSelectorOpen(false); }}
+            >
+              Import a backup (.skaldbok)
+            </DropdownMenuItem>
+          )}
           {campaigns.map(campaign => (
             <DropdownMenuItem
               key={campaign.id}
@@ -238,12 +248,20 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
               </button>
             )}
 
-            {/* Export / Import section */}
+            {/*
+              Export / Import section.
+
+              Import is deliberately OUTSIDE the `activeCampaign` gate. It is a
+              device-level action, not a campaign-scoped one, and gating it made
+              a genuinely fresh install create a campaign before it could restore
+              one — the recovery path blocked by the thing being recovered. The
+              exports stay gated because there is genuinely nothing to export.
+            */}
+            <div className="px-4 pt-4 pb-1 text-text-muted text-xs uppercase tracking-widest font-semibold">
+              Data
+            </div>
             {activeCampaign && (
               <>
-                <div className="px-4 pt-4 pb-1 text-text-muted text-xs uppercase tracking-widest font-semibold">
-                  Data
-                </div>
                 <button
                   onClick={() => { exportAllNotes(); setSheetOpen(false); }}
                   className="block w-full text-left px-4 py-3 min-h-[44px] bg-transparent border-none border-b border-border cursor-pointer text-text text-base"
@@ -256,17 +274,25 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
                 >
                   Export Campaign (.skaldbok)
                 </button>
-                <button
-                  onClick={() => { startImport(); setSheetOpen(false); }}
-                  className="block w-full text-left px-4 py-3 min-h-[44px] bg-transparent border-none border-b border-border cursor-pointer text-text text-base"
-                >
-                  Import (.skaldbok)
-                </button>
-                <label className="flex items-center gap-2 px-4 py-2 text-text-muted text-sm">
-                  <input type="checkbox" checked={includePrivateExport} onChange={e => setIncludePrivateExport(e.target.checked)} className="w-4 h-4 accent-[var(--color-accent)]" />
-                  Include private notes
-                </label>
               </>
+            )}
+            <button
+              onClick={() => { startImport(); setSheetOpen(false); }}
+              className="block w-full text-left px-4 py-3 min-h-[44px] bg-transparent border-none border-b border-border cursor-pointer text-text text-base"
+            >
+              Import (.skaldbok)
+            </button>
+            {!activeCampaign && (
+              <p className="px-4 py-2 text-text-muted text-sm">
+                Restoring a backup? Import it here — a campaign bundle brings its own campaign
+                with it.
+              </p>
+            )}
+            {activeCampaign && (
+              <label className="flex items-center gap-2 px-4 py-2 text-text-muted text-sm">
+                <input type="checkbox" checked={includePrivateExport} onChange={e => setIncludePrivateExport(e.target.checked)} className="w-4 h-4 accent-[var(--color-accent)]" />
+                Include private notes
+              </label>
             )}
           </SheetBody>
         </SheetContent>
