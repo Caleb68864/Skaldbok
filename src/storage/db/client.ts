@@ -38,6 +38,20 @@ export interface ReferenceNote {
   content: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * ISO timestamp set when the row is soft-deleted.
+   *
+   * @remarks
+   * Legacy table, live schema. The Reference screen still creates rows here and
+   * its delete button used to call an irreversible `db.referenceNotes.delete`,
+   * making this the one user-facing control in the app that destroyed content
+   * outright. Both fields are unindexed and need no `version()` block: Dexie
+   * only requires a schema entry for fields queried *by index*, and this table
+   * is small enough to filter in memory.
+   */
+  deletedAt?: string;
+  /** Transaction id shared by every row deleted in the same cascade. */
+  softDeletedBy?: string;
 }
 
 /**
