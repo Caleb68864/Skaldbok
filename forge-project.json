@@ -15,7 +15,7 @@
   "build_command": "npm run build",
   "test_command": "npm test",
   "typecheck_command": "npx tsc -b",
-  "e2e_command": "npm run build && npx --yes http-server dist -p 4177 -a 127.0.0.1 --cors -c-1",
+  "e2e_command": "npm run build && npx --yes http-server dist -p 4177 -a 127.0.0.1 --cors -c-1 --proxy \"http://127.0.0.1:4177?\"",
   "start_command": "npm run build && npm run preview",
   "dev_server": "npm run dev",
   "notes": [
@@ -25,10 +25,12 @@
     "Local-first: the user's data lives only in their browser. Dexie migrations and the campaign export are the two places where a mistake is unrecoverable.",
     "The bundle <-> Dexie schema parity test walks db.tables at runtime, so a new version(n).stores({...}) fails CI until someone decides whether the table belongs in a backup.",
     "Non-test source has zero as-any / ts-ignore / ts-expect-error. Keep it that way.",
-    "Ships to two branches: main and Production."
+    "Ships to two branches: main and Production.",
+    "The smoke/e2e server needs http-server's --proxy self-fallback: this is a SPA with client-side routes, and without it any reload on a deep path 404s and Playwright fails with ERR_HTTP_RESPONSE_CODE_FAILURE.",
+    "output/playwright/session_smoke.cjs has drifted from the UI — it fails at the 'Add Note' step, and fails identically at commit a314ec7, so it is stale rather than broken by a change."
   ],
   "app_url": "https://localhost:4173",
-  "smoke_command": "npx --yes http-server dist -p 4177 -a 127.0.0.1 --cors -c-1",
+  "smoke_command": "npx --yes http-server dist -p 4177 -a 127.0.0.1 --cors -c-1 --proxy \"http://127.0.0.1:4177?\"",
   "smoke_url": "http://127.0.0.1:4177",
   "smoke_script": "output/playwright/session_smoke.cjs",
   "test_tool": "playwright",
