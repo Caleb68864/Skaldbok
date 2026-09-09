@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
@@ -662,22 +662,43 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     setStaleSession(null);
   }, [staleSession]);
 
+  // 31 files consume this context. Without the memo every one of them
+  // re-rendered whenever this provider re-rendered for any reason at all — a
+  // stale-session modal opening, a party refresh, a hydration tick — because
+  // the object literal was a new identity each time even when nothing in it had
+  // changed. Every member is in the dependency array and every function member
+  // is already a `useCallback`, so this is exact rather than approximate.
+  const value = useMemo(
+    () => ({
+      isHydrated,
+      activeCampaign,
+      activeSession,
+      activeParty,
+      activeCharacterInCampaign,
+      startSession,
+      endSession,
+      resumeSession,
+      setActiveCampaign,
+      refreshParty,
+      expireEncounterModifiers,
+    }),
+    [
+      isHydrated,
+      activeCampaign,
+      activeSession,
+      activeParty,
+      activeCharacterInCampaign,
+      startSession,
+      endSession,
+      resumeSession,
+      setActiveCampaign,
+      refreshParty,
+      expireEncounterModifiers,
+    ],
+  );
+
   return (
-    <CampaignContext.Provider
-      value={{
-        isHydrated,
-        activeCampaign,
-        activeSession,
-        activeParty,
-        activeCharacterInCampaign,
-        startSession,
-        endSession,
-        resumeSession,
-        setActiveCampaign,
-        refreshParty,
-        expireEncounterModifiers,
-      }}
-    >
+    <CampaignContext.Provider value={value}>
       {children}
       {staleSession && (
         <StaleSessionModal

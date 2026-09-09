@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { DEFAULT_THEME, THEME_LIST, THEME_STORAGE_KEY } from './themes';
 import type { ThemeName } from './themes';
@@ -41,12 +41,17 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }, [theme]);
 
-  function setTheme(t: ThemeName) {
+  // `useCallback` over a plain function so the memo below can actually hit:
+  // a function redefined on every render makes any surrounding memo a no-op.
+  // The state setter is stable, so an empty dependency array is exact here.
+  const setTheme = useCallback((t: ThemeName) => {
     setThemeState(t);
-  }
+  }, []);
+
+  const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );

@@ -9,7 +9,7 @@
  * as stable references in the context value.
  */
 
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { KBNode, KBEdge } from '../../storage/db/client';
 import {
@@ -136,15 +136,29 @@ export function KnowledgeBaseProvider({ children, campaignId }: KnowledgeBasePro
     []
   );
 
-  const value: KnowledgeBaseContextValue = {
-    campaignId,
-    getBacklinks,
-    getForwardLinks,
-    getGraphNeighbors,
-    getNodesByTypeForCampaign,
-    resolveWikilink,
-    getNodeById: getNodeByIdFn,
-  };
+  // Every member is already a `useCallback` or the campaign id itself, so the
+  // memo is exact and this object now changes identity only when the campaign
+  // does — rather than on every render of whatever renders the provider.
+  const value = useMemo<KnowledgeBaseContextValue>(
+    () => ({
+      campaignId,
+      getBacklinks,
+      getForwardLinks,
+      getGraphNeighbors,
+      getNodesByTypeForCampaign,
+      resolveWikilink,
+      getNodeById: getNodeByIdFn,
+    }),
+    [
+      campaignId,
+      getBacklinks,
+      getForwardLinks,
+      getGraphNeighbors,
+      getNodesByTypeForCampaign,
+      resolveWikilink,
+      getNodeByIdFn,
+    ],
+  );
 
   return (
     <KnowledgeBaseContext.Provider value={value}>
