@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { db } from '../../storage/db/client';
-import { TRASH_ENTITY_TYPES } from './trashRegistry';
+import { RESTORE_WITHOUT_LISTING, TRASH_ENTITY_TYPES } from './trashRegistry';
 import * as shipRepository from '../../storage/repositories/shipRepository';
 import * as inventoryContainerRepository from '../../storage/repositories/inventoryContainerRepository';
 import * as ledgerRepository from '../../storage/repositories/ledgerRepository';
@@ -73,6 +73,72 @@ describe('registry completeness', () => {
       'those rows are unrecoverable from the UI.',
     ).toEqual([]);
     expect(listers.length).toBeGreaterThan(4);
+  });
+
+  /**
+   * The other direction: a repository that can delete and restore must be able
+   * to list, or say why not.
+   *
+   * @remarks
+   * The completeness test above runs `getDeleted → registry`. That is the half
+   * that had already failed, but it is the second half of the sequence. A
+   * repository gains `softDelete` and `restore` first, and until it also gains
+   * `getDeleted` the rows it tombstones are invisible to the Trash — with the
+   * guard above passing, because it is never asked about a repository with no
+   * listing. Six repositories are in that state today; each is exempted in
+   * `RESTORE_WITHOUT_LISTING` with a reason, and a seventh cannot appear
+   * silently.
+   */
+  it('lets no repository delete and restore without either a listing or a stated reason', () => {
+    const files = readdirSync(REPO_DIR).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'));
+
+    const undecided = files
+      .map((file) => {
+        const source = readFileSync(join(REPO_DIR, file), 'utf8');
+        const exports = (prefix: string) =>
+          [...source.matchAll(new RegExp(`export async function (${prefix}[A-Za-z]*)\\s*\\(`, 'g'))];
+        return {
+          module: file.replace(/\.ts$/, ''),
+          deletes: exports('softDelete').length > 0,
+          restores: exports('restore').length > 0,
+          lists: exports('getDeleted').length > 0,
+        };
+      })
+      .filter((repo) => repo.deletes && repo.restores && !repo.lists)
+      .filter((repo) => !(repo.module in RESTORE_WITHOUT_LISTING))
+      .map((repo) => repo.module);
+
+    expect(
+      undecided,
+      `${undecided.join(', ')} can soft-delete and restore a row but cannot list one. `
+      + 'Those rows are tombstoned somewhere the Trash cannot reach — the exact bug '
+      + 'this registry exists to prevent, one step earlier than the guard above '
+      + 'catches it. Add a `getDeleted` and a registry entry, or add the repository '
+      + 'to RESTORE_WITHOUT_LISTING with the reason it stays out.',
+    ).toEqual([]);
+  });
+
+  it('keeps the exemption list honest', () => {
+    const files = new Set(
+      readdirSync(REPO_DIR)
+        .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))
+        .map((f) => f.replace(/\.ts$/, '')),
+    );
+
+    for (const [module, reason] of Object.entries(RESTORE_WITHOUT_LISTING)) {
+      expect(files, `RESTORE_WITHOUT_LISTING names "${module}", which is not a repository`)
+        .toContain(module);
+      expect(reason.length, `"${module}" is exempted with no stated reason`).toBeGreaterThan(60);
+
+      // And the exemption must still be needed: a repository that has since
+      // grown a listing should be in the registry, not on this list.
+      const source = readFileSync(join(REPO_DIR, `${module}.ts`), 'utf8');
+      expect(
+        /export async function getDeleted[A-Za-z]*\s*\(/.test(source),
+        `"${module}" now exports a deleted-row listing, so its exemption is stale — `
+        + 'give it a Trash entry and remove it from RESTORE_WITHOUT_LISTING.',
+      ).toBe(false);
+    }
   });
 
   it('gives every entry a distinct key and a heading', () => {

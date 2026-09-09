@@ -81,6 +81,45 @@ export const TABLES_OUTSIDE_BUNDLE: Record<string, string> = {
 };
 
 /**
+ * Dexie tables whose rows do **not** carry `deletedAt` / `softDeletedBy`, with
+ * the reason.
+ *
+ * @remarks
+ * Written the same way as {@link TABLES_OUTSIDE_BUNDLE}, and for the same
+ * reason: the exclusion is the decision worth recording. Everything not listed
+ * here is soft-deletable, so this is six entries rather than twenty and a new
+ * table forces a choice instead of quietly defaulting either way.
+ *
+ * `CLAUDE.md` and `AGENTS.md` used to carry the *inclusion* list instead —
+ * nine entities named in prose against twenty tables that actually declare the
+ * fields, in two files that nothing kept in step. They now state the count and
+ * point here. `softDeleteCoverage.test.ts` walks `db.tables` against this map,
+ * so neither the map nor the count in the docs can drift from the schema.
+ */
+export const TABLES_WITHOUT_SOFT_DELETE: Record<string, string> = {
+  systems:
+    'Ruleset definitions, keyed by id and versioned by their own integer `version`. '
+    + 'Replaced wholesale on a newer version rather than deleted; a tombstoned ruleset '
+    + 'would orphan every character that names it.',
+  appSettings:
+    'Per-device preferences — a single row the settings screen overwrites in place. '
+    + 'There is no delete to undo.',
+  metadata:
+    'Internal bookkeeping (migration markers, the active-campaign id). Keys are '
+    + 'written and overwritten by the app, never deleted by a user.',
+  referenceNotes:
+    'Legacy table superseded at schema v7. Its content lives in `notes` now, where it '
+    + 'is soft-deleted like every other note; the old table is retained only so '
+    + 'upgrades still type.',
+  kb_nodes:
+    'A derived projection of `notes` and the entities they link, rebuilt from source by '
+    + '`linkSyncEngine`. Deleting the note is the delete; a tombstone here would be a '
+    + 'second, divergent record of the same fact.',
+  kb_edges:
+    'Derived alongside `kb_nodes` and rebuilt with them. Same reason.',
+};
+
+/**
  * Human-readable group names for the import preview's per-type checkboxes.
  *
  * @remarks

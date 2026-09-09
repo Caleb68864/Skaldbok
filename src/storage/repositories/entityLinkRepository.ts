@@ -6,12 +6,23 @@ import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 
 // entityType is a free-string field — no whitelist enforced.
-// Valid values include: 'note', 'character', 'session', 'campaign',
-// 'party', 'partyMember', 'encounter', 'encounterParticipant', 'creature'
 //
-// relationshipType is likewise free-string. Valid values include: 'contains',
-// 'introduced_in', 'happened_during', 'represents', 'promoted_into'
-// Verified: 2026-07-27 (promoted_into relationship type)
+// Written by the app today: 'note', 'character', 'session', 'encounter',
+// 'encounterParticipant', 'creature'. Also *resolvable* on import, because
+// `mergeEngine`'s LINK_ENDPOINT_TABLES can look them up and would reject an edge
+// it could not verify: 'campaign', 'party', 'partyMember', 'inventoryContainer'.
+// The two lists are different questions and the older version of this comment
+// merged them, over-declaring by three.
+//
+// relationshipType is likewise free-string. Every value the app writes:
+// 'contains', 'introduced_in', 'happened_during', 'represents',
+// 'promoted_into', 'migrated_from'.
+//
+// 'migrated_from' is written by the `version(6)` upgrade in `db/client.ts`, so
+// those edges exist in every database that came up through v6 — and it was in
+// none of the three places that list these types until `softDeleteCoverage.test.ts`
+// started scanning `src` for the literals and failing when a list is short.
+// Keep this comment, the CLAUDE.md table and the AGENTS.md table together.
 
 /**
  * Outgoing edges of one relationship type from an entity.

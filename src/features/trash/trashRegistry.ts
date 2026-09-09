@@ -44,6 +44,52 @@ export interface TrashEntityType {
   load: (campaignId: string | undefined) => Promise<TrashRow[]>;
 }
 
+/**
+ * Repositories that can soft-delete and restore a row but deliberately offer no
+ * `getDeleted` listing, with the reason.
+ *
+ * @remarks
+ * `trashRegistry.test.ts` enforced one direction only — a `getDeleted` must
+ * reach this registry — which is the direction that had already gone wrong.
+ * The other direction is the same bug one step earlier: a repository that gains
+ * a `softDelete` and a `restore` without a listing puts rows somewhere the
+ * Trash cannot see, and the test passed because it was never asked.
+ *
+ * Now both directions are enforced, and this map is where a deliberate absence
+ * is recorded. Written the same way as `TABLES_OUTSIDE_BUNDLE`: the reason is
+ * the point, because an exemption someone can re-read and disagree with is a
+ * decision, and a repository silently missing a listing is the bug.
+ *
+ * Each entry is keyed by repository module name.
+ */
+export const RESTORE_WITHOUT_LISTING: Record<string, string> = {
+  attachmentRepository:
+    'A cascade child, never deleted on its own. Attachments are soft-deleted with '
+    + 'their note and come back through `restoreAttachmentsForTxId`, matching the '
+    + "note's `softDeletedBy`. A standalone listing would offer the user an "
+    + 'attachment whose note is still in the trash.',
+  entityLinkRepository:
+    'The same, for edges. Links are soft-deleted as part of whatever cascade owns '
+    + 'their endpoints and restored by that cascade\'s txId. An edge listed on its '
+    + 'own could be restored into a dangling state.',
+  campaignRepository:
+    'No user-facing delete exists. `softDelete` is reachable only from code, and '
+    + 'the campaign cascade does not yet carry its sessions, notes and encounters '
+    + 'with it — so a Trash entry would restore an empty shell. Add the listing '
+    + 'with the delete button, not before.',
+  encounterRepository:
+    'No user-facing delete exists; encounters end rather than being deleted. The '
+    + 'Trash has a Sessions section that is already unreachable in normal use for '
+    + 'the same reason, and a second one would not earn its heading.',
+  ledgerSplitRepository:
+    'One lazily-created row per campaign, with no user-facing delete at all. A '
+    + 'listing here would be dead code — the same call this project made when it '
+    + 'declined to add `getDeleted` to it during the Trash rework.',
+  routePlanRepository:
+    'One lazily-created row per campaign, as above. The route *stops* are the '
+    + 'user-deletable part and they are listed.',
+};
+
 /** Leading characters of a note body used as a title fallback. */
 const TITLE_FALLBACK_LENGTH = 40;
 
