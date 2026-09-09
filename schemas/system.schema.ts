@@ -109,7 +109,11 @@ export const systemDefinitionSchema = z.object({
   // vanishes for *imported* systems while working for bundled ones. Both halves
   // or neither — see the skills note in CLAUDE.md.
   sheetPanels: z.array(z.object({
-    id: z.string().min(1),
+    // Enumerated, like the sibling `panels` field below and for the same reason:
+    // the id is `PanelKey` in TypeScript but was `z.string()` here, so a typo'd
+    // panel id in an imported system validated cleanly and then rendered
+    // nowhere — indistinguishable from a panel the system chose not to show.
+    id: z.enum(PANEL_KEYS),
     title: z.string().min(1),
     icon: z.string().min(1).optional(),
     sections: z.array(z.discriminatedUnion('kind', [
@@ -172,9 +176,19 @@ export const systemDefinitionSchema = z.object({
     attributesPanel: z.string().optional(),
     encumbrance: z.string().optional(),
     participantHealth: z.string().optional(),
-    creatureHealth: z.string().optional(),
-    creatureArmor: z.string().optional(),
-    creatureMovement: z.string().optional(),
+    // `printResources` / `printAbilities` head the printed sheet's resource and
+    // abilities blocks (PrintableSheet.tsx). They are populated by
+    // classicFantasyEngine and genuinely read — but they were missing here, so
+    // an *imported* system could not rename its printed headings while a bundled
+    // one could. That is the exact asymmetry CLAUDE.md warns about, in the block
+    // whose own comment promises EVERY label is renameable from system.json.
+    printResources: z.string().optional(),
+    printAbilities: z.string().optional(),
+    // `creatureHealth` / `creatureArmor` / `creatureMovement` stood here after
+    // they were removed from SystemLabels — three keys a system.json could set,
+    // that validated, that getEngine spread onto engine.labels, and that nothing
+    // read. The creature headings come from `creatures.statFields` now; see the
+    // note in engine/types.ts for why the second source was the wrong one.
     conditionExamples: z.string().optional(),
     encounterTagExamples: z.string().optional(),
     locationExample: z.string().optional(),
