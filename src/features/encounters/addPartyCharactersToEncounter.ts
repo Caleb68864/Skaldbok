@@ -45,7 +45,7 @@ export async function addPartyCharactersToEncounter(
         .map((link) => link.toEntityId),
     );
 
-    let updatedParticipants = [...(enc.participants ?? [])];
+    const updatedParticipants = [...(enc.participants ?? [])];
 
     for (const character of characters) {
       if (existingCharacterIds.has(character.id)) continue;

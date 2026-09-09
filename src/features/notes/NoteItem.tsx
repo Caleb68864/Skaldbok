@@ -58,7 +58,7 @@ export function NoteItem({ note, onPin, onUnpin, onExport, onCopy, onDelete }: N
           className="absolute right-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg shadow-[0_4px_16px_rgba(0,0,0,0.2)] z-[100] min-w-40"
         >
           {[
-            { label: note.pinned ? 'Unpin' : 'Pin', action: () => { note.pinned ? onUnpin(note.id) : onPin(note.id); setShowActions(false); } },
+            { label: note.pinned ? 'Unpin' : 'Pin', action: () => { if (note.pinned) { onUnpin(note.id); } else { onPin(note.id); } setShowActions(false); } },
             { label: 'Export Note', action: () => { onExport(note.id); setShowActions(false); } },
             { label: 'Copy as Markdown', action: () => { onCopy(note.id); setShowActions(false); } },
             { label: 'Delete', action: () => { onDelete(note.id); setShowActions(false); } },

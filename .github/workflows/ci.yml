@@ -34,6 +34,13 @@ jobs:
       - name: Typecheck
         run: npx tsc -b
 
+      # The ten `eslint-disable-next-line` comments in `src/` enforced nothing
+      # until this step existed. Errors fail the build; the remaining warnings
+      # (fast-refresh boundaries and deliberate dependency-array omissions) are
+      # reported, not fatal.
+      - name: Lint
+        run: npx eslint .
+
       - name: Test
         run: npx vitest run
 

@@ -20,7 +20,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     // Guarded: this runs while the outermost provider renders, and a browser
     // that blocks site data (Safari private mode) throws on the accessor
     // itself. Unguarded, that was a blank page with nothing to catch it.
-    let stored: string | null = null;
+    let stored: string | null;
     try {
       stored = localStorage.getItem(THEME_STORAGE_KEY);
     } catch {

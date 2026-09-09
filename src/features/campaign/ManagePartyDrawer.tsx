@@ -43,6 +43,13 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
   const { showToast } = useToast();
   const [allCharacters, setAllCharacters] = useState<CharacterRecord[]>([]);
   const [saving, setSaving] = useState(false);
+  // Above the `!activeCampaign` early return, not below it. Below, the hook is
+  // called conditionally: the drawer can mount while the campaign context is
+  // still loading, render null, and then render again once the campaign
+  // arrives — at which point React sees more hooks than the previous render
+  // and throws "Rendered more hooks than during the previous render", taking
+  // the whole screen to the error boundary.
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onClose);
 
   // Guard: show toast and close if no active campaign
   useEffect(() => {
@@ -146,9 +153,6 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
       setSaving(false);
     }
   };
-
-
-  const dialogRef = useModalBehaviour<HTMLDivElement>(onClose);
 
   return (
     <div

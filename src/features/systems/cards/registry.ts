@@ -45,6 +45,13 @@ export type CardKey =
  * any extra `props` a template supplies, while primitives read their
  * declarative shape out of `props`.
  */
+// The one `any` in shipped source, and it is load-bearing: the registry holds
+// components with genuinely different prop types (smart cards take
+// `PlayModuleProps`, primitives read a declarative shape out of `props`), and
+// `ComponentType` is contravariant in its prop type — every narrower type,
+// including `unknown`, rejects one half of the table. Removing it means a
+// discriminated union over `CardKey`, which is a refactor, not a rename.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const CARD_REGISTRY: Record<CardKey, ComponentType<any>> = {
   vitals: ResourceModule,
   derived: DerivedStatsModule,
