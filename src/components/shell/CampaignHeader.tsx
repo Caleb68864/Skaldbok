@@ -10,6 +10,7 @@ import { useSystemDefinition } from '../../features/systems/useSystemDefinition'
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { getAllCampaigns } from '../../storage/repositories/campaignRepository';
+import { destinationsFor } from './navigationCatalogue';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -51,6 +52,9 @@ export interface CampaignHeaderProps {
  * {@link useFullscreen}/{@link useWakeLock}) and silently no-op where unsupported,
  * which matters for tablets at the table.
  */
+/** The secondary destinations this sheet offers, in catalogue order. */
+const MENU_DESTINATIONS = destinationsFor('menu');
+
 export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHeaderProps) {
   const { activeCampaign, activeSession, activeCharacterInCampaign, setActiveCampaign } = useCampaignContext();
   const { exportAllNotes, exportCampaign } = useExportActions();
@@ -199,41 +203,22 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
                 tap away. Listing them here as well would be a second, slower
                 path to the same screens. See `SessionSubNav`. */}
 
-            <Link
-              to="/settings"
-              onClick={() => setSheetOpen(false)}
-              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
-            >
-              Settings
-            </Link>
-            <Link
-              to="/reference"
-              onClick={() => setSheetOpen(false)}
-              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
-            >
-              Reference
-            </Link>
-            <Link
-              to="/library"
-              onClick={() => setSheetOpen(false)}
-              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
-            >
-              Character Library
-            </Link>
-            <Link
-              to="/trash"
-              onClick={() => setSheetOpen(false)}
-              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
-            >
-              Trash
-            </Link>
-            <Link
-              to="/profile"
-              onClick={() => setSheetOpen(false)}
-              className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
-            >
-              Profile
-            </Link>
+            {/*
+              One list, from the catalogue. These five were written out by hand
+              here and again in `MoreScreen`, which is how the two drifted and
+              how `/more` ended up offering a strict subset of this sheet while
+              nothing linked to it at all.
+            */}
+            {MENU_DESTINATIONS.map(({ path, label }) => (
+              <Link
+                key={path}
+                to={path}
+                onClick={() => setSheetOpen(false)}
+                className="block w-full text-left px-4 py-3 min-h-[44px] no-underline border-b border-border text-text text-base"
+              >
+                {label}
+              </Link>
+            ))}
 
             {fsSupported && (
               <button

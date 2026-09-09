@@ -41,7 +41,6 @@ function screen(Screen: ComponentType): ReactNode {
 }
 
 const SessionScreen = lazyScreen(() => import('../screens/SessionScreen'), (m) => m.SessionScreen);
-const MoreScreen = lazyScreen(() => import('../screens/MoreScreen'), (m) => m.MoreScreen);
 const SheetScreen = lazyScreen(() => import('../screens/SheetScreen'), (m) => m.default);
 const SkillsScreen = lazyScreen(() => import('../screens/SkillsScreen'), (m) => m.default);
 const GearScreen = lazyScreen(() => import('../screens/GearScreen'), (m) => m.default);
@@ -100,7 +99,6 @@ export const routes: RouteObject[] = [
       { path: '/notes', element: <Navigate to="/session?view=notes" replace /> },
       { path: '/note/new', element: screen(NoteEditorScreen) },
       { path: '/note/:id/edit', element: screen(NoteEditorScreen) },
-      { path: '/more', element: screen(MoreScreen) },
       {
         path: '/character',
         children: [

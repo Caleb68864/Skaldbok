@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCampaignContext } from '../../features/campaign/CampaignContext';
 import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
+import { destinationsFor } from './navigationCatalogue';
 
 /** A single entry in the session sub-navigation row. */
 interface SessionTab {
@@ -29,11 +30,29 @@ interface SessionTab {
  * no failing test. There is no money or route glyph in that map; lucide has
  * both.
  */
-const STATIC_SESSION_TABS: SessionTab[] = [
-  { id: 'session', to: '/session', label: 'Session', Icon: Flame },
-  { id: 'log', to: '/session/log', label: 'Log', Icon: NotebookPen },
-  { id: 'ledger', to: '/ledger', label: 'Ledger', Icon: Coins },
-];
+const SESSION_TAB_ICONS: Record<string, LucideIcon> = {
+  '/session': Flame,
+  '/session/log': NotebookPen,
+  '/ledger': Coins,
+  '/route': RouteIcon,
+};
+
+const SESSION_TAB_IDS: Record<string, string> = {
+  '/session': 'session',
+  '/session/log': 'log',
+  '/ledger': 'ledger',
+  '/route': 'route',
+};
+
+const STATIC_SESSION_TABS: SessionTab[] = destinationsFor('session')
+  // The route tab is appended below, with the label the ruleset gives it.
+  .filter((destination) => !destination.dynamicLabel)
+  .map((destination) => ({
+    id: SESSION_TAB_IDS[destination.path] ?? destination.path,
+    to: destination.path,
+    label: destination.label,
+    Icon: SESSION_TAB_ICONS[destination.path] ?? Flame,
+  }));
 
 /**
  * Every top-level path that belongs to the campaign/session section.

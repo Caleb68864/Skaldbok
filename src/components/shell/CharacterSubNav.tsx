@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { GameIcon } from '../primitives/GameIcon';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSystemEngine } from '../../features/systems/engine';
+import { destinationsFor } from './navigationCatalogue';
 
 /** A single entry in the character sub-navigation row. */
 interface CharacterTab {
@@ -24,12 +25,23 @@ interface CharacterTab {
  * user-facing text (per-system, via the {@link SystemEngine}) never changes
  * React keys or active-state matching.
  */
-const STATIC_CHARACTER_TABS: CharacterTab[] = [
-  { id: 'play', to: '/character/play', label: 'Play', icon: 'perspective-dice-six-faces-random' },
-  { id: 'sheet', to: '/character/sheet', label: 'Sheet', icon: 'scroll-unfurled' },
-  { id: 'skills', to: '/character/skills', label: 'Skills', icon: 'perspective-dice-six-faces-random' },
-  { id: 'gear', to: '/character/gear', label: 'Gear', icon: 'knapsack' },
-];
+const CHARACTER_TAB_ICONS: Record<string, string> = {
+  '/character/play': 'perspective-dice-six-faces-random',
+  '/character/sheet': 'scroll-unfurled',
+  '/character/skills': 'perspective-dice-six-faces-random',
+  '/character/gear': 'knapsack',
+  '/character/magic': 'spell-book',
+};
+
+const STATIC_CHARACTER_TABS: CharacterTab[] = destinationsFor('character')
+  // The abilities tab is appended below, with the label the ruleset gives it.
+  .filter((destination) => !destination.dynamicLabel)
+  .map((destination) => ({
+    id: destination.path.replace('/character/', ''),
+    to: destination.path,
+    label: destination.label,
+    icon: CHARACTER_TAB_ICONS[destination.path] ?? 'scroll-unfurled',
+  }));
 
 /**
  * Horizontal sub-navigation bar for the character section using Radix Tabs.
