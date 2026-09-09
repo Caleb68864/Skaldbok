@@ -391,7 +391,7 @@ export default function ReferenceScreen() {
   async function handleNoteDeleteConfirm() {
     if (!deleteNoteTarget) return;
     try {
-      await referenceNoteRepository.remove(deleteNoteTarget.id);
+      await referenceNoteRepository.softDelete(deleteNoteTarget.id);
       await loadNotes();
     } catch (e) {
       setError(`Could not delete the note. ${String(e)}`);

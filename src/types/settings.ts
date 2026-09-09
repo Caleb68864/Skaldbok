@@ -86,12 +86,16 @@ export interface AppSettings extends Versioned {
   mode: ModeName;
   /** If `true`, the Screen Wake Lock API is requested to keep the display on during play. */
   wakeLockEnabled: boolean;
-  /** Visibility map for bottom nav tabs; keyed by lowercase label (e.g. `"sheet"`, `"profile"`). */
-  bottomNavTabs?: Record<string, boolean>;
+  // `bottomNavTabs` and `showOtherSessionNotes` stood here. Neither had a
+  // reader: `bottomNavTabs` was written by a Settings card that read it back
+  // only to draw its own toggles, and `showOtherSessionNotes` had no writer
+  // either — one hit in the whole repo, this declaration. Both are dropped
+  // rather than left as inert promises; `settingsHaveReaders.test.ts` now fails
+  // on a settings field nothing outside the writer reads. Stored records may
+  // still carry the keys, which is harmless: settings are merged over the
+  // defaults on load and unknown keys are simply never consulted.
   /** Panel display order for the Sheet page; array of panel ID strings. */
   sheetPanelOrder?: string[];
-  /** Per-campaign preference for showing notes from other sessions in Notes Grid. Keyed by `campaignId`. */
-  showOtherSessionNotes?: Record<string, boolean>;
   /** Per-campaign custom tags created by the user. Keyed by `campaignId`; value is an array of tag strings. */
   customTags?: Record<string, string[]>;
   /**

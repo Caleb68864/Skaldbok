@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../theme/ThemeProvider';
 import { useAppState } from '../context/AppStateContext';
@@ -11,31 +11,24 @@ import { Modal } from '../components/primitives/Modal';
 import { db } from '../storage/db/client';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { type ThemeName, THEME_LIST, THEME_DISPLAY_NAMES } from '../theme/themes';
-import { DEFAULT_BOTTOM_NAV_TABS } from '../features/settings/useAppSettings';
 import { usePwaInstall } from '../hooks/usePwaInstall';
-import { useSystemEngine } from '../features/systems/engine';
 import { cn } from '../lib/utils';
 
-/**
- * Bottom-nav rows that are the same in every ruleset.
- *
- * @remarks
- * `id` is the persisted settings key and must never be derived from `label` —
- * renaming a label would otherwise orphan the user's stored preference. The
- * abilities/magic row is inserted separately because its label (and its very
- * existence) comes from the active system's engine.
- */
-const STATIC_BOTTOM_NAV_TABS: { id: string; label: string }[] = [
-  { id: 'sheet', label: 'Sheet' },
-  { id: 'skills', label: 'Skills' },
-  { id: 'gear', label: 'Gear' },
-];
-
-const TRAILING_BOTTOM_NAV_TABS: { id: string; label: string }[] = [
-  { id: 'combat', label: 'Combat' },
-  { id: 'reference', label: 'Reference' },
-  { id: 'profile', label: 'Profile' },
-];
+// A "Bottom Navigation" card stood here, offering seven ON/OFF toggles over
+// `settings.bottomNavTabs` and telling the user "hidden tabs remain accessible
+// via the ☰ menu". Nothing read the setting: BottomNav and CharacterSubNav both
+// take their destinations from `destinationsFor(...)` and never consult
+// settings at all. There is also no ☰ menu — the `/more` screen it referred to
+// was removed when the navigation catalogue landed — and its seven ids
+// (sheet/skills/gear/magic/combat/reference/profile) matched neither the three
+// bottom-bar destinations nor anything else.
+//
+// It is deleted rather than wired because wiring it would fight a guarantee the
+// catalogue was built to make: `navigationCatalogue.test.ts` requires every
+// route to have a way in, and a user who switched enough toggles off would
+// strand the routes behind them. See `settingsHaveReaders.test.ts`, which is
+// why this was found — the field escaped `declaredCapabilities` precisely
+// because it *was* read, by the control that wrote it.
 
 /** Rich per-theme descriptions; labels come from THEME_DISPLAY_NAMES. */
 const THEME_DESCRIPTIONS: Partial<Record<ThemeName, string>> = {
@@ -60,14 +53,12 @@ const THEMES: { value: ThemeName; label: string; description: string }[] = THEME
 }));
 
 /**
- * App settings screen: theme, bottom-nav tab selection, PWA install, and the
+ * App settings screen: theme, PWA install, printing, import/export, and the
  * destructive "clear all data" flow.
  *
  * @remarks
- * The bottom-nav choices are assembled from `STATIC_BOTTOM_NAV_TABS` plus an
- * engine-driven abilities/magic row plus `TRAILING_BOTTOM_NAV_TABS`, so the tab
- * set adapts to the active ruleset. "Clear all data" is a deliberately staged,
- * type-to-confirm flow (`clearStep`) because it wipes IndexedDB irreversibly.
+ * "Clear all data" is a deliberately staged, type-to-confirm flow
+ * (`clearStep`) because it wipes IndexedDB irreversibly.
  */
 export default function SettingsScreen() {
   const { theme, setTheme } = useTheme();
@@ -75,28 +66,10 @@ export default function SettingsScreen() {
   const { character, clearCharacter } = useActiveCharacter();
   const navigate = useNavigate();
   const { canInstall, install: installPwa } = usePwaInstall();
-  const engine = useSystemEngine();
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
 
   useAutosave(character, characterRepository.save, 1000);
-
-  const abilitiesLabel = engine.labels.abilitiesScreen;
-
-  /**
-   * Bottom-nav rows for the active system. The `magic` row keeps its stable
-   * `magic` id (so stored preferences survive a label rename) and is dropped
-   * entirely for systems without an abilities/magic screen.
-   */
-  const bottomNavTabs = useMemo(
-    () => [
-      ...STATIC_BOTTOM_NAV_TABS,
-      ...(abilitiesLabel ? [{ id: 'magic', label: abilitiesLabel }] : []),
-      ...TRAILING_BOTTOM_NAV_TABS,
-    ],
-    [abilitiesLabel],
-  );
-
 
   async function handleClearAll() {
     if (confirmText !== 'DELETE') return;
@@ -205,51 +178,6 @@ export default function SettingsScreen() {
           >
             {settings.showGlobalFAB !== false ? 'ON' : 'OFF'}
           </button>
-        </div>
-      </Card>
-
-      {/* Bottom Navigation */}
-      <Card>
-        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">
-          Bottom Navigation
-        </h2>
-        <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-md)]">
-          Choose which tabs appear in the bottom navigation bar. Hidden tabs remain accessible via the ☰ menu.
-        </p>
-        <div className="flex flex-col gap-3">
-          {bottomNavTabs.map(({ id: key, label: tabLabel }) => {
-            const currentTabs: Record<string, boolean> = {
-              ...DEFAULT_BOTTOM_NAV_TABS,
-              ...(settings.bottomNavTabs ?? {}),
-            };
-            const isVisible = currentTabs[key] ?? DEFAULT_BOTTOM_NAV_TABS[key] ?? false;
-            return (
-              <div
-                key={key}
-                className="flex justify-between items-center px-[var(--space-md)] py-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] min-h-[var(--touch-target-min)]"
-              >
-                <span className="text-[var(--color-text)] font-[var(--weight-medium)]">
-                  {tabLabel}
-                </span>
-                <button
-                  onClick={() => {
-                    const updated = { ...currentTabs, [key]: !isVisible };
-                    updateSettings({ bottomNavTabs: updated }).catch(console.error);
-                  }}
-                  aria-label={`${isVisible ? 'Hide' : 'Show'} ${tabLabel} tab in bottom navigation`}
-                  aria-pressed={isVisible}
-                  className={cn(
-                    'inline-flex items-center justify-center min-w-16 min-h-[var(--touch-target-min)] px-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] cursor-pointer font-bold text-[length:var(--font-size-sm)]',
-                    isVisible
-                      ? 'bg-[var(--color-success)] text-[var(--color-bg)]'
-                      : 'bg-[var(--color-surface)] text-[var(--color-text-muted)]'
-                  )}
-                >
-                  {isVisible ? 'ON' : 'OFF'}
-                </button>
-              </div>
-            );
-          })}
         </div>
       </Card>
 

@@ -1,6 +1,41 @@
 import { describe, it, expect } from 'vitest';
+import type { z } from 'zod';
 import { systemDefinitionSchema } from '../../../../schemas/system.schema';
 import { BUNDLED_SYSTEMS } from '../../../systems/registry';
+import type { SystemLabels, SystemTerms } from './types';
+
+/**
+ * The Zod `labels` / `terms` blocks must offer exactly the keys the engine
+ * contract declares — no more, no fewer.
+ *
+ * @remarks
+ * Enforced here as a compile error rather than an assertion because the failure
+ * is invisible at runtime in both directions. A key in the schema and not the
+ * type validates, is spread onto `engine.labels`, and is read by nothing. A key
+ * in the type and not the schema is stripped by Zod on import while continuing
+ * to work for the three bundled systems, which bypass validation — so it looks
+ * correct everywhere it is tested and fails only for a user's authored system.
+ *
+ * `MissingFrom` names the offending keys in the error text, so a failure reads
+ * as "printResources is not assignable to never" rather than "true is not
+ * assignable to false".
+ */
+type SchemaLabelKeys = keyof NonNullable<z.infer<typeof systemDefinitionSchema>['labels']>;
+type SchemaTermKeys = keyof NonNullable<z.infer<typeof systemDefinitionSchema>['terms']>;
+
+/** Keys of `A` absent from `B`; `never` when `B` covers `A`. */
+type MissingFrom<A extends string, B extends string> = Exclude<A, B>;
+
+/** Assigning a key union to `never` fails, and the message names the key. */
+type NoKeys<T extends never> = T;
+
+// SystemLabels ↔ the schema's labels block, both directions. Exported only so
+// `noUnusedLocals` does not strip the very assertions that do the work.
+export type LabelsCoveredBySchema = NoKeys<MissingFrom<keyof SystemLabels, SchemaLabelKeys>>;
+export type SchemaLabelsDeclared = NoKeys<MissingFrom<SchemaLabelKeys, keyof SystemLabels>>;
+// SystemTerms ↔ the schema's terms block, both directions.
+export type TermsCoveredBySchema = NoKeys<MissingFrom<keyof SystemTerms, SchemaTermKeys>>;
+export type SchemaTermsDeclared = NoKeys<MissingFrom<SchemaTermKeys, keyof SystemTerms>>;
 
 /**
  * Guards the bundled system definitions against the schema (they are loaded via
@@ -120,28 +155,74 @@ describe('systemDefinitionSchema', () => {
   it('preserves the full label surface, not just the four core keys', () => {
     // Before the schema was widened these keys were silently stripped by Zod,
     // so a system.json override never reached the engine merge.
+    //
+    // This used to also assert that `creatureHealth`/`creatureArmor`/
+    // `creatureMovement` survived validation. They had been removed from
+    // SystemLabels and left in the schema, so a *passing* test was pinning
+    // three keys that validated, were spread onto `engine.labels`, and were
+    // read by nothing. The exactness check below replaces that hand-listing.
     const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));
     def.labels = {
       ...(def.labels ?? {}),
       participantHealth: 'Vitality',
       storyBankPanel: 'Legends',
-      // The creature-template headings, added when ParticipantDrawer stopped
-      // hardcoding HP/Armor/Mv. Every new SystemLabels key has to be mirrored
-      // here or Zod drops it before the engine merge — that silent strip is
-      // exactly what this test exists to catch.
-      creatureHealth: 'Vigour',
-      creatureArmor: 'Plating',
-      creatureMovement: 'Stride',
+      printResources: 'Vitals',
+      printAbilities: 'Knacks',
     };
     const result = systemDefinitionSchema.safeParse(def);
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.labels?.participantHealth).toBe('Vitality');
       expect(result.data.labels?.storyBankPanel).toBe('Legends');
-      expect(result.data.labels?.creatureHealth).toBe('Vigour');
-      expect(result.data.labels?.creatureArmor).toBe('Plating');
-      expect(result.data.labels?.creatureMovement).toBe('Stride');
+      // Read at PrintableSheet.tsx and populated by classicFantasyEngine, but
+      // absent from the schema until now: an authored system could not rename
+      // its printed sheet headings while a bundled one could.
+      expect(result.data.labels?.printResources).toBe('Vitals');
+      expect(result.data.labels?.printAbilities).toBe('Knacks');
     }
+  });
+
+  it('rejects a sheetPanel id that is not a PanelKey', () => {
+    // `sheetPanels[].id` is `PanelKey` in TypeScript and was `z.string()` here,
+    // while the sibling `panels` field was already enumerated. A typo'd id in an
+    // imported system validated and then rendered nowhere — which looks exactly
+    // like a panel the system chose not to show, so nothing reports it.
+    const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));
+    def.sheetPanels = [{
+      id: 'carrers', // 'careers', mistyped
+      title: 'Careers',
+      sections: [{ kind: 'text', key: 'career' }],
+    }];
+    expect(systemDefinitionSchema.safeParse(def).success).toBe(false);
+
+    def.sheetPanels[0].id = 'careers';
+    expect(systemDefinitionSchema.safeParse(def).success).toBe(true);
+  });
+
+  it('mirrors SystemLabels and SystemTerms exactly', () => {
+    // The type-level assertions below are the real guard — `tsc -b` fails on any
+    // drift in either direction, which is stronger than any list a test can keep
+    // and is how this codebase holds its other key-set invariants (CardKey ↔
+    // CARD_REGISTRY, SHEET_PANEL_KEYS ↔ SheetPanelAvailability).
+    //
+    // Drift is silent and one-sided, which is what makes it worth a compile
+    // error: Zod strips unknown keys, and bundled systems bypass validation
+    // entirely (`useSystemDefinition` imports the object), so a key in the type
+    // and not the schema works for the three shipped systems and vanishes for
+    // every imported one. Both live cases had been sitting here for a while —
+    // three phantom keys in the schema, two read-but-strippable ones missing
+    // from it.
+    //
+    // This body asserts the observable consequence — what survives validation
+    // and what does not — so a reader sees the effect; the exactness itself is
+    // enforced at compile time above.
+    const def: any = JSON.parse(JSON.stringify(BUNDLED_SYSTEMS[0]));
+    def.labels = { ...(def.labels ?? {}), creatureHealth: 'Vigour', printResources: 'Vitals' };
+    const result = systemDefinitionSchema.safeParse(def);
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.data.labels?.printResources).toBe('Vitals');
+    expect(result.data.labels).not.toHaveProperty('creatureHealth');
   });
 
   it('survives a financeFields declaration intact', () => {

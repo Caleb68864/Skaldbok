@@ -9,6 +9,7 @@ import * as ledgerAccountRepository from '../../storage/repositories/ledgerAccou
 import * as recurringBillRepository from '../../storage/repositories/recurringBillRepository';
 import * as routeRepository from '../../storage/repositories/routeRepository';
 import * as referenceSectionRepository from '../../storage/repositories/referenceSectionRepository';
+import * as referenceNoteRepository from '../../storage/repositories/referenceNoteRepository';
 import * as partyRepository from '../../storage/repositories/partyRepository';
 import { docToText } from '../notes/textToDoc';
 import type { Note } from '../../types/note';
@@ -244,6 +245,20 @@ export const TRASH_ENTITY_TYPES: TrashEntityType[] = [
         detail: 'Restores its sections too',
         deletedAt: g.deletedAt,
         restore: () => referenceSectionRepository.restoreGroup(g.id),
+      })),
+  },
+  {
+    key: 'referenceNotes',
+    heading: 'Reference Notes',
+    scope: 'global',
+    load: async () =>
+      (await referenceNoteRepository.getDeleted()).map((n) => ({
+        id: n.id,
+        title: n.title || 'Untitled note',
+        // The legacy table carries no category or scope of its own.
+        detail: 'Reference library note',
+        deletedAt: n.deletedAt,
+        restore: () => referenceNoteRepository.restore(n.id),
       })),
   },
 ];

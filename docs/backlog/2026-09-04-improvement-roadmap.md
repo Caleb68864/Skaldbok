@@ -1347,6 +1347,148 @@ Baseline before: 1595 tests / 99 files. After: 1649 tests / 103 files, with
 
 ---
 
+## Workstream N — Closed by the 2026-09-09 maintainability pass
+
+Sourced from `vault/maintainability-2026-09-09.md`, which asked "what will make
+the next change expensive, risky or easy to get wrong?" rather than "is there a
+bug". Its dominant finding is that this codebase's conventions are enforced by
+source-scanning tests, so **the scope boundary of each guard — not the
+convention — is where drift lives**. Most of what follows widens or adds a
+guard; two items are behaviour.
+
+Baseline before: 1649 tests / 103 files. After: **1872 tests / 112 files**, with
+`tsc -b`, `eslint .` (0 errors, the same 35 standing warnings) and `vite build`
+green throughout. Every item below was reverted and re-run to confirm its test
+fails without the fix.
+
+### N1. Nothing enforced the `system.json` / `sheet.json` version bump — DONE
+- **Where:** six bundled JSON files; `useSystemDefinition.ts:49`,
+  `useSheetTemplate.ts:63`.
+- **What:** `CLAUDE.md`'s one bolded convention, with zero enforcement. Both
+  gates compare strictly-greater-than against an IndexedDB cache that survives
+  reload, so a missed bump is invisible **to the author locally** and presents
+  as "my edit didn't work".
+- **Fix:** `src/systems/bundledVersionBumps.test.ts`, following
+  `releasedSchemaVersions.test.ts`: hash each file's content minus its
+  `version`, record `{version, hash}` by hand. Key order is canonicalised so
+  reformatting is not a change; array order is, because region layout and skill
+  order are content.
+
+### N2. Two hard-delete traps, one live — DONE
+- **Where:** `ReferenceScreen.tsx:394` → `referenceNoteRepository.remove`;
+  `noteRepository.deleteNote`.
+- **What:** the first was `db.referenceNotes.delete` wired to a confirmation
+  dialog with no Trash — the only user-facing control in the app that destroyed
+  content outright. It passed review because it was not *named* `hardDelete`.
+  The second was a callerless duplicate of `hardDelete` whose JSDoc `@example`
+  read `await deleteNote('abc123')`.
+- **Fix:** reference notes now soft-delete, list in the Trash and restore; both
+  fields are unindexed so no `version()` block was needed. `deleteNote` is
+  removed and its KB-node cleanup moved onto `hardDelete`.
+  `hardDeleteReachability.test.ts` guards the *operation* rather than the name.
+
+### N3. `declaredCapabilities.test.ts` could not see nested or inline fields — DONE
+- **What:** `^\s{2}` is the top level of an interface and nothing else, so every
+  nested member was unchecked — including `allowsPlus`, one of the five bugs
+  named in that file's own doc comment. Its `\bname\s*[,}]` read-pattern matched
+  ES6 shorthand *construction*; `DamageApplication.depleted` was the live false
+  pass.
+- **Fix:** any indent, plus an inline pattern; destructuring matched
+  specifically. Four newly-visible inert fields went to `KNOWN_UNIMPLEMENTED`
+  with reasons — `condition.recovery`'s `traitId`/`onCriticalFailure`,
+  `depleted`, `raises`. The extraction is pinned by example in both directions.
+
+### N4. Zod ↔ TypeScript label drift — DONE
+- **Where:** `schemas/system.schema.ts`; `engine/types.ts:316,325`;
+  `systemDefinitionSchema.test.ts`.
+- **What:** three keys removed from `SystemLabels` and left in the schema, held
+  in place by a *passing* test asserting they survive validation; and
+  `printResources`/`printAbilities`, read by `PrintableSheet`, missing from it —
+  so an imported system could not rename its printed headings while a bundled
+  one could.
+- **Fix:** the mirror is now a **compile error** in both directions rather than
+  a list. `sheetPanels[].id` is enumerated like its sibling `panels`.
+
+### N5. `where('softDeletedBy')` had no index guard — DONE
+- **What:** three queries, three indexed tables, agreeing by hand. Dexie throws
+  a `SchemaError` for an unindexed one — and not at `.where(...)` but when the
+  query runs, on the restore path, which is the least-exercised path there is.
+- **Fix:** `softDeletedByIndex.test.ts` reads the index side off the *opened*
+  database, so it reflects the schema Dexie assembles across all twenty blocks.
+
+### N6. `bottomNavTabs` was a user-visible setting that changed nothing — DONE
+- **What:** seven ON/OFF toggles writing a field `BottomNav` and
+  `CharacterSubNav` never consulted, with copy promising a ☰ menu that no longer
+  exists. It escaped `declaredCapabilities` because the field *was* read — by
+  the control that wrote it.
+- **Fix:** removed rather than wired, because wiring it would fight the
+  navigation catalogue's guarantee that every route has a way in.
+  `showOtherSessionNotes` (no writer, no reader) went with it.
+  `settingsHaveReaders.test.ts` now fails on a settings field nothing outside
+  the writer reads.
+
+### N7. Three `NOTE_TYPES` had no config entry — DONE
+- **What:** `npc`, `spell-cast` and `ability-use` are actively written by four
+  flows and were absent from `DEFAULT_NOTE_TYPE_CONFIG`, which is what
+  `NotesGrid` builds its filter chips from. No test referenced that constant.
+- **Not changed:** `baseNoteSchema.type` stays `z.string()`. A validation
+  failure is treated as an absent note on read, so `z.enum(NOTE_TYPES)` would
+  hide any row carrying a type this build does not know.
+
+### N8. There was no vitest configuration at all — DONE
+- **What:** no `test:` block, no `vitest.config.*`. `environment: 'node'` and
+  `globals: false` matched `CLAUDE.md` **by omission**. Globals-on is the quiet
+  one: it would silently make every DOM test's manual `cleanup()` redundant.
+- **Fix:** both declared in `vite.config.ts` with the reason, plus
+  `jsdomBoundary.test.ts` for the per-file half — pragma on line 1, `cleanup()`
+  in an `afterEach` — which was perfect and entirely unenforced.
+
+### N9. Three blind assertions in `providerMemoization.test.tsx` — DONE
+- **What:** `expect(after).not.toBe(before === 'parchment' ? after : before)`
+  becomes `expect(after).not.toBe(after)` if `DEFAULT_THEME` ever changes;
+  `expect(source).toMatch(/useMemo/)` passes on any file containing the string;
+  the dependency check took the first object-returning `useMemo` in the file
+  with nothing tying it to `.Provider value={…}`.
+- **And the 7-file list omitted an eighth provider** — and not harmlessly.
+  `SessionEncounterContext` takes its value from `useSessionEncounter`, which
+  returned a fresh object literal every render: the exact defect this file
+  exists to catch, one level below where it was looking. Now memoised, and the
+  file list is discovered rather than maintained.
+
+### N10. `engine/index.ts` cited a test that has never existed — DONE
+- **Fix:** the citation names the real guard; that guard now enforces
+  adapter → registry as well as registry → adapter; and
+  `testCitations.test.ts` fails on any comment naming a test file that is not
+  there — the class, not the instance.
+
+### N11. Repository conventions were unguarded — DONE (test only, by design)
+- **Where:** `src/storage/repositories/repositoryConventions.test.ts`.
+- **What:** 24 hand-written repositories, no factory, and five measured
+  divergences in the soft-delete contract: `softDelete` signatures that cannot
+  join a cascade (`shipRepository` takes no `txId`), six missing the re-delete
+  guard, seven minting the transaction id with bare `generateId()`, five with
+  `restore` and no `getDeleted`, and sixteen validating nothing on read.
+- **Deliberately the test and not a factory.** This is the layer where a mistake
+  in a local-first app is unrecoverable. Each check carries an exception list
+  with a reason per entry, and each list is **self-checking** — an entry that no
+  longer diverges fails, so the lists cannot rot into a record of things already
+  fixed. A new repository is on none of them and must comply, which stops the
+  drift widening while the entries are worked off.
+- **The test found a sixth divergence the scan missed:** the Trash lists deleted
+  party *members* and has no equivalent for a party, so `partyRepository.restore`
+  cannot be reached.
+
+**Left open, with reasons.** From the same scan and not taken here: the 42
+direct Dexie calls outside `src/storage/` (scan §7 — the largest remaining
+unguarded axis); `preserve-caught-error`, 128 sites, all in repositories, worth
+taking as its own mechanical commit; the `resolveComponent` subsystem, 156 lines
+tested and unreachable; the migration freeze's widening blind spot for
+*extracted* upgrades; and the `CLAUDE.md` drift the scan documents in §8 —
+soft-delete list of 9 against 20 tables, and the `migrated_from` relationship
+type that exists in every database that came up through v6 and is in no list.
+
+---
+
 ## Suggested order of attack
 
 Each line is a self-contained change that can ship on its own and be verified
@@ -1413,6 +1555,16 @@ import, apart from the in-app editor bodies), and partial progress on **E4**
 (the unknown-system fallback is now loud and guarded, but adapter selection is
 still by id) and **I5** (a DOM environment exists; shared setup and coverage do
 not).
+
+A third 2026-09-09 pass closed **workstream N**, from a maintainability scan
+that asked what makes the next change expensive rather than what is broken. Its
+finding is worth carrying forward: the guards are now the load-bearing artifact
+here, and the drift lives in their scope boundaries rather than in the
+conventions they enforce. Two of the eleven items were behaviour (a live
+hard-delete on user content; three note types that could not be filtered); the
+rest widened, added or repaired a guard. It also wrote `repositoryConventions`
+— the test only, ahead of any repository factory, because that is the layer
+where a mistake cannot be undone.
 
 A second 2026-09-09 pass then took the expensive tail — the items scoring near
 zero on this file's own formula, where changing no behaviour is most of the

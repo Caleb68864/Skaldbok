@@ -41,6 +41,21 @@ describe('adapter registry', () => {
     }
   });
 
+  it('has a bundled system for every adapter', () => {
+    // The other direction, which nothing checked. An adapter left in the map
+    // after its system.json is removed is dead weight that still answers "does
+    // this system have an adapter?" with yes — and `getEngine` would hand a
+    // stale ruleset to any character record still carrying that id, silently,
+    // rather than falling back with the warning that path exists to give.
+    const bundled = new Set(BUNDLED_SYSTEMS.map(s => s.id));
+    const orphaned = Object.keys(SYSTEM_ADAPTERS).filter(id => !bundled.has(id));
+    expect(
+      orphaned,
+      `${orphaned.join(', ')} has an adapter in SYSTEM_ADAPTERS but is not in ` +
+      'BUNDLED_SYSTEMS. Register the system, or remove the adapter.',
+    ).toEqual([]);
+  });
+
   it('includes the default system', () => {
     expect(SYSTEM_ADAPTERS[DEFAULT_SYSTEM_ID]).toBeDefined();
   });

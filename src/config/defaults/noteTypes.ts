@@ -33,12 +33,21 @@ export interface NoteTypeConfig {
  */
 export const DEFAULT_NOTE_TYPE_CONFIG: NoteTypeConfig[] = [
   { id: 'generic', label: 'Note', promotable: true },
+  // `npc`, `spell-cast` and `ability-use` were missing from this list while
+  // being actively written — by `useSessionLog`, `noteCreationService`,
+  // `SkillCheckEditDrawer` and `PromoteEntriesSheet`. `NotesGrid` builds its
+  // filter chips from this array, so there was no way to filter to any of the
+  // three, and the "All" filter is assembled from it too. None is `promotable`:
+  // like `combat` and `skill-check`, the flow that creates them picks the type.
+  { id: 'npc', label: 'NPC' },
   { id: 'location', label: 'Location', promotable: true },
   { id: 'combat', label: 'Combat' },
   { id: 'loot', label: 'Loot', promotable: true },
   { id: 'rumor', label: 'Rumor', promotable: true },
   { id: 'quote', label: 'Quote', promotable: true },
   { id: 'skill-check', label: 'Skill Check' },
+  { id: 'spell-cast', label: 'Spell Cast' },
+  { id: 'ability-use', label: 'Ability Use' },
   { id: 'recap', label: 'Recap', promotable: true },
   { id: 'log', label: 'Log', hiddenByDefault: true },
 ];

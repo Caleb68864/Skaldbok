@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { db } from '../../storage/db/client';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
@@ -190,13 +190,21 @@ export function useSessionEncounter(sessionId: string): UseSessionEncounterResul
     [sessionId, refresh],
   );
 
-  return {
-    activeEncounter,
-    recentEnded,
-    loading,
-    startEncounter,
-    endEncounter,
-    reopenEncounter,
-    refresh,
-  };
+  // Memoised because this object *is* a context value: `SessionEncounterProvider`
+  // passes it straight to `.Provider value={…}`. Returned as a fresh literal it
+  // handed every consumer a new identity on each provider render, which is the
+  // defect `context/providerMemoization.test.tsx` exists to catch — it was
+  // simply one level further down than that file was looking.
+  return useMemo(
+    () => ({
+      activeEncounter,
+      recentEnded,
+      loading,
+      startEncounter,
+      endEncounter,
+      reopenEncounter,
+      refresh,
+    }),
+    [activeEncounter, recentEnded, loading, startEncounter, endEncounter, reopenEncounter, refresh],
+  );
 }

@@ -43,9 +43,40 @@ function walk(dir: string): string[] {
   return out;
 }
 
-/** Property names declared in an interface in the given source. */
+/**
+ * Property names declared in the given source.
+ *
+ * @remarks
+ * The indent used to be pinned at exactly two spaces, which is the top level of
+ * an interface and nothing else. Everything nested was invisible:
+ * `SystemDefinition.terms.*`, `labels.*`, `currency.*`, `magic.*`,
+ * `routePlanner.*`, `itemFields.hiddenBuiltIns`, `expiresOn.*` — all sit at four
+ * or more. Any indent now counts.
+ *
+ * The second pattern catches members declared *inline* on one line, as in
+ * `scale?: { kind: 'die-ladder'; ladder: number[]; allowsPlus?: boolean }`,
+ * which yielded only `scale`. `allowsPlus` is one of the five original bugs
+ * named in the doc comment above, and until this pattern existed the test
+ * written to prevent it did not cover it.
+ */
 function declaredProperties(source: string): string[] {
-  return [...source.matchAll(/^\s{2}([a-zA-Z][a-zA-Z0-9]*)\??\s*:/gm)].map(m => m[1]);
+  // Comments first, or `in \`{ denominationId: amount }\`` — prose in a
+  // `@remarks` — reads as a declaration.
+  const code = stripComments(source);
+  // Parameter lists next, but only for the line-start scan: a wrapped parameter
+  // (`    context?: SkillDisplayContext,`) is indistinguishable from an
+  // interface member by indentation alone. Nested groups need the loop.
+  let unparenthesised = code;
+  for (;;) {
+    const next = unparenthesised.replace(/\([^()]*\)/g, '()');
+    if (next === unparenthesised) break;
+    unparenthesised = next;
+  }
+  const own = [...unparenthesised.matchAll(/^\s+([a-zA-Z][a-zA-Z0-9]*)\??\s*:/gm)].map(m => m[1]);
+  const inline = [...code.matchAll(/[{;]\s*([a-zA-Z][a-zA-Z0-9]*)\??\s*:[^;{}\n]*[;}]/g)].map(
+    m => m[1],
+  );
+  return [...own, ...inline];
 }
 
 /**
@@ -87,6 +118,14 @@ const KNOWN_UNIMPLEMENTED: Record<string, string> = {
   roleFallback: 'no surface shows a profession fallback yet; the library card now uses identityFields instead',
   sectionLayouts: 'sheet layout comes from sheet.json; this predates it',
   themesSupported: 'theming is app-level, not per-system',
+  // The four below were invisible until this file learned to see nested, inline
+  // and shorthand-constructed fields. None is newly broken; each has been
+  // declared-and-inert all along, and is written down here rather than merely
+  // absent.
+  traitId: 'condition.recovery is declared by savage-worlds/system.json (Shaken → Spirit 4) and no surface offers the recovery roll',
+  onCriticalFailure: 'same as traitId — the whole condition.recovery object is inert, so its consequence string is too',
+  depleted: 'DamageHealModule reads resources/dealt/unassigned/status; which tracks are full is implied by status and never named',
+  raises: 'accepted for forward-compatibility by the toughness comparison and deliberately unread — savageWorldsEngine.ts:287 says why',
 };
 
 /**
@@ -114,18 +153,65 @@ const declared = [
   ...new Set(DECLARATION_FILES.flatMap(f => declaredProperties(readFileSync(f, 'utf8')))),
 ].filter(name => !TOO_GENERIC.has(name));
 
+/**
+ * Whether the corpus genuinely *reads* a field of this name.
+ *
+ * @remarks
+ * The third pattern used to be `\bname\s*[,}]`, and the doc comment claimed it
+ * could not match a population because "a population reads `field: value`".
+ * That is false for ES6 shorthand, and the false pass was live:
+ * `DamageApplication.depleted` matched only
+ * `return { resources, dealt, unassigned: remaining, depleted, status };` in
+ * `utils/damageTrack.ts`. The field was produced, typed, and read by nothing but
+ * its own test — precisely the bug this file exists to catch — and the guard
+ * passed it.
+ *
+ * Destructuring is still a real read, so it is matched specifically: a brace
+ * group containing the name and followed by `=` (`const { depleted } = …`), `:`
+ * (a typed parameter) or `)` (an inline destructured parameter). What that
+ * excludes is the object-literal *construction*, where the closing brace is
+ * followed by `;`, `,` or a newline.
+ */
+function isRead(name: string): boolean {
+  return (
+    new RegExp(`\\.${name}\\b`).test(consumerSource) ||
+    new RegExp(`\\['${name}'\\]`).test(consumerSource) ||
+    new RegExp(`\\{[^{}\\n]*\\b${name}\\b[^{}\\n]*\\}\\s*[=:)]`).test(consumerSource)
+  );
+}
+
 describe('declared capabilities have readers', () => {
   it('found a meaningful number of declared fields to check', () => {
     // A broken regex silently checking nothing is this test's failure mode.
     expect(declared.length).toBeGreaterThan(20);
   });
 
+  it('sees nested and inline members, not just the top level of an interface', () => {
+    // The extraction is the whole guarantee, and it is invisible from the code
+    // it guards, so it gets pinned by example. Each of these was outside the
+    // old `^\s{2}` pattern:
+    //   allowsPlus  — inline, `scale?: { …; allowsPlus?: boolean }`
+    //   printAbilities, creatureHealth — nested under `labels`, 4 spaces
+    //   hiddenBuiltIns — nested under `itemFields`
+    // `allowsPlus` is one of the five bugs named at the top of this file, and
+    // the test written to prevent it did not cover it.
+    for (const name of ['allowsPlus', 'printAbilities', 'hiddenBuiltIns', 'traitId']) {
+      expect(declared, `${name} is no longer being extracted as a declared field`).toContain(name);
+    }
+  });
+
+  it('does not mistake a parameter or a doc comment for a declaration', () => {
+    // `context?: SkillDisplayContext,` is a wrapped parameter; `denominationId`
+    // appears only inside a `@remarks`. Both were counted the moment the indent
+    // pattern widened, and both would have been "fixed" by allowlisting fields
+    // that do not exist.
+    for (const name of ['context', 'denominationId']) {
+      expect(declared, `${name} is a parameter/comment, not a declared field`).not.toContain(name);
+    }
+  });
+
   it.each(declared)('%s is read somewhere', name => {
-    // A genuine read looks like `.name` or `['name']` or destructuring.
-    const read =
-      new RegExp(`\\.${name}\\b`).test(consumerSource) ||
-      new RegExp(`\\['${name}'\\]`).test(consumerSource) ||
-      new RegExp(`\\b${name}\\s*[,}]`).test(consumerSource);
+    const read = isRead(name);
 
     if (!read && KNOWN_UNIMPLEMENTED[name]) {
       // Documented promise, not a bug. Still surfaced, so the list stays honest.
@@ -145,17 +231,13 @@ describe('declared capabilities have readers', () => {
     // Stops the allowlist rotting into a list of things that were fixed years
     // ago, which is how an exemption list stops meaning anything.
     //
-    // The three patterns must match the main check's exactly. This one was
-    // missing the destructuring form, so a field that gained a reader written
-    // as `const { name } = engine` stayed on the allowlist unchallenged — the
-    // rot the test exists to prevent, in the test itself.
+    // Both checks now share `isRead`, so they cannot drift apart. They already
+    // had: this one was missing the destructuring form, so a field that gained
+    // a reader written as `const { name } = engine` stayed on the allowlist
+    // unchallenged — the rot the test exists to prevent, in the test itself.
     for (const [name, reason] of Object.entries(KNOWN_UNIMPLEMENTED)) {
-      const read =
-        new RegExp(`\\.${name}\\b`).test(consumerSource) ||
-        new RegExp(`\\['${name}'\\]`).test(consumerSource) ||
-        new RegExp(`\\b${name}\\s*[,}]`).test(consumerSource);
       expect(
-        read,
+        isRead(name),
         `"${name}" is listed as unimplemented ("${reason}") but now HAS a reader — ` +
           `remove it from KNOWN_UNIMPLEMENTED`,
       ).toBe(false);

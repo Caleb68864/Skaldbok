@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
@@ -111,5 +111,29 @@ export default defineConfig({
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
+  },
+  /**
+   * Vitest's settings, stated rather than inherited.
+   *
+   * @remarks
+   * There was no `test:` block and no `vitest.config.*` anywhere, so both of
+   * these matched CLAUDE.md **by omission**. They are not incidental defaults:
+   *
+   * - `environment: 'node'` is what keeps the ~100 pure test files fast. The DOM
+   *   is opted into per file with a `// @vitest-environment jsdom` pragma;
+   *   flipping this to `'jsdom'` globally would silently slow every one of them.
+   * - `globals: false` is load-bearing in a way that is easy to miss. Testing
+   *   Library's automatic cleanup only registers when Vitest globals are on, so
+   *   with globals off every DOM test file must call `cleanup()` in its own
+   *   `afterEach` or renders stack up in one document. Turning globals *on*
+   *   would not break anything visibly — it would quietly make those manual
+   *   `cleanup()` calls redundant, and the next DOM test written without one
+   *   would pass here and fail the day someone turned globals back off.
+   *
+   * `jsdomBoundary.test.ts` enforces the per-file half of this.
+   */
+  test: {
+    globals: false,
+    environment: 'node',
   },
 });

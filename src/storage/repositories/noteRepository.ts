@@ -204,31 +204,14 @@ export async function updateNote(id: string, data: Partial<Note>): Promise<Note>
   }
 }
 
-/**
- * Permanently deletes a {@link Note} record from IndexedDB.
- *
- * @remarks
- * This operation is irreversible.  The caller is responsible for any
- * confirmation prompts before invoking this function.
- *
- * @param id - The ID of the note to delete.
- * @returns A promise that resolves when the deletion is complete.
- * @throws {Error} If the Dexie delete operation throws.
- *
- * @example
- * ```ts
- * await deleteNote('abc123');
- * ```
- */
-export async function deleteNote(id: string): Promise<void> {
-  try {
-    await db.notes.delete(id);
-    // Fire-and-forget KB graph cleanup
-    getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
-  } catch (e) {
-    throw new Error(`noteRepository.deleteNote failed: ${e}`);
-  }
-}
+// `deleteNote` stood here: a second, callerless permanent delete of a note row,
+// duplicating `hardDelete` below but carrying an `@example` that read
+// `await deleteNote('abc123')`. That put irreversible destruction of a user's
+// note one plausible-looking import away, in a local-first app where the row
+// exists in exactly one browser and nothing can restore it. Its only behaviour
+// `hardDelete` lacked — dropping the note's KB node — has moved there, so the
+// graph no longer keeps a node pointing at a purged row. The user-facing path
+// is unchanged: `useNoteActions.deleteNote` → `softDeleteWithLinks`.
 
 /** Soft-deletes a note (the user-facing delete). Enlist in a cascade via `txId`. No-op if missing or already deleted. */
 export async function softDelete(id: string, txId?: string): Promise<void> {
@@ -326,7 +309,6 @@ export async function restore(id: string): Promise<void> {
   }
 }
 
-/** Permanently removes a note row. Internal only — never called from UI, which soft-deletes. */
 /** Soft-deleted notes of a campaign, most recently deleted first. Feeds the Trash screen. */
 export async function getDeleted(campaignId: string): Promise<Note[]> {
   try {
@@ -339,9 +321,19 @@ export async function getDeleted(campaignId: string): Promise<Note[]> {
   }
 }
 
+/**
+ * Permanently removes a note row.
+ *
+ * @remarks
+ * **Internal only** — purge jobs and data cleanup. Never call it from UI, which
+ * soft-deletes. The KB node goes with the row: leaving one behind listed a note
+ * in the Knowledge Base that no longer existed anywhere else.
+ */
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.notes.delete(id);
+    // Fire-and-forget KB graph cleanup, mirroring `softDelete`.
+    getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
   } catch (e) {
     throw new Error(`noteRepository.hardDelete failed: ${e}`);
   }
