@@ -17,7 +17,15 @@ export interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<ThemeName>(() => {
-    const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    // Guarded: this runs while the outermost provider renders, and a browser
+    // that blocks site data (Safari private mode) throws on the accessor
+    // itself. Unguarded, that was a blank page with nothing to catch it.
+    let stored: string | null;
+    try {
+      stored = localStorage.getItem(THEME_STORAGE_KEY);
+    } catch {
+      stored = null;
+    }
     if (stored && (THEME_LIST as string[]).includes(stored)) {
       return stored as ThemeName;
     }
@@ -26,7 +34,11 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem(THEME_STORAGE_KEY, theme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme);
+    } catch {
+      // Theme just will not persist across reloads here; the app still works.
+    }
   }, [theme]);
 
   function setTheme(t: ThemeName) {

@@ -1,0 +1,48 @@
+name: CI
+
+# Every guard in this repository — the migration tests, the engine contract
+# fingerprint, the capability-reader enforcement, the bundle parity test — only
+# protects anything if something runs it. Nothing did. Typecheck, tests and
+# build together take about twenty seconds.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+# A new push to the same branch supersedes the run in flight.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # The lockfile is committed, so the cache key is exact.
+          node-version: '22'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Typecheck first: it is the fastest of the three and the one that fails
+      # most often, and `npm run build` would only run it again.
+      - name: Typecheck
+        run: npx tsc -b
+
+      # The ten `eslint-disable-next-line` comments in `src/` enforced nothing
+      # until this step existed. Errors fail the build; the remaining warnings
+      # (fast-refresh boundaries and deliberate dependency-array omissions) are
+      # reported, not fatal.
+      - name: Lint
+        run: npx eslint .
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npx vite build

@@ -20,21 +20,8 @@ import * as noteRepository from '../../storage/repositories/noteRepository';
 import type { Note, NoteType } from '../../types/note';
 import { cn } from '../../lib/utils';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
+import { useNoteTypeConfig } from '../../hooks/useConfigurableDefaults';
 
-/**
- * Selectable note types when promoting to a *new* note. System-only types
- * (`npc`, `combat`, `skill-check`) are excluded — they are assigned by the
- * flows that create them, not chosen by hand. `log` is excluded too: promoting
- * a log entry back into a log entry is not a thing.
- */
-const SELECTABLE_NOTE_TYPES: { value: NoteType; label: string }[] = [
-  { value: 'generic', label: 'Note' },
-  { value: 'location', label: 'Location' },
-  { value: 'loot', label: 'Loot' },
-  { value: 'rumor', label: 'Rumor' },
-  { value: 'quote', label: 'Quote' },
-  { value: 'recap', label: 'Recap' },
-];
 
 /**
  * What promoting a selection should do.
@@ -199,6 +186,12 @@ async function tagEntries(entries: Note[], tags: string[]): Promise<void> {
  * simply tag them — the source entries are never deleted.
  */
 export function PromoteEntriesSheet({ entries, campaignId, onClose, onDone, initialMode = 'new' }: PromoteEntriesSheetProps) {
+  const noteTypeConfig = useNoteTypeConfig();
+  /** Types a promoted note may take — the configured `promotable` ones, in order. */
+  const SELECTABLE_NOTE_TYPES = useMemo<{ value: NoteType; label: string }[]>(
+    () => noteTypeConfig.filter(t => t.promotable).map(t => ({ value: t.id, label: t.label })),
+    [noteTypeConfig],
+  );
   const [mode, setMode] = useState<PromoteMode>(initialMode);
   const [saving, setSaving] = useState(false);
 

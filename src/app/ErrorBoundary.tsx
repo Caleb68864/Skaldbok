@@ -3,6 +3,12 @@ import { Button } from '../components/primitives/Button';
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
+  /**
+   * When this changes the boundary clears its error. The app passes the
+   * current pathname, so a screen that crashed does not keep the whole app
+   * on the fallback after the user navigates elsewhere.
+   */
+  resetKey?: unknown;
 }
 
 export interface ErrorBoundaryState {
@@ -18,6 +24,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('[ErrorBoundary]', error, info);
+  }
+
+  componentDidUpdate(prevProps: ErrorBoundaryProps) {
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null });
+    }
   }
 
   render() {

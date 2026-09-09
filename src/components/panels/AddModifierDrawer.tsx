@@ -117,6 +117,7 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
             type="text"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
+            aria-label="Modifier label"
             placeholder="e.g. Power Fist, Stone Skin"
             className={inputClasses}
           />
@@ -168,6 +169,7 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
             >
               <select
                 value={effect.stat}
+                aria-label={`Effect ${index + 1} stat`}
                 onChange={(e) => updateEffect(index, { stat: e.target.value })}
                 className={cn(inputClasses, "flex-1 w-auto")}
               >
@@ -184,6 +186,7 @@ export function AddModifierDrawer({ open, onClose, onSave }: AddModifierDrawerPr
               <input
                 type="number"
                 value={effect.delta}
+                aria-label={`Effect ${index + 1} amount`}
                 onChange={(e) => updateEffect(index, { delta: Number(e.target.value) })}
                 className={cn(inputClasses, "w-[72px] flex-[0_0_72px] text-center")}
               />

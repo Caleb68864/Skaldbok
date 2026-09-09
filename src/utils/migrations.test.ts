@@ -270,6 +270,21 @@ describe('migrateCharacterV3ToV4 (unified abilities)', () => {
     expect(spell.prepared).toBe(true);
   });
 
+  it('carries fields it does not know about across the conversion', () => {
+    // A field added to Spell/HeroicAbility after this migration was written
+    // must survive it; the whitelist copy used to drop anything unnamed.
+    const src = v3WithBoth();
+    (src.spells[0] as Record<string, unknown>).notes = 'learned at the tower';
+    (src.heroicAbilities[0] as Record<string, unknown>).usesPerRest = 2;
+    const out = migrateCharacterV3ToV4(src) as Record<string, unknown>;
+    const [spell, heroic] = out.abilities as Array<Record<string, unknown>>;
+    expect(spell.notes).toBe('learned at the tower');
+    expect(heroic.usesPerRest).toBe(2);
+    // …while the consumed legacy keys do not leak through alongside `cost`.
+    expect(spell).not.toHaveProperty('wpCost');
+    expect(spell).not.toHaveProperty('school');
+  });
+
   it('is idempotent — re-running does not duplicate abilities', () => {
     const once = migrateCharacterV3ToV4(v3WithBoth());
     const twice = migrateCharacterV3ToV4(once);
@@ -321,6 +336,17 @@ describe('migrateCharacterV4ToV5', () => {
     // Level 0 trained is a real skill in Traveller; dropping the flag would
     // silently re-apply the -3 unskilled DM.
     expect((out.skills as Record<string, { trained: boolean }>).electronicsSensors.trained).toBe(true);
+  });
+
+  it('carries every other field on the legacy entry across the rename', () => {
+    // Only `value` and `trained` used to be merged; anything else stored on the
+    // legacy entry was dropped on the floor when no target entry existed.
+    const out = migrateCharacterV4ToV5(v4Traveller({
+      sensors: { value: 2, trained: true, dragonMarked: true, note: 'from the scout ship' },
+    })) as Record<string, unknown>;
+    expect((out.skills as Record<string, unknown>).electronicsSensors).toMatchObject({
+      value: 2, trained: true, dragonMarked: true, note: 'from the scout ship',
+    });
   });
 
   it('leaves a non-Traveller character alone', () => {

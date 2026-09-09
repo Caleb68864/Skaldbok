@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCampaignContext } from './CampaignContext';
 import { useToast } from '../../context/ToastContext';
 import { getAll as getAllCharacters } from '../../storage/repositories/characterRepository';
-import { createParty, addPartyMember, removePartyMember } from '../../storage/repositories/partyRepository';
+import { createParty, addPartyMember, softDeletePartyMember } from '../../storage/repositories/partyRepository';
 import { updateCampaign } from '../../storage/repositories/campaignRepository';
 import type { CharacterRecord } from '../../types/character';
 import type { PartyMember } from '../../types/party';
@@ -43,6 +43,13 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
   const { showToast } = useToast();
   const [allCharacters, setAllCharacters] = useState<CharacterRecord[]>([]);
   const [saving, setSaving] = useState(false);
+  // Above the `!activeCampaign` early return, not below it. Below, the hook is
+  // called conditionally: the drawer can mount while the campaign context is
+  // still loading, render null, and then render again once the campaign
+  // arrives — at which point React sees more hooks than the previous render
+  // and throws "Rendered more hooks than during the previous render", taking
+  // the whole screen to the error boundary.
+  const dialogRef = useModalBehaviour<HTMLDivElement>(onClose);
 
   // Guard: show toast and close if no active campaign
   useEffect(() => {
@@ -111,12 +118,12 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
   /**
    * Removes a member from the party by their party-member ID.
    *
-   * @param memberId - ID of the {@link PartyMember} row to delete.
+   * @param memberId - ID of the {@link PartyMember} row to soft-delete.
    */
   const handleRemoveMember = async (memberId: string) => {
     setSaving(true);
     try {
-      await removePartyMember(memberId);
+      await softDeletePartyMember(memberId);
       await refreshParty();
     } catch (e) {
       showToast('Failed to remove member');
@@ -147,9 +154,6 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
     }
   };
 
-
-  const dialogRef = useModalBehaviour<HTMLDivElement>(onClose);
-
   return (
     <div
       ref={dialogRef}
@@ -167,6 +171,7 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
           <h2 className="text-[var(--color-text)]">Manage Party</h2>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="bg-transparent border-none text-[var(--color-text-muted)] text-xl cursor-pointer min-h-11 min-w-11"
           >
             ✕

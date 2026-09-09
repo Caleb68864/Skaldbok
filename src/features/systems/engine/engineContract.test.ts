@@ -84,11 +84,19 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
       expect(new Set(keys).size).toBe(keys.length);
     });
 
-    it('skill defaultValue and advancementMax are within range', () => {
-      const { range, defaultValue, advancementMax } = engine.skill;
+    it('skill defaultValue is within range', () => {
+      const { range, defaultValue } = engine.skill;
       expect(defaultValue).toBeGreaterThanOrEqual(range.min);
       expect(defaultValue).toBeLessThanOrEqual(range.max);
-      expect(advancementMax).toBeLessThanOrEqual(range.max);
+    });
+
+    it('the advancement ceiling is within the skill range', () => {
+      // Was `skill.advancementMax`, a second ceiling beside
+      // `advancement.maxSkillValue` that no code read — classic-fantasy
+      // declared 18 in both places, and the two could have drifted with nothing
+      // to notice. The advancement model's is the one advancement uses.
+      if (engine.advancement === null) return;
+      expect(engine.advancement.maxSkillValue).toBeLessThanOrEqual(engine.skill.range.max);
     });
   },
 );
@@ -102,13 +110,31 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
  * Values are arbitrary but in-range; these assertions are about a function
  * running and returning the right *shape*, not about specific arithmetic.
  */
+/**
+ * A mid-range value for one attribute, on its ladder if it has one.
+ *
+ * @remarks
+ * These used to be seeded at `a.max`, which quietly defeated the modifier probe
+ * below: every formula that steps at a threshold (Dragonbane's damage bonus at
+ * 13 and 17, the skill base-chance table, a Savage Worlds die ladder) is already
+ * saturated at the maximum, so a +3 probe moved nothing and the test could not
+ * tell a saturated threshold from a modifier no consumer reads.
+ */
+function midRangeAttribute(a: SystemDefinition['attributes'][number]): number {
+  const mid = Math.round(((a.min ?? 1) + (a.max ?? 18)) / 2);
+  const ladder = a.scale?.kind === 'die-ladder' ? a.scale.ladder : null;
+  if (!ladder || ladder.length === 0) return mid;
+  const below = ladder.filter(rung => rung <= mid);
+  return below.length > 0 ? Math.max(...below) : Math.min(...ladder);
+}
+
 function syntheticCharacter(system: SystemDefinition): CharacterRecord {
   return {
     id: 'contract-test',
     name: 'Contract',
     systemId: system.id,
     schemaVersion: 99,
-    attributes: Object.fromEntries(system.attributes.map(a => [a.id, a.max ?? 10])),
+    attributes: Object.fromEntries(system.attributes.map(a => [a.id, midRangeAttribute(a)])),
     resources: Object.fromEntries(
       system.resources.map(r => [r.id, { current: 1, max: 5 }]),
     ),
@@ -217,7 +243,7 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
         helmet: { name: 'Test helm', rating: 2 },
       } as CharacterRecord;
 
-      const fingerprint = (c: CharacterRecord): string => {
+      const fingerprint = (c: CharacterRecord, options?: { withoutAttrs?: boolean }): string => {
         const derived = engine.derivedStats(c, system) as unknown as Record<string, unknown>;
         return JSON.stringify({
           derived,
@@ -225,8 +251,13 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
           fields: engine.derivedFields.map(f => resolveDerivedField(c, derived as Record<string, number | string | undefined>, f).display),
           armor: resolveArmorRating(c, 'armor'),
           helmet: resolveArmorRating(c, 'helmet'),
-          // Every attribute as the sheet reads it.
-          attrs: engine.attributeIds.map(id => getEffectiveValue(attrKey(id), c).effective),
+          // Every attribute as the sheet reads it. Omitted by the downstream
+          // probe below, because this line alone moves for any `attr:` target
+          // and so cannot tell "the attribute display changed" from "something
+          // computed from the attribute changed".
+          attrs: options?.withoutAttrs
+            ? null
+            : engine.attributeIds.map(id => getEffectiveValue(attrKey(id), c).effective),
           // The skills screen's own line. Function-valued and previously never
           // invoked here, so a state penalty that feeds only the roll display
           // (SWADE's wound/fatigue penalty) was invisible to this suite.
@@ -238,6 +269,14 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
           skills: system.skillCategories
             .flatMap(cat => cat.skills)
             .map(s => resolveSkillValue(c, s.id, engine.skill.defaultValue).effective),
+          // The engine's own skill formula. `resolveSkillValue` above folds
+          // modifiers into a *stored* value and never calls this, so a skill
+          // computed from a linked attribute — Dragonbane's whole skill list —
+          // was outside the fingerprint entirely. Without it an `attr:` target
+          // whose only consumers are skills reads as inert.
+          computedSkills: system.skillCategories
+            .flatMap(cat => cat.skills)
+            .map(s => engine.skill.computeValue(s, c, false)),
         });
       };
 
@@ -263,6 +302,36 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
             `it is offered by the modifier picker but no consumer reads it`,
         ).not.toBe(before);
       }
+
+      // The stricter half. The fingerprint above includes every attribute's own
+      // effective value, so an `attr:` target moves it whatever else happens —
+      // which is why the original test passed while a +2 CON left HP max, a +2
+      // STR left the damage bonus, and a +2 Vigor left Toughness all unmoved.
+      // Re-run the attribute targets against a fingerprint with that line
+      // removed, so the modifier has to reach something computed *from* the
+      // attribute: a derived stat, a badge, or a skill.
+      const beforeDownstream = fingerprint(equipped, { withoutAttrs: true });
+
+      for (const stat of engine.modifiableStats(system).filter(s => s.id.startsWith('attr:'))) {
+        const withModifier = {
+          ...equipped,
+          tempModifiers: [
+            {
+              id: `probe-${stat.id}`,
+              label: 'Probe',
+              effects: [{ stat: stat.id, delta: 3 }],
+              duration: 'scene',
+              createdAt: '2026-08-08T00:00:00.000Z',
+            },
+          ],
+        } as unknown as CharacterRecord;
+
+        expect(
+          fingerprint(withModifier, { withoutAttrs: true }),
+          `a +3 modifier on "${stat.id}" (${stat.label}) moves the attribute's own display and ` +
+            `nothing else — no derived stat, badge or skill computed from it reads the modifier`,
+        ).not.toBe(beforeDownstream);
+      }
     });
 
     it('every derivedFields key is actually produced by derivedStats', () => {
@@ -275,6 +344,39 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
       }
     });
 
+    it('the encumbrance model returns usable numbers', () => {
+      // Three formulas used to live in three places with nothing tying them
+      // together, and only one honoured an item's capacityBonus.
+      if (engine.encumbrance === null) return;
+      const limit = engine.encumbrance.limit(character);
+      const load = engine.encumbrance.load(character);
+      expect(Number.isFinite(limit), `${system.id}: encumbrance.limit is not finite`).toBe(true);
+      expect(Number.isFinite(load), `${system.id}: encumbrance.load is not finite`).toBe(true);
+      expect(limit).toBeGreaterThanOrEqual(0);
+      expect(load).toBeGreaterThanOrEqual(0);
+    });
+
+    it('encumbrance.load counts an item by quantity', () => {
+      // The party screen summed weight with a literal `* 1` in place of the
+      // quantity, so ten 2 kg rations weighed 2.
+      if (engine.encumbrance === null) return;
+      const one = { ...character, inventory: [{ id: 'i1', name: 'Ration', weight: 2, quantity: 1, description: '' }] } as CharacterRecord;
+      const ten = { ...character, inventory: [{ id: 'i1', name: 'Ration', weight: 2, quantity: 10, description: '' }] } as CharacterRecord;
+      expect(engine.encumbrance.load(ten)).toBeGreaterThan(engine.encumbrance.load(one));
+    });
+
+    it('a system that declares an encumbrance limit also declares the field', () => {
+      // The panel reads the limit through resolveDerivedField, so the key has to
+      // exist in derivedStats or the override and modifier channels resolve to
+      // nothing and the screen silently reads 0.
+      if (engine.encumbrance === null) return;
+      const derived = engine.derivedStats(character, system) as unknown as Record<string, unknown>;
+      expect(
+        Object.prototype.hasOwnProperty.call(derived, 'encumbranceLimit'),
+        `${system.id}: declares an encumbrance model but derivedStats has no encumbranceLimit`,
+      ).toBe(true);
+    });
+
     it('timeUnits are non-empty with unique ids', () => {
       // AddModifierDrawer defaults its Duration row to timeUnits[0]; an empty
       // list would store an empty duration no consumer can resolve.
@@ -282,6 +384,22 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
       const ids = engine.timeUnits.map(u => u.id);
       expect(new Set(ids).size).toBe(ids.length);
       expect(ids.every(id => id.length > 0)).toBe(true);
+    });
+
+    it('every time unit either expires on something or says it is permanent', () => {
+      // A modifier's duration is a TimeUnit id, and expiry used to happen only
+      // when a rest of the same id was pressed. Traveller and Savage Worlds
+      // declare rest: null, so a duration there could never end. A unit with no
+      // `expiresOn` is a deliberate never-expires; a unit naming a rest that
+      // does not exist is a modifier the user can never be rid of.
+      for (const unit of engine.timeUnits) {
+        const restId = unit.expiresOn?.rest;
+        if (restId === undefined) continue;
+        expect(
+          (engine.rest ?? []).some(r => r.id === restId),
+          `${system.id}: time unit "${unit.id}" expires on rest "${restId}", which this system does not define`,
+        ).toBe(true);
+      }
     });
 
     it('outcome and rollModifier ids are unique', () => {
@@ -293,8 +411,15 @@ describe.each(BUNDLED_SYSTEMS.map(s => [s.displayName, s] as const))(
 
     // ── Capability coherence ─────────────────────────────────────────
 
-    it('hasMagic agrees with the nullable magic model', () => {
-      expect(engine.hasMagic).toBe(engine.magic !== null);
+    it('magic presence agrees with the panel the system claims', () => {
+      // `engine.hasMagic` used to sit beside `magic` saying the same thing, and
+      // this test asserted the two agreed — which is the tell that one of them
+      // was redundant. The boolean is gone; what is left worth checking is that
+      // a system claiming the magic panel actually has a magic model, since the
+      // panel list and the nullable models are maintained separately.
+      if (engine.panels.includes('magic')) {
+        expect(engine.magic, `${system.id}: claims the magic panel but has no magic model`).not.toBeNull();
+      }
     });
 
     it('damage thresholds are reachable within the track', () => {

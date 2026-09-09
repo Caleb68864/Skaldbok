@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 23,
+  "version": 24,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -851,40 +851,125 @@
         "abbr": "Cr",
         "value": 1,
         "step": 100,
-        "quickSteps": [1, 5, 10, 100, 1000, 10000]
+        "quickSteps": [
+          1,
+          5,
+          10,
+          100,
+          1000,
+          10000
+        ]
       }
     ]
   },
   "creatures": {
     "statFields": [
-      { "id": "hp", "label": "Hits", "abbr": "Hits", "summary": true },
-      { "id": "armor", "label": "Armour", "abbr": "Armour", "summary": true },
-      { "id": "movement", "label": "Speed (m)", "abbr": "Spd", "summary": true },
-      { "id": "str", "label": "STR" },
-      { "id": "dex", "label": "DEX" },
-      { "id": "end", "label": "END" }
+      {
+        "id": "hp",
+        "label": "Hits",
+        "abbr": "Hits",
+        "summary": true
+      },
+      {
+        "id": "armor",
+        "label": "Armour",
+        "abbr": "Armour",
+        "summary": true
+      },
+      {
+        "id": "movement",
+        "label": "Speed (m)",
+        "abbr": "Spd",
+        "summary": true
+      },
+      {
+        "id": "str",
+        "label": "STR"
+      },
+      {
+        "id": "dex",
+        "label": "DEX"
+      },
+      {
+        "id": "end",
+        "label": "END"
+      }
     ]
   },
   "vehicles": {
     "label": "Ships",
     "singular": "Ship",
     "counters": [
-      { "id": "hull", "label": "Hull" },
-      { "id": "fuel", "label": "Fuel" },
-      { "id": "cargo", "label": "Cargo", "unit": "t" }
+      {
+        "id": "hull",
+        "label": "Hull"
+      },
+      {
+        "id": "fuel",
+        "label": "Fuel"
+      },
+      {
+        "id": "cargo",
+        "label": "Cargo",
+        "unit": "t"
+      }
     ],
-    "summaryCounterIds": ["hull", "cargo", "fuel"],
+    "summaryCounterIds": [
+      "hull",
+      "cargo",
+      "fuel"
+    ],
     "subtitleSpecId": "shipClass",
     "specs": [
-      { "id": "shipClass", "label": "Class / Type", "placeholder": "e.g. Free Trader" },
-      { "id": "tl", "label": "TL", "type": "number" },
-      { "id": "armor", "label": "Armour", "type": "number", "section": "Status" },
-      { "id": "jump", "label": "Jump", "type": "number", "section": "Drives" },
-      { "id": "thrust", "label": "Thrust", "type": "number", "section": "Drives" },
-      { "id": "power", "label": "Power Plant", "section": "Drives" },
-      { "id": "upkeep", "label": "Monthly Upkeep", "type": "number", "unit": "currency", "section": "Drives" }
+      {
+        "id": "shipClass",
+        "label": "Class / Type",
+        "placeholder": "e.g. Free Trader"
+      },
+      {
+        "id": "tl",
+        "label": "TL",
+        "type": "number"
+      },
+      {
+        "id": "armor",
+        "label": "Armour",
+        "type": "number",
+        "section": "Status"
+      },
+      {
+        "id": "jump",
+        "label": "Jump",
+        "type": "number",
+        "section": "Drives"
+      },
+      {
+        "id": "thrust",
+        "label": "Thrust",
+        "type": "number",
+        "section": "Drives"
+      },
+      {
+        "id": "power",
+        "label": "Power Plant",
+        "section": "Drives"
+      },
+      {
+        "id": "upkeep",
+        "label": "Monthly Upkeep",
+        "type": "number",
+        "unit": "currency",
+        "section": "Drives"
+      }
     ],
-    "crewRoles": ["Pilot", "Navigator", "Engineer", "Gunner", "Sensors", "Steward"]
+    "crewRoles": [
+      "Pilot",
+      "Navigator",
+      "Engineer",
+      "Gunner",
+      "Sensors",
+      "Steward"
+    ]
   },
   "financeFields": [
     {
@@ -1023,10 +1108,10 @@
       "title": "Core Roll",
       "rows": [
         [
-          "2d6 + Skill + Characteristic DM  ≥  Target (default 8+)"
+          "2d6 + Skill + Characteristic DM  \u2265  Target (default 8+)"
         ]
       ],
-      "note": "Unskilled: −3 DM. Skill 0 = trained, no bonus. Boon: roll 3d6 keep best 2. Bane: keep worst 2."
+      "note": "Unskilled: \u22123 DM. Skill 0 = trained, no bonus. Boon: roll 3d6 keep best 2. Bane: keep worst 2."
     },
     {
       "title": "Task Difficulty (Target)",
@@ -1070,22 +1155,22 @@
       ]
     },
     {
-      "title": "Effect (roll total − target)",
+      "title": "Effect (roll total \u2212 target)",
       "columns": [
         "Effect",
         "Result"
       ],
       "rows": [
         [
-          "−6 or worse",
+          "\u22126 or worse",
           "Exceptional Failure"
         ],
         [
-          "−5 to −2",
+          "\u22125 to \u22122",
           "Average Failure"
         ],
         [
-          "−1",
+          "\u22121",
           "Marginal Failure"
         ],
         [
@@ -1111,19 +1196,19 @@
       "rows": [
         [
           "Significant",
-          "Attack · complex skill · stabilize wounded"
+          "Attack \u00b7 complex skill \u00b7 stabilize wounded"
         ],
         [
           "Minor",
-          "Move 6m · Aim (+1) · draw weapon · change stance"
+          "Move 6m \u00b7 Aim (+1) \u00b7 draw weapon \u00b7 change stance"
         ],
         [
           "Reaction",
-          "Dodge · Dive for cover"
+          "Dodge \u00b7 Dive for cover"
         ],
         [
           "Free",
-          "Talk · drop prone · drop item"
+          "Talk \u00b7 drop prone \u00b7 drop item"
         ]
       ],
       "note": "Per round: 1 Significant + 1 Minor, or 3 Minor. Initiative = 2d6 + DEX DM, rolled once for the whole fight."
@@ -1132,10 +1217,10 @@
       "title": "Attack Rolls",
       "rows": [
         [
-          "Melee:  2d6 + Melee (spec) + STR or DEX DM  ≥ 8"
+          "Melee:  2d6 + Melee (spec) + STR or DEX DM  \u2265 8"
         ],
         [
-          "Ranged: 2d6 + Gun Combat (spec) + DEX DM  ≥ 8"
+          "Ranged: 2d6 + Gun Combat (spec) + DEX DM  \u2265 8"
         ]
       ]
     },
@@ -1148,26 +1233,26 @@
       "rows": [
         [
           "0",
-          "−3"
+          "\u22123"
         ],
         [
-          "1–2",
-          "−2"
+          "1\u20132",
+          "\u22122"
         ],
         [
-          "3–5",
-          "−1"
+          "3\u20135",
+          "\u22121"
         ],
         [
-          "6–8",
+          "6\u20138",
           "+0"
         ],
         [
-          "9–11",
+          "9\u201311",
           "+1"
         ],
         [
-          "12–14",
+          "12\u201314",
           "+2"
         ],
         [
@@ -1287,5 +1372,195 @@
     "kind": "day-of-year",
     "daysInYear": 365,
     "example": "097-1105"
-  }
+  },
+  "sheetPanels": [
+    {
+      "id": "careers",
+      "title": "Careers & Creation History",
+      "icon": "person",
+      "sections": [
+        {
+          "kind": "rows",
+          "key": "careerTerms",
+          "heading": "Career History",
+          "columns": [
+            {
+              "key": "term",
+              "label": "Term",
+              "flex": "0 0 56px"
+            },
+            {
+              "key": "career",
+              "label": "Career",
+              "flex": "2 1 140px"
+            },
+            {
+              "key": "survival",
+              "label": "Surv.",
+              "flex": "0 0 64px"
+            },
+            {
+              "key": "advancement",
+              "label": "Adv.",
+              "flex": "0 0 64px"
+            },
+            {
+              "key": "rank",
+              "label": "Rank",
+              "flex": "1 1 100px"
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "flex": "3 1 100%"
+            }
+          ],
+          "addLabel": "Term",
+          "emptyLabel": "No career terms recorded."
+        },
+        {
+          "kind": "rows",
+          "key": "decorations",
+          "heading": "Decorations & Awards",
+          "columns": [
+            {
+              "key": "award",
+              "label": "Award",
+              "flex": "1 1 160px"
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "flex": "2 1 160px"
+            }
+          ],
+          "addLabel": "Award",
+          "emptyLabel": "No decorations recorded."
+        },
+        {
+          "kind": "rows",
+          "key": "training",
+          "heading": "Training",
+          "columns": [
+            {
+              "key": "skill",
+              "label": "Skill",
+              "flex": "2 1 140px"
+            },
+            {
+              "key": "weeks",
+              "label": "Completed Weeks",
+              "flex": "1 1 110px"
+            },
+            {
+              "key": "studyPeriods",
+              "label": "Study Periods",
+              "flex": "1 1 110px"
+            }
+          ],
+          "addLabel": "Training",
+          "emptyLabel": "No training recorded."
+        },
+        {
+          "kind": "rows",
+          "key": "allies",
+          "heading": "Allies",
+          "columns": [
+            {
+              "key": "name",
+              "label": "Name",
+              "flex": "1 1 140px"
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "flex": "2 1 160px"
+            }
+          ],
+          "addLabel": "Ally",
+          "emptyLabel": "No allies recorded."
+        },
+        {
+          "kind": "rows",
+          "key": "contacts",
+          "heading": "Contacts",
+          "columns": [
+            {
+              "key": "name",
+              "label": "Name",
+              "flex": "1 1 140px"
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "flex": "2 1 160px"
+            }
+          ],
+          "addLabel": "Contact",
+          "emptyLabel": "No contacts recorded."
+        },
+        {
+          "kind": "rows",
+          "key": "rivals",
+          "heading": "Rivals",
+          "columns": [
+            {
+              "key": "name",
+              "label": "Name",
+              "flex": "1 1 140px"
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "flex": "2 1 160px"
+            }
+          ],
+          "addLabel": "Rival",
+          "emptyLabel": "No rivals recorded."
+        },
+        {
+          "kind": "rows",
+          "key": "enemies",
+          "heading": "Enemies",
+          "columns": [
+            {
+              "key": "name",
+              "label": "Name",
+              "flex": "1 1 140px"
+            },
+            {
+              "key": "notes",
+              "label": "Notes",
+              "flex": "2 1 160px"
+            }
+          ],
+          "addLabel": "Enemy",
+          "emptyLabel": "No enemies recorded."
+        },
+        {
+          "kind": "text",
+          "key": "careers",
+          "label": "History & Background",
+          "minHeight": 120
+        }
+      ]
+    },
+    {
+      "id": "augments",
+      "title": "Augments / Species",
+      "icon": "cog",
+      "sections": [
+        {
+          "kind": "text",
+          "key": "speciesTraits",
+          "label": "Species Traits"
+        },
+        {
+          "kind": "text",
+          "key": "augments",
+          "label": "Augments"
+        }
+      ]
+    }
+  ]
 }

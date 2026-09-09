@@ -83,7 +83,6 @@ const consumerSource = walk('src')
  * the codebase is knowingly not keeping; anything NOT here and unread is a bug.
  */
 const KNOWN_UNIMPLEMENTED: Record<string, string> = {
-  advancementMax: 'engine.skill.advancementMax is the per-skill ceiling; advancement uses advancement.maxSkillValue',
   penaltyPerLevel: 'the number is single-sourced in savageWorldsEngine (pass 11); the FIELD still has no reader',
   roleFallback: 'no surface shows a profession fallback yet; the library card now uses identityFields instead',
   sectionLayouts: 'sheet layout comes from sheet.json; this predates it',
@@ -100,7 +99,12 @@ const TOO_GENERIC = new Set([
   'fields', 'tone', 'range', 'display', 'character', 'resources', 'skills',
   'conditions', 'attributes', 'status', 'messages', 'prompt', 'chance',
   'abbr', 'abbrev', 'description', 'version', 'columns', 'cells', 'regions',
-  'layout', 'card', 'when', 'note', 'rows', 'title', 'effect', 'recovery',
+  // `effect` came off this list once conditions[].effect gained a reader: it
+  // was excluded as too generic to prove anything, and that exclusion is what
+  // let Savage Worlds declare its condition penalties and have nothing read
+  // them. `recovery` and `duration` stay: both are genuinely common words, and
+  // both are separately tracked — see KNOWN_UNIMPLEMENTED.
+  'layout', 'card', 'when', 'note', 'rows', 'title', 'recovery',
   'duration', 'summary', 'cost', 'ladder', 'scale', 'noop', 'tracks', 'panels',
   'terms', 'labels', 'currency', 'magic', 'rest', 'death', 'probability',
   'skill', 'armor', 'weapon', 'direction', 'surfaces', 'denominations',
@@ -140,10 +144,16 @@ describe('declared capabilities have readers', () => {
   it('every KNOWN_UNIMPLEMENTED entry is still genuinely unread', () => {
     // Stops the allowlist rotting into a list of things that were fixed years
     // ago, which is how an exemption list stops meaning anything.
+    //
+    // The three patterns must match the main check's exactly. This one was
+    // missing the destructuring form, so a field that gained a reader written
+    // as `const { name } = engine` stayed on the allowlist unchallenged — the
+    // rot the test exists to prevent, in the test itself.
     for (const [name, reason] of Object.entries(KNOWN_UNIMPLEMENTED)) {
       const read =
         new RegExp(`\\.${name}\\b`).test(consumerSource) ||
-        new RegExp(`\\['${name}'\\]`).test(consumerSource);
+        new RegExp(`\\['${name}'\\]`).test(consumerSource) ||
+        new RegExp(`\\b${name}\\s*[,}]`).test(consumerSource);
       expect(
         read,
         `"${name}" is listed as unimplemented ("${reason}") but now HAS a reader — ` +

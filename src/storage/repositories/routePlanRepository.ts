@@ -56,6 +56,22 @@ export async function getOrCreateForCampaign(campaignId: string): Promise<RouteP
   });
 }
 
+/**
+ * Lists a campaign's route plan rows without creating one.
+ *
+ * @remarks
+ * The read-only counterpart to {@link getOrCreateForCampaign}, for callers that
+ * must not write — an export has to be able to observe that a campaign has no
+ * plan rather than bring one into existence while backing the campaign up.
+ */
+export async function listByCampaign(
+  campaignId: string,
+  options?: { includeDeleted?: boolean },
+): Promise<RoutePlan[]> {
+  const rows = await db.routePlans.where('campaignId').equals(campaignId).toArray();
+  return options?.includeDeleted ? rows : excludeDeleted(rows);
+}
+
 /** Patches the journey's start, deadline, or what the deadline is for. */
 export async function update(
   id: string,

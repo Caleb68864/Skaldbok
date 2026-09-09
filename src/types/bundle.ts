@@ -8,6 +8,15 @@ import { attachmentSchema } from './attachment';
 import { creatureTemplateSchema } from './creatureTemplate';
 import { encounterSchema } from './encounter';
 import { inventoryContainerSchema } from './inventoryContainer';
+import { shipSchema } from './ship';
+import { ledgerEntrySchema } from './ledger';
+import { ledgerAccountSchema } from './ledgerAccount';
+import { payoutSplitSchema } from './payoutSplit';
+import { recurringBillSchema } from './recurringBill';
+import { routeStopSchema } from './routeStop';
+import { routePlanSchema } from './routePlan';
+import { referenceGroupSchema, referenceSectionSchema } from './reference';
+import { kbNodeSchema, kbEdgeSchema } from './knowledgeBase';
 
 /**
  * Bundle-safe attachment schema.
@@ -37,9 +46,30 @@ export const attachmentBundleSchema = attachmentSchema
  * `characters` uses `z.record(z.any())` because `CharacterRecord` is a plain
  * TypeScript interface without a Zod schema. Validation of character records
  * within bundles relies on structural compatibility rather than strict Zod parsing.
+ *
+ * Every key here corresponds to a Dexie table via `types/bundleTables.ts`, and
+ * `bundleParity.test.ts` walks `db.tables` against that registry. Ships, the
+ * whole ledger (entries, accounts, payout splits, recurring bills), routes, the
+ * knowledge-base graph and the reference library were all missing from this
+ * object while the settings screen described a campaign export as "the only copy
+ * that survives this device" — the parity test exists so that cannot recur when
+ * the next table is added.
  */
 export const bundleContentsSchema = z.object({
   campaign: campaignSchema.optional(),
+  /**
+   * The campaign's game system definition.
+   *
+   * @remarks
+   * A user-authored system is stored only in the local `systems` table. Without
+   * it, a restored campaign references a ruleset the importing device has never
+   * seen. Bundled systems ship with the app and are skipped by the collector.
+   *
+   * Typed as a loose record for the same reason as `characters`: the strict
+   * `systemDefinitionSchema` lives in `schemas/`, outside this module's import
+   * graph, and rows are validated against it on import instead.
+   */
+  systems: z.array(z.record(z.any())).optional(),
   sessions: z.array(sessionSchema).optional(),
   parties: z.array(partySchema).optional(),
   partyMembers: z.array(partyMemberSchema).optional(),
@@ -50,6 +80,17 @@ export const bundleContentsSchema = z.object({
   entityLinks: z.array(entityLinkSchema).optional(),
   attachments: z.array(attachmentBundleSchema).optional(),
   inventoryContainers: z.array(inventoryContainerSchema).optional(),
+  ships: z.array(shipSchema).optional(),
+  ledgerAccounts: z.array(ledgerAccountSchema).optional(),
+  ledgerEntries: z.array(ledgerEntrySchema).optional(),
+  ledgerSplits: z.array(payoutSplitSchema).optional(),
+  recurringBills: z.array(recurringBillSchema).optional(),
+  routeStops: z.array(routeStopSchema).optional(),
+  routePlans: z.array(routePlanSchema).optional(),
+  referenceGroups: z.array(referenceGroupSchema).optional(),
+  referenceSections: z.array(referenceSectionSchema).optional(),
+  kbNodes: z.array(kbNodeSchema).optional(),
+  kbEdges: z.array(kbEdgeSchema).optional(),
 });
 
 /**

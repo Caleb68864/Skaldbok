@@ -52,6 +52,9 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
   const track = model;
 
   const labelFor = (id: string) => system?.resources.find(r => r.id === id)?.name ?? id.toUpperCase();
+  /** A condition's display name, from the system that declares it. */
+  const conditionNameFor = (id: string) =>
+    system?.conditions.find(c => c.id === id)?.name ?? id;
 
   /**
    * Writes new track `current` values back to the character, keeping any
@@ -94,7 +97,12 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
     // Level-track systems (Savage Worlds) convert a rolled damage total to Wounds
     // via the engine's Toughness comparison, and set conditions (Shaken), rather
     // than subtracting points. E3.
-    if (engine.resolveDamage && track.kind === 'levels') {
+    // `resolveDamage` is the capability: a system that implements it converts a
+    // rolled total to track effects itself. The extra `track.kind === 'levels'`
+    // test named Savage Worlds' shape rather than asking whether the engine can
+    // do the conversion, so a points-based system that wanted the same hook
+    // would have been ignored.
+    if (engine.resolveDamage) {
       const r = engine.resolveDamage(character, { total: n });
 
       // Work out what actually LANDS before applying it, so the log reports the
@@ -124,12 +132,19 @@ export function DamageHealModule({ character, system, updateCharacter }: PlayMod
         for (const c of r.setsConditions) conditions[c] = true;
         return { resources, conditions, updatedAt: nowISO() };
       });
-      const woundsAdded = Object.values(applied).reduce((a, b) => a + b, 0);
+      // Every name in this message comes from the system definition or the
+      // engine. It used to say "Shaken", "Wound" and "under Toughness" — Savage
+      // Worlds' vocabulary, written into a shared screen, so a second
+      // level-track system would have been described in SWADE's terms.
       const parts: string[] = [];
-      if (r.noEffect) parts.push(`Damage ${n} — no effect (under Toughness).`);
-      else {
-        if (r.setsConditions.includes('shaken')) parts.push('Shaken');
-        if (woundsAdded > 0) parts.push(`+${woundsAdded} Wound${woundsAdded > 1 ? 's' : ''}`);
+      if (r.noEffect) {
+        const reason = r.noEffectReason ? ` (${r.noEffectReason})` : '';
+        parts.push(`Damage ${n} — no effect${reason}.`);
+      } else {
+        for (const id of r.setsConditions) parts.push(conditionNameFor(id));
+        for (const [id, added] of Object.entries(applied)) {
+          if (added > 0) parts.push(`+${added} ${labelFor(id)}`);
+        }
       }
       const levelsOutcome = parts.join(' · ') || 'No effect.';
       setMessage(levelsOutcome);

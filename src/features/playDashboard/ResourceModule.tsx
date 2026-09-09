@@ -25,6 +25,11 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
     id => system?.resources.find(r => r.id === id)?.refresh !== 'session',
   );
 
+  /** Whether a resource counts up toward its max (a damage track) or down from it. */
+  function accumulates(id: string): boolean {
+    return system?.resources.find(r => r.id === id)?.direction === 'accumulates';
+  }
+
   function updateResourceCurrent(id: string, delta: number) {
     const old = character.resources[id]?.current ?? 0;
     const max = character.resources[id]?.max ?? 0;
@@ -33,8 +38,12 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
       resources: { ...prev.resources, [id]: { ...prev.resources[id], current: next } },
       updatedAt: nowISO(),
     }));
-    if ((id === 'hp' || id === 'wp') && old !== next) {
-      logHPChange(character.name, old, next, max, id);
+    // Every resource the engine declares, not the two Dragonbane pool ids.
+    // `id === 'hp' || id === 'wp'` meant Wounds, Fatigue, Bennies and any
+    // user-authored pool changed silently — they never reached the session log
+    // at all. SheetScreen already gets this right with resourceIds.includes.
+    if (engine.resourceIds.includes(id) && old !== next) {
+      logHPChange(character.name, old, next, max, id, accumulates(id));
     }
   }
 
@@ -47,7 +56,12 @@ export function ResourceModule({ character, system, updateCharacter }: PlayModul
             const resource = character.resources[id];
             if (!resource) return null;
             const def = system?.resources.find(r => r.id === id);
-            const wounded = resource.current > 0;
+            // Which end of the range is the bad one is declared per resource:
+            // an accumulating track is bad as it fills, a depleting pool is bad
+            // as it empties. `current > 0` assumed accumulating, so a depleting
+            // resource on this branch would read as wounded at full health.
+            const wounded =
+              def?.direction === 'accumulates' ? resource.current > 0 : resource.current < resource.max;
             return (
               <div
                 key={id}

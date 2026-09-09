@@ -5,6 +5,7 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import * as entityLinkRepository from './entityLinkRepository';
+import * as attachmentRepository from './attachmentRepository';
 import { serializeStrokePage, deserializeStrokePage } from '../../features/notes/ink/strokeModel';
 import type { StrokePage } from '../../features/notes/ink/strokeModel';
 
@@ -271,7 +272,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
 export async function softDeleteWithLinks(id: string, txId?: string): Promise<void> {
   const finalTxId = txId ?? generateSoftDeleteTxId();
   try {
-    await db.transaction('rw', [db.notes, db.entityLinks], async () => {
+    await db.transaction('rw', [db.notes, db.entityLinks, db.attachments], async () => {
       const row = await db.notes.get(id);
       if (!row) return;
       if ((row as Note).deletedAt) return;
@@ -282,6 +283,11 @@ export async function softDeleteWithLinks(id: string, txId?: string): Promise<vo
         updatedAt: now,
       });
       await entityLinkRepository.deleteLinksForNote(id, finalTxId);
+      // Attachments ride the same cascade id. They used to be hard-deleted by
+      // the caller before this transaction ran, so Trash would restore the note
+      // and its edges onto photos that no longer existed — the one place in the
+      // app where an undoable action was not undoable.
+      await attachmentRepository.softDeleteAttachmentsByNote(id, finalTxId);
     });
     getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
   } catch (e) {
@@ -297,7 +303,7 @@ export async function restore(id: string): Promise<void> {
     // txId expressly so restore can bring them back — without this, a restored
     // note reappears orphaned from its session/encounter. Mirrors
     // encounterRepository.restore / creatureTemplateRepository.restore.
-    await db.transaction('rw', [db.notes, db.entityLinks], async () => {
+    await db.transaction('rw', [db.notes, db.entityLinks, db.attachments], async () => {
       const row = await db.notes.get(id);
       if (!row) return;
       if (!(row as Note).deletedAt) return;
@@ -309,6 +315,7 @@ export async function restore(id: string): Promise<void> {
       });
       if (txId) {
         await entityLinkRepository.restoreLinksForTxId(txId);
+        await attachmentRepository.restoreAttachmentsForTxId(txId);
       }
     });
     // Rebuild the KB node that softDelete removed, so a restored note is
@@ -320,6 +327,18 @@ export async function restore(id: string): Promise<void> {
 }
 
 /** Permanently removes a note row. Internal only — never called from UI, which soft-deletes. */
+/** Soft-deleted notes of a campaign, most recently deleted first. Feeds the Trash screen. */
+export async function getDeleted(campaignId: string): Promise<Note[]> {
+  try {
+    const rows = await db.notes.where('deletedAt').above('').toArray();
+    return (rows as Note[])
+      .filter((r) => r.campaignId === campaignId)
+      .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
+  } catch (e) {
+    throw new Error(`noteRepository.getDeleted failed: ${e}`);
+  }
+}
+
 export async function hardDelete(id: string): Promise<void> {
   try {
     await db.notes.delete(id);
@@ -604,6 +623,9 @@ export async function saveInkPage(noteId: string, page: StrokePage): Promise<Not
     const existing = await db.notes.get(noteId);
     if (!existing) {
       throw new Error(`note ${noteId} not found`);
+    }
+    if ((existing as Note).deletedAt) {
+      throw new Error(`note ${noteId} has been deleted`);
     }
     const mergedTypeData = {
       ...asTypeDataRecord((existing as Note).typeData),

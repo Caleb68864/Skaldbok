@@ -6,12 +6,12 @@ import { getLinksFrom } from '../../storage/repositories/entityLinkRepository';
 import { useSystemEngineFor } from '../systems/engine';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
-import { partitionCreatureStats, resolveCreatureStatFields } from '../bestiary/creatureStats';
+import { partitionCreatureStats, resolveCreatureStatFields, creatureStatLabel, resolveCreatureHealthStatId } from '../bestiary/creatureStats';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../../types/character';
-import { nowISO } from '../../utils/dates';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 
 export interface ParticipantDrawerProps {
   participant: EncounterParticipant;
@@ -29,7 +29,7 @@ const inputClass = 'w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] b
 export function ParticipantDrawer({ participant, onUpdateState, onClose }: ParticipantDrawerProps) {
   const { activeCampaign } = useCampaignContext();
   const engine = useSystemEngineFor(activeCampaign?.system);
-  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const statFields = resolveCreatureStatFields(system);
   const { character: activeCharacter, updateCharacter } = useActiveCharacter();
   const [template, setTemplate] = useState<CreatureTemplate | null>(null);
@@ -108,15 +108,17 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
     if (currentHp === '' || !Number.isFinite(parsed)) return;
     const next = Math.max(0, Math.min(parsed, linkedResource.max));
 
-    const updated: CharacterRecord = {
-      ...linkedCharacter,
+    // patch, not save: this drawer holds a copy of the character loaded when it
+    // opened, so putting the whole record back reverted every other change made
+    // since — including the rest of *this* map when two participants' HP were
+    // edited in quick succession. The mutator reads the stored resources.
+    const updated = await characterRepository.patch(linkedCharacter.id, current => ({
       resources: {
-        ...linkedCharacter.resources,
-        [healthResourceId]: { ...linkedCharacter.resources[healthResourceId], current: next },
+        ...current.resources,
+        [healthResourceId]: { ...current.resources[healthResourceId], current: next },
       },
-      updatedAt: nowISO(),
-    };
-    await characterRepository.save(updated);
+    }));
+    if (!updated) return;
     setLinkedCharacter(updated);
 
     if (activeCharacter?.id === linkedCharacter.id) {
@@ -211,7 +213,8 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setCurrentHp(e.target.value)}
               onBlur={linkedCharacter ? handleLinkedHealthBlur : handleHpBlur}
               className={inputClass}
-              placeholder={engine.labels.creatureHealth}
+              aria-label={creatureStatLabel(system, resolveCreatureHealthStatId(system))}
+              placeholder={creatureStatLabel(system, resolveCreatureHealthStatId(system))}
             />
           </div>
           <div>
@@ -224,6 +227,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setConditionsText(e.target.value)}
               onBlur={handleConditionsBlur}
               className={inputClass}
+              aria-label="Conditions, comma separated"
               placeholder={engine.labels.conditionExamples}
             />
           </div>
@@ -236,6 +240,7 @@ export function ParticipantDrawer({ participant, onUpdateState, onClose }: Parti
               onChange={(e) => setNotes(e.target.value)}
               onBlur={handleNotesBlur}
               className={`${inputClass} min-h-[80px] resize-y`}
+              aria-label="Participant notes"
               placeholder="Participant notes..."
             />
           </div>

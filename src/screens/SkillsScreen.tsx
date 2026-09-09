@@ -6,15 +6,11 @@ import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useFieldEditable, FIELD_PATHS } from '../utils/modeGuards';
 import { useAutosave } from '../hooks/useAutosave';
-import { SkillList } from '../components/fields/SkillList';
 import { Chip } from '../components/primitives/Chip';
 import { GameIcon } from '../components/primitives/GameIcon';
 import { AddCustomSkillForm, type CustomSkillDraft } from '../components/fields/AddCustomSkillForm';
 import { SkillGroupHeader } from '../components/fields/SkillGroupHeader';
-import {
-  resolveEffectiveBoonBane,
-  formatProb,
-} from '../utils/boonBane';
+import { resolveEffectiveBoonBane } from '../utils/boonBane';
 import type { BoonBaneState } from '../types/settings';
 import type { CharacterSkill } from '../types/character';
 import type { AttributeDefinition } from '../types/system';
@@ -32,6 +28,7 @@ import {
 } from '../features/characters/customSkills';
 import { generateId } from '../utils/ids';
 import { resolveSkillValue } from '../utils/derivedValues';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 function clampSkillValue(value: number, range: { min: number; max: number }): number {
   if (!Number.isFinite(value)) return range.min;
@@ -71,7 +68,7 @@ function clampSkillValue(value: number, range: { min: number; max: number }): nu
 export default function SkillsScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
-  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
   const {
     sessionState,
     setGlobalBoonBane,
@@ -184,39 +181,29 @@ export default function SkillsScreen() {
     const override = sessionState.skillOverrides[skillId];
     const effective = resolveEffectiveBoonBane(sessionState.globalBoonBane, override, hasAutoBane);
 
-    if (!engine.skill.supportsMarks) {
-      // Non-d20 systems (e.g. Traveller) express success chance through the engine's own
-      // display formula. Pass the linked attribute so it can fold in its characteristic
-      // DM, the resolved advantage state so the odds reflect boon/bane, and whether the
-      // skill is trained so an untrained attempt shows the −3 unskilled odds.
-      return engine.skill.display(
-        value,
-        character
-          ? { character, skillId, linkedAttributeId, boonBane: effective, trained, target: rollTarget }
-          : undefined,
-      );
-    }
+    // The engine returns the roll's parts; this screen leads with the plain
+    // odds and names only the state actually in effect.
+    //
+    // This used to branch on `!engine.skill.supportsMarks` to mean "not a d20
+    // system", and computed auto-success as `supportsMarks && value === 1`.
+    // Marks and resolution are unrelated capabilities — a system that added
+    // marks would have had its odds line silently change shape — and the
+    // threshold was a Dragonbane literal. Both now come from the engine.
+    const described = engine.skill.describe(
+      value,
+      character
+        ? { character, system, skillId, linkedAttributeId, boonBane: effective, trained, target: rollTarget }
+        : undefined,
+    );
+    const active = (described.alternatives ?? []).find(alt => alt.id === effective);
+    const qualifiers = [
+      active ? `${active.detail} with ${active.label}` : null,
+      described.note,
+    ].filter(Boolean);
 
-    // The engine owns the odds maths; the screen only decides which state applies.
-    const probContext = character ? { character, skillId, linkedAttributeId, target: rollTarget } : undefined;
-    const chance = (state: BoonBaneState) => engine.probability.chance(value, state, probContext);
-    const normalPct = formatProb(chance('none'));
-    // Natural-1 auto-success is a roll-under convention; other resolutions never show it.
-    const isDragon = engine.skill.supportsMarks && value === 1;
-
-    if (effective === 'none') {
-      return isDragon ? `${normalPct} (auto-success)` : normalPct;
-    }
-    if (effective === 'boon') {
-      const boonPct = formatProb(chance('boon'));
-      return isDragon
-        ? `${normalPct} (${boonPct} with boon, auto-success)`
-        : `${normalPct} (${boonPct} with boon)`;
-    }
-    const banePct = formatProb(chance('bane'));
-    return isDragon
-      ? `${normalPct} (${banePct} with bane, auto-success)`
-      : `${normalPct} (${banePct} with bane)`;
+    return qualifiers.length > 0
+      ? `${described.detail} (${qualifiers.join(', ')})`
+      : described.detail;
   }
 
   // Grouping/collapse/search rules live in a tested helper — see
@@ -295,7 +282,14 @@ export default function SkillsScreen() {
           ...(draft.linkedAttributeId ? { linkedAttributeId: draft.linkedAttributeId } : {}),
         },
       ],
-      skills: { ...character.skills, [id]: { value: 0, trained: true } },
+      // The engine owns a skill's starting value. A literal 0 was Traveller's
+      // rule: in Savage Worlds it lands the new skill below the unskilled d4,
+      // off the die ladder entirely. `trained` is true in every system here —
+      // the player added the skill because the character has it.
+      skills: {
+        ...character.skills,
+        [id]: { value: engine.skill.defaultValue, trained: true },
+      },
       updatedAt: nowISO(),
     });
     setDraft(null);
@@ -392,7 +386,13 @@ export default function SkillsScreen() {
             onClick={() => setGlobalBoonBane(seg)}
             aria-pressed={sessionState.globalBoonBane === seg}
           >
-            {seg === 'none' ? 'Normal' : seg.charAt(0).toUpperCase() + seg.slice(1)}
+            {seg === 'none'
+              ? 'Normal'
+              : // The engine names its own roll modifiers. Capitalising the id
+                // printed "Boon"/"Bane" only because those ids happen to read as
+                // English words; a system calling the same states Edge and
+                // Snag would have shown its internal ids to the player.
+                (engine.rollModifiers.find(m => m.id === seg)?.label ?? seg)}
           </button>
         ))}
       </div>
@@ -672,15 +672,7 @@ export default function SkillsScreen() {
             </p>
           )}
         </div>
-      ) : (
-        <SkillList
-          categories={[]}
-          characterSkills={character.skills}
-          onSkillChange={handleSkillChange}
-          disabled={!skillsEditable}
-          filter={filter}
-        />
-      )}
+      ) : null}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCampaignContext } from '../../features/campaign/CampaignContext';
 import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 
 /** A single entry in the session sub-navigation row. */
 interface SessionTab {
@@ -77,7 +78,7 @@ export function SessionSubNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeCampaign } = useCampaignContext();
-  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
 
   const planner = system?.routePlanner;
 

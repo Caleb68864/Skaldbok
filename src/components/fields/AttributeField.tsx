@@ -12,8 +12,17 @@ export interface AttributeFieldProps {
   attributeId: string;
   abbreviation: string;
   value: number;
-  min?: number;
-  max?: number;
+  /**
+   * Bounds the stepper enforces, from the attribute's own definition.
+   *
+   * @remarks
+   * Required. These defaulted to `3` and `18` — Dragonbane's range — and the
+   * sheet passes `attr?.min`, so an attribute the system does not declare was
+   * silently clamped to Dragonbane's bounds by a component that had no way to
+   * know that was wrong. An undeclared attribute now has to say what it allows.
+   */
+  min: number;
+  max: number;
   onChange: (delta: number) => void;
   disabled?: boolean;
   linkedConditions?: LinkedCondition[];
@@ -33,7 +42,7 @@ export interface AttributeFieldProps {
  * {@link AttributeFieldProps.modifierDelta} surfaces a colored ± badge next to the
  * label so temporary buffs/debuffs are visible without opening the modifier list.
  */
-export function AttributeField({ attributeId: _attributeId, abbreviation, value, min = 3, max = 18, onChange, disabled = false, linkedConditions, onConditionToggle, modifierDelta, format }: AttributeFieldProps) {
+export function AttributeField({ attributeId: _attributeId, abbreviation, value, min, max, onChange, disabled = false, linkedConditions, onConditionToggle, modifierDelta, format }: AttributeFieldProps) {
   const hasModifier = modifierDelta !== undefined && modifierDelta !== 0;
   const shown = format ? format(value) : value;
 

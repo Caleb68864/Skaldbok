@@ -4,7 +4,6 @@ import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
-import { db } from '../../storage/db/client';
 import { flushAll } from '../persistence/autosaveFlush';
 
 /**
@@ -13,10 +12,11 @@ import { flushAll } from '../persistence/autosaveFlush';
  * @remarks
  * Delete flushes pending autosaves before removing the row so an in-flight save can't
  * resurrect the character after deletion — via `clearCharacter` when the target
- * is active (which flushes internally) or an explicit {@link flushAll} otherwise — and
- * also cleans up any party-member rows that linked to the character. Create seeds a
+ * is active (which flushes internally) or an explicit {@link flushAll} otherwise.
+ * The delete itself is a soft delete whose cascade (party seats, encounter
+ * edges) lives in the repository. Create seeds a
  * blank character for the chosen system; duplicate deep-copies with a fresh id and a
- * "(Copy)" name.
+ * (Copy)" name.
  */
 export function useCharacterActions() {
   const { clearCharacter, character: activeCharacter } = useActiveCharacter();
@@ -54,8 +54,10 @@ export function useCharacterActions() {
       // character lands before we remove the row.
       await flushAll();
     }
-    await db.partyMembers.where('linkedCharacterId').equals(id).delete();
-    await characterRepository.remove(id);
+    // Soft delete, like every other entity: the row, its party seats and its
+    // encounter edges go to the trash under one transaction id and can be
+    // restored together. Nothing user-facing hard-deletes.
+    await characterRepository.softDelete(id);
   }
 
   return { createCharacter, duplicateCharacter, deleteCharacter };

@@ -5,6 +5,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import * as systemRepository from '../storage/repositories/systemRepository';
 import { classicFantasySystem } from '../systems/classic-fantasy';
 import type { AppSettings, ModeName, BoonBaneState, SessionState } from '../types/settings';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 /** App-wide settings plus the in-memory, per-run session state (boon/bane selections). */
 export interface AppStateContextValue {
@@ -12,6 +13,8 @@ export interface AppStateContextValue {
   updateSettings: (partial: Partial<AppSettings>) => Promise<void>;
   isLoading: boolean;
   settingsError: string | null;
+  /** Non-null when IndexedDB could not be opened at all; the app must not pretend to save. */
+  storageError: string | null;
   /** Flips between play and edit mode. */
   toggleMode: () => void;
   /** Transient roll-advantage state; in-memory only and reset on app restart. */
@@ -49,7 +52,7 @@ export interface AppStateProviderProps {
  * and seeding the bundled classic-fantasy system into IndexedDB on first run.
  */
 export function AppStateProvider({ children }: AppStateProviderProps) {
-  const { settings, updateSettings, isLoading, error: settingsError } = useAppSettings();
+  const { settings, updateSettings, isLoading, error: settingsError, storageError } = useAppSettings();
   const { setTheme } = useTheme();
   const [sessionState, setSessionState] = useState<SessionState>(INITIAL_SESSION_STATE);
 
@@ -62,7 +65,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
 
   // Seed default system if absent
   useEffect(() => {
-    systemRepository.getById('classic-fantasy').then(existing => {
+    systemRepository.getById(DEFAULT_SYSTEM_ID).then(existing => {
       if (!existing) {
         systemRepository.save(classicFantasySystem).catch(console.error);
       }
@@ -113,6 +116,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
         updateSettings,
         isLoading,
         settingsError,
+        storageError,
         toggleMode,
         sessionState,
         setGlobalBoonBane,

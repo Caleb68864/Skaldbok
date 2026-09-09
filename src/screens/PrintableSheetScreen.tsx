@@ -9,6 +9,7 @@ import * as characterRepository from '../storage/repositories/characterRepositor
 import type { CharacterRecord } from '../types/character';
 import PrintableSheet from '../components/PrintableSheet';
 import '../styles/print-sheet.css';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 /** Derived stats resolved once for the printout, after per-character overrides. */
 interface PrintDerivedValues {
@@ -79,7 +80,7 @@ export default function PrintableSheetScreen() {
 
   const character = requestedId ? requested : activeCharacter;
   const characterLoading = requestedId ? requestedLoading : activeLoading;
-  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
   const [colorMode, setColorMode] = useState<'color' | 'bw'>('color');
 
   // Wait for settings to load, then wait for character to load.

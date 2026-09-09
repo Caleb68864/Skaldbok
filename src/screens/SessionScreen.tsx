@@ -300,7 +300,7 @@ function NoActiveSessionContent() {
 function ActiveSessionContent() {
   const navigate = useNavigate();
   const { openNote, skillCheckNote, closeSkillCheckEditor } = useNoteOpenDispatcher();
-  const { activeCampaign, activeSession, activeParty, endSession } = useCampaignContext();
+  const { activeCampaign, activeSession, activeParty, endSession, expireEncounterModifiers } = useCampaignContext();
   const engine = useSystemEngineFor(activeCampaign?.system);
   const { exportSessionMarkdown, exportSessionBundle, exportSessionSkaldmark } = useExportActions();
   const { showToast } = useToast();
@@ -395,6 +395,8 @@ function ActiveSessionContent() {
       // End any active encounters before ending the session.
       if (activeEncounter) {
         await encounterRepository.end(activeEncounter.id);
+        // Scene-length modifiers end with the scene.
+        await expireEncounterModifiers();
         refreshEncounters();
       }
       await endSession();

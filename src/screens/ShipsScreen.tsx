@@ -14,6 +14,7 @@ import { Button } from '../components/primitives/Button';
 import { WritePad } from '../components/notes/WritePad';
 import { useToast } from '../context/ToastContext';
 import { useIsEditMode } from '../utils/modeGuards';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 const inputClass =
   'w-full min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]';
@@ -47,7 +48,7 @@ const stepBtn =
 export default function ShipsScreen() {
   const { activeCampaign } = useCampaignContext();
   const { showToast } = useToast();
-  const { system } = useSystemDefinition(activeCampaign?.system ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const engine = useSystemEngineFor(activeCampaign?.system);
   const model = system?.vehicles ?? null;
   // Fall back to generic words rather than to "Ship": arriving here with no
@@ -91,29 +92,50 @@ export default function ShipsScreen() {
   async function handleCreate() {
     const name = newName.trim();
     if (!name || !campaignId) return;
-    const ship = await shipRepository.create({
-      campaignId,
-      name,
-      counterIds: (model?.counters ?? []).map(c => c.id),
-      crewRoles: model?.crewRoles,
-    });
-    setNewName('');
-    await reload();
-    setSelectedId(ship.id);
+    try {
+      const ship = await shipRepository.create({
+        campaignId,
+        name,
+        counterIds: (model?.counters ?? []).map(c => c.id),
+        crewRoles: model?.crewRoles,
+      });
+      setNewName('');
+      await reload();
+      setSelectedId(ship.id);
+    } catch (e) {
+      console.error('ShipsScreen.handleCreate failed:', e);
+      showToast('Failed to add ship', 'error');
+    }
   }
 
-  /** Patches the selected ship in the DB and refreshes the local copy. */
+  /**
+   * Patches the selected ship in the DB and refreshes the local copy.
+   *
+   * @remarks
+   * Local state changes only after the write lands, so a failed write leaves
+   * the screen showing what is actually stored rather than what was typed.
+   */
   async function patch(changes: Partial<Ship>) {
     if (!selected) return;
-    await shipRepository.update(selected.id, changes);
-    setShips(prev => prev.map(s => (s.id === selected.id ? { ...s, ...changes } : s)));
+    try {
+      await shipRepository.update(selected.id, changes);
+      setShips(prev => prev.map(s => (s.id === selected.id ? { ...s, ...changes } : s)));
+    } catch (e) {
+      console.error('ShipsScreen.patch failed:', e);
+      showToast('Failed to save ship', 'error');
+    }
   }
 
   async function handleDelete(ship: Ship) {
-    await shipRepository.softDelete(ship.id);
-    if (selectedId === ship.id) setSelectedId(null);
-    await reload();
-    showToast(`${ship.name} removed`, 'success');
+    try {
+      await shipRepository.softDelete(ship.id);
+      if (selectedId === ship.id) setSelectedId(null);
+      await reload();
+      showToast(`${ship.name} removed`, 'success');
+    } catch (e) {
+      console.error('ShipsScreen.handleDelete failed:', e);
+      showToast('Failed to remove ship', 'error');
+    }
   }
 
   return (

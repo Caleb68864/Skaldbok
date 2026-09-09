@@ -6,6 +6,7 @@ import { useCampaignContext } from '../../campaign/CampaignContext';
 import { useToast } from '../../../context/ToastContext';
 import * as noteRepository from '../../../storage/repositories/noteRepository';
 import { generateSoftDeleteTxId } from '../../../utils/softDelete';
+import { generateId } from '../../../utils/ids';
 import { createPenObservationTracker, detectPenCapability } from '../../notes/ink/penCapability';
 import { deserializeStrokePage, strokeBounds, type Stroke, type StrokePage } from '../../notes/ink/strokeModel';
 import { textToDoc, docToText } from '../../notes/textToDoc';
@@ -126,7 +127,7 @@ function tabId(): string {
   try {
     const existing = sessionStorage.getItem(KEY);
     if (existing) return existing;
-    const fresh = crypto.randomUUID();
+    const fresh = generateId();
     sessionStorage.setItem(KEY, fresh);
     return fresh;
   } catch {
@@ -315,7 +316,11 @@ export function SessionLog() {
     // an ink page (which leaves the text empty) deleted the parked record while
     // the other surface still held content.
     if (draft.trim() === '' && !hasInk) {
-      localStorage.removeItem(key);
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Storage unavailable — nothing was parked there to begin with.
+      }
       return;
     }
     try {

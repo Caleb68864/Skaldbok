@@ -3551,3 +3551,774 @@ b"` with a real break parses as a broken
   the autosave debounce (the first read at 800ms was too early), reopened to see
   it, then cleared it so the real character was left as found.
 - Commit: feat(sheet) — a Story Bank row opens the story behind it.
+
+## 2026-08-28 — Every screen shipped in one 1.87 MB chunk
+- Symptom: `routes/index.tsx` imported all twenty screens eagerly, so the first
+  paint downloaded a single 1,866 kB JS file. That is 89% of Workbox's default
+  2 MiB per-file precache ceiling; past it the file is dropped from the precache
+  with only a build-time warning and the PWA stops working offline. One more
+  dependency would have done it.
+- Fix: each screen is a `React.lazy` chunk behind a Suspense fallback
+  (`lazyScreen`/`screen` helpers). Shared chunk is now 850 kB, screens are
+  16–120 kB each, and `maximumFileSizeToCacheInBytes` is set to 4 MiB explicitly.
+  `main.tsx` listens for `vite:preloadError` and reloads once (session-flagged)
+  so a stale chunk hash after a deploy does not land on the error boundary.
+- Surfaces: routes/index.tsx, main.tsx, app/App.tsx, app/ErrorBoundary.tsx,
+  vite.config.ts.
+- Watch: `lazy()` MUST be called at module scope. The first draft called it
+  inside a render arrow, which mints a new component type every render and
+  remounts the screen on each parent update. Hoisted before it was ever run.
+- Watch also: the ErrorBoundary now takes `resetKey` (App passes the pathname)
+  so a crashed screen does not hold the whole app on the fallback after the
+  user navigates away; and a second boundary wraps `AppProviders` in main.tsx,
+  because the providers themselves can throw during render (ThemeProvider did —
+  see the storage-guard entry below) with nothing above them to catch it.
+- Watch also: the `linkSyncEngine` "dynamically imported but also statically
+  imported" build warning is unchanged and harmless — KnowledgeBaseScreen
+  imports it statically; the others lazily.
+- Verified: build clean, 1236 tests. Browser smoke on the built bundle over
+  plain HTTP: library → new Traveller character → Sheet/Play/Skills/Gear →
+  Session → Reference → Menu, seven lazy chunks, zero console errors/warnings.
+- Commit: perf(app) — code-split every screen; boundary outside the providers.
+
+## 2026-08-28 — Deleting a character was the one hard delete left in the UI
+- Symptom: `useCharacterActions.deleteCharacter` ran `db.partyMembers…delete()`
+  and `characterRepository.remove()` — two hard deletes from UI code, against
+  the project-wide soft-delete rule, and the only user-facing delete that could
+  never be restored. `represents` edges from encounter participants were left
+  dangling. Around it, a cluster of raw Dexie reads leaked tombstones: the
+  campaign switcher (`db.campaigns.toArray()`) listed trashed campaigns;
+  `CampaignContext.resolvePartyWithMembers` read parties/seats raw, so a deleted
+  character's seat came back in the drawer; the active-session lookup could pick
+  a trashed session; `ManagePartyDrawer` hard-deleted seats; `saveInkPage` wrote
+  strokes onto a deleted note. `addPartyCharactersToEncounter` did
+  `db.entityLinks.toArray()` — a full-table scan — despite the compound index.
+  "Clear all data" cleared a hand-kept list of 16 tables and had silently missed
+  ships, the whole ledger, routes, reference groups and systems.
+- Fix: `characterRepository.softDelete` cascades in one transaction to seats
+  (`linkedCharacterId`) and edges under a shared `softDeletedBy`; `restore`
+  brings back only rows carrying that id, so a seat removed on its own earlier
+  stays removed. `sessionRepository` cascades/restores its edges the same way.
+  Shared helper `softDeleteLinksForEntity` in entityLinkRepository. The dead
+  `characterRepository.remove` is gone (`hardDelete` already existed). Leaking
+  reads go through `getAllCampaigns`, `partyRepository.getPartyByCampaign/
+  getPartyMembers`, `sessionRepository.getActiveSession/getSessionById`; session
+  writes in CampaignContext go through `createSession`/`updateSession`. The
+  encounter helper queries `[fromEntityId+relationshipType]` with `anyOf`.
+  Settings wipe iterates `db.tables`.
+- Surfaces: storage/repositories/{character,session,entityLink,note}Repository.ts,
+  features/characters/useCharacterActions.ts, features/campaign/CampaignContext.tsx,
+  features/campaign/ManagePartyDrawer.tsx, components/shell/CampaignHeader.tsx,
+  features/encounters/addPartyCharactersToEncounter.ts, screens/SettingsScreen.tsx.
+- Watch: there is still no Trash UI for characters — a soft-deleted character is
+  restorable only via `characterRepository.restore`. That is strictly better than
+  before (the row exists) but the library has no "Trash" affordance yet.
+- Watch also: `updateSession` stamps `updatedAt` itself; callers that used to
+  pass it no longer do. The "Session N" numbering counts deleted sessions on
+  purpose (`includeDeleted: true`) so numbering stays stable after a delete.
+- Watch also: the audit that found these listed `useSessionLog`, `useEncounter`,
+  `useSessionEncounter`, `CombatEncounterView`, `BestiaryScreen` and the KB
+  files as still touching `db.*` directly. Those are by-id writes inside
+  transactions, not leaking reads, and were left for a separate pass.
+- Verified: new `characterRepository.test.ts` (4 tests: hidden-but-kept,
+  cascade shares txId, restore brings all back, independently-removed seat stays
+  removed); build clean; 1236 tests.
+- Commit: fix(storage) — deleting a character is a soft delete with a cascade.
+
+## 2026-08-28 — Two surfaces still read stats off the record
+- Symptom: CLAUDE.md's "read every stat through the shared resolvers" rule had
+  two holdouts. `PrintableSheet` rendered `character.attributes[id]` and
+  `character.skills[id].value` (three skill loops), so every `attr:`/`skill:`
+  temp modifier was invisible on paper while the same sheet already used
+  `resolveArmorRating`. `TileCard.resolveDataPath` — the JSON card-template
+  path — returned raw `attributes[id]`, `resources[id].current` and
+  `derivedStats()[id]`, so a tile never showed a modifier or a derived
+  override. Separately, `migrateCharacterV4ToV5` built the merged entry as
+  `{ ...target, value, trained }`; with no target entry (the common case)
+  `...target` is empty and a `dragonMarked`/`demonMarked` mark on the legacy
+  `sensors` row was dropped — the doc comment promised "cannot cost anyone a
+  skill level", which was true of the level and false of the mark.
+- Fix: `printedSkillValue` helper + `getEffectiveValue(attrKey(id))` on the
+  print sheet; `resolveDataPath` uses `getEffectiveValue`/`resolveDerivedField`
+  (returns `.display`, so an override wins over computed and modifiers apply).
+  Migration spreads `{ ...legacy, ...target, value, trained }` (test). ShipsScreen
+  create/patch/delete wrapped with toasts. Fifteen `'classic-fantasy'` fallback
+  literals replaced with `DEFAULT_SYSTEM_ID` from the registry.
+- Surfaces: components/PrintableSheet.tsx, features/systems/cards/primitives/
+  TileCard.tsx, utils/migrations.ts, screens/ShipsScreen.tsx, plus the
+  `useSystemDefinition(… ?? DEFAULT_SYSTEM_ID)` call sites.
+- Watch: `resolveDataPath` for `attr:`/`res:` still returns `undefined` when the
+  record has no value at all, so a tile bound to a missing stat stays blank
+  rather than showing a modifier-only number.
+- Watch also: not touched, on purpose — the remaining `'classic-fantasy'`
+  literals in `types/campaign.ts` (Zod default), `bundleParser`/`bundleSerializer`
+  (import/export fallback) and `characterMappers.ts` (blank-template map, the
+  third hand-maintained system list). The mappers map should really be keyed
+  off the registry; that is a bigger change than a literal swap.
+- Verified: migrations test "carries every other field on the legacy entry
+  across the rename" fails on the old code, passes now; build clean; 1236 tests;
+  Traveller Play dashboard tiles render STR…SOC / Init / Carry in the browser.
+- Commit: fix(engine) — printed sheet and JSON tiles read through the resolvers.
+
+## 2026-08-28 — Exported attachments never carried their bytes
+- Symptom: `collectors.toBundleAttachment` stripped the Blob "to match the
+  bundle schema", and `bundleSerializer.convertAttachmentsToBase64` only
+  base64-encodes when it finds a Blob — so every campaign export emitted
+  attachment metadata with no payload, and on import every one was rejected as
+  "no restorable base64 data", surfaced only as "N error(s)". The importer also
+  trusted the bundle's `mimeType` verbatim and `atob`'d an uncapped payload;
+  a legacy bare-character file (no `version` key) bypassed
+  `validateContentsEntities` and `migrateCharacter` entirely and was `put`
+  straight into `db.characters`; `startImport`, `CreatureImportModal.handleFile`
+  and `CharacterLibraryScreen.handleImportFile` awaited `file.text()` with no
+  try/catch (and the library never reset its file input on the failure path).
+- Fix: the collector passes the Blob through; `blobToBase64` uses
+  `arrayBuffer()` + chunked `btoa` (FileReader does not exist in the test
+  runtime and the arrayBuffer form is simpler anyway). `restoreAttachmentBlob`
+  refuses a mime type outside {jpeg,png,webp,gif}, caps the payload at 10 MiB
+  decoded before `atob`, tolerates a malformed base64 string, and rewrites
+  `sizeBytes` from the real length. The legacy branch runs the same
+  validation and returns a hard failure when nothing survives. The three entry
+  points are guarded; the import toast names the first three failing entities
+  and logs the rest.
+- Surfaces: utils/export/{collectors,bundleSerializer}.ts,
+  utils/import/{mergeEngine,bundleParser}.ts, features/import/useImportActions.ts,
+  features/bestiary/CreatureImportModal.tsx, screens/CharacterLibraryScreen.tsx.
+- Watch: `toBundleAttachment` now returns a value that still *has* a Blob under
+  an `Omit<Attachment,'blob'>` type — a deliberate cast, commented, because the
+  schema shape is reached after serialization, not before. Do not "fix" the
+  type by stripping the Blob again.
+- Watch also: the campaign bundle still omits ships, ledger, routes, reference
+  groups and the system definition (`bundleContentsSchema` has no slot for
+  them). That is a feature gap, not a regression, and is left open.
+- Verified: new tests — attachment round-trip (serialize → parse → merge →
+  identical bytes), non-image mime refused, legacy bare record validated,
+  non-character bare object rejected; build clean; 1236 tests.
+- Commit: fix(import-export) — attachments round-trip; untrusted input is checked.
+
+## 2026-08-28 — A blocked localStorage was a blank page
+- Symptom: `ThemeProvider`'s `useState` initializer called
+  `localStorage.getItem` unguarded. In Safari private mode (and any browser
+  set to block site data) the accessor itself throws, during the render of the
+  outermost provider, above the only error boundary — a blank page with no
+  recovery. `generateId` was bare `crypto.randomUUID()`, which is gated to
+  secure contexts; the documented tablet flow (`npm run preview` over
+  `http://<lan-ip>:4173`) is not one, so every entity creation threw a
+  TypeError there. `SessionLog` had one `localStorage.removeItem` outside its
+  otherwise-careful guards. KB tag nodes used `tag-${slug}` — no campaign in
+  the id, so `#lore` in two campaigns was one shared row whose `campaignId` was
+  whichever synced last, and slugging merged `Old Gods` with `Old-Gods` — the
+  exact bug already fixed for `[[placeholders]]`, not applied to tags.
+- Fix: both storage touches in ThemeProvider wrapped; `generateId` falls back
+  to a v4 UUID built from `getRandomValues` (not gated); `tagNodeIdFor`
+  mirrors `placeholderNodeId` (`tag:${campaignId}:${normalised label}`).
+  Skill-value input, derived-field edit input get `aria-label`s; the derived
+  click-to-edit span is a keyboard-operable `role="button"` when editable;
+  "Close", "Add tag", "Add modifier" on three icon-only buttons.
+- Surfaces: theme/ThemeProvider.tsx, utils/ids.ts, features/session/sessionLog/
+  SessionLog.tsx, features/kb/linkSyncEngine.ts, components/fields/{SkillRow,
+  DerivedFieldDisplay}.tsx, components/notes/TagPicker.tsx,
+  components/panels/BuffChipBar.tsx.
+- Watch: existing tag nodes under the old `tag-…` ids are orphaned until the
+  next `bulkRebuildGraph`; the Knowledge Base rebuilds on first mount when its
+  migration key is absent, but an already-migrated campaign keeps stale tag
+  rows until something else triggers a rebuild. Cosmetic (duplicate tag node
+  in the graph view), not data loss.
+- Watch also: the audit also flagged `useAppSettings`' `error` being exported
+  as `settingsError` and read by nobody — a DB that fails to open renders on
+  defaults with every save failing silently. Not addressed here; it wants a
+  real "storage unavailable" screen, not a toast.
+- Verified: build clean; 1236 tests; browser smoke as above.
+- Commit: fix(app) — storage guards, id fallback, campaign-scoped tags, a11y labels.
+
+## 2026-08-29 — Trash for characters, sessions and notes
+- Symptom: yesterday's change made deleting a character a soft delete, but the
+  Trash screen (`/bestiary/trash`) listed creatures only — a deleted character
+  was restorable solely by calling `characterRepository.restore` from a console.
+  Sessions and notes were in the same position. The library's confirm still
+  read "This cannot be undone".
+- Fix: `TrashScreen` is generic over a `TrashRow { title, detail, deletedAt,
+  restore }` and shows four sections — Characters (global), Sessions and Notes
+  (active campaign), Creatures — hidden when empty. New `getDeleted` on the
+  character, session and note repositories use the `deletedAt` index
+  (`where('deletedAt').above('')`) rather than scanning. Restore calls each
+  repository's own `restore`, so a character comes back with its party seat and
+  edges, a note with its links and KB node. Routed at `/trash`; linked from the
+  library header and the overflow menu. Restore is guarded and toasts.
+- Surfaces: screens/TrashScreen.tsx, storage/repositories/{character,session,
+  note}Repository.ts, routes/index.tsx, screens/CharacterLibraryScreen.tsx,
+  components/shell/CampaignHeader.tsx.
+- Watch: a restored character is no longer the *active* character — deletion
+  clears that — so the library shows "Set Active & Open" for it, not "(Active)".
+  Expected, but it reads like a change to someone who did not know.
+- Watch also: sessions/notes are filtered client-side after the index read; a
+  huge multi-campaign trash would read every deleted row. Fine at any real
+  size; noted in case the index gains a compound form later.
+- Verified: build clean; 1242 tests; browser on the built bundle — Delete →
+  Trash shows the row with its deletion time → Restore → toast → library lists
+  the character again; zero console output throughout.
+- Commit: feat(trash) — characters, sessions and notes can be restored.
+
+## 2026-08-29 — A database that would not open looked like a working app
+- Symptom: `useAppSettings` caught the settings-load failure and only cleared
+  `isLoading`, so when IndexedDB refused to open (private mode, blocked site
+  data, a newer schema opened by another tab) the app rendered on defaults and
+  every save failed silently. `settingsError` was exported and read by nobody.
+  No `versionchange` handler existed, so an update in another tab left this
+  one with a closed connection and `DatabaseClosedError` on every call. Also:
+  `isFatalMergeError` matched `name === 'DexieError'`, which Dexie never
+  assigns, so a genuinely dead database during import was logged as N per-row
+  errors and the import "completed"; three ReferenceScreen delete confirms and
+  the drag-reorder writer were unguarded (reorder was optimistic, so a failed
+  save left the screen showing an order that was never stored);
+  `PartyInventoryTab` writes had `showToast` in hand and did not use it; an
+  imported character could carry `portraitUri: https://…`, rendered as an
+  `<img>` every time the sheet opened.
+- Fix: `storageError` from `useAppSettings` → `AppStateContext` → `App`
+  renders `StorageUnavailable` (causes listed, error verbatim, Reload).
+  `db.on('versionchange')` closes and reloads. `FATAL_MERGE_ERROR_NAMES` holds
+  the real names (QuotaExceeded, Abort, DatabaseClosed, Version, OpenFailed,
+  Upgrade, InvalidState, MissingAPI, Unknown, TransactionInactive). Reference
+  handlers try/catch into `setError`; a failed reorder reloads the stored
+  order. `persistCarrier` catches and toasts (every caller reloads, so the
+  screen snaps back to truth). `importablePortraitUri` keeps
+  `data:image/*;base64,` only, applied in `sanitizeCharacterStrings` and in
+  `mergeEntity` for characters (test: remote dropped, inline kept).
+- Surfaces: app/{StorageUnavailable,App}.tsx, context/AppStateContext.tsx,
+  features/settings/useAppSettings.ts, storage/db/client.ts,
+  screens/ReferenceScreen.tsx, features/party/PartyInventoryTab.tsx,
+  utils/import/{mergeEngine,portraitUri}.ts, utils/importExport.ts.
+- Watch: `StorageUnavailable` renders only when the *settings* read fails. A
+  database that opens and then fails mid-session is still the per-write toast
+  path. The reload-on-versionchange is deliberate for a local-first app with no
+  unsaved server state; if a screen ever holds unsaved in-memory work, revisit.
+- Watch also: `portraitUri` on a *locally created* character is untouched;
+  the picker already produces data URLs.
+- Verified: build clean; 1242 tests; E2E suite 14/14 on the dev server.
+- Commit: fix(app) — say so when storage will not open; guard the last silent writes.
+
+## 2026-08-29 — Migration whitelist copies; KB edge twins across tabs
+- Symptom: `migrateCharacterV3ToV4`'s `spellToAbility` / `heroicToAbility`
+  copied only the fields they named, so anything else on a legacy spell or
+  heroic ability (a field added to the type later, or user data an older build
+  stored) was dropped on upgrade — against CLAUDE.md's "must preserve unrelated
+  fields". `linkSyncEngine` inserted edges with `generateId()`; the per-note
+  mutex serialises one tab, but two tabs both read the edge set, both decide
+  the edge is missing, both `put()` — two rows, a doubled backlink. And
+  `characterMappers.BLANK_TEMPLATES` was a third hand-kept system-id list with
+  nothing checking it against `registry.ts`.
+- Fix: `partitionLegacy(entry, systemKeys, consumedKeys)` splits an entry into
+  `systemFields`, the keys the new shape replaces (`wpCost`, `summary`, `type`),
+  and `rest`, which is spread first so the named fields still win. Edge id is
+  `edge:${type}:${from}:${to}` — one such edge can exist, so its id is its
+  identity and the second `put` is a no-op; `absorbPlaceholder` deletes the
+  old row and re-puts under the id of the edge it now is. `hasBlankTemplate` +
+  `characterMappers.test.ts` (`it.each(BUNDLED_SYSTEMS)`) fails the build when
+  a system is registered without a template.
+- Surfaces: utils/migrations.ts, features/kb/linkSyncEngine.ts,
+  features/characters/characterMappers.ts.
+- Watch: edges written before this keep their random ids. The key-set diff
+  (`type:toId`) still prevents adding a twin next to one, so nothing
+  duplicates; a `bulkRebuildGraph` rewrites them under the new ids. There is
+  still no unique index on `(fromId,type,toId)` — the id *is* the constraint.
+- Watch also: `partitionLegacy` treats a legacy `type` key as consumed, so a
+  v3 spell that somehow carried `type: 'heroic'` becomes `type: 'spell'`, as
+  before. That is the intended precedence, not a loss.
+- Verified: new migration test fails on the old code (dropped `notes`/
+  `usesPerRest`), passes now; linkSyncEngine tests unchanged; 1242 tests.
+- Commit: fix(data) — migrations keep unknown fields; KB edges have one identity.
+
+## 2026-08-29 — Note-type and KB-category groupings out of components
+- Symptom: three literal arrays of user-facing groupings inside components —
+  `NotesGrid.NOTE_TYPE_FILTERS` (+ `HIDDEN_NOTE_TYPES`),
+  `PromoteEntriesSheet.SELECTABLE_NOTE_TYPES` (a *different* subset with
+  different labels), `VaultBrowser.CATEGORY_TABS` (renamed labels: People,
+  Places, Loot). CLAUDE.md names note-type groupings and filter presets as
+  must-be-configurable. Plus a spread of unlabeled inputs.
+- Fix: `config/defaults/noteTypes.ts` — one `NoteTypeConfig[]` with `label`,
+  order, `hiddenByDefault`, `promotable`; `config/defaults/kbCategories.ts`.
+  `AppSettings.noteTypes` / `kbCategoryTabs` overrides; `useNoteTypeConfig()` /
+  `useKBCategoryTabs()` in `useConfigurableDefaults`. The grid derives its
+  chips and hidden set, the promote sheet its selectable list, the browser its
+  tabs. `InventoryItemEditor` labels bound with `htmlFor`/`useId`;
+  `aria-label` on the participant drawer's HP/conditions/notes, the modifier
+  drawer's label/stat/amount, and the notes/bestiary search boxes.
+- Surfaces: config/defaults/{noteTypes,kbCategories}.ts, types/settings.ts,
+  hooks/useConfigurableDefaults.ts, features/notes/{NotesGrid,
+  PromoteEntriesSheet}.tsx, features/kb/VaultBrowser.tsx, and the labelled
+  components.
+- Watch: the default list now labels `generic` as "Note" everywhere (the grid
+  used to say "Generic"). `npc`, `spell-cast` and `ability-use` are not in the
+  default list, as before — they are system-assigned and were never offered.
+- Watch also: `AppSettings` is a TS interface, not Zod-validated, so a stored
+  override with a bad `id` is used as-is; the grid tolerates an unknown type
+  (it filters nothing) and the promote sheet writes it. A preferences UI must
+  validate against `NOTE_TYPES` when it lands.
+- Verified: build clean; 1242 tests; E2E promote flow (type picker) 14/14;
+  KB tabs All/People/Places/Loot/Notes render in the browser.
+- Commit: refactor(config) — note types and KB tabs come from configuration.
+
+## 2026-09-06 — Roadmap items A2–A7, B3, C1, D1, D2
+
+Nine changes from `docs/backlog/2026-09-04-improvement-roadmap.md`, worked in
+the order that document proposes. Each is its own commit; this entry records
+what they share and the decisions that are not obvious from the diffs.
+
+### A derived override was seeded with the buff (A2)
+
+- Symptom: `DerivedFieldDisplay` was handed the *effective* value as
+  `computedValue` whenever a temp modifier was active, and its edit input
+  seeded from it. Tap Movement while Hasted, tap away, and
+  `derivedOverrides.movement` was persisted with the buff inside — the exact
+  case CLAUDE.md warns about under "bind editable inputs to the stored value".
+- Fix: `modifiedValue` is a separate, display-only prop. The input always seeds
+  from override-else-computed, with a "(base N)" adornment beside the headline
+  number. Committing the seed unchanged is also a no-op now, so tap-and-leave
+  no longer mints an override that pins the stat to today's number.
+- Watch: the two decisions are exported as pure functions (`splitDerivedValues`,
+  `commitOverrideValue`) and tested there. There is still no DOM test setup, so
+  the component wiring itself is covered only by the build and by hand.
+- Commit: fix(sheet) — a derived override starts from the stored value.
+
+### Private notes' photos shipped in the session ZIP (B3)
+
+- Symptom: `exportSessionBundle` filtered private notes out of the rendered
+  Markdown and then looped the *unfiltered* list to collect attachments. The
+  images shipped, along with sidecars carrying the note's title and type.
+- Fix: assembly moved to `utils/export/attachmentFiles.ts`, which filters
+  nothing itself — the caller passes the notes it has already vetted, so the
+  policy cannot be half-applied. All three export paths use it.
+- Watch also: the same loops named sidecars with
+  `filename.replace('.jpg', '.md')`, which left a `.png` or `.webp` name
+  untouched — the sidecar then took the image's own key in the ZIP and
+  overwrote it. The extension is now replaced whatever it is.
+- Commit: fix(export) — a private note's photos stay out of the session ZIP.
+
+### Schema v19: three faults that never announced themselves (A6, A7, B8)
+
+- Symptom: (1) `referenceSections` never declared a `softDeletedBy` index, but
+  `restoreGroup` queries it — Dexie throws `SchemaError` on an undeclared
+  index, so restoring a reference card would have failed the first time anyone
+  tried; nothing calls it yet, which is the only reason it had not fired.
+  (2) The v7 note backfill was added to the **v7** block in `1b5e70a`, when the
+  schema was already at v14; Dexie runs an upgrade once on the way past its
+  version, so every database already above v7 skipped it. (3) The v8 rework
+  dumped every table into `localStorage['forge:backup:…']` and nothing ever
+  removed it — it survives campaign deletion and "clear all data", sits outside
+  the soft-delete model, and holds note bodies verbatim.
+- Fix: one `version(19)` block. Index added; backfill re-run, touching only
+  genuinely absent fields so it is idempotent and leaves an edited note alone;
+  dump cleared, guarded so a browser that blocks site data cannot abort the
+  upgrade transaction.
+- Watch: the upgrade is **exported** and tested directly, as `upgradeReference
+  GroupsToV14` is — a copy of a migration in a test passes while the shipped one
+  drifts. There is also an integration test that builds a real v18 database
+  under the real name and lets Dexie walk it up, because a migration that
+  throws leaves the app unable to open at all and re-runs the same failing
+  upgrade on every load.
+- Watch also: A7 and B8 ride in the same block as A6. The next schema change is
+  `version(20)`; do not edit 19.
+- Commit: fix(storage) — schema v19 closes three faults.
+
+### Load, mutate, save the whole record (A3)
+
+- Symptom: four places read a character, awaited something, then `put` the
+  whole record back. Anything another writer changed in between was silently
+  reverted. Move an item off your own PC into a party container, edit the
+  sheet, and the item was back on the PC *and* still in the container.
+- Fix: `characterRepository.patch(id, mutate)` runs the mutator inside the
+  transaction against the stored row. Callers that touch the *active* character
+  additionally `flushAll()` first and merge the same fields into
+  `ActiveCharacterContext`, because its next autosave would otherwise write the
+  pre-patch record back. `encounterRepository.update`/`updateParticipant` are
+  now single transactions.
+- Surfaces: PartyInventoryTab, CampaignContext.refreshPartyResources,
+  ParticipantDrawer, encounterRepository.
+- Watch: item and coin moves are now all-or-nothing — a failure between the two
+  writes used to destroy the item. The compensating write is a second
+  repository call rather than one transaction, because the two carriers may be
+  a character and a container in different tables.
+- Verified: tests reproduce both concurrency failures against the old code.
+- Commit: fix(storage) — a write reads the row it is writing.
+
+### Dragonbane's attribute range applied to every system (A4)
+
+- Symptom: `normalizeCharacter` runs on every save and clamped every attribute
+  to `1..30`, defaulting to `10`. A Traveller characteristic legitimately at 0
+  was rewritten to 1 on the next save, and 10 is not a rung on a Savage Worlds
+  die ladder.
+- Fix: bounds come from the character's own `AttributeDefinition`. A die-ladder
+  attribute snaps to the nearest rung at or below the value; `allowsPlus` keeps
+  d12+ as written. With no system available the value is only made finite and
+  integral — imposing bounds from a ruleset the character does not use is what
+  caused this.
+- Watch: the system is loaded *before* the write transaction opens, because
+  `db.systems` is not in a character transaction's scope.
+- Watch also: the skill ceiling is a separate `skillMax` option, still
+  defaulting to 20, rather than read from `engine.skill.range`. `engine/index`
+  imports `ActiveCharacterContext`, which imports this module, so reading the
+  engine here would close a cycle. Nothing passes the option yet.
+- Commit: fix(storage) — an attribute is clamped to its own system's range.
+
+### Attribute modifiers reached nothing (C1, F3)
+
+- Symptom: every derived formula read `character.attributes[id]` raw, so the
+  `attr:` targets the picker offers moved the attribute's own display and
+  nothing downstream — +2 CON did not move HP max, +2 STR did not move the
+  damage bonus or carry limit, +2 Vigor did not move Toughness, and a Dragonbane
+  attribute buff left every skill linked to it alone.
+- Fix: a shared `effectiveAttribute` helper, used by the Dragonbane derived
+  block and skill formula, Savage Worlds' trait die and attribute badge, and
+  Traveller's carry limit.
+- Watch: Traveller's carry limit still ignores damage. `attr:str` and `res:str`
+  are separate keys — that is the whole reason stat keys are namespaced — so an
+  exoskeleton buff moves the limit while a hit mid-fight does not.
+- Watch also: the contract test could not have caught any of this, and the
+  reason is worth remembering. Its fingerprint included each attribute's own
+  effective value, so an `attr:` target moved it whatever else happened. Three
+  changes fix that: a second probe runs the `attr:` targets against a
+  fingerprint with that line removed; the fingerprint now calls the engine's own
+  `skill.computeValue`, which `resolveSkillValue` never invokes; and the
+  synthetic character is seeded mid-range rather than at each attribute's
+  maximum, where every threshold formula is already saturated and a +3 probe
+  moves nothing.
+- Commit: fix(engine) — an attribute modifier reaches what is computed from it.
+
+### Three encumbrance formulas, one on the wrong engine (D1)
+
+- Symptom: Dragonbane's `ceil(STR/2)` plus item `capacityBonus`, Traveller's
+  `STR + END` and SWADE's `Strength × 5` lived in three places with nothing
+  tying them together, and only the first honoured `capacityBonus` — so a
+  backpack added capacity in exactly one system. Carried load was summed inline
+  at each call site with its own copy of the `tiny` exemption.
+- Fix: `engine.encumbrance: { limit, load } | null`; `null` hides the panel
+  rather than showing it reading zero. Each adapter states its own load rule.
+- Watch: `PartyInventoryTab` imported Dragonbane's `computeEncumbranceLimit`
+  directly and called `useSystemEngine()`, which resolves the *active
+  character's* system. On a screen listing every party member that is the wrong
+  engine — a Traveller party got Dragonbane capacity, and with no active
+  character at all, Dragonbane coins. It now uses the campaign's system.
+- Watch also: both weight sums ignored quantity, one via a literal `* 1`, so
+  ten 2 kg rations weighed 2.
+- Watch also: a container is not a character, so `carrierWeight` stays local for
+  containers; `encumbrance.load` takes a character and folds in worn armour.
+- Commit: feat(engine) — carry rules belong to the system, not the screen.
+
+### Nothing expired a modifier outside Dragonbane (D2)
+
+- Symptom: the only expiry path was pressing a rest button whose id matched the
+  modifier's `duration`. Traveller and Savage Worlds declare `rest: null`, so in
+  those systems nothing could expire anything and every buff was permanent in
+  practice. A `scene` modifier expired nowhere in any system, because no rest is
+  called scene. Traveller relabels `stretch`/`shift` as Watch/Day, neither of
+  which has a rest to press.
+- Fix: `TimeUnit.expiresOn` says what ends a unit — a named rest, session start,
+  or encounter end — and all three adapters declare it. `modifiersEndingOn` is
+  pure so the confirmation prompt and the write path agree;
+  `expirePartyModifiers` applies it per character against that character's own
+  system, since a party may mix them.
+- Watch: a unit with **no** `expiresOn` never expires on its own. That silence
+  is deliberate — dropping a buff nobody asked to drop is worse than leaving one
+  the player can remove by hand — and it is also what a user-authored system
+  that forgets the field gets. Likewise a `duration` naming no declared unit is
+  left alone rather than guessed at.
+- Watch also: the active character's in-memory record is updated alongside the
+  stored one, or its next autosave writes the expired modifiers back.
+- Watch also: a contract test rejects a time unit that expires on a rest its
+  system does not define. Nothing yet asserts that every non-permanent unit has
+  *some* expiry, because "permanent" is legitimately expiry-free and the two are
+  not distinguishable from the data.
+- Commit: feat(engine) — a modifier expires when its own time unit ends.
+
+### Verification for all nine
+
+- `tsc -b` clean; 1318 tests (up from 1242), including new suites for the
+  derived-override rules, attachment assembly, the v19 upgrade (unit and
+  real-database integration), `characterRepository.patch`, encounter
+  concurrency, attribute normalisation, and modifier expiry.
+- Several tests were checked against the pre-fix code and fail there: the
+  `SchemaError` on `restoreGroup`, both encounter lost-write races, and both
+  halves of the attribute-modifier probe.
+- Playwright E2E on the dev server: 14/14 across all phases, 0 crashes.
+
+## 2026-09-06 — Roadmap steps 10 and 11: proxy branches, and the import surface
+
+Two more items from the roadmap, worked in its proposed order. Four commits.
+
+### Five screens asked one question to answer another (D6, F2)
+
+- Symptom: each of these read a real capability and used it to decide something
+  it had nothing to do with, so each named exactly one shipped system while
+  looking generic. `SkillModule` branched on
+  `engine.resolution === 'd20-roll-under'` for layout. `SkillsScreen` used
+  `!engine.skill.supportsMarks` to mean "not a d20 system" when choosing an odds
+  format, and computed auto-success as `supportsMarks && value === 1`.
+  `DerivedStatsModule` tested `'characteristicDMs' in derived` — commented as a
+  structural check, but only Traveller's derived block has that key, so a second
+  modifier-based system would have had to adopt Traveller's key name to get the
+  same layout. `CombatModule` hid the purse on `!engine.damageTrack`.
+  `ResourceModule` gated session logging on `id === 'hp' || id === 'wp'`, so
+  Wounds, Fatigue, Bennies and any user-authored pool changed silently and never
+  reached the log; its damage-track readout also assumed accumulating, so a
+  depleting resource would read as wounded at full health.
+- Fix: `skill.describe(value, ctx)` returns a row's parts — `headline`, `detail`,
+  `alternatives`, `note` — so the dashboard can list every advantage state and
+  the skills screen can name just the one in effect, neither knowing the
+  mechanic. `attributeSummary` returns per-attribute rows already labelled.
+  The purse follows the declared `finances` panel. Logging uses
+  `engine.resourceIds`; "wounded" uses `ResourceDefinition.direction`.
+- Surfaces: features/playDashboard/{SkillModule,DerivedStatsModule,CombatModule,
+  ResourceModule}.tsx, screens/SkillsScreen.tsx, engine/types.ts and all three
+  adapters.
+- Watch: `engine.resolution` is **deleted**, not kept. Its only use was being
+  branched on, and `declaredCapabilities.test.ts` flagged it the moment the last
+  reader went. The same happened to a `skill.autoSuccessAt` field added during
+  this change — `describe`'s `note` already carried the rule, and a second
+  source of it would only drift. Both deletions were the guard doing its job.
+- Watch also: the skills-screen mark vocabulary (dragon/demon glyphs, colours,
+  the marked-count badge) is still Dragonbane's, written into the screen. It
+  wants `skill.marks` and a rewrite of the mark cycle; left rather than
+  half-done, and recorded in the roadmap.
+- Watch also: one new consumer guard had to be withdrawn. Forbidding
+  `!engine.skill.supportsMarks` outright flagged the legitimate use that guards
+  the mark control itself. The rule that replaced it is positive and crisp:
+  outside the engine directory nothing calls `probability.chance` — a skill row
+  comes from `describe`.
+- Verified: four new guards in `engineConsumers.test.ts`, all four failing
+  against the pre-fix code; 1323 tests; Playwright 14/14.
+- Commit: fix(engine) — stop asking one question to answer another.
+
+### The import surface (B2, B4, B5, B6, B7, B9)
+
+- Symptom, and the one that mattered: `CardRenderer` looked a template's `when`
+  string up in `GUARDS` by plain indexing. Sheet templates are importable, so
+  `when: "constructor"` resolved to `Object`, `Object(engine)` returned a truthy
+  object, and the guard whose entire purpose is to fail closed failed **open**,
+  rendering a card the template said to hide. Three sibling lookups had the same
+  shape and failed safe only by accident: the entity-link table lookup threw
+  inside `db.table` and was caught; the system-id alias table let
+  `systemId: "__proto__"` persist a character whose `systemId` was an object; and
+  `sanitizeDeep` built its output with a plain literal, so assigning the key
+  `__proto__` replaced the prototype instead of adding a property.
+- Symptom: the id-collision guard compared `createdAt` to tell "a newer version
+  of this entity" from "a different entity reusing its id", but only when both
+  sides had one — so a bundle row with **no** `createdAt` and a far-future
+  `updatedAt` skipped the guard entirely and overwrote the local record. That is
+  the exact shape a hand-edited bundle has. A soft-deleted local row was also
+  overwritable, resurrecting a record the user had deleted with no sign it ever
+  had been.
+- Symptom: all six import entry points called `file.text()` with no size check.
+- Fix: own-property checks at all four lookup sites (`hasOwnProperty.call`, to
+  match the codebase and the ES2020 target). Missing-or-differing `createdAt` and
+  a tombstoned local row are both collisions now. One `readTextFile` helper
+  checks `file.size` first and every path shares its limit and message.
+  `importablePortraitUri` narrowed from any `data:image/*` — which admits
+  `svg+xml`, a document carrying its own script — to raster types, capped at
+  8 MB. `safeAttachmentFilename` reduces a stored name to one path segment
+  wherever it becomes a path or a link.
+- Surfaces: features/systems/cards/CardRenderer.tsx, utils/import/{mergeEngine,
+  portraitUri,readTextFile}.ts, utils/importExport.ts, utils/attachmentFilename.ts,
+  utils/export/{attachmentFiles,renderAttachmentSidecar}.ts, the six import
+  entry points, vite.config.ts.
+- Watch: the ZIP entry name, the wiki-links in the exported Markdown and the
+  sidecar's own embed must all agree, or the links point at files that are not
+  in the archive. All three are sanitised; the sidecar still records the raw
+  value as `originalFilename` so provenance survives.
+- Watch also: zip-slip strips **both** separators. A bundle written on Windows
+  carries backslashes, which a POSIX extractor does not treat as separators, so
+  stripping only `/` leaves `..\..\x.jpg` intact.
+- Watch also: the CSP is injected at **build** only. Applying it in dev breaks
+  Vite's HMR client, which injects inline scripts, and a policy that has to be
+  loosened for the dev server is not the policy that ships. `frame-ancestors` is
+  deliberately absent — it is ignored in a `<meta>` element and only logs an
+  error on every load; real framing protection needs an HTTP header, which a
+  static bundle on a LAN address cannot set.
+- Watch also: the existing dedup test's fixture carried no `createdAt`, so the
+  stricter guard reclassified it as a collision. Real records always have one;
+  the fixture was corrected rather than the guard loosened.
+- Verified: 1352 tests, including the guard-map shape, the portrait whitelist,
+  the read limit and traversal-proof export paths; the **built** bundle under
+  the real CSP passes Playwright 14/14 with no policy violations. The SSL and
+  service-worker errors in that run are Chromium rejecting the preview server's
+  self-signed certificate, not the policy — a CSP refusal reads "Refused to…".
+- Commits: fix(security) — prototype keys, portrait sources, and a policy;
+  fix(import) — close the id-collision bypass and bound what gets read;
+  fix(export) — an attachment name cannot escape the archive.
+
+## 2026-09-06 — Roadmap step 12: rules that lived in shared screens
+
+Four commits, all the same shape: a rule belonging to one ruleset, written
+into code every ruleset runs.
+
+### Conditions did not do what their system declared (D4, F4)
+
+- Symptom: Savage Worlds states its condition penalties in `system.json` as
+  `effect: { scope: 'all-traits', modifier: -2 }`, and nothing read that field.
+  `savageTraitPenalty` matched `distracted` and `entangled` by id and wrote
+  their magnitude into the adapter, so editing the declaration changed the
+  description a player reads and not the number they roll — and a fourth
+  condition added to the JSON did nothing at all. Dragonbane expressed the same
+  idea through a different field (`linkedAttributeId`), read by a different
+  helper, so two systems had two unconnected implementations of "this condition
+  makes rolls worse".
+- Fix: `conditionPenalty` resolves both shapes, returning the advantage state,
+  the flat modifier, whether the character can act, and which conditions
+  contributed. `attribute-linked` is Dragonbane's rule stated the newer way and
+  behaves identically to the bare field.
+- Watch: `SkillDisplayContext` gained `system`, because an engine folding in a
+  JSON-declared rule needs it. A screen that has a system must pass it —
+  without it, declared condition effects contribute nothing and the odds read
+  unpenalised. Both skill surfaces do.
+- Watch also: `effect` came off `TOO_GENERIC` in `declaredCapabilities.test.ts`.
+  Being excluded there as "too generic to prove anything" is precisely what let
+  this ship. `recovery` and `duration` stay excluded and are genuinely unread.
+- Watch also: that test's own staleness check was missing the destructuring read
+  pattern the main check uses, so an allowlisted field that gained a reader
+  written as `const { name } =` would have stayed on the list unchallenged. The
+  rot the test exists to prevent, in the test itself.
+- Verified: tests that the penalty follows an edited declaration, and that a
+  condition the adapter never names still applies.
+- Commit: fix(engine) — a condition does what its system declares it does.
+
+### Two flags restating a model (D11, in part)
+
+- Symptom: `engine.hasMagic` beside `engine.magic`, and `skill.advancementMax`
+  beside `advancement.maxSkillValue`. The tell for the first was a contract test
+  asserting `hasMagic === (magic !== null)` — a test that two fields always
+  agree is a test that one is redundant. The second was already on the
+  declared-capability allowlist as unread, with classic-fantasy declaring 18 in
+  both places.
+- Fix: both deleted. The magic guard asks the nullable model directly.
+- Watch: the *guard name* `hasMagic` is unchanged, because `when: "hasMagic"` is
+  written into every `sheet.json` and that string is stored data.
+- Watch also: the rest of D11 — one `engine.health` object — was **declined**.
+  `terms.healthResource` and `labels.participantHealth` are overridable from
+  `system.json`, and `getEngine` merges those two objects by key; a new home for
+  them either breaks that documented override or becomes an alias for it.
+- Commit: refactor(engine) — two flags that restated what a model already said.
+
+### The damage message spoke SWADE (D5)
+
+- Symptom: the shared Take Damage panel wrote "Shaken", "Wound" and "no effect
+  (under Toughness)" itself. It also branched on
+  `engine.resolveDamage && track.kind === 'levels'`, whose second half names
+  Savage Worlds' track shape rather than asking whether the engine can convert a
+  rolled total at all.
+- Fix: condition names from `system.conditions`, track names from
+  `system.resources`, and the bounce reason travels on the result as
+  `noEffectReason` in the words of the ruleset that decided it bounced. Having
+  the hook is the capability.
+- Commit: fix(engine) — the damage message uses the system's words.
+
+### Dragonbane's magic rules applied to every magical system (D3)
+
+- Symptom: the prepared-spell cap came from `computeMaxPreparedSpells`, which
+  reads INT through Dragonbane's base-chance table. The impairment banner came
+  from an `isMetalEquipped` import and named metal armour. A trick was anything
+  whose school contained "trick", tested in three places including a private
+  copy in the play dashboard — a naming convention in the bundled content
+  treated as a rule, so a system whose cantrips are called something else got no
+  trick handling and one with a school containing the word got it by accident.
+  The screen also carried a `?? { [1,2,3], 2, 1 }` fallback: Dragonbane's
+  economy, substituted silently.
+- Fix: `engine.magic` gains `maxPrepared`, `castingImpairment` and
+  `trickSchools`, all optional — a system without those rules omits them. An
+  explicit `powerLevel` of 0 still marks a trick everywhere, which is the part
+  that is genuinely general. The fallback is gone: the mismatch it covered
+  cannot exist now `hasMagic` does not.
+- Watch: `isMagicTrick` still falls back to the substring test when given no
+  list, so user-authored data that never named its trick schools classifies as
+  before.
+- Commit: fix(engine) — the magic screen stops applying Dragonbane's rules.
+
+### Verification for all four
+
+- `tsc -b` clean; 1373 tests (up from 1352); Playwright 14/14 after each change.
+
+## 2026-09-06 — Roadmap step 13: the screen-by-screen vocabulary sweep
+
+Three commits. Everything here is a ruleset's own words or rules sitting in code
+that every ruleset runs, which is the same shape as step 12 but spread across
+surfaces rather than concentrated in a model.
+
+### The printed sheet, and widening the leak test (D7, F1, part of D12)
+
+- Symptom: the sheet said "Hit Points & Willpower" and "Abilities" as literals,
+  each with a comment explaining that reading the engine would change the
+  Dragonbane sheet. Both statements were true; the conclusion — leave one
+  ruleset's words in shared print code — was not. Four more in the same file:
+  the whole abilities-and-spells block returned `null` when a system had no
+  magic model, so Traveller's Talents never printed; labels, maxima and the dot
+  CSS class were chosen by comparing the resource id to `'hp'`/`'wp'`; an
+  untrained skill printed blank though it still has a base chance; the
+  secondary-skill rows read the stored value raw, so a `skill:` modifier was
+  invisible there alone; the death-track headings were a map of Dragonbane ids.
+- Fix: `labels.printResources` / `labels.printAbilities` and
+  `DeathTrack.printLabel`, all declared by the classic adapter with the strings
+  the sheet already used, so the printed Dragonbane sheet is byte-identical.
+  Identity comes from `primaryHealthResourceId` and `magic.resourceId`.
+  `printedSkillValue` falls back to `engine.skill.computeValue`.
+- Watch: `F1` widened `vocabularyLeaks.test.ts` to `src/screens` and
+  `src/components` and added WP/Willpower/Bennies. Verified by reverting the
+  print sheet and watching it name the exact line. `BenniesModule` is
+  allowlisted: it is a panel that exists only for the ruleset whose word that is.
+- Also from D12: `AttributeField` defaulted `min`/`max` to 3 and 18 —
+  Dragonbane's range — while the sheet passes `attr?.min`, so an undeclared
+  attribute was clamped to bounds the component had no way to know were wrong.
+  The "Tiny item" checkbox rendered for every system with Dragonbane's wording,
+  though Traveller and Savage Worlds both declare `labels.tinyItems: null`.
+  `SkillList`/`SkillRow` are deleted — 105 lines whose only caller passed
+  `categories={[]}`.
+- Commit: fix(print) — the paper sheet reads the engine, and the leak test widens.
+
+### Creature headings had two sources that disagreed (D9, part of D10)
+
+- Symptom: Traveller's `system.json` declared "Hits" / "Armour" / "Speed (m)"
+  while `labels.creatureHealth` / `creatureArmor` / `creatureMovement` said
+  "END" / "Armour" / "Mv" — the same creature, described differently on the
+  bestiary card and in the encounter view opened from it. Savage Worlds had the
+  same split ("HP" vs "Wounds").
+- Fix: `creatureStatLabel` resolves headings from `creatures.statFields`; the
+  three engine labels are deleted. Savage Worlds declared no `creatures` block
+  at all, so it gains one carrying the labels its adapter used to hold —
+  otherwise deriving would have lost vocabulary rather than unified it.
+- Watch: `system.json` version bumped for that, per the cache gate.
+- Also from D10: a resource change logged its id shouted — "Took 1 BENNIES
+  damage", "3/3 WOUNDS" — readable only because Dragonbane's ids happen to be
+  the abbreviations players use. And the coin line said "Coins", Dragonbane's
+  word for the purse. Both read through **refs**: the flush callbacks are
+  debounced and registered once, so closing over the definition would pin
+  whichever system was active when the buffer opened, not the one it flushes
+  under.
+- Commit: fix(engine) — one source for creature headings, and the log says the noun.
+
+### A ruleset declares its own sheet panels (D8)
+
+- Symptom: Traveller's Careers, Decorations, Training, Connections and Augments
+  panels and Savage Worlds' Edges and Hindrances were ~175 lines of JSX in
+  `SheetScreen` keyed off panel ids, with their column layouts as module
+  constants beside them. A fourth system could add nothing to the sheet without
+  editing the sheet.
+- Fix: `sheetPanels` in `system.json`, rendered by one `SystemDataPanel`. Every
+  panel was already binding a `systemData` key to a text area or a table of
+  rows — the shape `identityFields` and `financeFields` declare — so the markup
+  is unchanged and the keys are the ones the hand-written panels used. A
+  character recorded before this reads back identically.
+- Watch: both `system.json` versions bumped, and the Zod schema extended. A
+  field on the type but not in the schema silently vanishes for *imported*
+  systems while working for bundled ones; that trap is documented in CLAUDE.md
+  for skills and applies here too.
+- Watch also: **the main E2E suite never leaves the default system.** It creates
+  characters without touching the system picker, so it could not exercise any of
+  this. `tests/panels_check.py` drives a Traveller and a Savage Worlds sheet in a
+  browser — eleven assertions including adding a career term, zero console
+  errors. Its first run reported three false failures from case-sensitivity
+  (headings are `text-transform: uppercase`, and `inner_text` returns rendered
+  casing) and three more because creating a second character does not make it
+  active. Both are noted in the script.
+- Commit: refactor(engine) — a ruleset declares its own sheet panels.
+
+### Verification
+
+- `tsc -b` clean; 1483 tests (up from 1373); Playwright suite 14/14 after each
+  change, plus the new panel check 11/11.

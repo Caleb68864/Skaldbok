@@ -1,9 +1,11 @@
+import { readTextFile } from './import/readTextFile';
 import { migrateCharacter } from './migrations';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { generateId } from './ids';
 import { nowISO } from './dates';
 import { BUNDLED_SYSTEMS } from '../systems/registry';
 import type { CharacterRecord } from '../types/character';
+import { importablePortraitUri } from './import/portraitUri';
 
 function sanitizeFilename(name: string): string {
   return name.replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/^-+|-+$/g, '') || 'character';
@@ -26,7 +28,10 @@ const SYSTEM_ID_ALIASES: Record<string, string> = {
 
 function normalizeSystemId(systemId: string): string {
   const normalized = stripHtml(systemId).trim().toLowerCase();
-  return SYSTEM_ID_ALIASES[normalized] ?? normalized;
+  // An own-property check, not `?? normalized`: the id comes from the imported file, so
+  // `systemId: "__proto__"` reached Object.prototype and persisted the
+  // character with `systemId` set to an object rather than a string.
+  return Object.prototype.hasOwnProperty.call(SYSTEM_ID_ALIASES, normalized) ? SYSTEM_ID_ALIASES[normalized] : normalized;
 }
 
 /**
@@ -43,11 +48,15 @@ function sanitizeDeep<T>(value: T): T {
   if (typeof value === 'string') return stripHtml(value) as unknown as T;
   if (Array.isArray(value)) return value.map(item => sanitizeDeep(item)) as unknown as T;
   if (value && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
+    // A null-prototype bag: assigning the key `__proto__` on a plain object
+    // literal sets the prototype instead of adding a property, so a sanitised
+    // record could come back with its prototype replaced by imported data.
+    // Nothing here can inherit, so the result is a pure data map.
+    const out: Record<string, unknown> = Object.create(null);
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
       out[key] = sanitizeDeep(val);
     }
-    return out as unknown as T;
+    return { ...out } as unknown as T;
   }
   return value;
 }
@@ -59,6 +68,7 @@ function sanitizeCharacterStrings(char: CharacterRecord): CharacterRecord {
     name: stripHtml(char.name),
     metadata: sanitizeDeep(char.metadata),
     memento: stripHtml(char.memento),
+    portraitUri: importablePortraitUri(char.portraitUri),
   };
   if (char.systemData) {
     sanitized.systemData = sanitizeDeep(char.systemData);
@@ -113,7 +123,7 @@ export interface ImportResult {
 export async function importCharacter(file: File): Promise<ImportResult> {
   let raw: string;
   try {
-    raw = await file.text();
+    raw = await readTextFile(file);
   } catch {
     return { success: false, error: 'Could not read the file.' };
   }

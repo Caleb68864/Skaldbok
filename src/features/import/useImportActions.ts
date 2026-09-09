@@ -1,3 +1,4 @@
+import { readTextFile } from '../../utils/import/readTextFile';
 import { useState, useCallback } from 'react';
 import { parseBundle, verifyContentHash } from '../../utils/import/bundleParser';
 import { mergeBundle } from '../../utils/import/mergeEngine';
@@ -6,21 +7,16 @@ import type { MergeOptions } from '../../utils/import/mergeEngine';
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
 import { useToast } from '../../context/ToastContext';
 import { db } from '../../storage/db/client';
+import { BUNDLE_TABLE_BY_KEY } from '../../types/bundleTables';
 
-/** Maps bundle entity type keys to their Dexie table names. */
-const TABLE_NAMES: Record<string, string> = {
-  campaign: 'campaigns',
-  sessions: 'sessions',
-  parties: 'parties',
-  partyMembers: 'partyMembers',
-  characters: 'characters',
-  creatureTemplates: 'creatureTemplates',
-  encounters: 'encounters',
-  inventoryContainers: 'inventoryContainers',
-  notes: 'notes',
-  entityLinks: 'entityLinks',
-  attachments: 'attachments',
-};
+/**
+ * Maps bundle entity type keys to their Dexie table names.
+ *
+ * @remarks
+ * Read from the shared registry rather than restated here — a local copy is how
+ * conflict detection came to be silently blind to whole entity types.
+ */
+const TABLE_NAMES = BUNDLE_TABLE_BY_KEY;
 
 /** A conflict detected between a bundle entity and a local entity. */
 export interface ImportConflict {
@@ -95,8 +91,18 @@ export function useImportActions() {
     const file = await pickFile(['.skaldbok.json', '.skaldmark.json', '.json']);
     if (!file) return;
 
-    const json = await file.text();
-    const result = parseBundle(json);
+    // Both the read and the parse take untrusted input; a rejected read or a
+    // parser throw used to escape as an unhandled rejection with no toast.
+    let json: string;
+    let result: ReturnType<typeof parseBundle>;
+    try {
+      json = await readTextFile(file);
+      result = parseBundle(json);
+    } catch (err) {
+      console.error('[useImportActions] startImport failed', err);
+      showToast('Import failed: the file could not be read.');
+      return;
+    }
     setParsedResult(result);
 
     if (result.success) {
@@ -155,9 +161,18 @@ export function useImportActions() {
       }
 
       if (report.errors.length > 0) {
+        // Name the first failures rather than only counting them — "40
+        // error(s)" with no reason told the user nothing they could act on.
+        const detail = report.errors
+          .slice(0, 3)
+          .map((e) => `${e.entityType} ${e.entityId}: ${e.message}`)
+          .join('; ');
+        const more = report.errors.length > 3 ? ` (+${report.errors.length - 3} more in the console)` : '';
+        console.error('[useImportActions] import errors', report.errors);
         showToast(
           `Import completed with ${report.errors.length} error(s). ` +
-          `Imported ${report.inserted} new, updated ${report.updated}, skipped ${report.skipped}.`
+          `Imported ${report.inserted} new, updated ${report.updated}, skipped ${report.skipped}. ` +
+          `${detail}${more}`
         );
       } else {
         showToast(

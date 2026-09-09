@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Toaster } from '../components/ui/toaster';
+import { generateId } from '../utils/ids';
 import type { ToastAction, ToastItem, ToastVariant } from '../components/ui/toaster';
 
 /** Optional toast behaviour: auto-dismiss delay and an optional action button. */
@@ -50,7 +51,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           ? { duration: optionsOrDuration }
           : optionsOrDuration ?? {};
       const duration = opts.duration ?? 3000;
-      const id = crypto.randomUUID();
+      const id = generateId();
       setToasts((prev) => [...prev, { id, message, variant, duration, action: opts.action }]);
       setTimeout(() => {
         setToasts((prev) => prev.filter((t) => t.id !== id));

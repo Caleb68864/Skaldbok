@@ -19,6 +19,20 @@ const BLANK_TEMPLATES: Record<string, unknown> = {
 };
 
 /**
+ * Whether a bundled blank template exists for `systemId`.
+ *
+ * @remarks
+ * `BLANK_TEMPLATES` is a third hand-maintained list of system ids, next to
+ * `registry.ts` and `baseEngineFor`. `characterMappers.test.ts` asserts every
+ * registered system answers true here, so a system added to the registry
+ * without a template fails the build instead of silently minting Dragonbane
+ * characters.
+ */
+export function hasBlankTemplate(systemId: string): boolean {
+  return systemId in BLANK_TEMPLATES;
+}
+
+/**
  * Builds a fresh blank character for a system from its bundled template.
  *
  * @remarks

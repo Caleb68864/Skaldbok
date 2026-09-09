@@ -4,6 +4,7 @@ import type { ValidationWarning } from '../../utils/import/bundleParser';
 import type { MergeOptions } from '../../utils/import/mergeEngine';
 import { getAllCampaigns } from '../../storage/repositories/campaignRepository';
 import type { Campaign } from '../../types/campaign';
+import { BUNDLE_ENTITY_LABELS } from '../../types/bundleTables';
 import { cn } from '../../lib/utils';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
@@ -27,19 +28,15 @@ interface ImportPreviewProps {
   isImporting?: boolean;
 }
 
-const ENTITY_LABELS: Record<string, string> = {
-  campaign: 'Campaign',
-  sessions: 'Sessions',
-  parties: 'Parties',
-  partyMembers: 'Party Members',
-  characters: 'Characters',
-  creatureTemplates: 'Creature Templates',
-  encounters: 'Encounters',
-  inventoryContainers: 'Containers',
-  notes: 'Notes',
-  entityLinks: 'Entity Links',
-  attachments: 'Attachments',
-};
+/**
+ * Display names for the per-group import checkboxes.
+ *
+ * @remarks
+ * Comes from the shared registry: `getAvailableEntityTypes` iterates these keys,
+ * so a group missing a label was not merely unlabelled — it never appeared in
+ * the dialog and could not be imported at all.
+ */
+const ENTITY_LABELS = BUNDLE_ENTITY_LABELS;
 
 /** Entity-group keys present in the bundle with at least one row, in a stable display order. */
 function getAvailableEntityTypes(contents: BundleContents): string[] {

@@ -7,8 +7,12 @@ rulesets — vocabulary, panels, formulas, rest and death rules, currency,
 probability — is resolved through a **`SystemEngine`**, never hardcoded in a
 screen and never branched on `systemId`.
 
-Source: `src/features/systems/engine/`. Two adapters ship today:
-`classicFantasyEngine` (Dragonbane-like) and `travellerEngine`.
+Source: `src/features/systems/engine/`. Three adapters ship today:
+`classicFantasyEngine` (Dragonbane-like), `travellerEngine` and
+`savageWorldsEngine`, registered in the `SYSTEM_ADAPTERS` map in
+`engine/index.ts`. A system with no adapter falls back to classic-fantasy,
+which is not a neutral default — it brings Dragonbane's formulas with it — so
+the engine sets `fallbackRulesFor` and `CharacterSubNav` says so on screen.
 
 ### The rule
 
@@ -96,11 +100,12 @@ scene-long buff in permanently. `resolveSkillValue` returns `base` and
 
 1. Add `src/systems/<id>/system.json` + `index.ts`, and register it in
    `src/systems/registry.ts` (this drives the character-creation picker).
-2. Add an engine adapter under `src/features/systems/engine/` and add a
-   `system.id === '<id>'` branch to `baseEngineFor` in `engine/index.ts` — the
-   one sanctioned place for a systemId branch (the "no `systemId ===`" rule
-   applies everywhere *else*). The `registry.ts` list and this branch are two
-   hand-maintained lists that must stay in lockstep.
+2. Add an engine adapter under `src/features/systems/engine/` and add it to the
+   `SYSTEM_ADAPTERS` map in `engine/index.ts` — the one sanctioned place for a
+   systemId-to-behaviour mapping (the "no `systemId ===`" rule applies
+   everywhere *else*). The `registry.ts` list and that map are two
+   hand-maintained lists that must stay in lockstep;
+   `fallbackAdapter.test.ts` fails if they drift.
 3. **Bump the `version` whenever you edit a bundled `system.json` — AND bump
    `sheet.json`'s *separate* `version` whenever you edit that file.** Both are
    cached in IndexedDB behind independent version gates (`useSystemDefinition`

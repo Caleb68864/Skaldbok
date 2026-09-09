@@ -1,5 +1,5 @@
 import type { CharacterRecord } from '../../../types/character';
-import { getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
+import { effectiveAttribute, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
 import {
   characteristicToDM,
   twoD6SuccessProbability,
@@ -60,15 +60,36 @@ export function effectiveCharacteristic(character: CharacterRecord, id: string):
  *
  * @remarks
  * Deliberately a simple, legible default rather than an imported encumbrance
- * table — bundling the tables is what this project avoids. It reads the *base*
- * characteristics, not the damaged ones, so a hit mid-fight does not silently
- * make a character encumbered; and any character can override the computed
- * value from the sheet if a group plays it differently.
+ * table — bundling the tables is what this project avoids. Any character can
+ * override the computed value from the sheet if a group plays it differently.
+ *
+ * Reads the characteristics, not the damage track. In Traveller the two share
+ * ids, which is exactly why stat keys are namespaced: `attr:str` is the
+ * characteristic and `res:str` is the damage taken to it. So an `attr:` buff (a
+ * powered exoskeleton) moves the limit, while a hit mid-fight still does not
+ * silently make a character encumbered.
  */
 export function computeTravellerCarryLimit(character: CharacterRecord): number {
-  const str = character.attributes?.['str'] ?? 0;
-  const end = character.attributes?.['end'] ?? 0;
-  return str + end;
+  return (
+    effectiveAttribute(character, 'str', 0) + effectiveAttribute(character, 'end', 0)
+  );
+}
+
+/**
+ * Mass carried, in kg.
+ *
+ * @remarks
+ * Traveller has no "tiny item is free" exemption — a kilo is a kilo — so this
+ * counts every item by quantity, plus worn armour. Dragonbane's `tiny` flag is
+ * simply not consulted, which is the point of each system owning its own load
+ * rule rather than sharing one inline sum.
+ */
+export function computeTravellerLoad(character: CharacterRecord): number {
+  const items = (character.inventory ?? []).reduce(
+    (sum, i) => sum + (i.weight ?? 0) * (i.quantity ?? 1),
+    0,
+  );
+  return items + (character.armor?.weight ?? 0) + (character.helmet?.weight ?? 0);
 }
 
 /** Formats a DM as a signed string, e.g. 2 -> '+2', -1 -> '-1'. */
@@ -276,18 +297,27 @@ function travellerRollContext(
  * is how those panels get hidden.
  */
 export const travellerEngine: SystemEngine = {
-  resolution: '2d6-plus',
-  hasMagic: false,
   attributeBadge: (attributeId, character) => {
     const score = character.attributes?.[attributeId];
     if (score === undefined || score === null) return null;
     return formatDM(characteristicToDM(effectiveCharacteristic(character, attributeId)));
   },
   attributeIds: TRAVELLER_ATTRIBUTE_IDS,
+  // The dashboard leads each characteristic with its score and shows the DM
+  // beside it: a player is asked for "END 7" as often as for "+0", and the two
+  // must come from one number or they disagree the moment damage lands.
+  attributeSummary: (character, system) => {
+    const derived = computeTravellerDerivedValues(character);
+    return TRAVELLER_ATTRIBUTE_IDS.map(id => ({
+      id,
+      label: system?.attributes.find(attr => attr.id === id)?.abbreviation ?? id.toUpperCase(),
+      value: derived.characteristicScores[id] ?? 0,
+      note: formatDM(derived.characteristicDMs[id] ?? 0),
+    }));
+  },
   skill: {
     valueLabel: 'Level',
     range: { min: 0, max: 6 },
-    advancementMax: 6,
     defaultValue: 0,
     display: (value, context) => {
       const { dm, unskilled, unskilledDM } = travellerRollContext(value, context);
@@ -296,6 +326,13 @@ export const travellerEngine: SystemEngine = {
         context?.target ?? TRAVELLER_DEFAULT_TARGET,
       );
     },
+    // A bare level is not a target number — "1" means nothing without the DM and
+    // the odds beside it — so there is no standalone headline; the formatted
+    // string carries the whole row.
+    describe: (value, context) => ({
+      headline: null,
+      detail: travellerEngine.skill.display(value, context),
+    }),
     supportsMarks: false,
     // Traveller level 0 is a real (trained) skill, so presence of the trained
     // flag matters as much as a non-zero level.
@@ -340,10 +377,13 @@ export const travellerEngine: SystemEngine = {
   ],
   // Reuses the existing TempModifier duration ids, relabelled for a sci-fi setting.
   timeUnits: [
-    { id: 'round', label: 'Round', abbrev: 'RND' },
-    { id: 'stretch', label: 'Watch', abbrev: 'WCH' },
-    { id: 'shift', label: 'Day', abbrev: 'DAY' },
-    { id: 'scene', label: 'Scene', abbrev: 'SCN' },
+    // Traveller has `rest: null`, so the rest-button expiry path never fired
+    // here: a Watch- or Day-long modifier lasted for ever. The `stretch`/`shift`
+    // ids are relabelled Watch/Day and no rest of either id exists to press.
+    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { encounterEnd: true } },
+    { id: 'stretch', label: 'Watch', abbrev: 'WCH', expiresOn: { sessionStart: true } },
+    { id: 'shift', label: 'Day', abbrev: 'DAY', expiresOn: { sessionStart: true } },
+    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
     { id: 'permanent', label: 'Permanent', abbrev: '∞' },
   ],
   terms: {
@@ -368,9 +408,6 @@ export const travellerEngine: SystemEngine = {
     encumbrance: 'Encumbrance',
     // Traveller has no hit points; END is the pool a hit actually depletes.
     participantHealth: 'Current END',
-    creatureHealth: 'END',
-    creatureArmor: 'Armour',
-    creatureMovement: 'Mv',
     conditionExamples: 'e.g. stunned, wounded',
     encounterTagExamples: 'e.g. boarding, starport, pirates',
     locationExample: 'e.g. Cargo Bay 3',
@@ -414,6 +451,10 @@ export const travellerEngine: SystemEngine = {
   },
   // Psionics exist but the app does not automate a PP economy yet.
   magic: null,
+  encumbrance: {
+    limit: computeTravellerCarryLimit,
+    load: computeTravellerLoad,
+  },
   // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
   rest: null,
   // No death-roll track; a downed character is handled by the damage track.

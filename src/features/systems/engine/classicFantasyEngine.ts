@@ -1,4 +1,12 @@
-import { computeDerivedValues, computeSkillValue } from '../../../utils/derivedValues';
+import {
+  computeCarriedWeight,
+  computeDerivedValues,
+  computeEncumbranceLimit,
+  computeMaxPreparedSpells,
+  computeSkillValue,
+  effectiveAttribute,
+} from '../../../utils/derivedValues';
+import { isMetalEquipped } from '../../../utils/metalDetection';
 import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../../utils/boonBane';
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
@@ -12,6 +20,18 @@ const classicFantasyCoinDenominations: CurrencyDenomination[] = [
   { id: 'silver', label: 'Silver', abbr: 's', value: 10 },
   { id: 'copper', label: 'Copper', abbr: 'c', value: 1 },
 ];
+
+/**
+ * Skill value at or below which a roll cannot fail.
+ *
+ * @remarks
+ * A natural 1 always succeeds, so a skill of 1 succeeds on exactly the roll it
+ * needs and can never miss. Named rather than written inline because the skills
+ * screen used to compute it as `supportsMarks && value === 1` — an unrelated
+ * capability standing in for "is this roll-under", with the threshold hardcoded
+ * beside it. The rule is Dragonbane's, so it belongs here.
+ */
+const CLASSIC_AUTO_SUCCESS_AT = 1;
 
 /** Formats a skill's success probability string for the current boon/bane state. */
 export function formatSkillProbability(value: number, state: BoonBaneState): string {
@@ -109,24 +129,39 @@ const classicFantasyRests: RestDefinition[] = [
  * (HP is a single pool) and death is handled by the {@link features/systems/engine/types!DeathModel | DeathModel} instead.
  */
 export const classicFantasyEngine: SystemEngine = {
-  resolution: 'd20-roll-under',
-  hasMagic: true,
   attributeBadge: () => null,
   attributeIds: ['str', 'con', 'agl', 'int', 'wil', 'cha'],
   skill: {
     valueLabel: 'Value',
     range: { min: 0, max: 20 },
     // Dragonbane advancement stops at 18 even though the sheet accepts 20.
-    advancementMax: 18,
     defaultValue: 0,
     display: (value: number) => `${value}`,
+    // Roll-under: the target number stands alone, with the odds beneath it.
+    // `formatSkillProbability` above existed with no caller; this is it.
+    //
+    // `detail` is always the unmodified chance, so a screen can lead with it and
+    // name the state that applies; boon and bane are offered as alternatives
+    // rather than folded in, which is what lets the dashboard list all three and
+    // the skills screen pick one.
+    describe: (value: number) => ({
+      headline: `${value}`,
+      detail: formatSkillProbability(value, 'none'),
+      alternatives: [
+        { id: 'boon', label: 'boon', detail: formatSkillProbability(value, 'boon') },
+        { id: 'bane', label: 'bane', detail: formatSkillProbability(value, 'bane') },
+      ],
+      note: value <= CLASSIC_AUTO_SUCCESS_AT ? 'auto-success' : undefined,
+    }),
     supportsMarks: true,
     supportsBoonBane: true,
     // Roll-under: 0 means untrained, so a skill matters once trained or raised.
     isRelevant: skill => !!skill && (skill.value > 0 || skill.trained),
     computeValue: (skill, character, trained) =>
       skill.linkedAttributeId
-        ? computeSkillValue(character.attributes?.[skill.linkedAttributeId] ?? 10, trained)
+        // Through the resolver: read raw, an `attr:` modifier moved the
+        // attribute's own display and left every skill derived from it alone.
+        ? computeSkillValue(effectiveAttribute(character, skill.linkedAttributeId, 10), trained)
         : trained
           ? Math.max(skill.baseChance * 2, 1)
           : skill.baseChance,
@@ -165,10 +200,12 @@ export const classicFantasyEngine: SystemEngine = {
     { id: 'pushed', label: 'Pushed' },
   ],
   timeUnits: [
-    { id: 'round', label: 'Round', abbrev: 'RND' },
-    { id: 'stretch', label: 'Stretch', abbrev: 'STR' },
-    { id: 'shift', label: 'Shift', abbrev: 'SHI' },
-    { id: 'scene', label: 'Scene', abbrev: 'SCN' },
+    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { rest: 'round' } },
+    { id: 'stretch', label: 'Stretch', abbrev: 'STR', expiresOn: { rest: 'stretch' } },
+    { id: 'shift', label: 'Shift', abbrev: 'SHI', expiresOn: { rest: 'shift' } },
+    // A scene is an encounter here; nothing expired this before.
+    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
+    // No expiry: removed by hand.
     { id: 'permanent', label: 'Permanent', abbrev: '∞' },
   ],
   terms: {
@@ -182,12 +219,14 @@ export const classicFantasyEngine: SystemEngine = {
   labels: {
     abilitiesScreen: 'Abilities / Magic',
     resourcesPanel: 'Resources',
+    // The paper sheet names these blocks differently from the screen. Declared
+    // here so the printed Dragonbane sheet is unchanged while the strings stop
+    // being literals in shared print code.
+    printResources: 'Hit Points & Willpower',
+    printAbilities: 'Abilities',
     attributesPanel: 'Attributes',
     encumbrance: 'Encumbrance',
     participantHealth: 'Current HP',
-    creatureHealth: 'HP',
-    creatureArmor: 'Armor',
-    creatureMovement: 'Mv',
     conditionExamples: 'e.g. poisoned, prone',
     encounterTagExamples: 'e.g. ambush, forest, kobolds',
     locationExample: 'e.g. Riverside Clearing',
@@ -210,7 +249,24 @@ export const classicFantasyEngine: SystemEngine = {
   damageTrack: null,
   // Willpower economy: a power level `n` spell costs `n * 2` WP; a magic trick
   // (power level 0) costs 1. Was hardcoded in the ability/magic modules. E11.
-  magic: { resourceId: 'wp', powerLevels: [1, 2, 3], costPerLevel: 2, trickCost: 1 },
+  magic: {
+    resourceId: 'wp',
+    powerLevels: [1, 2, 3],
+    costPerLevel: 2,
+    trickCost: 1,
+    // INT's base chance caps prepared spells. Was computed by the magic screen
+    // for every system, Dragonbane rule and all.
+    maxPrepared: computeMaxPreparedSpells,
+    // Metal armour blocks casting. The screen imported the check directly and
+    // wrote its own warning, so every magical system inherited the rule.
+    castingImpairment: character =>
+      isMetalEquipped(character) ? 'Metal armour blocks spellcasting' : null,
+    trickSchools: ['trick', 'magic tricks'],
+  },
+  encumbrance: {
+    limit: computeEncumbranceLimit,
+    load: computeCarriedWeight,
+  },
   rest: classicFantasyRests,
   death: {
     triggerResourceId: 'hp',
@@ -219,8 +275,9 @@ export const classicFantasyEngine: SystemEngine = {
     deadLabel: 'DEAD',
     stabilizedLabel: 'Stabilized!',
     tracks: [
-      { id: 'deathRolls', label: 'Failures', max: 3, tone: 'danger' },
-      { id: 'deathSuccesses', label: 'Successes', max: 3, tone: 'success' },
+      // Plural on screen, singular as a printed column heading.
+      { id: 'deathRolls', label: 'Failures', max: 3, tone: 'danger', printLabel: 'Failure' },
+      { id: 'deathSuccesses', label: 'Successes', max: 3, tone: 'success', printLabel: 'Success' },
     ],
   },
   advancement: {

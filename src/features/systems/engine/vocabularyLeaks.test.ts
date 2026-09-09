@@ -20,7 +20,17 @@ import { join, relative } from 'node:path';
  * adapter, which is entitled to say HP) and get suppressed rather than fixed.
  */
 
-const SCAN_DIRS = ['src/features/encounters', 'src/features/playDashboard'];
+const SCAN_DIRS = [
+  'src/features/encounters',
+  'src/features/playDashboard',
+  // Widened: the printed sheet said "Hit Points & Willpower" and "Abilities"
+  // outright, each with a comment explaining that reading the engine would
+  // change the Dragonbane sheet. Both statements were true; the conclusion —
+  // leave one ruleset's words in shared code — was not. Those strings are
+  // `labels.printResources` / `labels.printAbilities` now.
+  'src/screens',
+  'src/components',
+];
 
 /** Files entitled to say a ruleset's own words. */
 const ALLOWED = [
@@ -28,6 +38,10 @@ const ALLOWED = [
   'engine/',
   // Fallback defaults live next to the prop that overrides them.
   'QuickCreateParticipantFlow.tsx',
+  // A panel that exists only for the ruleset whose term it is. `bennies` is a
+  // SWADE panel key; the fallback shows only if that system stops naming its
+  // own resource.
+  'BenniesModule.tsx',
 ];
 
 /**
@@ -35,7 +49,7 @@ const ALLOWED = [
  * literals. Requires a word boundary so `currentHp`, `maxHp`, `hpMax` and
  * `stats.hp` — field names, which are deliberately fixed — do not match.
  */
-const BANNED = /(?<![\w.])(HP|Hit Points)(?![\w])/;
+const BANNED = /(?<![\w.])(HP|Hit Points|WP|Willpower|Bennies|Benny)(?![\w])/;
 
 function walk(dir: string): string[] {
   let out: string[] = [];
@@ -80,7 +94,8 @@ describe('engine vocabulary is not hardcoded in shared UI', () => {
     expect(
       offenders,
       `${relative(process.cwd(), file)} hardcodes a health noun. Read it from ` +
-        `engine.labels (participantHealth / creatureHealth) so a Traveller ` +
+        `engine.labels.participantHealth, or creatureStatLabel() for a ` +
+        `creature stat, so a Traveller ` +
         `encounter says END:\n` +
         offenders.map(o => `  line ${o.number}: ${o.line}`).join('\n'),
     ).toEqual([]);

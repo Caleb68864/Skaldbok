@@ -3,7 +3,9 @@ import * as creatureTemplateRepository from '../../storage/repositories/creature
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { CharacterRecord } from '../../types/character';
 import { useCampaignContext } from '../campaign/CampaignContext';
-import { useSystemEngineFor } from '../systems/engine';
+import { useSystemDefinition } from '../systems/useSystemDefinition';
+import { creatureStatLabel, resolveCreatureHealthStatId } from '../bestiary/creatureStats';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 
 export interface EncounterParticipantPickerProps {
@@ -25,7 +27,7 @@ export function EncounterParticipantPicker({
   const { activeCampaign, activeParty } = useCampaignContext();
   // The creature health noun is the ruleset's; this form said "HP" while the
   // drawer that opens the same participant said "END".
-  const engine = useSystemEngineFor(activeCampaign?.system);
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const [mode, setMode] = useState<Mode>('search');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CreatureTemplate[]>([]);
@@ -146,7 +148,7 @@ export function EncounterParticipantPicker({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          {engine.labels.creatureHealth} (optional)
+          {creatureStatLabel(system, resolveCreatureHealthStatId(system))} (optional)
           <input
             type="number"
             value={newHp}
@@ -191,6 +193,7 @@ export function EncounterParticipantPicker({
         autoFocus
         value={query}
         onChange={(e) => setQuery(e.target.value)}
+        aria-label="Search bestiary"
         placeholder="Search bestiary…"
         className="px-2 py-1 border border-neutral-300 rounded"
       />

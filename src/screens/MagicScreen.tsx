@@ -14,8 +14,6 @@ import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { useToast } from '../context/ToastContext';
 import { useIsEditMode } from '../utils/modeGuards';
-import { computeMaxPreparedSpells } from '../utils/derivedValues';
-import { isMetalEquipped } from '../utils/metalDetection';
 import { compareSpellsByRankThenName, isMagicTrick } from '../utils/spells';
 import { toSpells, toHeroicAbilities, withSpells, withHeroicAbilities } from '../utils/abilities';
 import { useSystemEngine } from '../features/systems/engine';
@@ -75,7 +73,7 @@ export default function MagicScreen() {
   useEffect(() => {
     if (spellDrawerOpen && editingSpell) {
       setSName(editingSpell.name); setSSchool(editingSpell.school);
-      setSRank(String(editingSpell.rank ?? (isMagicTrick(editingSpell) ? 0 : editingSpell.powerLevel ?? 1)));
+      setSRank(String(editingSpell.rank ?? (isMagicTrick(editingSpell, engine.magic?.trickSchools) ? 0 : editingSpell.powerLevel ?? 1)));
       setSRequirements(editingSpell.requirements?.join(', ') ?? '');
       setSCastingTime(editingSpell.castingTime ?? 'action');
       setSRange(editingSpell.range); setSDuration(editingSpell.duration);
@@ -116,7 +114,7 @@ export default function MagicScreen() {
   const spellsTerm = engine.terms.spells;
   const magicResourceTerm = engine.terms.magicResource;
 
-  if (!engine.hasMagic) {
+  if (engine.magic === null) {
     return (
       <div className="p-[var(--space-md)]">
         <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] mb-[var(--space-md)]">
@@ -134,24 +132,30 @@ export default function MagicScreen() {
   // spells and heroic abilities, so it reads through the typed projections.
   const allSpells = toSpells(character.abilities);
   const heroicAbilities = toHeroicAbilities(character.abilities);
-  const maxPrepared = computeMaxPreparedSpells(character);
-  const preparedCount = allSpells.filter(s => s.prepared && !isMagicTrick(s)).length;
-  const metalBlocked = isMetalEquipped(character);
+  // Both rules come from the engine now. `computeMaxPreparedSpells` reads INT
+  // through Dragonbane's base-chance table, and `isMetalEquipped` is
+  // Dragonbane's armour rule; imported here, every magical system inherited
+  // both whether or not it has them.
+  const maxPrepared = engine.magic.maxPrepared?.(character) ?? Infinity;
+  const trickSchools = engine.magic.trickSchools;
+  const preparedCount = allSpells.filter(s => s.prepared && !isMagicTrick(s, trickSchools)).length;
+  const castingImpairment = engine.magic.castingImpairment?.(character) ?? null;
   // The pool spent on casting comes from `engine.magic.resourceId`; it is not
   // assumed to be `wp`. Reading `resources.wp` directly meant any system whose
   // magic resource is named anything else showed 0 available and could never
-  // cast. `engine.hasMagic` is already true here, so `magic` is non-null, but
-  // the fallback keeps this honest if the two ever disagree.
-  const magicResourceId = engine.magic?.resourceId ?? 'wp';
+  // cast. The null check above is the only guard needed — there is no longer a
+  // second `hasMagic` boolean that could disagree with it.
+  const magicResourceId = engine.magic.resourceId;
   const currentMagicResource = character.resources?.[magicResourceId]?.current ?? 0;
-  // Dragonbane's economy is the fallback, matching what the screen hardcoded
-  // before, so a system that declares `hasMagic` without a `magic` model keeps
-  // working rather than rendering a card with no power levels.
-  const magicModel = engine.magic ?? { powerLevels: [1, 2, 3], costPerLevel: 2, trickCost: 1 };
+  // No fallback: this used to be `engine.magic ?? { [1,2,3], 2, 1 }` — Dragonbane's
+  // economy, standing in for a system that claimed `hasMagic` without declaring a
+  // model. That mismatch cannot exist now the boolean is gone, and a silent
+  // Dragonbane default would be worse than an obvious absence anyway.
+  const magicModel = engine.magic;
   const overLimit = preparedCount > maxPrepared;
 
   const visibleSpells = (filter === 'prepared'
-    ? allSpells.filter(s => s.prepared === true || isMagicTrick(s))
+    ? allSpells.filter(s => s.prepared === true || isMagicTrick(s, trickSchools))
     : allSpells
   ).slice().sort(compareSpellsByRankThenName);
 
@@ -269,7 +273,7 @@ export default function MagicScreen() {
         byDuration.set(eff.duration, arr);
       }
       const newModifiers: TempModifier[] = Array.from(byDuration.entries()).map(([dur, effs]) => ({
-        id: crypto.randomUUID(),
+        id: generateId(),
         label: spell.name,
         effects: effs.map(e => ({ stat: e.stat, delta: e.delta })),
         duration: dur as TempModifier['duration'],
@@ -317,9 +321,11 @@ export default function MagicScreen() {
       )}
 
       {/* ── Metal warning banner (spells only) ── */}
-      {showMagic && metalBlocked && (
+      {showMagic && castingImpairment && (
         <div className="bg-[color-mix(in_srgb,var(--color-danger)_15%,transparent)] border border-[var(--color-danger)] rounded-[var(--radius-sm)] px-[var(--space-md)] py-[var(--space-sm)] mb-[var(--space-sm)] text-[length:var(--font-size-sm)] text-[var(--color-text)]">
-          ⚠ Metal equipment equipped — spellcasting is impaired!
+          {/* The engine says what is wrong; this used to be Dragonbane's metal
+              rule written into a shared screen. */}
+          ⚠ {castingImpairment}
         </div>
       )}
 
@@ -372,7 +378,7 @@ export default function MagicScreen() {
             <MagicSpellCard
               key={spell.id}
               spell={spell}
-              isTrick={isMagicTrick(spell)}
+              isTrick={isMagicTrick(spell, trickSchools)}
               isGrimoireView={filter === 'grimoire'}
               preparedCount={preparedCount}
               maxPrepared={maxPrepared}

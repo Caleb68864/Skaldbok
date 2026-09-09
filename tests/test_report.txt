@@ -1,4 +1,4 @@
-Skaldmark E2E Test Report — 1 iterations
+Skaldmark E2E Test Report â€” 1 iterations
 ============================================================
 
 Total tests: 14

@@ -22,7 +22,6 @@ import {
   deleteEdgesToNode,
 } from '../../storage/repositories/kbEdgeRepository';
 import { extractLinksFromTiptapJSON } from './tiptapParser';
-import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { db } from '../../storage/db/client';
 import type { KBNode, KBEdge } from '../../storage/db/client';
@@ -68,6 +67,25 @@ function placeholderNodeId(campaignId: string, label: string): string {
 }
 
 /**
+ * Id for the tag node behind a `#descriptor`.
+ *
+ * @remarks
+ * Same shape as {@link placeholderNodeId}, for the same two reasons: the old
+ * `tag-${slug}` form had no campaign in it, so `#lore` in two campaigns was
+ * one shared row whose `campaignId` was whichever synced last, and slugging
+ * merged `Old Gods` with `Old-Gods`. Existing tag nodes under the old ids are
+ * replaced on the next graph rebuild.
+ */
+/** Id of the edge `from —type→ to`; one such edge can exist, so its id is its identity. */
+function edgeIdFor(fromId: string, type: string, toId: string): string {
+  return `edge:${type}:${fromId}:${toId}`;
+}
+
+function tagNodeIdFor(campaignId: string, label: string): string {
+  return `tag:${campaignId}:${label.trim().toLowerCase().replace(/\s+/g, ' ')}`;
+}
+
+/**
  * Repoints edges from a placeholder onto the real node that now carries its
  * label, then removes the placeholder.
  *
@@ -104,7 +122,11 @@ async function absorbPlaceholder(
       await deleteEdge(edge.id);
       continue;
     }
-    await upsertEdge({ ...edge, toId: realNodeId });
+    // The old id encodes the placeholder as target; the edge is now a
+    // different edge and takes that edge's id, so a later sync that computes
+    // the same id finds this row rather than adding a twin.
+    await deleteEdge(edge.id);
+    await upsertEdge({ ...edge, id: edgeIdFor(edge.fromId, edge.type, realNodeId), toId: realNodeId });
     alreadyLinked.add(`${edge.fromId}:${edge.type}`);
   }
   await deleteNode(stubId);
@@ -279,7 +301,7 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
     // Process descriptors
     for (const label of descriptors) {
       // Descriptors become tag nodes
-      let tagNodeId = `tag-${label.toLowerCase().replace(/\s+/g, '-')}`;
+      const tagNodeId = tagNodeIdFor(note.campaignId, label);
       const existingTag = await db.kb_nodes.get(tagNodeId).catch(() => null);
       if (!existingTag) {
         await upsertNode({
@@ -306,7 +328,11 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
     for (const [key, { toId, type }] of desiredEdges.entries()) {
       if (!existingEdgeKeys.has(key)) {
         await upsertEdge({
-          id: generateId(),
+          // Deterministic, not generated: two tabs syncing the same note both
+          // diff against the edge set they read, both decide this edge is
+          // missing, and both put() — with a random id that was two rows and
+          // a doubled backlink; with this id the second put is a no-op.
+          id: edgeIdFor(noteNodeId, type, toId),
           fromId: noteNodeId,
           toId,
           type,

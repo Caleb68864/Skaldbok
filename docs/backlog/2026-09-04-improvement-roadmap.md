@@ -6,7 +6,18 @@ consistency** (rules that still live in screens or in one ruleset's helpers
 instead of the `SystemEngine`), and **functionality / storage conventions**
 (workstreams A–G). A second pass added **product gaps and reachability**,
 **build, tooling, tests and performance**, and **documentation drift**
-(workstreams H–J). Nothing in this document has been fixed yet.
+(workstreams H–J).
+
+> **Reconciled 2026-09-08** by a five-pass re-audit (notes in `vault/`,
+> gitignored; cross-project view in `../../../ROADMAP.md`). Two entries were
+> checked against the tree and found wrong rather than merely stale:
+> **H1 is withdrawn** (the Knowledge Base is reachable from the Session tab)
+> and **H3 is rescoped** (four entity types already restore, not one). Acting
+> on either as originally written would have deleted a live feature or
+> mis-scoped the work. Baseline on that date: `tsc -b` clean, `vitest run`
+> 1483 tests green across 86 files, `vite build` passing. The many **DONE**
+> markers below were added as that work landed and were not re-verified in
+> this pass.
 
 Status values: **OPEN** · **DONE** (record the commit) · **BLOCKED** (needs a
 product decision) · **WONTFIX** (record why).
@@ -27,7 +38,7 @@ suggested order of attack across workstreams is at the end.
 
 These produce wrong persisted data today. Fix before anything else.
 
-### A1. Character delete is a hard delete — OPEN (V)
+### A1. Character delete is a hard delete — DONE (743c828, with Trash in 435feb6)
 - **Where:** `src/features/characters/useCharacterActions.ts:57-58`;
   `src/storage/repositories/characterRepository.ts:98` (`remove`) and `:115`
   (`softDelete`, no callers). Caller `CharacterLibraryScreen.tsx:192` comments
@@ -47,7 +58,7 @@ These produce wrong persisted data today. Fix before anything else.
   `campaign.activeCharacterMemberId` dangling) and `ReferenceScreen.tsx:369`
   (`referenceNoteRepository.remove`; `ReferenceNote` has no `deletedAt`).
 
-### A2. Derived-stat override bakes in temporary modifiers — OPEN (V)
+### A2. Derived-stat override bakes in temporary modifiers — DONE (0159487)
 - **Where:** `src/screens/SheetScreen.tsx:1235`
   (`computedValue={resolved.isModified ? resolved.display : resolved.computed}`);
   `src/screens/GearScreen.tsx:590-594`; `src/components/fields/DerivedFieldDisplay.tsx:29,65`.
@@ -61,7 +72,7 @@ These produce wrong persisted data today. Fix before anything else.
   In `DerivedFieldDisplay`, skip `onOverride` when the committed value equals
   the seed so a tap-and-leave is a no-op.
 
-### A3. Stale full-record puts race the active character's autosave — OPEN (V for A3a, R for others)
+### A3. Stale full-record puts race the active character's autosave — DONE (55e259d)
 Root cause shared by four sites: code loads a character from the DB, mutates,
 and `put`s the whole record while `ActiveCharacterContext` still holds the
 previous in-memory record. The next autosave (or the next `updateCharacter`)
@@ -87,7 +98,7 @@ writes the stale record back.
   active character, route through `updateCharacter`; otherwise `flushAll()`
   first, then patch. Wrap multi-row moves in one transaction.
 
-### A4. Attribute normalisation clamps to Dragonbane's range — OPEN (V)
+### A4. Attribute normalisation clamps to Dragonbane's range — DONE (33cca29)
 - **Where:** `src/utils/characterNormalization.ts:53`
   `clampNumber(value, 1, 30, 10)`; `:17` clamps skills to `0..20`; applied on
   every save at `characterRepository.ts:72`.
@@ -107,7 +118,7 @@ writes the stale record back.
   `version()` block and soft-delete them in the same `txId`; or keep the blob
   and reclaim it from a purge keyed on `note.deletedAt` age.
 
-### A6. Latent crash: `restoreGroup` queries an index that does not exist — OPEN (V)
+### A6. Latent crash: `restoreGroup` queries an index that does not exist — DONE (5601188)
 - **Where:** `src/storage/repositories/referenceSectionRepository.ts:76`
   `where('softDeletedBy')`; `src/storage/db/client.ts:572` declares
   `referenceSections: 'id, category, groupId, order, updatedAt, deletedAt'`.
@@ -116,7 +127,7 @@ writes the stale record back.
 - **Fix:** `version(19).stores({ referenceSections: '…, softDeletedBy' })` and a
   round-trip test (soft-delete group → restore → sections back).
 
-### A7. v7 migration body was edited after later versions shipped — OPEN (V)
+### A7. v7 migration body was edited after later versions shipped — DONE (5601188)
 - **Where:** `src/storage/db/client.ts:309-342`; commit `1b5e70a` added the
   `campaignId`/`body`/`status`/`pinned` backfill inside `version(7)` while the
   schema was already at v14. No later version re-runs the backfill (checked
@@ -205,7 +216,7 @@ The app has no eval, no `dangerouslySetInnerHTML`, no network calls, no CDN
 scripts, all object URLs are revoked, and exports skip deleted rows. Every gap
 is on the **import** path, where data is untrusted.
 
-### B1. Legacy bare-character import skips validation — OPEN (V)
+### B1. Legacy bare-character import skips validation — DONE (7bf2a4e)
 - **Where:** `src/utils/import/bundleParser.ts:67-68` routes any JSON without a
   `version` key to `handleLegacySkaldbok` (`:144-171`), which never calls
   `migrateCharacter`. `validateContentsEntities` (`:177`) runs only on the
@@ -218,7 +229,7 @@ is on the **import** path, where data is untrusted.
 - **Fix:** Run `migrateCharacter` inside `handleLegacySkaldbok` and return a
   failure result on throw.
 
-### B2. Bundle attachments are never validated; filename reaches ZIP paths — OPEN (R)
+### B2. Bundle attachments are never validated; filename reaches ZIP paths — DONE (7bf2a4e mime/size, 1f7c538 filename)
 - **Where:** `bundleParser.ts:251` claims attachments are "validated via
   bundleContentsSchema already", but the parser uses
   `bundleEnvelopeParseSchema` whose `contents` is `z.record(z.any())`
@@ -235,14 +246,14 @@ is on the **import** path, where data is untrusted.
   `filename` on import (as `attachmentRepository.ts:25` does) or
   `basename`+slugify at export.
 
-### B3. Session ZIP export leaks private notes' attachments — OPEN (V)
+### B3. Session ZIP export leaks private notes' attachments — DONE (d7bea56)
 - **Where:** `src/features/export/useExportActions.ts:237` computes
   `shareableNotes = excludePrivateNotes(linkedNotes)`; the attachment loop at
   `:256` iterates `linkedNotes`. The sidecar (`renderAttachmentSidecar.ts:16`)
   also includes the private note's title.
 - **Fix:** Loop over `shareableNotes`.
 
-### B4. Id-collision guard is bypassable — OPEN (R)
+### B4. Id-collision guard is bypassable — DONE (91a1722)
 - **Where:** `mergeEngine.ts:282-291` treats a same-id row as a collision only
   when *both* `createdAt` exist and differ. A record with no `createdAt` and a
   far-future `updatedAt` passes `:297` and `:317` and overwrites the local row
@@ -251,7 +262,7 @@ is on the **import** path, where data is untrusted.
 - **Fix:** Mint a fresh id when `createdAt` is absent or differs (as
   `importExport.ts:149-152` does). Treat a tombstoned local row as a collision.
 
-### B5. Prototype-key lookups on attacker-controlled strings — OPEN (R)
+### B5. Prototype-key lookups on attacker-controlled strings — DONE (ce28c51)
 - `importExport.ts:29` `SYSTEM_ID_ALIASES[normalized]` — `systemId:
   "__proto__"` persists `systemId: {}`.
 - `mergeEngine.ts:106` `LINK_ENDPOINT_TABLES[type]` — throws inside `db.table`,
@@ -262,7 +273,7 @@ is on the **import** path, where data is untrusted.
   guard fails **open**.
 - **Fix:** `Object.hasOwn` at every site, or `Object.create(null)` maps.
 
-### B6. Remote-URL portrait makes a network request — OPEN (R)
+### B6. Remote-URL portrait makes a network request — DONE (db42a26, tightened in ce28c51)
 - **Where:** `portraitUri` (`src/types/character.ts:490`) is unconstrained
   (`schemas/character.schema.ts:135-139` is `passthrough()`), rendered as
   `<img src>` at `CharacterPortrait.tsx:139,208` and `ProfileScreen.tsx:146`.
@@ -271,21 +282,21 @@ is on the **import** path, where data is untrusted.
 - **Fix:** `z.string().regex(/^data:image\/(jpeg|png|webp|gif);base64,/).max(N)`,
   plus B7.
 
-### B7. No Content-Security-Policy — OPEN (R)
+### B7. No Content-Security-Policy — DONE (ce28c51)
 - `index.html` has none. Defence in depth, and it neutralises B6 via `img-src`.
 - **Fix:** `<meta http-equiv="Content-Security-Policy" content="default-src
   'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline';
   script-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'">`.
   Verify Tailwind/Tiptap inline styles and the PWA manifest still load.
 
-### B8. Full DB dump left in localStorage forever — OPEN (R)
+### B8. Full DB dump left in localStorage forever — DONE (5601188)
 - `src/storage/db/migrations/pre-encounter-rework-backup.ts:44-48` writes every
   domain table to `localStorage["forge:backup:…"]` during the v8 upgrade.
   Nothing removes it; it survives campaign deletion and sits outside the
   soft-delete model.
 - **Fix:** Clear the key in the next `version()` upgrade.
 
-### B9. Unbounded input sizes on the bundle path — OPEN (R)
+### B9. Unbounded input sizes on the bundle path — DONE (91a1722)
 - `useImportActions.ts:98` `file.text()` with no size check; `parseBundle`
   parses, then `verifyContentHash` (`bundleParser.ts:291`) re-parses; pre-v1
   bundles are re-serialised and re-parsed (`:85`). `baseNoteSchema.body` is
@@ -294,13 +305,25 @@ is on the **import** path, where data is untrusted.
 - **Fix:** Reject on `file.size` above a cap before `text()`; gate images as
   `CharacterPortrait.tsx:14-15` already does.
 
-### B10. Reference import and editor bodies are unvalidated JSON — OPEN (R)
+### B10. Reference import and editor bodies are unvalidated JSON — MOSTLY DONE (4d6d9e7); editor bodies remain
 - `src/screens/ReferenceScreen.tsx:328` `JSON.parse(...) as ReferenceImportBundle`
   → `referenceSectionRepository.importBundle` (`:160-200`) stores
   `columns/rows/items/paragraphs` as-is; `parseEditorBody` (`:60,:64`) casts.
   Rendering is React text so no XSS; a malformed shape is a render error and a
   stuck section.
 - **Fix:** Zod schemas for `ReferenceImportBundle` and the table/kv bodies.
+- **Closed for the import path.** `importBundle` now takes `unknown` and
+  validates it itself, so the enforcement is at the repository rather than at a
+  cast in one screen. `referenceImportSectionSchema` / `…GroupSchema` /
+  `…PageSchema` in `types/reference.ts` follow the row-schema pattern already
+  there; `utils/import/referenceBundleParser.ts` filters row by row with
+  `safeParse` and returns warnings, mirroring `bundleParser`. A bad row is
+  dropped and reported in the screen's status line instead of being written and
+  crashing the screen on the next visit — which the id-keyed `bulkPut` made
+  permanent, since a malformed row could land on a good one. Six tests in
+  `referenceSectionRepository.test.ts`; five fail with the validation bypassed.
+- **Still open:** `parseEditorBody`'s two casts (`:60`, `:64`) — the in-app
+  table/key-value editor bodies. Same shape, different entry point.
 
 ---
 
@@ -311,7 +334,7 @@ The engine contract says a modifier target must reach a consumer. The
 attribute values, so any `attr:` target trivially "moves" the fingerprint even
 when no derived number changes.
 
-### C1. Attribute modifiers never reach derived stats — OPEN (V)
+### C1. Attribute modifiers never reach derived stats — DONE (80c510d)
 - **Where:** `src/utils/derivedValues.ts:81,86,98,109,120,151` read
   `character.attributes['con'|'wil'|'str'|'agl'|'int']` raw;
   `savageWorldsEngine.ts:47-49` `traitDie` reads `character.attributes[id]` raw
@@ -376,7 +399,7 @@ generic code, in one adapter's private helper, or as a `systemId ===` branch in
 disguise. The fix pattern is the same every time: add the engine field, make
 every adapter declare it, make the screen read it.
 
-### D1. Encumbrance: three formulas, one wired to the wrong engine — OPEN (V for the import, R for details)
+### D1. Encumbrance: three formulas, one wired to the wrong engine — DONE (2a48cf0)
 - **Where:** classic `ceil(STR/2) + capacityBonus` (`derivedValues.ts:119-127`);
   Traveller `STR + END` (`travellerEngine.ts:68-72`); Savage `(sides+bonus) × 5`
   (`savageWorldsEngine.ts:103`). Only classic honours `capacityBonus`, so a
@@ -390,7 +413,7 @@ every adapter declare it, make the screen read it.
   `null` hides the panel. Party screens use
   `useSystemEngineFor(activeCampaign?.system)`.
 
-### D2. Modifier expiry is coupled to rest ids — OPEN (V)
+### D2. Modifier expiry is coupled to rest ids — DONE (0ee0e82)
 - **Where:** `SheetScreen.tsx:533-553` expires modifiers whose `duration ===
   rest.id` when that rest button is pressed. That is the *only* expiry path.
 - **What:** Traveller and Savage have `rest: null`, so no modifier ever expires
@@ -401,7 +424,7 @@ every adapter declare it, make the screen read it.
   and encounter end. Add a generic "advance time" control for systems with no
   rest ladder.
 
-### D3. Magic rules in the shared screen — OPEN (R)
+### D3. Magic rules in the shared screen — DONE (d34f5fd)
 - `src/screens/MagicScreen.tsx:17,137` `computeMaxPreparedSpells` reads
   `attributes['int']` raw (`derivedValues.ts:150-154`); `:18,139,320` the
   metal-armour-impairs-casting rule; `:145,150` fall back to `'wp'` and
@@ -415,7 +438,7 @@ every adapter declare it, make the screen read it.
   `engine.magic.castingImpairment?(character)`, `engine.magic.trickSchoolIds`;
   `magic === null` means no automation; render everything from the model.
 
-### D4. Savage condition effects are declared and unread — OPEN (R)
+### D4. Savage condition effects are declared and unread — DONE (8404407)
 - **Where:** `src/systems/savage-worlds/system.json` declares
   `conditions[].effect: {scope:'all-traits', modifier:-2}` etc.;
   `savageWorldsEngine.ts:130-131` hardcodes `distracted`/`entangled` instead.
@@ -427,7 +450,7 @@ every adapter declare it, make the screen read it.
   → { boonBane?, modifier, blocksActions }` driven by `conditions[].effect` for
   all three systems. Remove those names from `TOO_GENERIC`.
 
-### D5. Damage handling inlined per track kind — OPEN (R)
+### D5. Damage handling inlined per track kind — DONE (90ab3f7)
 - `DamageHealModule.tsx:6,97-139` imports `utils/damageTrack` directly, inlines
   `track.kind === 'levels'`, hardcodes `'shaken'`, "Shaken", "Wound", "under
   Toughness". `SheetScreen.tsx:43,746` imports `damageStatus`. `resolveDamage`'s
@@ -438,7 +461,7 @@ every adapter declare it, make the screen read it.
   Make `damageTrack.kind` and `attributeReadout` required rather than
   duck-typed.
 
-### D6. `systemId ===` branches in disguise — OPEN (V for SkillModule, R for rest)
+### D6. `systemId ===` branches in disguise — MOSTLY DONE (c45865e); skill marks remain
 - `SkillModule.tsx:38` `engine.resolution === 'd20-roll-under'` decides layout.
 - `SkillsScreen.tsx:187-219` `!engine.skill.supportsMarks` as "not d20";
   `supportsMarks && value === 1` for auto-success; imports
@@ -460,7 +483,7 @@ every adapter declare it, make the screen read it.
   currency card in `sheet.json`; log all `resourceIds`. Extend
   `engineConsumers.test.ts` to flag these patterns (F2).
 
-### D7. Print sheet is a Dragonbane skeleton — OPEN (R)
+### D7. Print sheet is a Dragonbane skeleton — DONE (1411b67)
 - `src/components/PrintableSheet.tsx`: `:238` abilities gated on `hasMagic`
   (Traveller Talents never print); `:140` raw attributes; `:403-410`
   `charSkill?.value ?? ''` (untrained skills print blank); `:724-753`
@@ -474,7 +497,7 @@ every adapter declare it, make the screen read it.
   `resolveSkillValue`, `engine.skill.computeValue`; iterate
   `resolveSkillCategories`; gate abilities on `labels.abilitiesScreen !== null`.
 
-### D8. System-specific sheet panels in code — OPEN (R)
+### D8. System-specific sheet panels in code — DONE (a0d2af5)
 - `SheetScreen.tsx:120-155,969-1138` Traveller career/connection columns,
   Savage Edges/Hindrances titles and placeholders, `systemData` keys
   (`careerTerms`, `allies`, `edges`, …) all in code, while
@@ -486,7 +509,7 @@ every adapter declare it, make the screen read it.
 - **Fix:** `sheetPanels` in `system.json` rendered by one generic repeatable-rows
   panel; alias the two panel keys.
 
-### D9. Creature stats and encounter defaults (R)
+### D9. Creature stats and encounter defaults — DONE (7fb7d3f)
 - `useEncounter.ts:121-123` `template.stats?.hp`;
   `EncounterParticipantPicker.tsx:107` `{hp, armor: 0, movement: 0}`;
   `CombatEncounterView.tsx:245`; `QuickCreateParticipantFlow.tsx:23`
@@ -497,7 +520,7 @@ every adapter declare it, make the screen read it.
 - **Fix:** Derive everything from `resolveCreatureStatFields(system)`; delete
   the three `labels.creature*` keys.
 
-### D10. Session log vocabulary (R)
+### D10. Session log vocabulary — MOSTLY DONE (7fb7d3f); "Death Roll #n" remains
 - `useSessionLog.ts:278-290,306` `'success'|'failure'|'dragon'|'demon'`,
   `tags.push('Boon'|'Bane'|'Pushed')` (dead but exported; `formatSkillCheckTitle.ts`
   already uses `engine.outcomes`); `:387` `resourceId = 'hp'`; `:108-112`
@@ -505,7 +528,7 @@ every adapter declare it, make the screen read it.
   damage"); `:426-428` "Death Roll #n" ignoring `death.tracks[].label`; `:471`
   "Coins" ignoring `currency.label`.
 
-### D11. The health resource is named six ways — OPEN (V)
+### D11. The health resource is named six ways — PARTLY DONE (74bd175); health consolidation declined
 `primaryHealthResourceId`, `damageTrack.order[0]`, `death.triggerResourceId`,
 `terms.healthResource`, `labels.participantHealth`, `creatures.healthStatId`;
 `downLabel`/`deadLabel` exist on both `DamageTrackModel` and `DeathModel`.
@@ -515,7 +538,7 @@ hasMagic`). `skill.advancementMax` duplicates `advancement.maxSkillValue`.
 - **Fix:** `engine.health { resourceId, label, downLabel, deadLabel }`; derive
   `hasMagic` from `magic !== null`; drop `advancementMax`.
 
-### D12. Smaller leaks (R)
+### D12. Smaller leaks — MOSTLY DONE (1411b67); see the Progress note
 - `AttributeField.tsx:36` defaults `min = 3, max = 18`; `SheetScreen.tsx:801-808`
   passes `attr?.min` so an undeclared attribute silently gets 3..18. Make
   required.
@@ -589,7 +612,7 @@ counters; declare that on the resource (`ResourceDefinition.role: 'track' |
 restate `defaultMax`/`scale.ladder`; `scale.allowsPlus` and
 `damageTrack.penaltyPerLevel` are unread.
 
-### E4. Base adapter by declaration, not by id — OPEN (V)
+### E4. Base adapter by declaration, not by id — PARTLY DONE (518238d); selection by declaration remains
 `baseEngineFor` (`engine/index.ts:16-27`) maps by `system.id`, so a
 user-imported system silently gets Dragonbane formulas (d20 roll-under, HP/WP
 rests, death rolls). Let `system.json` declare `engine: 'd20-roll-under' |
@@ -597,6 +620,20 @@ rests, death rolls). Let `system.json` declare `engine: 'd20-roll-under' |
 and pick the adapter from that. This also removes the hand-maintained lockstep
 between `registry.ts` and `baseEngineFor`. Warn loudly (not just in DEV) when
 an unknown id falls back.
+
+**Done:** the loud warning, and more than a warning. The `if (system.id === …)`
+chain is now `SYSTEM_ADAPTERS`, a map, so "does this system have an adapter?" is
+answerable rather than a fallthrough; the warning fires in every environment
+(once per id, since this runs during render); `SystemEngine.fallbackRulesFor`
+carries the unsupported id and `CharacterSubNav` — the one component every
+character screen passes through — names the system and says the numbers below
+came from classic-fantasy's rules. `fallbackAdapter.test.ts` also enforces the
+`registry.ts` ↔ adapter lockstep CLAUDE.md describes, so a bundled system
+registered without an adapter now fails CI instead of shipping as Dragonbane.
+
+**Still open:** picking the adapter from a declared `engine:` discriminator
+rather than from the id, which is what would remove the lockstep rather than
+merely guard it.
 
 ### E5. Classic-fantasy helpers into `systems/classic-fantasy/classicMath.ts` — OPEN (R)
 Mirror `travellerMath.ts` and `savageMath.ts`: the `compute*` family in
@@ -626,24 +663,24 @@ to the same shape.
 
 ## Workstream F — Tests that would have caught the above
 
-### F1. Widen `vocabularyLeaks.test.ts` — OPEN (V)
+### F1. Widen `vocabularyLeaks.test.ts` — DONE (1411b67)
 `:23` scans only `features/encounters` and `features/playDashboard` for
 `HP|Hit Points`. Add `src/screens` and `src/components`; it catches
 `PrintableSheet.tsx:741` immediately. Add `WP`, `Bennies`, `Wounds`, `DM`,
 `Cr`, `gold` with an allowlist for adapters and `system.json`.
 
-### F2. Extend `engineConsumers.test.ts` — OPEN (V)
+### F2. Extend `engineConsumers.test.ts` — DONE (c45865e)
 It catches `systemId ===` but not `engine.resolution ===`, `supportsMarks` as
 a proxy, `'characteristicDMs' in derived`, or `!engine.damageTrack` as a layout
 switch. Add those patterns.
 
-### F3. Make the contract fingerprint honest — OPEN (V)
+### F3. Make the contract fingerprint honest — DONE (80c510d)
 `engineContract.test.ts:229` includes `attrs` via `getEffectiveValue`, so any
 `attr:` target moves the fingerprint even when no derived value changes. Either
 drop that line, or assert per target that at least one of `derived`, `badges`,
 `fields` or `skill` moves.
 
-### F4. Remove `effect`, `duration`, `recovery` from `TOO_GENERIC` — OPEN (V)
+### F4. Remove `effect` from `TOO_GENERIC` — DONE (8404407)
 `declaredCapabilities.test.ts:103-104`. They hide D4. Also align the staleness
 self-check (`:144-146`) with the main check's three read patterns.
 
@@ -710,19 +747,24 @@ For each repository with `softDelete`: delete → not in default reads → resto
 Findings from the second sweep: features that exist in code but cannot be
 reached, and safety or UX gaps that no single bug explains.
 
-### H1. The Knowledge Base is unreachable from the UI — OPEN (V)
-- **Where:** `src/routes/index.tsx:82-83` mounts `/kb` and `/kb/:nodeId`. The
-  only `navigate('/kb')` calls are inside the feature itself
-  (`src/features/kb/VaultBrowser.tsx:326,362`, `GraphView.tsx:273`). None of
-  the four navigation surfaces link to it: `BottomNav.tsx:14-16` (three tabs),
-  `CampaignHeader.tsx:186-221` (ships, settings, reference, library, profile),
-  `SessionSubNav.tsx:32-34,89` (session, log, ledger, route), `MoreScreen.tsx`.
-- **What:** `KnowledgeBaseScreen`, `VaultBrowser`, `NoteReader`, `GraphView`,
-  the d3 graph renderer and the `useKBSearch` MiniSearch index (~2 000 lines
-  and three d3 packages) are only reachable by typing the URL.
-- **Fix:** Either add it to the header menu / session sub-nav, or, if session
-  notes have superseded it, delete the feature and the d3 dependencies.
-  Decide before spending any more effort on it.
+### H1. The Knowledge Base is unreachable from the UI — WITHDRAWN (2026-09-08 audit)
+**This finding was wrong and no work should be scheduled against it.** The
+Knowledge Base *is* reachable without typing a URL. `SessionScreen.tsx:290`
+mounts `<VaultBrowser campaignId={...} compact />` (and again at `:600`), and
+`VaultBrowser`'s compact branch renders an "Open Knowledge Base →" button that
+calls `navigate('/kb')`. The original entry read the `navigate('/kb')` call
+sites as internal to the feature; the relevant fact is that the *component
+containing them* is mounted on the Session tab, so the path from a running app
+to `/kb` exists and is two taps.
+
+Verified 2026-09-08: `SessionScreen.tsx:14,290,600,603`,
+`VaultBrowser.tsx:314-326`, `KnowledgeBaseScreen.tsx:18,111`.
+
+The genuine orphan the entry was reaching for is **`MoreScreen`**, which really
+does have no link site — `/more` appears only as its own route definition at
+`routes/index.tsx:103`. That is already H2's territory; H2 stands and is where
+this belongs. Do not delete the KB feature or the d3 dependencies on the
+strength of this entry.
 
 ### H2. Navigation is five hand-maintained lists, one of them dead — OPEN (V)
 - **Where:** `BottomNav.tsx:14-16`, `CampaignHeader.tsx:186-221`,
@@ -737,9 +779,16 @@ reached, and safety or UX gaps that no single bug explains.
   surface) read through a hook, per the configuration rule. Delete
   `MoreScreen`. This is the natural home for the A8 bottom-nav toggles.
 
-### H3. Every soft-deleted entity except creatures is unrestorable — OPEN (V)
-Extends G5 with the list. Repositories that implement `restore` but have no UI
-calling it: `session`, `party` / `partyMember`, `ship`, `route`, `routePlan`,
+### H3. Many soft-deleted entities are unrestorable — OPEN, RESCOPED (2026-09-08 audit)
+**The original title and premise were stale.** Four types restore from the
+trash screen today, not one: `TrashScreen.tsx:80,91,102,113` wires Restore for
+characters, sessions, notes **and** creatures, and its empty-state text at
+`:172` says so. Sessions in particular are listed below as unrestorable and are
+not. The remaining work is real but smaller than written — re-verify each type
+below against `TrashScreen.tsx` before scoping.
+
+Repositories that implement `restore` but have no UI
+calling it (list as originally written, now known to over-count): `session`, `party` / `partyMember`, `ship`, `route`, `routePlan`,
 `ledger`, `ledgerSplit`, `ledgerAccount`, `recurringBill`,
 `inventoryContainer`, `referenceSection` (`restoreGroup` too). Callers of
 `restore` outside `storage/`: `TrashScreen.tsx:31` (creatures),
@@ -776,12 +825,16 @@ is a hard delete from the user's point of view.
 - **Fix:** A `useConfirm()` hook over the existing Modal primitive; a small link
   popover for Tiptap.
 
-### H6. Pinch zoom is disabled — OPEN (V)
+### H6. Pinch zoom is disabled — DONE (a41d237)
 - **Where:** `index.html:8` `maximum-scale=1.0, user-scalable=no`.
 - **What:** Fails WCAG 1.4.4 on Android (iOS ignores the attribute). For a
   tablet app with small stat tiles this matters.
 - **Fix:** Drop both attributes; use `touch-action: manipulation` on buttons to
   kill the double-tap delay instead.
+- **Closed:** Both attributes dropped, `viewport-fit=cover` added while the tag
+  was open. `src/pwa/viewport.test.ts` asserts neither property returns — this
+  is a line that gets re-added by reflex, as the standard cure for iOS
+  focus-zoom on inputs (the actual cure being a 16px input font size).
 
 ### H7. One error boundary for the whole app — OPEN (V)
 - **Where:** `src/app/App.tsx:20` wraps the routes in the only `ErrorBoundary`
@@ -814,13 +867,13 @@ is a hard delete from the user's point of view.
   is a per-mount index built with `addAllAsync`. KB nodes are synced from notes
   by `linkSyncEngine` (`noteRepository.ts:12-15`).
 - **Fix:** One search service, built once, incrementally maintained, exposed to
-  both screens. Relevant only if H1 keeps the KB.
+  both screens. (H1 is withdrawn — the KB is staying, so this applies.)
 
 ---
 
 ## Workstream I — Build, tooling, tests and performance (second pass)
 
-### I1. No linter, but ten lint suppressions — OPEN (V)
+### I1. No linter, but ten lint suppressions — DONE (6f3a37f)
 - **Where:** `package.json` has no `eslint`, no config file exists at the root,
   and there is no `lint` script. Yet
   `eslint-disable-next-line react-hooks/exhaustive-deps` appears ten times:
@@ -836,6 +889,31 @@ is a hard delete from the user's point of view.
   `eslint-plugin-react-hooks`, a `lint` script, and run it in the same place as
   `tsc -b`. Add `no-restricted-properties` for I6 and `no-restricted-syntax`
   for I4 while there. Prettier or an `.editorconfig` would also be new.
+- **Closed.** `eslint.config.js` (flat, ESLint 10) with `@eslint/js`
+  recommended, `typescript-eslint` recommended, `rules-of-hooks` (error),
+  `exhaustive-deps` (warn) and `react-refresh/only-export-components` (warn);
+  a `lint` script; a CI step between typecheck and test. Deliberately the rules
+  the tree already passes, so it is green the day it lands.
+- **It found a real crash on its first run.** `ManagePartyDrawer` called
+  `useModalBehaviour` after `if (!activeCampaign) return null`, so the drawer
+  threw "Rendered more hooks than during the previous render" whenever the
+  campaign context resolved after the drawer mounted — see L4.
+- **What it flags and this pass did not fix:** `preserve-caught-error` (new in
+  ESLint 10) at 119 sites where the repositories rethrow as
+  `Failed to …: ${String(err)}` with no `{ cause }`; turned **off** in the
+  config with that reason recorded, because 119 mechanical rewrites of
+  error-handling code in the commit that introduces a linter is how a linter
+  gets reverted. Worth doing as its own change. Also 35 warnings left standing:
+  25 `react-refresh/only-export-components` (context modules exporting a
+  provider beside its hook) and 10 `exhaustive-deps`. `no-explicit-any` is off
+  in `*.test.*` only, where `any` builds the deliberately malformed input the
+  test is about; it is an error in shipped source, where the single remaining
+  `any` (`CARD_REGISTRY`'s `ComponentType<any>`) now carries a live disable
+  comment explaining that `ComponentType` is contravariant in its props.
+- **Not done:** `no-restricted-properties` for I6, `no-restricted-syntax` for
+  I4, and the React Compiler rules that `eslint-plugin-react-hooks` v7 now
+  turns on in `recommended` (`purity`, `immutability`, `set-state-in-effect`,
+  `refs`, …). Those are refactors, not configuration.
 
 ### I2. No code splitting; every screen is in the first chunk — OPEN (V)
 - **Where:** `src/routes/index.tsx:3-22` imports all 21 screens statically.
@@ -867,7 +945,7 @@ is a hard delete from the user's point of view.
 - **Fix:** Move to tokens; guard with an ESLint `no-restricted-syntax` regex on
   `#[0-9a-f]{6}` in JSX.
 
-### I5. Test infrastructure is implicit — OPEN (V)
+### I5. Test infrastructure is implicit — PARTLY DONE (3e1d307); shared setup and coverage remain
 - **Where:** No `vitest.config.ts` (defaults: node environment, no
   `setupFiles`, no coverage), so each of the repository tests wires
   `fake-indexeddb` itself. 71 test files exist.
@@ -875,6 +953,13 @@ is a hard delete from the user's point of view.
   coverage on `src/storage/**` and `src/utils/migrations.ts` with a threshold,
   and a `typecheck` script so type errors are not only found by `build`.
   Update CLAUDE.md (see J1) — it still says tests cover "pure logic only".
+- **Done:** a DOM environment now exists (L1), opted into per file with an
+  `@vitest-environment jsdom` docblock rather than globally, so the pure files
+  keep the node environment and their speed. A `lint` script exists (I1);
+  `tsc -b` is still reached through `build` rather than a `typecheck` script.
+- **Still open:** the shared `setupFiles` for `fake-indexeddb/auto`, and
+  coverage with a threshold. Note that a global `setupFiles` would run for every
+  file including the pure ones, which is the trade-off that kept this per-file.
 
 ### I6. Bypassed shared helpers — OPEN (V)
 - **Ids:** `crypto.randomUUID()` called directly at `ToastContext.tsx:53`,
@@ -913,11 +998,16 @@ is a hard delete from the user's point of view.
   diagnostics" button on Settings that dumps it with app version, schema
   version and `storage.estimate()`.
 
-### I10. No continuous integration — OPEN (V)
+### I10. No continuous integration — DONE (bfdf641)
 - **Where:** No `.github/` directory; nothing runs `tsc -b`, `vitest` or the
   Playwright script on push.
 - **Fix:** One workflow: `npm ci`, `npm run build`, `npm test`. Add `lint`
   once I1 lands.
+- **Closed:** `.github/workflows/ci.yml` runs `npx tsc -b`, `npx vitest run` and
+  `npx vite build` on every branch push and pull request, typecheck first
+  because it is fastest and fails most often. The Playwright script is not
+  wired in — see I11, it does not run unattended in its current shape. Add
+  `lint` here once I1 lands.
 
 ### I11. The E2E suite is a stale Python script with a committed report — OPEN (V)
 - **Where:** `tests/e2e_full_test.py` (last touched 2026-07-30) still describes
@@ -955,6 +1045,205 @@ is a hard delete from the user's point of view.
 
 ---
 
+## Workstream K — Closed by the 2026-09-08 audit pass
+
+Findings from the re-audit that had no entry above, fixed in the same pass.
+Each was re-verified against the source before it was touched; every one of the
+ten in the brief was real. Each fix has a test that fails without it unless the
+line says otherwise.
+
+### K1. The campaign export was not a complete backup — DONE (cf471d7)
+- **Where:** `types/bundle.ts` and `utils/export/collectors.ts`.
+- **What:** `StorageSafetyCard.tsx:102` calls a campaign export "the only copy
+  that survives this device". It omitted **twelve of the twenty-six Dexie
+  tables**: `ships`, `ledgerEntries`, `ledgerAccounts`, `ledgerSplits`,
+  `recurringBills`, `routeStops`, `routePlans`, `kb_nodes`, `kb_edges`,
+  `referenceSections`, `referenceGroups`, and `systems`. A user-authored ruleset
+  in particular exists only in the local `systems` table, so a restore pointed
+  the campaign at a system the new device had never seen.
+- **Cause:** four hand-maintained copies of the entity-type list — the bundle
+  schema, the collector, the merge engine, and the import dialog's labels.
+- **Fix:** one registry, `types/bundleTables.ts`, that all four read, recording
+  both the mapping and the reason each excluded table (`appSettings`,
+  `metadata`, the legacy `referenceNotes`) stays behind.
+
+### K2. Nothing enforced Dexie-schema ↔ bundle-schema parity — DONE (cf471d7)
+- **What:** K1's real cause, and the reason it would have recurred on the next
+  table.
+- **Fix:** `utils/export/bundleParity.test.ts` walks `db.tables` at runtime and
+  fails on any table that is neither mapped into a bundle nor excluded with a
+  stated reason; seeds one row in every mapped table and fails if
+  `collectCampaignBundle` does not emit it; and runs a full export → wipe →
+  import round trip asserting every table comes back. A mapping with no
+  collector behind it fails as loudly as no mapping. Also pins that collection
+  is read-only — `ledgerSplitRepository` and `routePlanRepository` gained
+  `listByCampaign` because their only read path, `getOrCreateForCampaign`,
+  writes on a miss.
+- **Related:** this is most of **F5** (the import path now has round-trip
+  coverage for every entity type), though F5's four specific B-series cases are
+  still unwritten.
+
+### K3. Deleting a note hard-deleted its attachments — DONE (e092476)
+- **Where:** `useNoteActions.ts:187`, `attachmentRepository.ts:105`.
+- **What:** Trash restored the note and its edges; the photos were already
+  gone. Unrecoverable loss inside the one feature whose promise is that the
+  deletion can be taken back.
+- **Fix:** attachments carry `deletedAt`/`softDeletedBy` (schema `version(20)`
+  indexes both) and cascade inside `noteRepository.softDeleteWithLinks` under
+  the note's own transaction id. `deleteAttachment` stays a hard delete on
+  purpose — that is the per-photo remove control, where freeing the space is
+  the point. This is one entity type's worth of **F6**.
+
+### K4. `normalizeCharacter` capped money, skills and resources — DONE (49a541f)
+- **Where:** `utils/characterNormalization.ts`.
+- **What:** every save clamped money to 999,999, skills to 20 and resource pools
+  to 999. All three were literals. A Traveller purse at 2.4 million credits was
+  rewritten on the next save, and a user-authored percentile system lost every
+  skill above 20 — in the app whose headline feature is authoring your own
+  system.
+- **Fix:** bounds come from the system definition where it states them
+  (`ResourceDefinition.min`) and nowhere else; `skillMax` becomes `skillRange`
+  and has no default. This closes the A4 caveat recorded under Progress below.
+
+### K5. Five call sites bypassed `generateId()` — DONE (e95b966)
+- **Where:** `ToastContext.tsx:53`, `SheetScreen.tsx:431`, `MagicScreen.tsx:276`,
+  `PartyInventoryTab.tsx:392`, `SessionLog.tsx:129`.
+- **What:** `ids.ts` exists because `crypto.randomUUID` is undefined over the
+  project's own documented plain-http LAN tablet flow. One of the five was
+  `showToast`, so on that flow the app threw on every toast — including the
+  toast reporting the error that caused it.
+- **Fix:** all five call `generateId()`; `utils/ids.test.ts` scans `src` so the
+  fallback protects code not yet written.
+
+### K6. `setCharacter` read the record before flushing autosave — DONE (56eb4c5)
+- **Where:** `ActiveCharacterContext.tsx:87-95`.
+- **What:** the read saw the pre-flush row, the flush then wrote the pending
+  edit to that same row, and the stale snapshot went into state on top of it —
+  reverting the edit the flush existed to protect.
+- **Fix:** flush, then read. **Untested**: this is a React hook callback and
+  there is no DOM test environment here (see I5), so there is nothing to mount
+  it in. Recorded rather than faked.
+
+### K7. `creatureTemplateRepository.getDeleted` was unscoped — DONE (e014a71)
+- **What:** it read the whole table, so a creature deleted in one campaign
+  appeared in another campaign's Trash — and restoring it there put it back
+  where the GM who deleted it was not looking.
+- **Fix:** takes a `campaignId`, matching `sessionRepository.getDeleted` and
+  `noteRepository.getDeleted`.
+
+### K8. Five encounter writes bypassed the repository's soft-delete guard — DONE (444d984)
+- **Where:** `useEncounter.ts` — description, body, summary, tags, location.
+- **What:** each skipped both things `encounterRepository.update` exists for:
+  the `deletedAt` check, so an autosave landing after deletion wrote into a
+  tombstoned row nobody can reach; and the single read-modify-write
+  transaction. `updateParticipant` in the same hook always used the repository,
+  which is why the guard was tested there and absent here. CLAUDE.md states the
+  rule these broke: hooks call repositories, never the Dexie tables.
+- **Fix:** all five delegate. The two participant paths in the same hook need
+  their own transaction (they touch `entityLinks` too) and now make the
+  `deletedAt` check themselves.
+- **Still open:** four further direct writers of the same shape outside this
+  hook — `CombatEncounterView.tsx:274`, `addPartyCharactersToEncounter.ts:79`,
+  `BestiaryScreen.tsx:399`, `useSessionEncounter.ts:177`. Same bug class, left
+  as out of scope for that pass.
+
+---
+
+## Workstream L — Closed by the 2026-09-09 pass
+
+Six items from the same re-audit, plus one crash the linter found on its first
+run. Each was verified in the source before being touched, and each fix has a
+test that fails when the fix is reverted — verified by reverting it. The items
+that already had entries above are marked there instead: **B10** (reference
+import validation), **I1** (linter), **I5** (DOM environment, in part), **E4**
+(the unknown-system fallback, in part).
+
+Baseline before: `tsc -b` clean, `vitest run` 1515 tests / 91 files, `vite
+build` passing. After: 1595 tests / 99 files, plus `eslint .` at 0 errors.
+
+### L1. No DOM test environment, so autosave had zero tests — DONE (3e1d307)
+- **Where:** `hooks/useAutosave.ts`, `features/persistence/autosaveFlush.ts`.
+  No `jsdom` in devDependencies, no `test.environment` configured.
+- **What:** the code that decides whether a user's edit survives could not be
+  tested at all, because no hook that renders could be mounted. The
+  flush-before-read fix in `ActiveCharacterContext` (K6, 56eb4c5) shipped
+  untested for exactly this reason.
+- **Fix:** `jsdom` and `@testing-library/react` as devDependencies, opted into
+  **per file** with an `@vitest-environment jsdom` docblock rather than a global
+  switch — the other 91 test files are pure and keep the node environment.
+  Three test files, 29 tests: the flush registry's `allSettled` and
+  entry-snapshot contracts; the unmount flush gated on the dirty flag rather
+  than the timer, the "already saved, don't re-write" clear, the record arriving
+  mid-save staying dirty, once-per-streak error toasts, and the
+  register/unregister lifecycle; and the K6 regression asserted on both call
+  order and value, which fails if the two statements are swapped back.
+- **Note for the next reader:** Testing Library only auto-cleans when Vitest
+  globals are on, and they are not — every DOM test file calls `cleanup()` in
+  its own `afterEach`. Without it renders stack up in one document and
+  `getByRole` starts finding duplicates.
+
+### L2. Nothing guarded already-released `version(n)` blocks — DONE (e80bd7b)
+- **Where:** `storage/db/client.ts`, whose header comment says "never edit an
+  existing block".
+- **What:** Dexie runs an upgrade once, on the way past that version, so
+  editing a released block changes what a *fresh install* gets and nothing else.
+  A7 records this having already happened: the v7 note backfill was added at
+  v14, every existing database skipped it, and `version(19)` exists solely to
+  re-run it. Only the comment stood between that and a third occurrence — the
+  same enforce-nothing shape as I1's ten inert suppressions.
+- **Fix:** `releasedSchemaVersions.test.ts` fingerprints all twenty released
+  blocks from the source, covering each block's `.stores(...)` **and** its
+  inline `.upgrade(...)` body (the v7 incident was an upgrade-body edit, not a
+  schema-string one). Comments and indentation are stripped first. It also
+  asserts versions are contiguous from 1 and in source order, that none has been
+  deleted, and that a newly added version gets its fingerprint in the same
+  commit. The failure message says which case it is and what to do instead.
+- **Not fingerprinted, deliberately:** the two upgrades that live in exported
+  functions, since they are exported precisely so their own tests run the
+  shipped function and a change already fails on behaviour.
+
+### L3. The printed sheet dropped rows with no marker — DONE (8c5f6f4)
+- **Where:** `styles/print-sheet.css:22-25,374-377,744-761`,
+  `components/PrintableSheet.tsx`.
+- **What:** two mechanisms, both silent. The renderer prints a fixed number of
+  slots — ten inventory rows, three weapons, six secondary skills — and never
+  drew the rest; a player carrying fourteen items got ten on a page that looked
+  complete. Separately `.print-col` clips at a fixed height under
+  `overflow: hidden`, so a long skills list lost its tail.
+- **Fix:** each capped section ends with "+ n more items not printed"; and
+  `PrintColumn` measures each column after layout and drops a "⚠ Cut off" band
+  at its foot, absolutely positioned so it is neither clipped by the overflow it
+  reports nor able to change the measurement that produced it. Eight tests; the
+  clipping ones stub `scrollHeight`/`clientHeight` because jsdom performs no
+  layout.
+- **Full pagination was not attempted, and is a separate decision.** The
+  single-page constraint is load-bearing rather than incidental: `.print-sheet`
+  is a fixed 10.5in box with `page-break-inside/after: avoid` (the SS-15 notes
+  record Chrome emitting a blank second page without them), and the two
+  three-column bands are fixed-height grids whose font sizes were tuned down to
+  fit inside them. Flowing to page two means giving up the fixed heights, which
+  means giving up the `avoid` rules, which means re-tuning the density
+  mitigations that only make sense against a known budget. That is a rewrite of
+  the print layout and it needs a decision about what a two-page sheet should
+  look like first.
+
+### L4. `ManagePartyDrawer` called a hook after an early return — DONE (6f3a37f)
+- **Where:** `features/campaign/ManagePartyDrawer.tsx` — `useModalBehaviour`
+  sat below `if (!activeCampaign) return null`.
+- **What:** the drawer opens from a header that renders while `CampaignContext`
+  is still reading IndexedDB, so it renders null first and then renders again
+  with the campaign — at which point React sees more hooks than the previous
+  render and throws, taking the screen to the error boundary. The reverse
+  direction (campaign cleared while the drawer is open) throws "Rendered fewer
+  hooks than expected".
+- **Found by:** `react-hooks/rules-of-hooks`, on the linter's first run. Nothing
+  else in the repo could have found it, and it is the clearest argument for I1
+  that this pass produced.
+- **Fix:** the hook moves above the early return, with both directions covered
+  by tests that fail if it moves back down.
+
+---
+
 ## Suggested order of attack
 
 Each line is a self-contained change that can ship on its own and be verified
@@ -980,11 +1269,14 @@ with `npm run build` + `npm test` + a walk through the app.
 14. **E1–E6** the data-into-JSON refactor. Best done after D-work so the
     adapters are already thin.
 15. **A8–A10, G** as filler.
-16. **H1** decide the Knowledge Base's fate before any other H work, then
-    **H2** the navigation catalogue (absorbs A8's toggles) and **H3** the
-    generic trash screen.
-17. **I1 + I10** linter and CI first, so **I3, I4, I6** are one-time fixes
-    that stay fixed. **I8** is a one-line delete; do it with I1.
+16. **H1 is withdrawn** — the KB is reachable, so there is no fate to decide.
+    Go straight to **H2** the navigation catalogue (absorbs A8's toggles, and
+    is where the genuinely orphaned `MoreScreen` is dealt with), then **H3**
+    the generic trash screen — rescoped, since four types already restore.
+17. **I1 + I10** linter and CI — both now done, so **I3, I4, I6** are one-time
+    fixes that stay fixed. **I8** is a one-line delete. When picking up I4 and
+    I6, add their `no-restricted-syntax` / `no-restricted-properties` rules to
+    `eslint.config.js` in the same change, which is what makes them stay fixed.
 18. **H4** backup banner and snapshots, **H7** shell-level error boundary,
     **H8** portraits out of the record. Each is a user-visible safety win.
 19. **I2** code splitting once **npm ci** is possible and sizes can be
@@ -994,3 +1286,83 @@ with `npm run build` + `npm test` + a walk through the app.
 
 When an item is closed, change its status line to `DONE (<commit>)` and leave
 the evidence in place so the next scan can confirm it did not regress.
+
+---
+
+## Progress
+
+Steps 1 to 13 of the order of attack are closed: A1–A4, A6, A7, B1–B9, C1, C2,
+D1–D12 (two small parts remain, below), F1–F4. Workstream D is effectively
+finished; workstream B is finished apart from **B10**, the unvalidated
+reference-import JSON. Step 14 is next — **E1 to E6**, moving adapter data into
+JSON, which the D-work has already made easier by thinning the adapters.
+
+The 2026-09-08 audit pass then closed **workstream K** (eight findings that had
+no entry here, including the incomplete export and the parity test that keeps it
+complete), plus **H6** and **I10**.
+
+The 2026-09-09 pass closed **workstream L** — a DOM test environment and the
+autosave tests it made possible (L1), the released-`version(n)` guard (L2), the
+printed sheet's silent truncation (L3), and a hook-order crash the new linter
+found (L4) — together with **I1** (the linter itself), **B10** (the reference
+import, apart from the in-app editor bodies), and partial progress on **E4**
+(the unknown-system fallback is now loud and guarded, but adapter selection is
+still by id) and **I5** (a DOM environment exists; shared setup and coverage do
+not). Workstreams G, H and J are otherwise untouched.
+
+What step 13 deliberately left:
+
+- **D10:** `logDeathRoll` still writes "Death Roll #n". Sourcing that phrase
+  means a new field on a death model only Dragonbane declares, read from a panel
+  that only renders when that model exists. Over-fitting for one string.
+- **D12:** the dragon/demon mark glyphs, their colours and the marked-count
+  badge are still Dragonbane's, written into `SkillsScreen`. That wants
+  `skill.marks?: [{ id, label, glyph }]` and a rewrite of the mark cycle.
+  Also still open from D12: `WeaponEditor`'s grip and damage-type lists,
+  `remakeCurrency` bypassing `engine.currency`, the `bennies` card key, and the
+  `StatKey`/`restsUsed` unions in `types/character.ts`.
+
+Seven things a future reader should know before picking up the rest:
+
+- **The E2E suite never leaves the default system.** It creates characters
+  without touching the system picker, so nothing it does exercises Traveller or
+  Savage Worlds. `tests/panels_check.py` was written for D8 and drives both
+  sheets in a browser; extend it rather than assuming the main suite covers a
+  system-specific change.
+- **Two more engine fields were deleted for having no reader**, following the
+  pattern from step 10: `labels.creature{Health,Armor,Movement}` duplicated
+  `creatures.statFields` and disagreed with it, and `skill.advancementMax`
+  duplicated `advancement.maxSkillValue`.
+
+- **D11's health consolidation was declined, not forgotten.** Folding
+  `terms.healthResource` and `labels.participantHealth` into an
+  `engine.health` object would move two fields that `system.json` can
+  override — `getEngine` merges `terms` and `labels` by key. A new home either
+  breaks that documented override or becomes an alias for it, which is more
+  indirection rather than less. The two genuinely redundant flags it also named
+  (`hasMagic`, `skill.advancementMax`) are gone.
+
+- **D6 is closed except for skill marks.** The dragon/demon glyphs, their
+  colours and the marked-count badge are still Dragonbane vocabulary written
+  into `SkillsScreen`. That wants `skill.marks?: [{ id, label, glyph }]` and a
+  rewrite of the mark cycle, which is a bigger change than the branch removals
+  around it and was left rather than half-done.
+- **Two engine fields were deleted rather than kept.** `engine.resolution` and a
+  proposed `skill.autoSuccessAt` both ended up with no reader once the thing
+  that had branched on them was fixed, and `declaredCapabilities.test.ts`
+  flagged each immediately. A descriptive label whose only use is to be branched
+  on invites the next person to branch on it again.
+- **The CSP is applied at build only.** Adding it in dev breaks Vite's HMR
+  client, and a policy loosened for the dev server is not the policy that ships.
+  It is verified by running the Playwright suite against `npm run preview`.
+
+- **A7 and B8 shipped as part of the same `version(19)` block as A6.**
+  `version(20)` is now taken too — K3's attachment soft-delete indexes. A future
+  schema change adds `version(21)`; do not edit either.
+- **A4 left the skill clamp at 20. K4 removed it** (49a541f). The cycle
+  described here is real and unchanged — `engine/index` imports
+  `ActiveCharacterContext`, which imports the normaliser — so the resolution was
+  not to reach for the engine but to stop inventing a ceiling: with no declared
+  range there is now no cap, exactly as `normalizeAttribute` already treated an
+  undeclared attribute. The option is `skillRange` rather than `skillMax`, and
+  still nothing passes it.

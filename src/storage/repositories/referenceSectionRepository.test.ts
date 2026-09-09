@@ -3,7 +3,14 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../db/client';
-import { importBundle, ensureGroupsForSections, getGroups } from './referenceSectionRepository';
+import {
+  importBundle,
+  ensureGroupsForSections,
+  getGroups,
+  getAll,
+  removeGroup,
+  restoreGroup,
+} from './referenceSectionRepository';
 
 /**
  * Covers the import path's binding of sections to their grouping card.
@@ -21,14 +28,14 @@ beforeEach(async () => {
 
 describe('importBundle', () => {
   it('binds every imported section to its card by id', async () => {
-    const count = await importBundle({
+    const result = await importBundle({
       referenceGroups: [{ id: 'g-combat', title: 'Combat', order: 0 }],
       referenceSections: [
         { id: 's1', title: 'Initiative', category: 'Combat', order: 0, type: 'rules_text' },
         { id: 's2', title: 'Cover', category: 'Combat', order: 1, type: 'rules_text' },
       ],
     });
-    expect(count).toBe(2);
+    expect(result).toEqual({ imported: 2, skipped: [] });
     const stored = await db.referenceSections.toArray();
     expect(stored.map(s => s.groupId)).toEqual(['g-combat', 'g-combat']);
   });
@@ -74,6 +81,85 @@ describe('importBundle', () => {
   });
 });
 
+/**
+ * The import used to be `JSON.parse(text) as ReferenceImportBundle` straight
+ * into a `bulkPut`. A row of the wrong shape was written to IndexedDB, where it
+ * stayed — and because the write is keyed by `id`, it could land on top of a
+ * section that had been fine, so re-importing the good file was the only way
+ * back and there was nothing to say that was needed.
+ */
+describe('importBundle validation', () => {
+  it('drops a section whose rows are not rows, and keeps the rest', async () => {
+    const result = await importBundle({
+      referenceSections: [
+        { id: 'good', title: 'Cover', category: 'Combat', type: 'rules_text' },
+        { id: 'bad', title: 'Ranges', category: 'Combat', type: 'table', rows: 'not-an-array' },
+      ],
+    });
+
+    expect(result.imported).toBe(1);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0]).toMatchObject({ entityType: 'referenceSection', entityIndex: 1, path: 'rows' });
+    expect((await db.referenceSections.toArray()).map(s => s.id)).toEqual(['good']);
+  });
+
+  it('drops a key-value section whose items are missing the fields the renderer reads', async () => {
+    // `ReferenceSectionRenderer` reads `item.label` and `item.description`.
+    const result = await importBundle({
+      referenceSections: [
+        { id: 'bad', title: 'Conditions', type: 'key_value_list', items: [{ label: 42 }] },
+      ],
+    });
+
+    expect(result.imported).toBe(0);
+    expect(result.skipped[0]?.path).toBe('items.0.label');
+    expect(await db.referenceSections.count()).toBe(0);
+  });
+
+  it('drops a section whose type is not one the renderer knows', async () => {
+    const result = await importBundle({
+      referenceSections: [{ id: 'bad', title: 'Mystery', type: 'flowchart' }],
+    });
+
+    expect(result.imported).toBe(0);
+    expect(result.skipped[0]?.path).toBe('type');
+  });
+
+  it('never overwrites a good section with a malformed one of the same id', async () => {
+    await importBundle({
+      referenceSections: [{ id: 's1', title: 'Initiative', category: 'Combat', type: 'rules_text', paragraphs: ['Roll.'] }],
+    });
+
+    const result = await importBundle({
+      referenceSections: [{ id: 's1', title: 'Initiative', category: 'Combat', type: 'table', columns: [1, 2] }],
+    });
+
+    expect(result.imported).toBe(0);
+    const [stored] = await db.referenceSections.toArray();
+    expect(stored.paragraphs).toEqual(['Roll.']);
+  });
+
+  it('rejects a file that is not a reference bundle at all', async () => {
+    await expect(importBundle({ characters: [] })).rejects.toThrow(/Not a reference file/);
+    await expect(importBundle('a string')).rejects.toThrow(/expected a JSON object/);
+    await expect(importBundle(null)).rejects.toThrow(/expected a JSON object/);
+    expect(await db.referenceSections.count()).toBe(0);
+  });
+
+  it('still accepts a partial hand-authored bundle', async () => {
+    // Tolerance of *missing* fields is the point of the format and must survive.
+    const result = await importBundle({
+      referenceSections: [{ title: 'Falling' }],
+    });
+
+    expect(result).toEqual({ imported: 1, skipped: [] });
+    const [stored] = await db.referenceSections.toArray();
+    expect(stored.id).toBeTruthy();
+    expect(stored.type).toBe('rules_text');
+    expect(stored.category).toBe('Imported');
+  });
+});
+
 describe('ensureGroupsForSections', () => {
   it('appends cards for categories that have none, preserving existing order', async () => {
     await db.referenceGroups.put({
@@ -99,5 +185,45 @@ describe('ensureGroupsForSections', () => {
     expect(groups.map(g => g.title)).toEqual(['Combat']);
     expect(groups[0].id).not.toBe('g-gone');
     expect((await getGroups()).length).toBe(1);
+  });
+});
+
+describe('removeGroup / restoreGroup round trip', () => {
+  it('brings back the card and every section deleted with it', async () => {
+    // restoreGroup queries `where('softDeletedBy')`, an index referenceSections
+    // did not declare until schema v19. Dexie throws SchemaError on an
+    // undeclared index, so this whole path was dead — it just had no caller yet
+    // to fire it.
+    await db.referenceGroups.put({
+      id: 'g-combat', title: 'Combat', order: 0, createdAt: 'x', updatedAt: 'x',
+    });
+    await db.referenceSections.bulkPut([
+      { id: 's1', title: 'Initiative', category: 'Combat', groupId: 'g-combat', order: 0, type: 'rules_text', createdAt: 'x', updatedAt: 'x' },
+      { id: 's2', title: 'Cover', category: 'Combat', groupId: 'g-combat', order: 1, type: 'rules_text', createdAt: 'x', updatedAt: 'x' },
+    ]);
+
+    await removeGroup('g-combat');
+    expect((await getGroups()).length).toBe(0);
+    expect((await getAll()).length).toBe(0);
+
+    await restoreGroup('g-combat');
+    expect((await getGroups()).map(g => g.id)).toEqual(['g-combat']);
+    expect((await getAll()).map(s => s.id).sort()).toEqual(['s1', 's2']);
+  });
+
+  it('leaves a section that was deleted on its own deleted', async () => {
+    // Only rows carrying the group's own transaction id come back; a section
+    // the user removed separately stays removed.
+    await db.referenceGroups.put({
+      id: 'g-combat', title: 'Combat', order: 0, createdAt: 'x', updatedAt: 'x',
+    });
+    await db.referenceSections.bulkPut([
+      { id: 's1', title: 'Initiative', category: 'Combat', groupId: 'g-combat', order: 0, type: 'rules_text', createdAt: 'x', updatedAt: 'x' },
+      { id: 's2', title: 'Cover', category: 'Combat', groupId: 'g-combat', order: 1, type: 'rules_text', createdAt: 'x', updatedAt: 'x', deletedAt: 'earlier', softDeletedBy: 'other-tx' },
+    ]);
+
+    await removeGroup('g-combat');
+    await restoreGroup('g-combat');
+    expect((await getAll()).map(s => s.id)).toEqual(['s1']);
   });
 });

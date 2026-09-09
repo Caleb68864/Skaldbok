@@ -6,15 +6,17 @@ import { ReopenEncounterPrompt } from '../../components/modals/ReopenEncounterPr
 import { flushAll } from '../persistence/autosaveFlush';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import type { Encounter } from '../../types/encounter';
-import { db } from '../../storage/db/client';
+import * as sessionRepository from '../../storage/repositories/sessionRepository';
+import * as partyRepository from '../../storage/repositories/partyRepository';
 import * as metadataRepository from '../../storage/repositories/metadataRepository';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import * as systemRepository from '../../storage/repositories/systemRepository';
 import { sessionRefreshPatch } from '../characters/sessionRefresh';
+import { modifiersEndingOn, expirePartyModifiers } from '../characters/modifierExpiry';
+import { getEngine } from '../systems/engine';
 import * as campaignRepository from '../../storage/repositories/campaignRepository';
 import { useActiveCharacter } from '../../context/ActiveCharacterContext';
 import { useAppState } from '../../context/AppStateContext';
-import { generateId } from '../../utils/ids';
 import { localDateOnlyISO, nowISO } from '../../utils/dates';
 import { useToast } from '../../context/ToastContext';
 import type { Campaign } from '../../types/campaign';
@@ -142,6 +144,17 @@ export interface CampaignContextValue {
    * members or the active-character designation.
    */
   refreshParty: () => Promise<void>;
+  /**
+   * Expires every party character's modifiers that end when an encounter does.
+   *
+   * @remarks
+   * Lives here because this is the only context holding the party. Call it from
+   * every path that ends an encounter — before this existed, a modifier could
+   * only be expired by pressing a Dragonbane rest button, so a scene-long buff
+   * outlived the scene in every system and never expired at all in the two with
+   * no rest ladder.
+   */
+  expireEncounterModifiers: () => Promise<void>;
 }
 
 const CampaignContext = createContext<CampaignContextValue | null>(null);
@@ -190,9 +203,11 @@ function lastSegmentEnd(enc: Encounter): string | null {
  * @returns The party with members, or `null` if no party exists for this campaign.
  */
 async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyWithMembers | null> {
-  const party = await db.parties.where('campaignId').equals(campaignId).first();
+  // Through the repository, which drops soft-deleted parties and seats — a
+  // raw Dexie read here put a deleted character's seat back in the drawer.
+  const party = await partyRepository.getPartyByCampaign(campaignId);
   if (!party) return null;
-  const members = await db.partyMembers.where('partyId').equals(party.id).toArray();
+  const members = await partyRepository.getPartyMembers(party.id);
   return { ...party, members };
 }
 
@@ -218,7 +233,7 @@ async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyW
  */
 export function CampaignProvider({ children }: { children: ReactNode }) {
   const { showToast } = useToast();
-  const { setCharacter, clearCharacter } = useActiveCharacter();
+  const { setCharacter, clearCharacter, updateCharacter } = useActiveCharacter();
   const { settings } = useAppState();
   // Latest active-character id, read inside the async reconcile without stale closures.
   const activeCharacterIdRef = useRef<string | null>(settings.activeCharacterId ?? null);
@@ -310,9 +325,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         setActiveCampaign_(campaign);
         await metadataRepository.set(ACTIVE_CAMPAIGN_METADATA_KEY, campaign.id);
 
-        const session = await db.sessions
-          .where({ campaignId: campaign.id, status: 'active' })
-          .first();
+        const session = await sessionRepository.getActiveSession(campaign.id);
         if (!mounted) return;
         setActiveSession_(session ?? null);
 
@@ -377,24 +390,73 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
    * Best-effort and non-blocking: one unreadable character must not stop the
    * others, and none of it should delay the session actually starting.
    */
+  /** Linked character ids of every seat in the active party. */
+  const partyCharacterIds = useCallback(
+    () =>
+      (activeParty?.members ?? [])
+        .map(m => m.linkedCharacterId)
+        .filter((id): id is string => Boolean(id)),
+    [activeParty],
+  );
+
+  const expireEncounterModifiers = useCallback(async () => {
+    const ids = partyCharacterIds();
+    if (ids.length === 0) return;
+    // Land any pending sheet edits first; the expiry patches the stored record.
+    await flushAll();
+    const expired = await expirePartyModifiers(ids, { kind: 'encounterEnd' });
+    for (const { characterName, expired: mods } of expired) {
+      // The active character's in-memory copy would otherwise autosave the
+      // expired modifiers straight back.
+      if (activeCharacterIdRef.current) {
+        const ids2 = new Set(mods.map(m => m.id));
+        updateCharacter(current => ({
+          tempModifiers: (current.tempModifiers ?? []).filter(m => !ids2.has(m.id)),
+        }));
+      }
+      showToast(`${characterName}: ${mods.map(m => m.label).join(', ')} expired`);
+    }
+  }, [partyCharacterIds, updateCharacter, showToast]);
+
   const refreshPartyResources = useCallback(async () => {
-    const memberIds = (activeParty?.members ?? [])
-      .map(m => m.linkedCharacterId)
-      .filter((id): id is string => Boolean(id));
+    const memberIds = partyCharacterIds();
+
+    // Any edit still sitting in the active character's autosave debounce has to
+    // land before we read, or the refresh computes against a stale record and
+    // the debounce then overwrites the refresh.
+    await flushAll();
 
     for (const id of memberIds) {
       try {
         const character = await characterRepository.getById(id);
         if (!character) continue;
         const system = await systemRepository.getById(character.systemId);
-        const patch = sessionRefreshPatch(system, character);
-        if (!patch) continue;
-        await characterRepository.save({ ...character, ...patch, updatedAt: nowISO() });
+        // Expire session-length modifiers at the same moment resources refill.
+        // Before `timeUnits[].expiresOn` the only expiry path was pressing a
+        // Dragonbane rest button, so a session-long buff in Traveller or Savage
+        // Worlds — neither of which has a rest ladder — never ended at all.
+        const { expiring, remaining } = modifiersEndingOn(
+          character,
+          getEngine(system ?? undefined),
+          { kind: 'sessionStart' },
+        );
+        const refresh = {
+          ...(sessionRefreshPatch(system, character) ?? {}),
+          ...(expiring.length > 0 ? { tempModifiers: remaining } : {}),
+        };
+        if (Object.keys(refresh).length === 0) continue;
+        // patch, not save: a whole-record put would revert anything changed
+        // between the read above and this write.
+        await characterRepository.patch(id, () => refresh);
+        // The active character is held in memory by ActiveCharacterContext; its
+        // next autosave would write the un-refreshed record straight back over
+        // this, so the refilled Bennies were invisible and then lost.
+        if (activeCharacterIdRef.current === id) updateCharacter(refresh);
       } catch (e) {
         console.error('session resource refresh failed for', id, e);
       }
     }
-  }, [activeParty]);
+  }, [activeParty, updateCharacter]);
 
   const startSession = useCallback(async () => {
     if (!activeCampaign) {
@@ -407,24 +469,18 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const sessionCount = await db.sessions.where('campaignId').equals(activeCampaign.id).count();
+      const sessionCount = (await sessionRepository.getSessionsByCampaign(activeCampaign.id, { includeDeleted: true })).length;
       const now = nowISO();
       const dateStr = localDateOnlyISO();
       const title = `Session ${sessionCount + 1} — ${dateStr}`;
 
-      const newSession: Session = {
-        id: generateId(),
+      const newSession = await sessionRepository.createSession({
         campaignId: activeCampaign.id,
         title,
         status: 'active',
         date: dateStr,
         startedAt: now,
-        schemaVersion: 1,
-        createdAt: now,
-        updatedAt: now,
-      };
-
-      await db.sessions.add(newSession);
+      });
       setActiveSession_(newSession);
 
       // Refill every party character's session-refreshing resources — Savage
@@ -448,10 +504,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
 
     try {
       const now = nowISO();
-      await db.sessions.update(activeSession.id, {
+      await sessionRepository.updateSession(activeSession.id, {
         status: 'ended',
         endedAt: now,
-        updatedAt: now,
       });
       setActiveSession_(null);
     } catch (e) {
@@ -468,13 +523,12 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     try {
       // Flush pending autosaves before mutating session state.
       await flushAll();
-      const session = await db.sessions.get(sessionId);
+      const session = await sessionRepository.getSessionById(sessionId);
       if (!session) { showToast('Session not found'); return; }
       const now = nowISO();
-      await db.sessions.update(sessionId, {
+      await sessionRepository.updateSession(sessionId, {
         status: 'active' as const,
         endedAt: undefined,
-        updatedAt: now,
       });
       setActiveSession_({ ...session, status: 'active', endedAt: undefined, updatedAt: now });
 
@@ -545,9 +599,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       setActiveCampaign_(campaign);
       await metadataRepository.set(ACTIVE_CAMPAIGN_METADATA_KEY, campaign.id);
 
-      const session = await db.sessions
-        .where({ campaignId, status: 'active' })
-        .first();
+      const session = await sessionRepository.getActiveSession(campaignId);
       setActiveSession_(session ?? null);
 
       const party = await resolvePartyWithMembers(campaignId);
@@ -589,10 +641,9 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
     if (!staleSession) return;
     try {
       const now = nowISO();
-      await db.sessions.update(staleSession.id, {
+      await sessionRepository.updateSession(staleSession.id, {
         status: 'ended',
         endedAt: now,
-        updatedAt: now,
       });
       setActiveSession_(null);
     } catch (e) {
@@ -624,6 +675,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         resumeSession,
         setActiveCampaign,
         refreshParty,
+        expireEncounterModifiers,
       }}
     >
       {children}

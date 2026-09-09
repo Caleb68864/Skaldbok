@@ -19,6 +19,7 @@ import { getEdgesFromNode, getEdgesToNode } from '../../storage/repositories/kbE
 import { getNotesBySession } from '../../storage/repositories/noteRepository';
 import { useKBSearch } from './useKBSearch';
 import { VaultCard } from './VaultCard';
+import { useKBCategoryTabs } from '../../hooks/useConfigurableDefaults';
 
 /** Props for {@link VaultBrowser}. */
 export interface VaultBrowserProps {
@@ -53,13 +54,6 @@ export interface VaultBrowserProps {
   refreshToken?: number;
 }
 
-const CATEGORY_TABS = [
-  { value: 'all', label: 'All' },
-  { value: 'character', label: 'People' },
-  { value: 'location', label: 'Places' },
-  { value: 'item', label: 'Loot' },
-  { value: 'note', label: 'Notes' },
-] as const;
 
 /**
  * Browsable list of Knowledge Base nodes for a campaign, with category tabs,
@@ -84,6 +78,7 @@ export function VaultBrowser({
   onSearchQueryChange,
   refreshToken = 0,
 }: VaultBrowserProps) {
+  const CATEGORY_TABS = useKBCategoryTabs();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<string>(typeFilter ?? 'all');
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
@@ -268,10 +263,10 @@ export function VaultBrowser({
         <div className="flex gap-1 px-1 overflow-x-auto">
           {CATEGORY_TABS.map((tab) => (
             <button
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap border-none cursor-pointer ${
-                activeTab === tab.value
+                activeTab === tab.id
                   ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
                   : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
               }`}

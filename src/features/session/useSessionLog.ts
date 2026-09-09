@@ -1,5 +1,8 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
+import { useSystemDefinition } from '../systems/useSystemDefinition';
+import { getEngine } from '../systems/engine';
+import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { db } from '../../storage/db/client';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
@@ -169,7 +172,15 @@ interface ResourceBuffer {
  * ```
  */
 export function useSessionLog() {
-  const { activeSession } = useCampaignContext();
+  const { activeSession, activeCampaign } = useCampaignContext();
+  // Read through refs: the flush callbacks are debounced and registered once,
+  // so closing over the definition directly would pin whichever system was
+  // active when the buffer started rather than the one it flushes under.
+  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
+  const systemRef = useRef(system);
+  systemRef.current = system;
+  const currencyLabelRef = useRef(getEngine(system ?? undefined).currency.label);
+  currencyLabelRef.current = getEngine(system ?? undefined).currency.label;
   const coinBuffer = useRef<CoinBuffer>({ character: '', changes: {}, session: null, timer: null });
   const resourceBuffer = useRef<ResourceBuffer>({ character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, session: null, timer: null });
 
@@ -348,7 +359,12 @@ export function useSessionLog() {
       return;
     }
     const diff = buf.currentValue - buf.startValue;
-    const resLabel = buf.resource.toUpperCase();
+    // The resource's declared name, not its id shouted. `toUpperCase()` on the
+    // id produced "Took 1 BENNIES damage" and "3/3 WOUNDS" — readable only
+    // because Dragonbane's ids happen to be the abbreviations players use.
+    const resLabel =
+      systemRef.current?.resources.find(r => r.id === buf.resource)?.name ??
+      buf.resource.toUpperCase();
     // A depleting pool going up is healing; an accumulating damage track going
     // up is a wound. Reading the sign without the direction reported every
     // Traveller hit as "Healed".
@@ -468,7 +484,9 @@ export function useSessionLog() {
       .filter(entry => entry.delta !== 0)
       .map(entry => `${entry.delta > 0 ? '+' : ''}${entry.delta}${entry.abbr}`);
     if (parts.length > 0) {
-      await logToSession(`${buf.character}: Coins ${parts.join(' ')}`, 'generic', {}, { session: buf.session });
+      // "Coins" is Dragonbane's word for the purse; Traveller's is "Credits".
+      const purse = currencyLabelRef.current;
+      await logToSession(`${buf.character}: ${purse} ${parts.join(' ')}`, 'generic', {}, { session: buf.session });
     }
     coinBuffer.current = { character: '', changes: {}, session: null, timer: null };
   }, [logToSession]);

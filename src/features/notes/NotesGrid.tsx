@@ -11,31 +11,7 @@ import type { Note, NoteType } from '../../types/note';
 import type { Session } from '../../types/session';
 import { cn } from '../../lib/utils';
 import { docToText } from './textToDoc';
-
-/**
- * Ordered list of note-type filter options rendered as pill chips above the grid.
- * The `'all'` entry shows every type without filtering.
- */
-const NOTE_TYPE_FILTERS: Array<{ value: NoteType | 'all'; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'generic', label: 'Generic' },
-  { value: 'location', label: 'Location' },
-  { value: 'combat', label: 'Combat' },
-  { value: 'loot', label: 'Loot' },
-  { value: 'rumor', label: 'Rumor' },
-  { value: 'quote', label: 'Quote' },
-  { value: 'skill-check', label: 'Skill Check' },
-  { value: 'recap', label: 'Recap' },
-  { value: 'log', label: 'Log' },
-];
-
-/**
- * Note types excluded from the pill-chip row and the "All" filter by default.
- * Log entries are freeform session-log captures, not intentionally-authored
- * notes, so they clutter the grid — but they must stay searchable
- * (see {@link useNoteSearch}), and the "Show log entries" toggle reveals them.
- */
-const HIDDEN_NOTE_TYPES: NoteType[] = ['log'];
+import { useNoteTypeConfig } from '../../hooks/useConfigurableDefaults';
 
 /** Number of leading characters of body text used as a title fallback for notes with no title (e.g. log entries). */
 const TITLE_FALLBACK_LENGTH = 40;
@@ -76,6 +52,17 @@ export interface NotesGridProps {
  * ```
  */
 export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
+  const noteTypeConfig = useNoteTypeConfig();
+  /** Filter chips, `'all'` first, in configured order. */
+  const NOTE_TYPE_FILTERS = useMemo<Array<{ value: NoteType | 'all'; label: string }>>(
+    () => [{ value: 'all', label: 'All' }, ...noteTypeConfig.map(t => ({ value: t.id, label: t.label }))],
+    [noteTypeConfig],
+  );
+  /** Types excluded from the chips and the "All" filter unless revealed (see the config for why). */
+  const HIDDEN_NOTE_TYPES = useMemo<NoteType[]>(
+    () => noteTypeConfig.filter(t => t.hiddenByDefault).map(t => t.id),
+    [noteTypeConfig],
+  );
   const navigate = useNavigate();
   const { openNote, skillCheckNote, closeSkillCheckEditor } = useNoteOpenDispatcher();
   const { pinNote, unpinNote, deleteNote } = useNoteActions();
@@ -228,6 +215,7 @@ export function NotesGrid({ campaignId, activeSessionId }: NotesGridProps) {
       {/* Search */}
       <input
         type="text"
+        aria-label="Search notes"
         placeholder="Search notes..."
         value={searchQuery}
         onChange={e => setSearchQuery(e.target.value)}

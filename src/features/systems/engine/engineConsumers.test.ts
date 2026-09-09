@@ -115,6 +115,74 @@ describe('engine consumer rules', () => {
     expect(offenders, offenders.join('\n')).toEqual([]);
   });
 
+  it('never uses a capability flag as a stand-in for a ruleset', () => {
+    // A `systemId ===` branch in disguise. Each of these named exactly one
+    // shipped system while looking generic:
+    //   `engine.resolution === 'd20-roll-under'`  — layout, in SkillModule
+    //   `!engine.skill.supportsMarks`             — "not d20", in SkillsScreen
+    //   `!engine.damageTrack`                     — where the purse lives
+    // The `resolution` field is gone entirely; the other two are real
+    // capabilities that must be read for what they say, not as proxies.
+    const offenders: string[] = [];
+    for (const { path, text } of FILES) {
+      if (path.startsWith('src/features/systems/engine/')) continue; // adapters declare them
+      for (const match of text.matchAll(/engine\.resolution\s*===/g)) {
+        offenders.push(`${path}: ${match[0]}`);
+      }
+      // damageTrack says how damage cascades, not how a screen is arranged.
+      for (const match of text.matchAll(/![\w.]*\bengine\.damageTrack\b(?!\s*\))/g)) {
+        offenders.push(`${path}: ${match[0]} (damage cascade is not a layout switch)`);
+      }
+    }
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+
+  it('gets a skill row from the engine rather than composing odds itself', () => {
+    // A screen that assembles its own odds line has to decide what shape that
+    // line takes, and both screens decided it by asking an unrelated question:
+    // SkillModule branched on `engine.resolution`, SkillsScreen on
+    // `!engine.skill.supportsMarks`. `skill.describe` returns the parts —
+    // headline, detail, alternatives, note — so neither has to know the
+    // mechanic. `probability.chance` stays available to the engines that build
+    // those parts, and to nothing else.
+    const offenders: string[] = [];
+    for (const { path, text } of FILES) {
+      if (path.startsWith('src/features/systems/engine/')) continue;
+      for (const match of text.matchAll(/\bprobability\.chance\s*\(/g)) {
+        offenders.push(`${path}: ${match[0]} — use engine.skill.describe()`);
+      }
+    }
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+
+  it('never duck-types a system by a key only one engine returns', () => {
+    // `'characteristicDMs' in derived` read as a structural check and was a
+    // system-id branch: only Traveller's derived block has that key, so a
+    // second modifier-based system would have had to adopt Traveller's key
+    // name to get the same layout. Ask the engine instead.
+    const offenders: string[] = [];
+    for (const { path, text } of FILES) {
+      if (path.startsWith('src/features/systems/engine/')) continue;
+      for (const match of text.matchAll(/(['"])(\w+)\1\s+in\s+derived\b/g)) {
+        offenders.push(`${path}: '${match[2]}' in derived`);
+      }
+    }
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+
+  it('logs every resource the engine declares, not two Dragonbane ids', () => {
+    // `id === 'hp' || id === 'wp'` gated session logging, so Wounds, Fatigue,
+    // Bennies and any user-authored pool changed silently.
+    const offenders: string[] = [];
+    for (const { path, text } of FILES) {
+      if (path.startsWith('src/systems/')) continue;
+      for (const match of text.matchAll(/===\s*(['"])(hp|wp)\1\s*\|\|[^\n]*===\s*(['"])(hp|wp)\3/g)) {
+        offenders.push(`${path}: ${match[0].trim()}`);
+      }
+    }
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+
   it('branches on systemId only in the engine resolver', () => {
     // The project's cardinal rule. `baseEngineFor` in engine/index.ts is the one
     // sanctioned place; anywhere else, the value belongs on the engine instead.

@@ -8,7 +8,6 @@ import type { DerivedValues } from '../../../utils/derivedValues';
 import type { PanelKey } from '../../../types/system';
 export type { PanelKey };
 
-export type ResolutionMethod = 'd20-roll-under' | '2d6-plus' | 'trait-die-vs-tn';
 
 export type CurrencyMode = 'coins' | 'abstract' | 'single';
 
@@ -101,6 +100,27 @@ export interface TimeUnit {
   label: string;
   /** Compact form for chips, e.g. `RND`. */
   abbrev: string;
+  /**
+   * What ends a modifier measured in this unit.
+   *
+   * @remarks
+   * A modifier's `duration` is a TimeUnit id, and the only thing that ever
+   * expired one was pressing a Dragonbane rest button whose id happened to
+   * match. Traveller and Savage Worlds have `rest: null`, so nothing in either
+   * system could expire anything — a scene-long buff lasted the campaign. And
+   * `scene` expired nowhere, in any system, because no rest is called "scene".
+   *
+   * Absent means the unit never expires on its own (Dragonbane's `permanent`),
+   * so it has to be removed by hand.
+   */
+  expiresOn?: {
+    /** Id of a rest that ends it, when the system has a rest ladder. */
+    rest?: string;
+    /** Ends when a session starts. */
+    sessionStart?: boolean;
+    /** Ends when an encounter ends — the closest thing to "the scene". */
+    encounterEnd?: boolean;
+  };
 }
 
 /**
@@ -112,6 +132,17 @@ export interface TimeUnit {
  */
 export interface SkillDisplayContext {
   character: CharacterRecord;
+  /**
+   * The active system definition.
+   *
+   * @remarks
+   * Needed by any engine whose display folds in a rule declared in JSON rather
+   * than written into the adapter — condition penalties, in particular. Optional
+   * because the adapters that ignore context entirely should not have to be
+   * handed one, but a screen that has a system should always pass it: without
+   * it, declared condition effects contribute nothing.
+   */
+  system?: SystemDefinition | null;
   /**
    * Id of the skill being displayed.
    *
@@ -153,21 +184,45 @@ export interface SkillEngineConfig {
    * never lands on a nonexistent d5/d7. Absent = any integer in {@link range}.
    */
   ladder?: number[];
-  /**
-   * Ceiling an end-of-session advancement roll may raise a skill to.
-   *
-   * @remarks
-   * Distinct from {@link range}: Dragonbane accepts values up to 20 on the
-   * sheet but advancement stops at 18, so reusing `range.max` here would
-   * silently raise the ceiling.
-   */
-  advancementMax: number;
   defaultValue: number;
   /**
    * Renders a skill's user-facing value string. `context` is optional so
    * engines that need no character state (classic-fantasy) can ignore it.
    */
   display: (value: number, context?: SkillDisplayContext) => string;
+  /**
+   * A skill row split into the parts a screen lays out, so the screen never has
+   * to know which resolution mechanic is in play.
+   *
+   * @remarks
+   * The play dashboard used to branch on `engine.resolution === 'd20-roll-under'`
+   * to decide whether to show a big target number with a separate odds line, or
+   * one formatted string. That is a `systemId ===` branch in disguise: a fourth
+   * system rolling under would have had to be named there too. Which parts exist
+   * is now the ruleset's own statement.
+   *
+   * `headline` is a number that stands on its own — a roll-under target — and is
+   * `null` for systems whose value only means something with its notation
+   * attached (a die code, a signed modifier). `detail` is the supporting line and
+   * is always present, describing the roll as it stands.
+   *
+   * `alternatives` are the same roll under the *other* advantage states a system
+   * offers, so a screen can either list them all (the dashboard's
+   * "38% / boon 62% / bane 14%") or pick out the one currently in effect (the
+   * skills screen's "38% (62% with boon)") without knowing what states exist.
+   * Empty for a system whose `display` already folds the state into `detail`.
+   *
+   * `note` is a qualifier on the roll itself, such as an automatic success.
+   */
+  describe: (
+    value: number,
+    context?: SkillDisplayContext,
+  ) => {
+    headline: string | null;
+    detail: string;
+    alternatives?: { id: string; label: string; detail: string }[];
+    note?: string;
+  };
   supportsMarks: boolean;
   supportsBoonBane: boolean;
   /**
@@ -247,6 +302,27 @@ export interface SystemLabels {
   abilitiesScreen: string | null;
   /** Title of the resources panel — "Resources" vs "Damage Track". */
   resourcesPanel: string;
+  /**
+   * Heading for the printed sheet's resource block, when the paper sheet names
+   * it differently from the screen. Falls back to {@link resourcesPanel}.
+   *
+   * @remarks
+   * The printed sheet said "Hit Points & Willpower" as a literal, with a comment
+   * explaining that `resourcesPanel` reads "Resources" and using it would change
+   * the Dragonbane sheet. Both statements are true; the conclusion was to leave
+   * one ruleset's words in shared code. Declaring it keeps the printed
+   * Dragonbane sheet identical and lets another system name its own block.
+   */
+  printResources?: string;
+  /**
+   * Heading for the printed sheet's abilities block. Falls back to
+   * {@link SystemTerms.abilities}.
+   *
+   * @remarks
+   * Same story: the sheet said "Abilities" rather than `terms.abilities`, which
+   * reads "Heroic Abilities" for classic-fantasy.
+   */
+  printAbilities?: string;
   /** Title of the attributes panel — "Attributes" vs "Characteristics". */
   attributesPanel: string;
   /** Title of the encumbrance panel. */
@@ -257,25 +333,12 @@ export interface SystemLabels {
    * the encounter screen even though the field itself is system-neutral.
    */
   participantHealth: string;
-  /**
-   * Column headings for a creature template's base stats in the participant
-   * drawer — the read-only trio above the editable "Current State" block.
-   *
-   * @remarks
-   * These existed as the literals `HP` / `Armor` / `Mv` inside
-   * `ParticipantDrawer`, which made the drawer contradict itself: its editable
-   * health field already read {@link SystemLabels.participantHealth} ("Current
-   * END" under Traveller) while the base-stat tile directly above it said "HP".
-   *
-   * Only the *labels* are system-driven. `creatureTemplate.stats` is still a
-   * fixed `hp`/`armor`/`movement` triple, so a system with a genuinely different
-   * stat shape needs a data-model change, not another label.
-   */
-  creatureHealth: string;
-  /** Heading for a creature template's armour value. See {@link SystemLabels.creatureHealth}. */
-  creatureArmor: string;
-  /** Heading for a creature template's movement value. See {@link SystemLabels.creatureHealth}. */
-  creatureMovement: string;
+  //
+  // `creatureHealth` / `creatureArmor` / `creatureMovement` used to live here.
+  // They were a second source for headings the ruleset already gives in
+  // `creatures.statFields`, and the two disagreed: Traveller's JSON said
+  // "Hits" / "Armour" / "Speed (m)" while these said "END" / "Armour" / "Mv",
+  // for the same creature on adjacent screens. Read `creatureStatLabel` instead.
   /** Placeholder listing example conditions, e.g. `poisoned, prone`. */
   conditionExamples: string;
   /** Placeholder listing example encounter tags, e.g. `ambush, forest, kobolds`. */
@@ -445,6 +508,23 @@ export interface RestOutcome {
  * `id` doubles as the {@link types/character!TempModifier | TempModifier} duration key, so a modifier lasting
  * "until the next round rest" expires when the rest with `id: 'round'` runs.
  */
+/**
+ * A system's carry rules: what a character can carry, and what counts as
+ * carried.
+ *
+ * @remarks
+ * `load` is separate from `limit` because the exemptions differ per ruleset —
+ * Dragonbane's "tiny items are free", a system that ignores worn armour, one
+ * that counts coin weight. Both are base figures; overrides and modifiers are
+ * applied by the caller through the usual derived-field resolver.
+ */
+export interface EncumbranceModel {
+  /** Base carry limit before overrides and modifiers. */
+  limit: (character: CharacterRecord) => number;
+  /** Weight currently carried, with this system's exemptions applied. */
+  load: (character: CharacterRecord) => number;
+}
+
 export interface RestDefinition {
   id: string;
   label: string;
@@ -470,6 +550,17 @@ export interface DeathTrack {
   label: string;
   max: number;
   tone: 'danger' | 'success';
+  /**
+   * Column heading on the printed sheet, when paper wants a different word from
+   * the screen. Falls back to {@link label}.
+   *
+   * @remarks
+   * The plural "Failures"/"Successes" reads well in the play UI; the paper sheet
+   * has always used the singular. That was a `Record<string, string>` of
+   * Dragonbane track ids in the print component, so any other system's tracks
+   * fell through it — correctly, but by accident rather than by saying so.
+   */
+  printLabel?: string;
 }
 
 /** How a system models a downed/dying character. `null` when it has no such rules. */
@@ -565,8 +656,23 @@ export interface DerivedFieldDef {
 }
 
 export interface SystemEngine {
-  resolution: ResolutionMethod;
-  hasMagic: boolean;
+  /**
+   * The system id whose rules are *not* being applied, when no adapter matched.
+   *
+   * @remarks
+   * Absent for every system that has its own adapter, which is the normal case.
+   * Set to the system's own id when `getEngine` fell back to classic-fantasy —
+   * a user-authored ruleset, or a bundled system added to the registry without
+   * an adapter. That fallback is not a cosmetic default: it applies
+   * Dragonbane's derived-stat formulas, rest and death rules, encumbrance and
+   * skill base chances to somebody else's system. The app's headline promise is
+   * that you can author your own; silently running another ruleset's maths
+   * against it breaks that promise in a way no error ever surfaces.
+   *
+   * Carrying the id rather than a boolean lets the notice name the system, and
+   * keeps one field instead of two.
+   */
+  fallbackRulesFor?: string;
   attributeBadge: (attributeId: string, character: CharacterRecord) => string | null;
   attributeIds: string[];
   skill: SkillEngineConfig;
@@ -612,7 +718,23 @@ export interface SystemEngine {
   resolveDamage?: (
     character: CharacterRecord,
     input: { total: number; ap?: number; raises?: number },
-  ) => { levels: Record<string, number>; setsConditions: string[]; noEffect?: boolean };
+  ) => {
+    levels: Record<string, number>;
+    setsConditions: string[];
+    noEffect?: boolean;
+    /**
+     * Why nothing landed, in this ruleset's own words — SWADE's "under
+     * Toughness". Read only when `noEffect` is set.
+     *
+     * @remarks
+     * The dashboard used to write that phrase itself, along with "Shaken" and
+     * "Wound", so a system whose damage bounced for a different reason, or whose
+     * tracks are called something else, would still have been told it was under
+     * Toughness. The rest of the message is assembled from `system.conditions`
+     * and `system.resources` names.
+     */
+    noEffectReason?: string;
+  };
   /**
    * How the attributes panel reads a stored attribute number: `'modifiers'`
    * (a signed DM like `+2`), `'value'` (plain `8`), or `'dice'` (Savage Worlds
@@ -624,6 +746,25 @@ export interface SystemEngine {
     mode: 'modifiers' | 'value' | 'dice';
     format: (value: number, bonus?: number) => string;
   };
+  /**
+   * Per-attribute rows the dashboard shows above its derived fields, or `null`
+   * when the system has nothing to add there.
+   *
+   * @remarks
+   * The dashboard used to duck-type this: `'characteristicDMs' in derived`, with
+   * a comment calling it "a structural check rather than a system-id branch". It
+   * is a system-id branch — `characteristicDMs` is a key only Traveller's
+   * derived block has, so the test names one ruleset without saying so, and a
+   * second modifier-based system would have had to adopt Traveller's key name to
+   * get the same layout.
+   *
+   * Returning the rows already labelled and formatted keeps the "score leads,
+   * modifier follows" decision with the ruleset that has an opinion about it.
+   */
+  attributeSummary?: (
+    character: CharacterRecord,
+    system?: SystemDefinition,
+  ) => { id: string; label: string; value: string | number; note?: string }[] | null;
   /**
    * Resource that generic damage/healing applies to, or `null` when the system
    * has no single health pool (consumers must then defer to the system's own UI).
@@ -646,7 +787,56 @@ export interface SystemEngine {
     /** Flat cost of a level-0 trick / cantrip, used instead of the `0` that
      * `level * costPerLevel` would give. */
     trickCost: number;
+    /**
+     * How many spells the character may keep prepared, or `undefined` when the
+     * system does not limit it.
+     *
+     * @remarks
+     * The magic screen called `computeMaxPreparedSpells`, which reads
+     * `attributes['int']` and runs it through Dragonbane's base-chance table —
+     * a Dragonbane rule applied to whatever system happened to be open.
+     */
+    maxPrepared?: (character: CharacterRecord) => number;
+    /**
+     * Why casting is impaired right now, in this ruleset's words, or `null`.
+     *
+     * @remarks
+     * Dragonbane's "metal armour blocks casting". The screen imported
+     * `isMetalEquipped` directly and rendered its own warning, so every system
+     * with magic inherited the rule whether or not it has it.
+     */
+    castingImpairment?: (character: CharacterRecord) => string | null;
+    /**
+     * School names that mark a spell as a trick, lowercased.
+     *
+     * @remarks
+     * Tricks were detected as `school.toLowerCase().includes('trick')` in three
+     * places — a naming convention in the bundled content, treated as a rule. A
+     * system whose cantrips are called something else got none of the trick
+     * handling; one with a school legitimately containing the word got it by
+     * accident. An explicit `powerLevel` of 0 still marks a trick in every
+     * system, which is the part that is genuinely general.
+     */
+    trickSchools?: string[];
   } | null;
+  /**
+   * How this system measures what a character can carry, or `null` when it does
+   * not track encumbrance at all — in which case the panel is hidden rather
+   * than shown reading zero.
+   *
+   * @remarks
+   * Three formulas existed with nothing tying them together — Dragonbane's
+   * `ceil(STR/2)` plus item `capacityBonus`, Traveller's `STR + END`, Savage
+   * Worlds' `Strength × 5` — and only the first honoured `capacityBonus`, so a
+   * backpack added capacity in exactly one system. Carried load was summed
+   * inline at each call site with its own copy of the `tiny` exemption.
+   *
+   * `limit` is the base figure only. Every screen must still put it through
+   * `resolveDerivedField(character, derived, { key: 'encumbranceLimit' })` so a
+   * user override and any `derived:encumbranceLimit` modifier apply in the
+   * usual computed → override → modifiers order.
+   */
+  encumbrance: EncumbranceModel | null;
   /** Rest/recovery actions, or `null` when the system has none. */
   rest: RestDefinition[] | null;
   /** Downed/dying rules, or `null` when the system has none. */

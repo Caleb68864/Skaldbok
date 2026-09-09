@@ -1,6 +1,8 @@
 import { db } from '../../storage/db/client';
 import type { BundleEnvelope, BundleContents } from '../../types/bundle';
 import { getById as getCreatureTemplateById } from '../../storage/repositories/creatureTemplateRepository';
+import { importablePortraitUri } from './portraitUri';
+import { BUNDLE_PROCESSING_ORDER, BUNDLE_TABLE_BY_KEY } from '../../types/bundleTables';
 
 /**
  * Options controlling how a bundle is merged into local IndexedDB.
@@ -34,37 +36,16 @@ export interface MergeReport {
 /**
  * FK-safe processing order. Entities must be imported in this order so that
  * foreign key references resolve correctly (e.g. campaigns before sessions).
+ *
+ * @remarks
+ * Both this and the table mapping used to be maintained here by hand, and were
+ * one of the four copies of the same list that let the campaign export omit six
+ * tables. They now come from the single registry in `types/bundleTables.ts`.
  */
-const PROCESSING_ORDER: (keyof BundleContents)[] = [
-  'campaign',
-  'sessions',
-  'parties',
-  'partyMembers',
-  'characters',
-  'creatureTemplates',
-  'encounters',
-  'inventoryContainers',
-  'notes',
-  'entityLinks',
-  'attachments',
-];
+const PROCESSING_ORDER = BUNDLE_PROCESSING_ORDER;
 
-/**
- * Maps entity type keys to their Dexie table names.
- */
-const TABLE_NAMES: Record<string, string> = {
-  campaign: 'campaigns',
-  sessions: 'sessions',
-  parties: 'parties',
-  partyMembers: 'partyMembers',
-  characters: 'characters',
-  creatureTemplates: 'creatureTemplates',
-  encounters: 'encounters',
-  inventoryContainers: 'inventoryContainers',
-  notes: 'notes',
-  entityLinks: 'entityLinks',
-  attachments: 'attachments',
-};
+/** Maps entity type keys to their Dexie table names. */
+const TABLE_NAMES = BUNDLE_TABLE_BY_KEY;
 
 /**
  * Maps an entityLink endpoint TYPE (the free-string `fromEntityType`/
@@ -103,7 +84,10 @@ async function danglingLinkEndpoint(link: Record<string, unknown>): Promise<stri
     const type = link[typeKey] as string | undefined;
     const entityId = link[idKey] as string | undefined;
     if (!type || !entityId) continue;
-    const table = LINK_ENDPOINT_TABLES[type];
+    // An own-property check, not plain indexing: `type` comes from the imported file, and
+    // `"constructor"` would otherwise resolve to a function that `db.table`
+    // then throws on. It failed safe only because the throw was caught.
+    const table = Object.prototype.hasOwnProperty.call(LINK_ENDPOINT_TABLES, type) ? LINK_ENDPOINT_TABLES[type] : undefined;
     if (!table) continue; // unverifiable endpoint type — don't reject on it
     const exists = await db.table(table).get(entityId);
     if (!exists) return `${type} "${entityId}"`;
@@ -140,13 +124,13 @@ export async function mergeBundle(
     // individual entities (e.g. an unrestorable attachment) are still collected
     // as per-entity errors and skipped so one bad row doesn't abort the import;
     // only DB-fatal errors are re-thrown to trigger the rollback.
+    // The table list is derived from the registry rather than written out, so a
+    // newly-exported table cannot arrive in a bundle that the transaction has no
+    // lock on — Dexie throws `NotFoundError` on the first write to an unlisted
+    // table, which `isFatalMergeError` would not have recognised.
     await db.transaction(
       'rw',
-      [
-        db.campaigns, db.sessions, db.parties, db.partyMembers, db.characters,
-        db.creatureTemplates, db.encounters, db.inventoryContainers, db.notes,
-        db.entityLinks, db.attachments,
-      ],
+      BUNDLE_PROCESSING_ORDER.map((key) => db.table(BUNDLE_TABLE_BY_KEY[key])),
       async () => {
         for (const entityType of PROCESSING_ORDER) {
           if (!options.selectedEntityTypes.has(entityType)) continue;
@@ -195,13 +179,25 @@ export async function mergeBundle(
  */
 function isFatalMergeError(err: unknown): boolean {
   const name = (err as { name?: string } | null)?.name ?? '';
-  return (
-    name === 'QuotaExceededError' ||
-    name === 'AbortError' ||
-    name === 'DatabaseClosedError' ||
-    name === 'DexieError'
-  );
+  // Dexie never assigns the name 'DexieError' to a thrown error — concrete
+  // failures carry their own names — so the old check let a closed or
+  // mis-versioned database read as a per-row problem and the import "finished".
+  return FATAL_MERGE_ERROR_NAMES.has(name);
 }
+
+/** Error names that mean the database itself is unusable, not one row. */
+const FATAL_MERGE_ERROR_NAMES = new Set([
+  'QuotaExceededError',
+  'AbortError',
+  'DatabaseClosedError',
+  'VersionError',
+  'OpenFailedError',
+  'UpgradeError',
+  'InvalidStateError',
+  'MissingAPIError',
+  'UnknownError',
+  'TransactionInactiveError',
+]);
 
 /**
  * Merges a single entity into IndexedDB using dedup rules.
@@ -228,6 +224,10 @@ async function mergeEntity(
   const reparented = { ...applyReparenting(entity, options.targetCampaignId, bundleContents) } as Record<string, unknown>;
   delete reparented.deletedAt;
   delete reparented.softDeletedBy;
+  if (entityType === 'characters' && 'portraitUri' in reparented) {
+    // Inline images only — see importablePortraitUri.
+    reparented.portraitUri = importablePortraitUri(reparented.portraitUri);
+  }
 
   // Skip an entityLink whose endpoints didn't make it into the DB — importing it
   // would create a dangling edge. This catches both the "user deselected the
@@ -256,7 +256,7 @@ async function mergeEntity(
     // For attachments: restore base64 data back to Blob before inserting.
     const toInsert = entityType === 'attachments' ? restoreAttachmentBlob(reparented) : reparented;
     if (!toInsert) {
-      report.errors.push({ entityType, entityId: id, message: 'Attachment has no restorable base64 data; skipped' });
+      report.errors.push({ entityType, entityId: id, message: 'Attachment has no restorable image payload (missing, oversized, or not an image); skipped' });
       return;
     }
     // Insert new entity — use put() to preserve original ID
@@ -272,6 +272,25 @@ async function mergeEntity(
     return;
   }
 
+  // A system definition carries neither `createdAt` nor `updatedAt` — it is
+  // versioned by its own integer `version`, the same counter `useSystemDefinition`
+  // gates its IndexedDB cache on. Sent down the timestamp path below, every
+  // re-import of an already-installed ruleset would be reported as an id
+  // collision. Overwrite only on a strictly higher version, matching the cache.
+  if (entityType === 'systems') {
+    const bundleVersion = reparented.version;
+    const localVersion = existing.version;
+    if (typeof bundleVersion === 'number' && typeof localVersion === 'number' && bundleVersion > localVersion) {
+      await db.table(tableName).put(reparented);
+      report.updated++;
+      console.info(`[merge] update ${entityType} ${id}`);
+    } else {
+      report.skipped++;
+      console.info(`[merge] skip ${entityType} ${id}`);
+    }
+    return;
+  }
+
   // Id-collision guard: the same id already exists locally. Distinguish a newer
   // version of the SAME entity from an id COLLISION (a hand-edited/community
   // bundle reusing an id that locally belongs to something else) by createdAt —
@@ -279,13 +298,32 @@ async function mergeEntity(
   // entities were created at different times. Same-id + different-createdAt =
   // collision → keep the local row and report it rather than overwrite unrelated
   // data. (A rename keeps createdAt, so legitimate updates are unaffected.)
+  //
+  // A missing `createdAt` on either side is a collision too, not a pass. The
+  // guard used to require *both* to be present and to differ, so a bundle row
+  // with no `createdAt` and a far-future `updatedAt` sailed through it and
+  // overwrote the local row — the one shape an attacker or a careless
+  // hand-edited bundle would actually have.
   const bundleCreated = reparented.createdAt as string | undefined;
   const localCreated = existing.createdAt as string | undefined;
-  if (bundleCreated !== undefined && localCreated !== undefined && bundleCreated !== localCreated) {
+  if (bundleCreated === undefined || localCreated === undefined || bundleCreated !== localCreated) {
     report.errors.push({
       entityType,
       entityId: id,
-      message: `Id "${id}" already belongs to a different local ${String(entityType)} (created ${localCreated}, bundle's created ${bundleCreated}); kept local to avoid overwriting unrelated data`,
+      message: `Id "${id}" already belongs to a different local ${String(entityType)} (created ${localCreated ?? 'unknown'}, bundle's created ${bundleCreated ?? 'unknown'}); kept local to avoid overwriting unrelated data`,
+    });
+    return;
+  }
+
+  // A tombstoned local row is a collision as well. `existing` is read straight
+  // from the table, so a soft-deleted row is visible here; overwriting one
+  // resurrects a record the user deleted, under whatever content the bundle
+  // carries, with no trace that it had been deleted.
+  if (existing.deletedAt) {
+    report.errors.push({
+      entityType,
+      entityId: id,
+      message: `Id "${id}" belongs to a deleted local ${String(entityType)}; kept the deletion rather than resurrecting it from the bundle`,
     });
     return;
   }
@@ -386,16 +424,33 @@ function restoreAttachmentBlob(entity: Record<string, unknown>): Record<string, 
   const data = entity.data as string | undefined;
   const encoding = entity.encoding as string | undefined;
   if (!data || encoding !== 'base64') return null;
-  const binary = atob(data);
+  // The bundle's declared mime type and size are untrusted. Attachments are
+  // images (the repository re-encodes everything it stores through a canvas),
+  // so anything else is refused, and the payload is capped before decoding
+  // rather than after.
+  const mimeType = entity.mimeType;
+  if (typeof mimeType !== 'string' || !ALLOWED_ATTACHMENT_MIME.has(mimeType)) return null;
+  if (data.length > MAX_ATTACHMENT_BASE64_LENGTH) return null;
+  let binary: string;
+  try {
+    binary = atob(data);
+  } catch {
+    return null;
+  }
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
   }
-  const mimeType = (entity.mimeType as string) ?? 'application/octet-stream';
   const blob = new Blob([bytes], { type: mimeType });
   const { data: _data, encoding: _enc, ...rest } = entity;
-  return { ...rest, blob };
+  return { ...rest, blob, sizeBytes: bytes.length };
 }
+
+/** Image types the attachment store produces; a bundle claiming anything else is refused. */
+const ALLOWED_ATTACHMENT_MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
+/** 10 MiB of decoded image, as base64 length (4/3 expansion). */
+const MAX_ATTACHMENT_BASE64_LENGTH = Math.ceil((10 * 1024 * 1024) * 4 / 3);
 
 /**
  * Logs warnings for encounter participants with unresolvable linkedCreatureId.

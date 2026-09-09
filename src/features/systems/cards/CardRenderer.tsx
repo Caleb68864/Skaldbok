@@ -56,11 +56,23 @@ export function CardRenderer({ entry, componentRegistry = {}, character, system,
 
   // Fail closed: a `when` that isn't a known guard is treated as "don't render"
   // rather than throwing on `undefined(engine)`.
-  if (normalized.when && !GUARDS[normalized.when]?.(engine)) {
-    return null;
+  //
+  // The own-property check is what makes that true. Plain indexing reaches inherited
+  // members, so `when: "constructor"` resolved to `Object`, `Object(engine)`
+  // returned a truthy object, and the guard that exists to fail closed failed
+  // *open* — rendering a card the template said to hide. A sheet template is
+  // importable, so the string is not ours.
+  if (normalized.when) {
+    const guard = Object.prototype.hasOwnProperty.call(GUARDS, normalized.when) ? GUARDS[normalized.when] : undefined;
+    if (typeof guard !== 'function' || !guard(engine)) return null;
   }
 
-  const componentDef = componentRegistry[normalized.card];
+  // Same reason as the guard above: `card` is template-supplied, so
+  // `card: "toString"` would otherwise resolve to an inherited function and be
+  // treated as a community component definition.
+  const componentDef = Object.prototype.hasOwnProperty.call(componentRegistry, normalized.card)
+    ? componentRegistry[normalized.card]
+    : undefined;
   if (componentDef) {
     let expanded: CardEntry[];
     try {

@@ -105,6 +105,36 @@ export const systemDefinitionSchema = z.object({
     per: z.string().min(1).optional(),
     group: z.string().min(1).optional(),
   })).optional().describe('Numeric finance lines on the sheet, keyed into character.systemData'),
+  // Zod strips unknown keys, so a field added to the type but not here silently
+  // vanishes for *imported* systems while working for bundled ones. Both halves
+  // or neither — see the skills note in CLAUDE.md.
+  sheetPanels: z.array(z.object({
+    id: z.string().min(1),
+    title: z.string().min(1),
+    icon: z.string().min(1).optional(),
+    sections: z.array(z.discriminatedUnion('kind', [
+      z.object({
+        kind: z.literal('text'),
+        key: z.string().min(1),
+        label: z.string().min(1).optional(),
+        placeholder: z.string().optional(),
+        minHeight: z.number().int().positive().optional(),
+      }),
+      z.object({
+        kind: z.literal('rows'),
+        key: z.string().min(1),
+        heading: z.string().min(1).optional(),
+        columns: z.array(z.object({
+          key: z.string().min(1),
+          label: z.string().min(1),
+          flex: z.string().min(1).optional(),
+          type: z.enum(['text', 'number']).optional(),
+        })).min(1),
+        addLabel: z.string().min(1),
+        emptyLabel: z.string().min(1),
+      }),
+    ])).min(1),
+  })).optional().describe('Sheet panels this ruleset adds, keyed into character.systemData'),
   itemFields: z.object({
     weapon: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),
     armor: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), type: z.enum(['text','number']).optional() })).optional(),

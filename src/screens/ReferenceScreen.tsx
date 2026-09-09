@@ -1,3 +1,4 @@
+import { readTextFile } from '../utils/import/readTextFile';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
@@ -5,7 +6,7 @@ import * as referenceNoteRepository from '../storage/repositories/referenceNoteR
 import * as referenceSectionRepository from '../storage/repositories/referenceSectionRepository';
 import { assignSectionGroup, currentGroupFor, PLACEHOLDER_GROUP_PREFIX } from '../utils/reference/assignSectionGroup';
 import type { ReferenceNote } from '../storage/db/client';
-import type { ReferenceGroup, ReferenceImportBundle, ReferenceSection, ReferenceSectionType } from '../types/reference';
+import type { ReferenceGroup, ReferenceSection, ReferenceSectionType } from '../types/reference';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { Card } from '../components/primitives/Card';
@@ -236,9 +237,14 @@ export default function ReferenceScreen() {
       setDeleteGroupTarget(null);
       return;
     }
-    await referenceSectionRepository.removeGroup(deleteGroupTarget.id);
-    setDeleteGroupTarget(null);
-    await loadSections();
+    try {
+      await referenceSectionRepository.removeGroup(deleteGroupTarget.id);
+      await loadSections();
+    } catch (e) {
+      setError(`Could not delete the card. ${String(e)}`);
+    } finally {
+      setDeleteGroupTarget(null);
+    }
   }
 
   function openEditSection(section: ReferenceSection) {
@@ -263,15 +269,26 @@ export default function ReferenceScreen() {
 
   async function handleSectionDeleteConfirm() {
     if (!deleteSectionTarget) return;
-    await referenceSectionRepository.remove(deleteSectionTarget.id);
-    setDeleteSectionTarget(null);
-    await loadSections();
+    try {
+      await referenceSectionRepository.remove(deleteSectionTarget.id);
+      await loadSections();
+    } catch (e) {
+      setError(`Could not delete the section. ${String(e)}`);
+    } finally {
+      setDeleteSectionTarget(null);
+    }
   }
 
   async function persistLayout(nextGroups: ReferenceGroup[], nextSections: ReferenceSection[]) {
     setGroups(nextGroups.map((group, index) => ({ ...group, order: index })));
     setSections(nextSections);
-    await referenceSectionRepository.saveLayout(nextGroups, nextSections);
+    try {
+      await referenceSectionRepository.saveLayout(nextGroups, nextSections);
+    } catch (e) {
+      // The optimistic order above is now wrong; reload what is actually stored.
+      setError(`Could not save the new order. ${String(e)}`);
+      await loadSections();
+    }
   }
 
   async function moveGroup(activeGroupId: string, targetGroupId: string) {
@@ -325,10 +342,17 @@ export default function ReferenceScreen() {
 
   async function handleImportFile(file: File) {
     try {
-      const bundle = JSON.parse(await file.text()) as ReferenceImportBundle;
-      const count = await referenceSectionRepository.importBundle(bundle);
+      // Parsed, not cast. `importBundle` takes `unknown` and validates every
+      // row, so a malformed section is dropped and reported here rather than
+      // written to IndexedDB and crashing this screen on the next visit.
+      const { imported, skipped } = await referenceSectionRepository.importBundle(
+        JSON.parse(await readTextFile(file)),
+      );
       await loadSections();
-      setError(`Imported ${count} reference section${count === 1 ? '' : 's'}.`);
+      const skippedNote = skipped.length > 0
+        ? ` Skipped ${skipped.length} malformed row${skipped.length === 1 ? '' : 's'}: ${skipped[0]!.entityType} #${skipped[0]!.entityIndex}${skipped[0]!.path ? `.${skipped[0]!.path}` : ''} — ${skipped[0]!.message}`
+        : '';
+      setError(`Imported ${imported} reference section${imported === 1 ? '' : 's'}.${skippedNote}`);
     } catch (e) {
       setError(`Could not import reference JSON. ${String(e)}`);
     } finally {
@@ -366,9 +390,14 @@ export default function ReferenceScreen() {
 
   async function handleNoteDeleteConfirm() {
     if (!deleteNoteTarget) return;
-    await referenceNoteRepository.remove(deleteNoteTarget.id);
-    setDeleteNoteTarget(null);
-    await loadNotes();
+    try {
+      await referenceNoteRepository.remove(deleteNoteTarget.id);
+      await loadNotes();
+    } catch (e) {
+      setError(`Could not delete the note. ${String(e)}`);
+    } finally {
+      setDeleteNoteTarget(null);
+    }
   }
 
   return (

@@ -1,7 +1,9 @@
 import type { CharacterRecord } from '../../../types/character';
-import { resolveArmorRating, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
+import { effectiveAttribute, resolveArmorRating, getEffectiveValue, type DerivedValues } from '../../../utils/derivedValues';
 import { dieCode, traitChance, decodeTraitDie, traitLadder, SAVAGE_TOP_DIE } from '../../../systems/savage-worlds/savageMath';
 import { attrKey, resKey } from '../../../utils/statKeys';
+import { conditionPenalty } from '../../../utils/conditionEffects';
+import type { SystemDefinition } from '../../../types/system';
 import type { SystemEngine } from './types';
 
 export const SAVAGE_WORLDS_ATTRIBUTE_IDS = ['agility', 'smarts', 'spirit', 'strength', 'vigor'];
@@ -45,7 +47,10 @@ const SAVAGE_MAX_FATIGUE_LEVELS = 2;
  * better than the rule allows at every target.
  */
 function traitDie(character: CharacterRecord, id: string) {
-  return decodeTraitDie(character.attributes?.[id] ?? SAVAGE_UNSKILLED_DIE);
+  // Through the resolver, so an `attr:` modifier reaches Toughness, Parry, Load
+  // Limit and the attribute badge. Read raw, a "+2 Vigor" buff moved the
+  // attribute's own display and none of the four numbers computed from it.
+  return decodeTraitDie(effectiveAttribute(character, id, SAVAGE_UNSKILLED_DIE));
 }
 
 /** Half a trait die, the step used by Parry and Toughness. The flat bonus adds whole. */
@@ -111,12 +116,27 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
 }
 
 /**
- * The flat penalty on every trait roll from the character's current state: −1 per
- * Wound and per Fatigue level, −2 Distracted, −2 Entangled. Wounds/Fatigue read
- * the level tracks; the two conditions are SWADE's own, so listing them here (in
- * the SWADE adapter) is the ruleset stating its own rule, not a cross-system leak.
+ * The flat penalty on every trait roll from the character's current state: −1
+ * per Wound and per Fatigue level, plus whatever the active conditions declare.
+ *
+ * @remarks
+ * The condition half used to be `if (conditions['distracted']) mod -= 2` and the
+ * same for `entangled` — both id and magnitude written into this adapter, while
+ * `system.json` declared exactly the same rule as
+ * `effect: { scope: 'all-traits', modifier: -2 }` and nothing read it. Editing
+ * the declaration changed the description a player reads and not the number they
+ * roll, and a fourth condition added to the JSON did nothing at all.
+ *
+ * Wounds and Fatigue stay here: they are level tracks, not conditions, and the
+ * per-level penalty is a SWADE constant this adapter owns.
+ *
+ * @param character - Whose state is being measured.
+ * @param system - The active definition, for its declared condition effects.
  */
-export function savageTraitPenalty(character: CharacterRecord): number {
+export function savageTraitPenalty(
+  character: CharacterRecord,
+  system?: SystemDefinition | null,
+): number {
   let mod = 0;
   // The damage-track model already bounds these, but clamp here too so a
   // hand-edited or imported over-max value can't produce a runaway penalty.
@@ -127,8 +147,7 @@ export function savageTraitPenalty(character: CharacterRecord): number {
     character.resources?.[id] ? Math.max(0, getEffectiveValue(resKey(id), character).effective) : 0;
   mod += SAVAGE_PENALTY_PER_LEVEL * Math.min(track('wounds'), SAVAGE_MAX_WOUND_LEVELS);
   mod += SAVAGE_PENALTY_PER_LEVEL * Math.min(track('fatigue'), SAVAGE_MAX_FATIGUE_LEVELS);
-  if (character.conditions?.['distracted']) mod -= 2;
-  if (character.conditions?.['entangled']) mod -= 2;
+  mod += conditionPenalty(system, character).modifier;
   return mod;
 }
 
@@ -156,12 +175,13 @@ export function formatSavageSkill(value: number, penalty = 0, wild = true): stri
  * rolls and its dying rules are status-plus-table, not a fixed procedure.
  */
 export const savageWorldsEngine: SystemEngine = {
-  resolution: 'trait-die-vs-tn',
-  hasMagic: false,
   attributeBadge: (attributeId, character) => {
     const sides = character.attributes?.[attributeId];
     if (sides === undefined || sides === null) return null;
-    const die = decodeTraitDie(sides);
+    // Through the resolver, so the badge agrees with the four numbers computed
+    // from the same trait die. Read raw, a +2 Agility buff moved Parry but left
+    // the die code beside it saying d6.
+    const die = decodeTraitDie(effectiveAttribute(character, attributeId, SAVAGE_UNSKILLED_DIE));
     return dieCode(die.sides, die.bonus);
   },
   attributeIds: SAVAGE_WORLDS_ATTRIBUTE_IDS,
@@ -178,9 +198,14 @@ export const savageWorldsEngine: SystemEngine = {
     // Legendary advance the first time the field is touched.
     range: { min: SAVAGE_UNSKILLED_DIE, max: SAVAGE_TOP_DIE + SAVAGE_MAX_DIE_BONUS },
     ladder: traitLadder([SAVAGE_UNSKILLED_DIE, 6, 8, 10, SAVAGE_TOP_DIE], true, SAVAGE_MAX_DIE_BONUS),
-    advancementMax: SAVAGE_TOP_DIE + SAVAGE_MAX_DIE_BONUS,
     defaultValue: SAVAGE_UNSKILLED_DIE,
-    display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character) : 0),
+    display: (value, context) => formatSavageSkill(value, context ? savageTraitPenalty(context.character, context.system) : 0),
+    // The stored number is die *sides*: "8" alone is meaningless, "d8" is the
+    // value. So no standalone headline — the die code leads the detail line.
+    describe: (value, context) => ({
+      headline: null,
+      detail: formatSavageSkill(value, context ? savageTraitPenalty(context.character, context.system) : 0),
+    }),
     supportsMarks: false,
     // A skill "counts" once the character has trained it (bought a die above the
     // unskilled d4 baseline).
@@ -219,9 +244,12 @@ export const savageWorldsEngine: SystemEngine = {
     { id: 'wild-attack', label: 'Wild Attack (+2)' },
   ],
   timeUnits: [
-    { id: 'round', label: 'Round', abbrev: 'RND' },
-    { id: 'scene', label: 'Scene', abbrev: 'SCN' },
-    { id: 'session', label: 'Session', abbrev: 'SES' },
+    // SWADE has no rest ladder, so before `expiresOn` nothing in this system
+    // could expire a modifier at all — every buff was permanent in practice.
+    // A round ends with the fight it was in.
+    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { encounterEnd: true } },
+    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
+    { id: 'session', label: 'Session', abbrev: 'SES', expiresOn: { sessionStart: true } },
     { id: 'permanent', label: 'Permanent', abbrev: '∞' },
   ],
   terms: {
@@ -238,9 +266,6 @@ export const savageWorldsEngine: SystemEngine = {
     attributesPanel: 'Attributes',
     encumbrance: 'Load Limit',
     participantHealth: 'Wounds',
-    creatureHealth: 'Wounds',
-    creatureArmor: 'Armor',
-    creatureMovement: 'Pace',
     conditionExamples: 'e.g. Shaken, Distracted',
     encounterTagExamples: 'e.g. chase, social, mass battle',
     locationExample: 'e.g. The Saloon',
@@ -264,7 +289,11 @@ export const savageWorldsEngine: SystemEngine = {
   resolveDamage: (character, { total, ap = 0 }) => {
     const toughness = computeToughness(character, ap);
     const levels: Record<string, number> = {};
-    if (total < toughness) return { levels, setsConditions: [], noEffect: true };
+    // The reason travels with the result. The dashboard used to write "under
+    // Toughness" itself, which is this ruleset's phrase, not a general one.
+    if (total < toughness) {
+      return { levels, setsConditions: [], noEffect: true, noEffectReason: 'under Toughness' };
+    }
     const extraWounds = Math.floor((total - toughness) / 4);
     const alreadyShaken = !!character.conditions?.['shaken'];
     const wounds = (alreadyShaken ? 1 : 0) + extraWounds;
@@ -288,6 +317,18 @@ export const savageWorldsEngine: SystemEngine = {
   },
   // No Arcane Background in the base ruleset; a caster build adds a PP pool later.
   magic: null,
+  encumbrance: {
+    // Load Limit is Strength x5; a d12+1 Strength carries as a 13 would.
+    limit: character => {
+      const strength = traitDie(character, 'strength');
+      return (strength.sides + strength.bonus) * 5;
+    },
+    // SWADE weighs everything in pounds with no free-item tier.
+    load: character =>
+      (character.inventory ?? []).reduce((sum, i) => sum + (i.weight ?? 0) * (i.quantity ?? 1), 0) +
+      (character.armor?.weight ?? 0) +
+      (character.helmet?.weight ?? 0),
+  },
   rest: null,
   death: null,
   advancement: null,
@@ -297,7 +338,7 @@ export const savageWorldsEngine: SystemEngine = {
     chance: (value, _state, context) =>
       ((die => traitChance(die.sides, 4, {
         wild: true,
-        bonus: (context ? savageTraitPenalty(context.character) : 0) + die.bonus,
+        bonus: (context ? savageTraitPenalty(context.character, context.system) : 0) + die.bonus,
       }))(decodeTraitDie(value))),
   },
   derivedFields: [

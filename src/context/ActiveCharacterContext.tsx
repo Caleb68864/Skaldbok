@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import type { ReactNode } from 'react';
 import { useAppState } from './AppStateContext';
 import * as characterRepository from '../storage/repositories/characterRepository';
+import * as systemRepository from '../storage/repositories/systemRepository';
 import { flushAll } from '../features/persistence/autosaveFlush';
 import type { CharacterRecord } from '../types/character';
 import { normalizeCharacter } from '../utils/characterNormalization';
@@ -58,10 +59,14 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
 
     let mounted = true;
     setIsLoading(true);
-    characterRepository.getById(settings.activeCharacterId).then(char => {
+    characterRepository.getById(settings.activeCharacterId).then(async char => {
       if (!mounted) return;
       if (char) {
-        setCharacterState(normalizeCharacter(char));
+        // Normalisation needs the system to know an attribute's legal range;
+        // without it a Traveller characteristic of 0 was rewritten to 1.
+        const system = await systemRepository.getById(char.systemId).catch(() => null);
+        if (!mounted) return;
+        setCharacterState(normalizeCharacter(char, { system }));
       } else {
         // Character was deleted; clear activeCharacterId
         updateSettings({ activeCharacterId: null }).catch(console.error);
@@ -79,14 +84,19 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
   }, [settings.activeCharacterId, settingsLoading]);
 
   const setCharacter = useCallback(async (id: string) => {
+    // Flush FIRST, then read. The flush and the read used to be the other way
+    // round, which quietly undid the edit it was added to protect: re-selecting
+    // the character already open read the row, the flush then wrote the pending
+    // edit to that same row, and the pre-flush snapshot was installed over it.
+    // The sheet reverted to the value the user had just changed away from.
+    //
+    // Mirrors clearCharacter; matters because campaign-switch reconciliation
+    // calls setCharacter in place while the sheet stays mounted.
+    await flushAll();
     const char = await characterRepository.getById(id);
     if (char) {
-      // Flush the outgoing character's pending autosave before switching, so a
-      // debounced edit can't fire against — or be dropped in favour of — the new
-      // character. Mirrors clearCharacter; matters now that campaign-switch
-      // reconciliation calls setCharacter in place while the sheet stays mounted.
-      await flushAll();
-      setCharacterState(normalizeCharacter(char));
+      const system = await systemRepository.getById(char.systemId).catch(() => null);
+      setCharacterState(normalizeCharacter(char, { system }));
       await updateSettings({ activeCharacterId: id });
     }
   }, [updateSettings]);

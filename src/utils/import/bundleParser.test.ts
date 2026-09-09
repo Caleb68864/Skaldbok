@@ -182,3 +182,21 @@ describe('parseBundle — envelope scope cross-check', () => {
     expect(result.warnings.some(w => w.entityType === 'envelope')).toBe(false);
   });
 });
+
+describe('legacy bare-character files', () => {
+  it('validates and migrates a bare record like the versioned path does', () => {
+    const { schemaVersion: _v, ...bare } = validChar;
+    const result = parseBundle(JSON.stringify({ ...bare, schemaVersion: 4 }));
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+    expect(result.bundle.type).toBe('character');
+    expect(result.bundle.contents.characters).toHaveLength(1);
+  });
+
+  it('rejects a bare object that is not a character instead of storing it raw', () => {
+    // This branch used to skip validation entirely, so any JSON object without
+    // a `version` key landed in IndexedDB unvalidated and unmigrated.
+    const result = parseBundle(JSON.stringify({ id: 'x', name: 'Not a character', attributes: 'nope' }));
+    expect(result.success).toBe(false);
+  });
+});

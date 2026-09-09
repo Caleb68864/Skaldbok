@@ -23,6 +23,7 @@ import { StoryBankModule } from '../features/playDashboard/StoryBankModule';
 import { DamageHealModule } from '../features/playDashboard/DamageHealModule';
 import { CurrencyModule } from '../features/playDashboard/CurrencyModule';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
+import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 
 /**
  * At-the-table dashboard for the active character: a dense grid of play modules
@@ -41,8 +42,8 @@ export default function PlayDashboardScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { settings, isLoading: settingsLoading } = useAppState();
-  const { system } = useSystemDefinition(character?.systemId ?? 'classic-fantasy');
-  const { template, error: templateError } = useSheetTemplate(character?.systemId ?? 'classic-fantasy');
+  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
+  const { template, error: templateError } = useSheetTemplate(character?.systemId ?? DEFAULT_SYSTEM_ID);
   const { error } = useAutosave(character, characterRepository.save, 500);
   useSyncedResourceMaxima(character, system, updateCharacter);
   const { showToast } = useToast();

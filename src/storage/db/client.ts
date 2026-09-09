@@ -20,6 +20,7 @@ import type { RouteStop } from '../../types/routeStop';
 import type { RoutePlan } from '../../types/routePlan';
 import type { LedgerAccount } from '../../types/ledgerAccount';
 import type { RecurringBill } from '../../types/recurringBill';
+import type { KBNode, KBEdge } from '../../types/knowledgeBase';
 import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
@@ -40,47 +41,26 @@ export interface ReferenceNote {
 }
 
 /**
- * A node in the per-campaign knowledge-base graph.
+ * The knowledge-base graph row types.
  *
  * @remarks
- * Derived content: nodes are projected from notes and their mentions, not
- * authored directly. `sourceId` points back at the entity a node was materialised
- * from; `scope` distinguishes campaign-local nodes from shared ones.
+ * These were declared here as bare interfaces, which left KB rows as the only
+ * bundle content with no schema to validate against on import. They now live in
+ * `types/knowledgeBase.ts` as Zod schemas with the types inferred from them, and
+ * are re-exported here so every existing `from '.../db/client'` import still
+ * resolves.
  */
-export interface KBNode {
-  id: string;
-  type: 'note' | 'character' | 'location' | 'item' | 'tag' | 'unresolved';
-  label: string;
-  scope: 'campaign' | 'shared';
-  campaignId: string;
-  sourceId?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * A directed edge in the knowledge-base graph, linking two {@link KBNode}s.
- *
- * @remarks
- * Distinct from the domain `entityLinks` table: KB edges model the derived
- * wiki-link/mention/descriptor graph rendered in the KB view, whereas
- * `entityLinks` express authored domain relationships.
- */
-export interface KBEdge {
-  id: string;
-  fromId: string;
-  toId: string;
-  type: 'wikilink' | 'mention' | 'descriptor';
-  campaignId: string;
-  createdAt: string;
-}
+export type { KBNode, KBEdge } from '../../types/knowledgeBase';
 
 /**
  * The app's single Dexie/IndexedDB database.
  *
  * @remarks
  * Each `version(n).stores(...)` block is an append-only migration — never edit an
- * existing block; add a new one. Schema changes that add a new lookup pattern
+ * existing block; add a new one. That is not just a convention any more:
+ * `releasedSchemaVersions.test.ts` fingerprints every released block, including
+ * its inline `.upgrade(...)` body, and fails on any edit. Adding a version means
+ * adding its fingerprint there in the same commit. Schema changes that add a new lookup pattern
  * should add a matching (often compound) index, mirroring the `entityLinks`
  * indexes. Repositories are the only code that touches these tables; UI and hooks
  * go through repositories, never the tables directly.
@@ -613,8 +593,104 @@ export class SkaldbokDatabase extends Dexie {
     this.version(18).stores({
       recurringBills: 'id, campaignId, active, deletedAt',
     });
+
+    // --- Version 19: three latent faults, none of which announce themselves ---
+    //
+    // 1. `referenceSections` never declared `softDeletedBy`, but
+    //    `referenceSectionRepository.restoreGroup` queries it. Dexie throws
+    //    SchemaError on an undeclared index, so the first attempt to restore a
+    //    reference group would have failed outright. Nothing calls it yet,
+    //    which is the only reason it has not fired.
+    //
+    // 2. The v7 `notes` backfill (campaignId/body/status/pinned on rows
+    //    promoted out of `referenceNotes`) was added to the v7 block in commit
+    //    1b5e70a, when the schema was already at v14. Dexie runs an upgrade
+    //    once, on the way past that version — a database already above v7 never
+    //    ran it, and its reference notes are still missing those fields. Re-run
+    //    it here, touching only rows where a field is actually absent so it is
+    //    idempotent and so a note someone has since edited is left alone.
+    //
+    // 3. The v8 rework wrote a full dump of every table into
+    //    localStorage['forge:backup:…'] as a safety net. Nothing ever removed
+    //    it. It survives campaign deletion and "clear all data", sits outside
+    //    the soft-delete model entirely, and holds note bodies verbatim. The
+    //    rework is long done, so drop it.
+    this.version(19)
+      .stores({
+        referenceSections: 'id, category, groupId, order, updatedAt, deletedAt, softDeletedBy',
+      })
+      .upgrade(upgradeNotesAndClearBackupsToV19);
+    // Attachments join the soft-delete convention. `softDeletedBy` is indexed
+    // because restoring a note has to find every attachment that went down with
+    // it by cascade id, exactly as entity links are restored.
+    this.version(20).stores({
+      attachments: 'id, noteId, campaignId, createdAt, deletedAt, softDeletedBy',
+    });
+  }
+}
+
+/**
+ * The v19 upgrade: re-runs the v7 note backfill and drops the v8 localStorage dump.
+ *
+ * @remarks
+ * Exported so `v19Migration.test.ts` runs the shipped function rather than a
+ * copy of it — a duplicated migration in a test passes happily while the real
+ * one drifts. A fresh install creates v19 directly and never reaches here.
+ *
+ * Only fields that are genuinely absent are written, so this is idempotent and
+ * leaves a note someone has since edited alone. `content` is the pre-v7 body
+ * field on rows promoted out of `referenceNotes`.
+ */
+export async function upgradeNotesAndClearBackupsToV19(tx: Transaction): Promise<void> {
+  const notes = await tx.table('notes').toArray().catch(() => []);
+  for (const note of notes) {
+    const patch: Record<string, unknown> = {};
+    if (note.campaignId === undefined || note.campaignId === null) patch.campaignId = '';
+    if (note.body === undefined) patch.body = note.content ?? null;
+    if (note.status === undefined) patch.status = 'active';
+    if (note.pinned === undefined) patch.pinned = false;
+    if (Object.keys(patch).length > 0) {
+      await tx.table('notes').update(note.id, patch);
+    }
+  }
+  clearPreEncounterReworkBackups();
+}
+
+/**
+ * Removes the v8 pre-rework dump from localStorage.
+ *
+ * @remarks
+ * Every key is enumerated rather than reconstructing the name, because the
+ * filename embedded the date the upgrade ran and there may be more than one
+ * from repeated upgrade attempts. Never throws: a browser that blocks site
+ * data throws on the accessor itself, and this is housekeeping — it must not
+ * be able to abort the upgrade transaction and lock the user out of the app.
+ */
+function clearPreEncounterReworkBackups(): void {
+  try {
+    const keys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key?.startsWith('forge:backup:')) keys.push(key);
+    }
+    for (const key of keys) localStorage.removeItem(key);
+  } catch (e) {
+    console.warn('clearPreEncounterReworkBackups: localStorage unavailable, leaving dump in place', e);
   }
 }
 
 /** The process-wide database singleton every repository reads and writes through. */
 export const db = new SkaldbokDatabase();
+
+// Another tab opened a newer schema (the app updated there). Dexie's default
+// is to close this connection, after which every repository call throws
+// DatabaseClosedError with no way for the user to know why. Reload instead:
+// the new build's migrations have already run, so the reload just picks up
+// the version that can open the database.
+if (typeof window !== 'undefined') {
+  db.on('versionchange', () => {
+    db.close();
+    window.location.reload();
+    return false;
+  });
+}

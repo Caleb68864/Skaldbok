@@ -4,6 +4,7 @@ import type { Session } from '../../types/session';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
+import { restoreLinksForTxId, softDeleteLinksForEntity } from './entityLinkRepository';
 
 /**
  * Retrieves a single {@link Session} by its unique identifier.
@@ -189,7 +190,16 @@ export async function updateSession(id: string, data: Partial<Session>): Promise
   }
 }
 
-/** Soft-deletes a session (the user-facing delete). Enlist in a cascade via `txId`. No-op if missing or already deleted. */
+/**
+ * Soft-deletes a session (the user-facing delete). Enlist in a cascade via
+ * `txId`. No-op if missing or already deleted.
+ *
+ * @remarks
+ * Cascades to every `entityLinks` edge touching the session (`contains` →
+ * note, note → `introduced_in`) under the same transaction id, so
+ * {@link restore} brings them back together and a deleted session leaves no
+ * dangling edges behind.
+ */
 export async function softDelete(id: string, txId?: string): Promise<void> {
   try {
     const row = await db.sessions.get(id);
@@ -197,29 +207,48 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
     if ((row as Session).deletedAt) return;
     const finalTxId = txId ?? generateSoftDeleteTxId();
     const now = nowISO();
-    await db.sessions.update(id, {
-      deletedAt: now,
-      softDeletedBy: finalTxId,
-      updatedAt: now,
+    await db.transaction('rw', [db.sessions, db.entityLinks], async () => {
+      await db.sessions.update(id, {
+        deletedAt: now,
+        softDeletedBy: finalTxId,
+        updatedAt: now,
+      });
+      await softDeleteLinksForEntity(id, finalTxId, now);
     });
   } catch (e) {
     throw new Error(`sessionRepository.softDelete failed: ${e}`);
   }
 }
 
-/** Restores a soft-deleted session. No-op if missing or already live. */
+/** Restores a soft-deleted session and the edges deleted with it. No-op if missing or already live. */
 export async function restore(id: string): Promise<void> {
   try {
     const row = await db.sessions.get(id);
     if (!row) return;
     if (!(row as Session).deletedAt) return;
-    await db.sessions.update(id, {
-      deletedAt: undefined,
-      softDeletedBy: undefined,
-      updatedAt: nowISO(),
+    const txId = (row as Session).softDeletedBy;
+    await db.transaction('rw', [db.sessions, db.entityLinks], async () => {
+      await db.sessions.update(id, {
+        deletedAt: undefined,
+        softDeletedBy: undefined,
+        updatedAt: nowISO(),
+      });
+      if (txId) await restoreLinksForTxId(txId);
     });
   } catch (e) {
     throw new Error(`sessionRepository.restore failed: ${e}`);
+  }
+}
+
+/** Soft-deleted sessions of a campaign, most recently deleted first. Feeds the Trash screen. */
+export async function getDeleted(campaignId: string): Promise<Session[]> {
+  try {
+    const rows = await db.sessions.where('deletedAt').above('').toArray();
+    return (rows as Session[])
+      .filter((r) => r.campaignId === campaignId)
+      .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
+  } catch (e) {
+    throw new Error(`sessionRepository.getDeleted failed: ${e}`);
   }
 }
 

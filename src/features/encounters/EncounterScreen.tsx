@@ -55,7 +55,7 @@ export function EncounterScreen({ encounterId, onClose }: EncounterScreenProps) 
 
   const { endEncounter, recentEnded, activeEncounter } = useSessionEncounterContext();
   const { reassignNote } = useSessionLog();
-  const { activeParty } = useCampaignContext();
+  const { activeParty, expireEncounterModifiers } = useCampaignContext();
   const { showToast } = useToast();
 
   const [showParticipantPicker, setShowParticipantPicker] = useState(false);
@@ -127,6 +127,9 @@ export function EncounterScreen({ encounterId, onClose }: EncounterScreenProps) 
     setSubmittingEnd(true);
     try {
       await endEncounter(encounterId, endSummary ?? undefined);
+      // Scene-length modifiers end with the scene. This is the main way an
+      // encounter is closed from the UI.
+      await expireEncounterModifiers();
       setShowEndDialog(false);
       setEndSummary(null);
       onClose();

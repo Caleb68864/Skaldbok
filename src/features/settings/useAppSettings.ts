@@ -39,6 +39,8 @@ export function useAppSettings() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** Set when the settings record could not be read at all — IndexedDB refused to open. */
+  const [storageError, setStorageError] = useState<string | null>(null);
 
   /**
    * The authoritative settings value for merging.
@@ -72,8 +74,14 @@ export function useAppSettings() {
         applySettings(DEFAULT_SETTINGS);
       }
       setIsLoading(false);
-    }).catch(() => {
-      if (mounted) setIsLoading(false);
+    }).catch((err: unknown) => {
+      // A failed *read* here means IndexedDB itself is unavailable (blocked,
+      // corrupt, a version the installed app cannot open). Rendering on
+      // defaults would look fine and lose every save; say so instead.
+      console.error('[useAppSettings] settings load failed', err);
+      if (!mounted) return;
+      setStorageError(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
+      setIsLoading(false);
     });
     return () => { mounted = false; };
   }, [applySettings]);
@@ -90,5 +98,5 @@ export function useAppSettings() {
     }
   }, [applySettings]);
 
-  return { settings, updateSettings, isLoading, error };
+  return { settings, updateSettings, isLoading, error, storageError };
 }
