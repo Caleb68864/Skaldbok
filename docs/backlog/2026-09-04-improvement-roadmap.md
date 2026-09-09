@@ -1492,8 +1492,15 @@ type that exists in every database that came up through v6 and is in no list.
 ## Workstream O — Import without a campaign, and the maintainability tail
 
 Baseline before: 1872 tests / 112 files, `tsc -b` clean, `eslint .` at 0 errors
-/ 35 standing warnings, `vite build` passing. Every item below was reverted and
-re-run to confirm its test fails without the fix.
+/ 35 standing warnings, `vite build` passing. After: **1931 tests / 120 files**,
+with all four checks green and `preserve-caught-error` now enforced on top of
+them. Every item below was reverted and re-run to confirm its test fails without
+the fix.
+
+Two of the scan's claims did not hold exactly and are corrected in place: the
+`preserve-caught-error` count is 129, not 128 or the config's 119; and six
+repositories restore without a listing, not four (the scan excluded two cascade
+children for a reason that was right but written down nowhere).
 
 ### O1. Import was gated on an active campaign — DONE
 - **Where:** `components/shell/CampaignHeader.tsx` (the Import button inside
@@ -1547,6 +1554,127 @@ re-run to confirm its test fails without the fix.
   `navigationCatalogue`/`trashRegistry`: `startImport()` must not sit inside any
   `activeCampaign` conditional; brace-balanced rather than regex, so
   reformatting cannot quietly disable it, 3).
+
+### O2. `preserve-caught-error` taken — 129 sites, all in repositories — DONE
+- **Where:** `eslint.config.js:66` (the rule, disabled, citing 119); every
+  `src/storage/repositories/*.ts`.
+- **Verified:** the comment was stale. Re-running eslint with the rule forced to
+  `error` gives **129**, not 119, and confirms the scan's other two claims: all
+  of them are in `src/storage/repositories/`, none anywhere else, and there was
+  no `cause:` in the codebase.
+- **Why it is not cosmetic here.** `` `${e}` `` renders a Dexie failure as
+  "ConstraintError: Key already exists" and discards the stack *and* `err.name`.
+  This app keeps the user's data in one IndexedDB database on one device, so a
+  `QuotaExceededError` — the device is out of room, the write did not happen —
+  reads as an ordinary validation failure by the time it reaches a toast.
+  `mergeEngine` already branches on exactly those names to decide between
+  rolling an import back and skipping a row; the repositories were throwing the
+  same information away one layer below it.
+- **Done as a codemod, purely additive**, with the rule flipped to `error` in the
+  same commit. One site needed a hand: `attachmentRepository.createAttachment`
+  re-labels a quota failure as a *new* named error, which the rule accepts and
+  which loses the original just as thoroughly.
+- **`tsconfig.app.json` gains `ES2022.Error`** — the one lib slice declaring
+  `ErrorOptions` and `Error.prototype.cause`. `target` stays ES2020, so nothing
+  about the emitted syntax moves.
+- **Tests:** `errorCause.test.ts`, both halves. Three behavioural tests force a
+  `QuotaExceededError` through a repository and assert the name and the original
+  stack are still reachable; a source scan then covers all 129 by walking every
+  brace-balanced `catch (x) { … }` in the directory, so reverting one `{ cause }`
+  fails the suite and not only the lint step.
+
+### O3. `CLAUDE.md` / `AGENTS.md` reconciled with the schema — DONE
+- **Verified:** the soft-delete list named nine entities; **20 of the 26 tables**
+  declare `deletedAt`. The eleven undocumented ones are attachments, inventory
+  containers, ships, all four ledger tables, both route tables and both
+  reference tables. `migrated_from` is written by the `version(6)` upgrade and
+  appeared in none of the three lists that name relationship types.
+- **The list was deleted rather than corrected.** The docs now state a count and
+  point at `TABLES_WITHOUT_SOFT_DELETE` (`types/bundleTables.ts`), which records
+  the six *exclusions* with a reason each — the same shape as
+  `TABLES_OUTSIDE_BUNDLE` beside it. Six entries with reasons stay true in a way
+  twenty names in prose do not.
+- Also fixed while there: the `entityType` comment in `entityLinkRepository.ts`
+  over-declared by three. It now separates what the app writes (6) from what the
+  merge engine can resolve on import (9, including `inventoryContainer`, which
+  the old comment omitted) — different questions that had been merged.
+- **Tests:** `softDeleteCoverage.test.ts` walks `db.tables` against the exclusion
+  map, checks the count the docs state, **diffs the sections CLAUDE.md and
+  AGENTS.md share** (which CLAUDE.md instructs and nothing enforced), and scans
+  `src` for every `relationshipType` literal, failing if any of the three lists
+  is short.
+
+### O4. Trash registry enforced in both directions — DONE
+- **Verified, with a correction:** the scan said four repositories. It is six —
+  `attachmentRepository` and `entityLinkRepository` as well, which the scan
+  excluded as cascade children. That is the right *reason* but it was never
+  written down anywhere, which is the finding.
+- **What was wrong:** `trashRegistry.test.ts` enforced `getDeleted → registry`,
+  the half that had already failed. That is the second step. A repository gains
+  `softDelete` and `restore` first, and until it also gains a listing its
+  tombstoned rows are invisible — with the existing guard passing, because it is
+  never asked about a repository that has no listing to check.
+- **Fix:** `RESTORE_WITHOUT_LISTING` records each of the six with its reason
+  (cascade children restored by txId; campaigns and encounters with no
+  user-facing delete and an incomplete cascade; ledger splits and route plans as
+  one lazily created row per campaign). A seventh cannot appear silently, and an
+  exemption that goes stale — the repository grows a listing — fails too.
+
+### O5. Migration freeze extended to extracted upgrades — DONE
+- **Where:** `releasedSchemaVersions.test.ts`; `client.ts:568,636`.
+- **The decision, since the file had a stated reason for the gap.**
+  `upgradeReferenceGroupsToV14` and `upgradeNotesAndClearBackupsToV19` were left
+  outside the hash on the grounds that an exported function has its own
+  behavioural tests. That does not survive contact with what a freeze is for: a
+  behavioural test catches the changes it happens to cover, a hash catches every
+  change, and "every change" is the whole property, because a released upgrade
+  should not be edited at all. Extraction is the pattern the file *recommends*
+  going forward, so the guarantee was shrinking with each version that used it.
+- **Fix:** both are fingerprinted, along with `writePreEncounterReworkBackup`
+  which the frozen v8 block calls out to, and a named `.upgrade(fn)` with no
+  fingerprint fails — so the next extracted upgrade cannot join silently. The
+  behavioural tests stay: they say what the upgrade does, the hash says it has
+  not moved. Verified by editing the v14 body and watching it fail.
+- **Where the freeze still stops is now stated** rather than left to be found:
+  `generateId` is called from the v6, v8 and v9 upgrades and is deliberately not
+  fingerprinted, because freezing a general helper would freeze the codebase.
+
+### O6. The tail — DONE
+- **`resolveComponent` connected, not deleted.** Verified unreachable from both
+  ends: `sheetTemplateSchema` had no `components` key, so nothing could declare
+  one, and `PlayDashboardScreen` never passed `CardRenderer` a registry.
+  Deleting ~250 lines would have discarded real hardening (own-property lookups
+  against a template's `card: "toString"`, a recursion stack, a depth cap and a
+  separate breadth budget) that would have to be rediscovered. It is finished
+  work with two wires unattached, and attaching them is fifteen lines. Every
+  bundled template declares no components and is unaffected.
+  `componentReachability.test.ts` covers the two links — including a source check
+  that no `<CardRenderer>` is missing the prop, since it is optional and defaults
+  to `{}`, so forgetting it renders nothing and raises nothing.
+- **Five inert `PANEL_KEYS` documented, not removed.** Verified: two production
+  sites read `engine.panels`, asking about eight keys between them; `skills`,
+  `inventory`, `combat`, `notes` and `bennies` are read by nothing. They stay
+  because `panels` is data a `system.json` may override and the Zod schema
+  validates an imported system's `panels` against these keys — shrinking the list
+  would make a previously valid user-authored system fail validation, a data
+  regression for five fewer strings. `panelKeyReaders.test.ts` pins the three
+  groups and fails in both directions, so the comment cannot rot into a lie.
+- **Four DB-reset dialects, one replaced.** `src/test-utils/resetDatabase.ts`,
+  derived from `db.tables`, replaces the six files that hand-listed their tables
+  plus the two that spelled the same loop out inline. `db.delete()`+`db.open()`
+  and `Dexie.delete(DB_NAME)` remain as separate sanctioned dialects — they
+  re-run the upgrade ladder and drop the database before redeclaring it at a
+  lower version respectively — with both reasons recorded beside the helper.
+- **`TimelineExample.tsx` + `mockData.ts` deleted.** 177 lines, referenced by
+  nothing but each other.
+
+**Left open from the same scan**, with reasons: the 42 direct Dexie calls
+outside `src/storage/` (the largest remaining unguarded axis, and a cross-cutting
+refactor rather than a guard); the repository factory, which the scan itself
+argues should follow `repositoryConventions.test.ts` rather than precede it;
+`declaredCapabilities`' remaining blind spots beyond the ones N3 fixed; and
+`sheetTemplateSchema.print`, which is still authored-and-discarded — now the only
+reserved-and-unread surface left in that file.
 
 ---
 
