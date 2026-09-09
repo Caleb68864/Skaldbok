@@ -89,3 +89,55 @@ export interface ReferenceImportBundle {
   referencePages?: Array<{ title: string; sections: string[] }>;
   referenceGroups?: Partial<ReferenceGroup>[];
 }
+
+/**
+ * Zod schemas for a hand-authored or third-party reference import file.
+ *
+ * @remarks
+ * Separate from the row schemas above because an import bundle is deliberately
+ * *partial* — `importBundle` synthesises missing ids, orders, categories and
+ * timestamps so a bundle written by hand still imports. What it cannot
+ * synthesise is a field of the wrong shape: `rows: "table"` or
+ * `items: [{ label: 42 }]` was written straight to IndexedDB, where it stayed,
+ * and crashed the screen on every subsequent render. Because the import
+ * `bulkPut`s by id, a bad row also overwrites a good one with the same id, so
+ * "delete the import and start again" was not a way out either.
+ *
+ * Every field is optional and every field is type-checked. The `satisfies`
+ * clause keeps these honest against the interfaces, the same way the row
+ * schemas above are kept honest.
+ */
+export const referenceImportSectionSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().optional(),
+  category: z.string().optional(),
+  groupId: z.string().optional(),
+  order: z.number().optional(),
+  pg: z.string().optional(),
+  type: z.enum(['table', 'key_value_list', 'rules_text']).optional(),
+  columns: z.array(z.string()).optional(),
+  rows: z.array(z.record(z.string(), z.string())).optional(),
+  items: z.array(z.object({ label: z.string(), description: z.string() })).optional(),
+  paragraphs: z.array(z.string()).optional(),
+  footnote: z.string().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+}) satisfies z.ZodType<Partial<ReferenceSection>>;
+
+export const referenceImportGroupSchema = z.object({
+  id: z.string().optional(),
+  title: z.string().optional(),
+  order: z.number().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+}) satisfies z.ZodType<Partial<ReferenceGroup>>;
+
+/**
+ * A page entry, which supplies the category and ordering for the sections it
+ * lists. Both fields are required: a page with no title names no card, and a
+ * page with no section list orders nothing.
+ */
+export const referenceImportPageSchema = z.object({
+  title: z.string(),
+  sections: z.array(z.string()),
+});

@@ -1,5 +1,7 @@
 import { db } from '../db/client';
-import type { ReferenceGroup, ReferenceImportBundle, ReferenceSection } from '../../types/reference';
+import type { ReferenceGroup, ReferenceSection } from '../../types/reference';
+import { parseReferenceBundle } from '../../utils/import/referenceBundleParser';
+import type { ValidationWarning } from '../../utils/import/bundleParser';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted } from '../../utils/softDelete';
@@ -146,28 +148,52 @@ export async function restore(id: string): Promise<void> {
 }
 
 /**
+ * What an import actually did: how many sections landed, and what was dropped.
+ */
+export interface ReferenceImportResult {
+  /** Sections written. */
+  imported: number;
+  /** One entry per row rejected by validation; empty on a clean import. */
+  skipped: ValidationWarning[];
+}
+
+/**
  * Imports a reference bundle, creating the sections and the grouping cards they
  * need in one transaction.
  *
  * @remarks
- * Tolerant of partial input: missing ids, orders, categories, and timestamps are
- * synthesised so a hand-authored or third-party bundle still imports cleanly.
- * A `referencePages` entry, if present, supplies the category and ordering for
- * its listed sections.
+ * Takes `unknown` and validates it here rather than trusting a cast at the call
+ * site. This was the last unvalidated JSON path in the app: the screen did
+ * `JSON.parse(text) as ReferenceImportBundle` and handed it straight to the
+ * `bulkPut` below. A section whose `rows` was a string, or whose `items` held
+ * numbers where the renderer reads `label`, persisted and then crashed the
+ * Reference screen on every later visit — and since the write is keyed by `id`,
+ * a malformed row could land on top of a section that had been fine.
  *
- * @returns The number of sections imported.
+ * Still tolerant of *partial* input, which is the point of the format: missing
+ * ids, orders, categories and timestamps are synthesised so a hand-authored
+ * bundle imports cleanly. A `referencePages` entry, if present, supplies the
+ * category and ordering for its listed sections. What is no longer tolerated is
+ * a field of the wrong type — that row is dropped and reported.
+ *
+ * @param bundle - The parsed JSON of an import file, unvalidated.
+ * @throws If the file is not a reference bundle at all.
+ * @returns The number of sections imported and the rows that were rejected.
  */
-export async function importBundle(bundle: ReferenceImportBundle): Promise<number> {
+export async function importBundle(bundle: unknown): Promise<ReferenceImportResult> {
+  const parsed = parseReferenceBundle(bundle);
+  if (!parsed.success) throw new Error(parsed.error);
+  const validated = parsed.bundle;
   const now = nowISO();
   const pageOrder = new Map<string, { category: string; order: number }>();
 
-  for (const page of bundle.referencePages ?? []) {
+  for (const page of validated.referencePages ?? []) {
     page.sections.forEach((sectionId, index) => {
       pageOrder.set(sectionId, { category: page.title, order: index });
     });
   }
 
-  const sections = (bundle.referenceSections ?? []).map((raw, index): ReferenceSection => {
+  const sections = (validated.referenceSections ?? []).map((raw, index): ReferenceSection => {
     const id = raw.id ?? generateId();
     const page = pageOrder.get(id);
     return {
@@ -188,7 +214,7 @@ export async function importBundle(bundle: ReferenceImportBundle): Promise<numbe
   });
 
   const groupTitles = new Set<string>();
-  for (const group of bundle.referenceGroups ?? []) {
+  for (const group of validated.referenceGroups ?? []) {
     if (group.title) groupTitles.add(group.title);
   }
   for (const section of sections) {
@@ -196,7 +222,7 @@ export async function importBundle(bundle: ReferenceImportBundle): Promise<numbe
   }
 
   const groups = Array.from(groupTitles).map((title, index): ReferenceGroup => {
-    const raw = bundle.referenceGroups?.find(group => group.title === title);
+    const raw = validated.referenceGroups?.find(group => group.title === title);
     return {
       id: raw?.id ?? generateId(),
       title,
@@ -221,7 +247,7 @@ export async function importBundle(bundle: ReferenceImportBundle): Promise<numbe
     await db.referenceGroups.bulkPut(groups);
     await db.referenceSections.bulkPut(boundSections);
   });
-  return boundSections.length;
+  return { imported: boundSections.length, skipped: parsed.warnings };
 }
 
 /**

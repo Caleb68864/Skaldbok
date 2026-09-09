@@ -6,7 +6,7 @@ import * as referenceNoteRepository from '../storage/repositories/referenceNoteR
 import * as referenceSectionRepository from '../storage/repositories/referenceSectionRepository';
 import { assignSectionGroup, currentGroupFor, PLACEHOLDER_GROUP_PREFIX } from '../utils/reference/assignSectionGroup';
 import type { ReferenceNote } from '../storage/db/client';
-import type { ReferenceGroup, ReferenceImportBundle, ReferenceSection, ReferenceSectionType } from '../types/reference';
+import type { ReferenceGroup, ReferenceSection, ReferenceSectionType } from '../types/reference';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { Card } from '../components/primitives/Card';
@@ -342,10 +342,17 @@ export default function ReferenceScreen() {
 
   async function handleImportFile(file: File) {
     try {
-      const bundle = JSON.parse(await readTextFile(file)) as ReferenceImportBundle;
-      const count = await referenceSectionRepository.importBundle(bundle);
+      // Parsed, not cast. `importBundle` takes `unknown` and validates every
+      // row, so a malformed section is dropped and reported here rather than
+      // written to IndexedDB and crashing this screen on the next visit.
+      const { imported, skipped } = await referenceSectionRepository.importBundle(
+        JSON.parse(await readTextFile(file)),
+      );
       await loadSections();
-      setError(`Imported ${count} reference section${count === 1 ? '' : 's'}.`);
+      const skippedNote = skipped.length > 0
+        ? ` Skipped ${skipped.length} malformed row${skipped.length === 1 ? '' : 's'}: ${skipped[0]!.entityType} #${skipped[0]!.entityIndex}${skipped[0]!.path ? `.${skipped[0]!.path}` : ''} — ${skipped[0]!.message}`
+        : '';
+      setError(`Imported ${imported} reference section${imported === 1 ? '' : 's'}.${skippedNote}`);
     } catch (e) {
       setError(`Could not import reference JSON. ${String(e)}`);
     } finally {
