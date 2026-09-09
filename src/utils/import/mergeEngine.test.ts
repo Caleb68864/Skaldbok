@@ -7,6 +7,7 @@ import { mergeBundle, type MergeOptions } from './mergeEngine';
 import { serializeBundle } from '../export/bundleSerializer';
 import { parseBundle } from './bundleParser';
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
+import { resetDatabase } from '../../test-utils/resetDatabase';
 
 function makeBundle(contents: Record<string, unknown>): BundleEnvelope {
   return {
@@ -27,7 +28,7 @@ const ALL_TYPES: MergeOptions['selectedEntityTypes'] = new Set([
 const opts: MergeOptions = { selectedEntityTypes: ALL_TYPES };
 
 beforeEach(async () => {
-  await Promise.all(db.tables.map(t => t.clear()));
+  await resetDatabase();
 });
 
 describe('mergeBundle', () => {

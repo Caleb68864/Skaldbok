@@ -314,21 +314,40 @@ export interface CreatureModel {
  * panels the *sheet surface* knows how to draw.
  */
 export const PANEL_KEYS = [
+  // ---- Read by `sheetPanelAvailability` (panelOrder.ts) or CombatModule ----
+  // Declaring or omitting one of these changes what renders.
   'attributes',
-  'skills',
   'resources',
-  'inventory',
-  'magic',
-  'combat',
-  'rest',
-  'death',
-  'notes',
   'characteristics',
   'finances',
   'careers',
   'augments',
   'edges',
   'hindrances',
+
+  // ---- Gated on a nullable rules model instead, deliberately ----
+  // A ruleset without the mechanic sets `engine.rest`/`death`/`magic` to null
+  // and the panel disappears; listing the key here as well is redundant but
+  // harmless, and `engineConsumers.test.ts` polices the nullable-model rule.
+  'magic',
+  'rest',
+  'death',
+
+  // ---- Declared by every adapter and read by nothing ----
+  // Kept, not deleted, and the distinction is worth stating because the obvious
+  // cleanup is the wrong one. `panels` is *data*: `system.json` may override it
+  // (Traveller already ships its list from JSON), and the Zod schema validates
+  // an imported system's `panels` against these keys. Removing one would make a
+  // user-authored or previously-exported `system.json` that lists it fail
+  // validation, which is a data regression in exchange for five fewer strings.
+  //
+  // If they are ever to mean something, the change is to give them a reader —
+  // not to delete them. `panelKeyReaders.test.ts` pins this partition so the
+  // inert set cannot quietly grow.
+  'skills',
+  'inventory',
+  'combat',
+  'notes',
   'bennies',
   // Reserved for SWADE Arcane Background / Powers — no adapter ships it yet
   // (savageWorldsEngine.magic is null), so no panel currently uses this key.

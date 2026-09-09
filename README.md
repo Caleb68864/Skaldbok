@@ -82,9 +82,26 @@ content hash, shows a preview with per-entity-type selection and conflict
 detection, and drops a malformed row with a warning rather than rejecting the
 whole file. ZIP is export-only.
 
-**Known gap:** the Import action lives in the campaign menu and is only shown
-when a campaign is active, so on a genuinely fresh install you must create a
-campaign before you can restore one.
+**Restoring onto an empty device works.** Import is a device-level action, not a
+campaign-scoped one: it is offered in the menu and in the campaign selector with
+no campaign present, because a device that has lost its data has no campaign by
+definition. What a bundle needs is then answered from the rows it carries rather
+than from the label on the file:
+
+- A **campaign bundle** brings its own campaign, so it is restored under that
+  campaign's own identity and made active — you are never asked to invent a
+  campaign to restore one into, and re-importing the same file updates that
+  campaign instead of creating a second copy.
+- A **character** has no campaign of its own (`characters` is a device-wide
+  table; a character joins a campaign through a party seat), so a character
+  bundle imports with no campaign involved at all.
+- Only rows that genuinely carry a `campaignId` — sessions, notes, encounters,
+  the ledger, and the rest — need a home, and only those are asked about. If
+  there is nowhere for them to go yet, the dialog says which groups those are so
+  you can bring in the rest now.
+
+The merge runs in a single Dexie transaction, so a restore either lands whole or
+not at all.
 
 ## Game systems
 

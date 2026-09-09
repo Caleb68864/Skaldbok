@@ -26,7 +26,8 @@ export async function getNodeById(id: string): Promise<KBNode | undefined> {
     return kbNodeSchema.parse(raw) as KBNode;
   } catch (err) {
     throw new Error(
-      `kbNodeRepository.getNodeById(${id}): ${err instanceof Error ? err.message : String(err)}`
+      `kbNodeRepository.getNodeById(${id}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -47,7 +48,8 @@ export async function getNodesByType(
     return raw.map((r) => kbNodeSchema.parse(r) as KBNode);
   } catch (err) {
     throw new Error(
-      `kbNodeRepository.getNodesByType(${campaignId}, ${type}): ${err instanceof Error ? err.message : String(err)}`
+      `kbNodeRepository.getNodesByType(${campaignId}, ${type}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -62,7 +64,8 @@ export async function getNodesByCampaign(campaignId: string): Promise<KBNode[]> 
     return raw.map((r) => kbNodeSchema.parse(r) as KBNode);
   } catch (err) {
     throw new Error(
-      `kbNodeRepository.getNodesByCampaign(${campaignId}): ${err instanceof Error ? err.message : String(err)}`
+      `kbNodeRepository.getNodesByCampaign(${campaignId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -77,7 +80,8 @@ export async function getSharedNodes(): Promise<KBNode[]> {
     return raw.map((r) => kbNodeSchema.parse(r) as KBNode);
   } catch (err) {
     throw new Error(
-      `kbNodeRepository.getSharedNodes(): ${err instanceof Error ? err.message : String(err)}`
+      `kbNodeRepository.getSharedNodes(): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -100,7 +104,8 @@ export async function getNodeByLabel(
     return kbNodeSchema.parse(raw) as KBNode;
   } catch (err) {
     throw new Error(
-      `kbNodeRepository.getNodeByLabel(${label}, ${campaignId}): ${err instanceof Error ? err.message : String(err)}`
+      `kbNodeRepository.getNodeByLabel(${label}, ${campaignId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -113,7 +118,8 @@ export async function upsertNode(node: KBNode): Promise<void> {
     await db.kb_nodes.put(node);
   } catch (err) {
     throw new Error(
-      `kbNodeRepository.upsertNode(${node.id}): ${err instanceof Error ? err.message : String(err)}`
+      `kbNodeRepository.upsertNode(${node.id}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -126,7 +132,8 @@ export async function deleteNode(id: string): Promise<void> {
     await db.kb_nodes.delete(id);
   } catch (err) {
     throw new Error(
-      `kbNodeRepository.deleteNode(${id}): ${err instanceof Error ? err.message : String(err)}`
+      `kbNodeRepository.deleteNode(${id}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }
@@ -139,7 +146,8 @@ export async function deleteNodesBySource(sourceId: string): Promise<void> {
     await db.kb_nodes.where('sourceId').equals(sourceId).delete();
   } catch (err) {
     throw new Error(
-      `kbNodeRepository.deleteNodesBySource(${sourceId}): ${err instanceof Error ? err.message : String(err)}`
+      `kbNodeRepository.deleteNodesBySource(${sourceId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
     );
   }
 }

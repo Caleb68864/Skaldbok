@@ -23,11 +23,35 @@ import { join } from 'node:path';
  *
  * The fingerprint covers each block's `.stores(...)` **and** its inline
  * `.upgrade(...)` body, because the v7 incident was an edit to an upgrade body,
- * not to a schema string. The two upgrades that live in exported functions
- * (`upgradeReferenceGroupsToV14`, `upgradeNotesAndClearBackupsToV19`) are
- * deliberately not fingerprinted: they are exported precisely so their own
- * tests run the shipped function, so a change to either fails those tests on
- * behaviour rather than on a hash.
+ * not to a schema string.
+ *
+ * ### Extracted upgrades are frozen too
+ *
+ * Two upgrades live in exported functions rather than inline arrows
+ * (`upgradeReferenceGroupsToV14`, `upgradeNotesAndClearBackupsToV19`), and that
+ * is the pattern this file recommends going forward — an exported function can
+ * be called directly by a behavioural test, which an inline arrow cannot. They
+ * were originally left outside the hash for that reason.
+ *
+ * That reasoning does not survive contact with what a freeze is for. A
+ * behavioural test catches the changes it happens to cover; a hash catches
+ * *every* change, and "every change" is the whole property, because a released
+ * upgrade should not be edited at all. Leaving the extracted ones out meant the
+ * guarantee shrank each time the recommended pattern was used — v14 and v19
+ * today, and everything after them.
+ *
+ * So both are fingerprinted here as well, and so is
+ * `writePreEncounterReworkBackup`, which the frozen v8 block calls out to. The
+ * behavioural tests stay: they say what the upgrade *does*, this says it has
+ * not moved. A named `.upgrade(fn)` with no fingerprint fails, so the next
+ * extracted upgrade cannot join silently.
+ *
+ * **Where the freeze still stops**, stated rather than left to be discovered: a
+ * shared utility called from inside an upgrade is not fingerprinted.
+ * `generateId` is called by the v6, v8 and v9 upgrades and is a general helper
+ * with its own reasons to change; freezing it would freeze the codebase. If a
+ * released upgrade's behaviour depends on a helper's exact output, inline the
+ * helper's logic into the upgrade rather than relying on this file to notice.
  */
 
 const CLIENT_PATH = join(process.cwd(), 'src/storage/db/client.ts');
@@ -111,6 +135,64 @@ function fingerprint(block: string): string {
   return createHash('sha256').update(block).digest('hex').slice(0, 16);
 }
 
+/**
+ * Fingerprints of released upgrade steps that live in a named function rather
+ * than an inline arrow.
+ *
+ * @remarks
+ * Same rules as {@link RELEASED_BLOCK_FINGERPRINTS}: add an entry when the
+ * upgrade ships, and **never refresh one to make the test pass**. A mismatch
+ * means a released migration was edited, and every database already past that
+ * version ran the old body.
+ */
+const EXTRACTED_UPGRADE_FINGERPRINTS: Record<string, string> = {
+  upgradeReferenceGroupsToV14: '53928b7dec68f5b8',
+  upgradeNotesAndClearBackupsToV19: '94976af6bf647af5',
+  // Not passed to `.upgrade()` — called from inside the frozen v8 block, which
+  // means the block's own hash covers the *call* and nothing covers what it
+  // calls. It writes the pre-encounter-rework backup, which is the one piece of
+  // user data that migration preserves.
+  writePreEncounterReworkBackup: '0639bb34b4e89893',
+};
+
+/** Modules that may declare a released upgrade step, searched in order. */
+const UPGRADE_SOURCE_FILES = [
+  CLIENT_PATH,
+  join(process.cwd(), 'src/storage/db/migrations/pre-encounter-rework-backup.ts'),
+];
+
+/** Every identifier passed by name to `.upgrade(...)` in the constructor. */
+function namedUpgrades(): string[] {
+  const body = constructorBody(readFileSync(CLIENT_PATH, 'utf8'));
+  return [...body.matchAll(/\.upgrade\(\s*([A-Za-z_$][\w$]*)\s*\)/g)].map((m) => m[1]!);
+}
+
+/**
+ * Source text of `export async function <name>(…) { … }`, matched by balancing
+ * braces so a nested block cannot end it early.
+ */
+function upgradeFunctionSource(name: string): string {
+  for (const file of UPGRADE_SOURCE_FILES) {
+    const source = readFileSync(file, 'utf8');
+    const declaration = new RegExp(`export\\s+async\\s+function\\s+${name}\\s*\\(`);
+    const match = declaration.exec(source);
+    if (!match) continue;
+    const open = source.indexOf('{', match.index + match[0].length);
+    let depth = 0;
+    for (let i = open; i < source.length; i++) {
+      if (source[i] === '{') depth++;
+      else if (source[i] === '}') {
+        depth--;
+        if (depth === 0) return source.slice(match.index, i + 1);
+      }
+    }
+  }
+  throw new Error(
+    `could not find the declaration of ${name}. If a released upgrade moved file, `
+    + 'add its new home to UPGRADE_SOURCE_FILES rather than dropping the fingerprint.',
+  );
+}
+
 describe('released schema versions', () => {
   const blocks = releasedBlocks();
 
@@ -145,6 +227,37 @@ describe('released schema versions', () => {
       'below it upgrades through it.',
     ).toEqual([]);
   });
+
+  it('records a fingerprint for every named upgrade function', () => {
+    // The widening blind spot, closed. `.upgrade(someFunction)` is the pattern
+    // this file recommends, so without this check the freeze would cover a
+    // smaller share of the ladder with every version that used it.
+    const named = namedUpgrades();
+    expect(named.length, 'no `.upgrade(name)` calls found — has the pattern changed?')
+      .toBeGreaterThan(0);
+    const unpinned = named.filter(name => !(name in EXTRACTED_UPGRADE_FINGERPRINTS));
+    expect(
+      unpinned,
+      `${unpinned.join(', ')} is passed to .upgrade() but has no fingerprint. An `
+      + 'extracted upgrade is still a released migration — add its entry to '
+      + 'EXTRACTED_UPGRADE_FINGERPRINTS in the same commit as the version block.',
+    ).toEqual([]);
+  });
+
+  it.each(Object.keys(EXTRACTED_UPGRADE_FINGERPRINTS))(
+    '%s is unchanged since it shipped',
+    name => {
+      expect(
+        fingerprint(normalise(upgradeFunctionSource(name))),
+        `${name} has been edited. It runs exactly once per database, on the way past `
+        + 'its version, so every database already above that version has run the old '
+        + 'body and will never run this one — the two populations diverge permanently. '
+        + 'Being in an exported function rather than an inline arrow changes nothing '
+        + 'about that. Revert the edit and express the change as a new version(n + 1) '
+        + 'block. This hash is not a snapshot to refresh.',
+      ).toBe(EXTRACTED_UPGRADE_FINGERPRINTS[name]);
+    },
+  );
 
   it.each([...blocks.keys()])('version(%i) is unchanged since it shipped', version => {
     const expected = RELEASED_BLOCK_FINGERPRINTS[version];

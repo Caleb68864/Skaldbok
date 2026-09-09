@@ -3,7 +3,13 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "target": "ES2020",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    // `ES2022.Error` is the one slice added on top of ES2020: it declares
+    // `ErrorOptions` and `Error.prototype.cause`, which `preserve-caught-error`
+    // requires every repository rethrow to use. Only the type declarations
+    // change — `target` stays ES2020, so nothing about the emitted syntax
+    // moves, and a browser old enough to lack `cause` ignores the extra
+    // constructor argument rather than failing on it.
+    "lib": ["ES2020", "ES2022.Error", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "bundler",

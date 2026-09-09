@@ -6,12 +6,23 @@ import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 
 // entityType is a free-string field — no whitelist enforced.
-// Valid values include: 'note', 'character', 'session', 'campaign',
-// 'party', 'partyMember', 'encounter', 'encounterParticipant', 'creature'
 //
-// relationshipType is likewise free-string. Valid values include: 'contains',
-// 'introduced_in', 'happened_during', 'represents', 'promoted_into'
-// Verified: 2026-07-27 (promoted_into relationship type)
+// Written by the app today: 'note', 'character', 'session', 'encounter',
+// 'encounterParticipant', 'creature'. Also *resolvable* on import, because
+// `mergeEngine`'s LINK_ENDPOINT_TABLES can look them up and would reject an edge
+// it could not verify: 'campaign', 'party', 'partyMember', 'inventoryContainer'.
+// The two lists are different questions and the older version of this comment
+// merged them, over-declaring by three.
+//
+// relationshipType is likewise free-string. Every value the app writes:
+// 'contains', 'introduced_in', 'happened_during', 'represents',
+// 'promoted_into', 'migrated_from'.
+//
+// 'migrated_from' is written by the `version(6)` upgrade in `db/client.ts`, so
+// those edges exist in every database that came up through v6 — and it was in
+// none of the three places that list these types until `softDeleteCoverage.test.ts`
+// started scanning `src` for the literals and failing when a list is short.
+// Keep this comment, the CLAUDE.md table and the AGENTS.md table together.
 
 /**
  * Outgoing edges of one relationship type from an entity.
@@ -40,7 +51,7 @@ export async function getLinksFrom(fromEntityId: string, relationshipType: strin
       .filter((l): l is EntityLink => l !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`entityLinkRepository.getLinksFrom failed: ${e}`);
+    throw new Error(`entityLinkRepository.getLinksFrom failed: ${e}`, { cause: e });
   }
 }
 
@@ -69,7 +80,7 @@ export async function getLinksTo(toEntityId: string, relationshipType: string, o
       .filter((l): l is EntityLink => l !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`entityLinkRepository.getLinksTo failed: ${e}`);
+    throw new Error(`entityLinkRepository.getLinksTo failed: ${e}`, { cause: e });
   }
 }
 
@@ -91,7 +102,7 @@ export async function getAllLinksFrom(fromEntityId: string, options?: { includeD
       .filter((l): l is EntityLink => l !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`entityLinkRepository.getAllLinksFrom failed: ${e}`);
+    throw new Error(`entityLinkRepository.getAllLinksFrom failed: ${e}`, { cause: e });
   }
 }
 
@@ -113,7 +124,7 @@ export async function getAllLinksTo(toEntityId: string, options?: { includeDelet
       .filter((l): l is EntityLink => l !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`entityLinkRepository.getAllLinksTo failed: ${e}`);
+    throw new Error(`entityLinkRepository.getAllLinksTo failed: ${e}`, { cause: e });
   }
 }
 
@@ -139,7 +150,7 @@ export async function createLink(data: Omit<EntityLink, 'id' | 'createdAt' | 'up
     await db.entityLinks.add(link);
     return link;
   } catch (e) {
-    throw new Error(`entityLinkRepository.createLink failed: ${e}`);
+    throw new Error(`entityLinkRepository.createLink failed: ${e}`, { cause: e });
   }
 }
 
@@ -170,7 +181,7 @@ export async function deleteLinksForNote(noteId: string, txId?: string): Promise
       await db.entityLinks.bulkUpdate(changes);
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.deleteLinksForNote failed: ${e}`);
+    throw new Error(`entityLinkRepository.deleteLinksForNote failed: ${e}`, { cause: e });
   }
 }
 
@@ -230,7 +241,7 @@ export async function softDeleteLinksForEncounter(
       });
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.softDeleteLinksForEncounter failed: ${e}`);
+    throw new Error(`entityLinkRepository.softDeleteLinksForEncounter failed: ${e}`, { cause: e });
   }
 }
 
@@ -264,7 +275,7 @@ export async function softDeleteLinksForCreature(
       });
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.softDeleteLinksForCreature failed: ${e}`);
+    throw new Error(`entityLinkRepository.softDeleteLinksForCreature failed: ${e}`, { cause: e });
   }
 }
 
@@ -287,7 +298,7 @@ export async function restoreLinksForTxId(txId: string): Promise<void> {
       });
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.restoreLinksForTxId failed: ${e}`);
+    throw new Error(`entityLinkRepository.restoreLinksForTxId failed: ${e}`, { cause: e });
   }
 }
 
@@ -305,7 +316,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       updatedAt: now,
     });
   } catch (e) {
-    throw new Error(`entityLinkRepository.softDelete failed: ${e}`);
+    throw new Error(`entityLinkRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -321,7 +332,7 @@ export async function restore(id: string): Promise<void> {
       updatedAt: nowISO(),
     });
   } catch (e) {
-    throw new Error(`entityLinkRepository.restore failed: ${e}`);
+    throw new Error(`entityLinkRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -330,6 +341,6 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.entityLinks.delete(id);
   } catch (e) {
-    throw new Error(`entityLinkRepository.hardDelete failed: ${e}`);
+    throw new Error(`entityLinkRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }

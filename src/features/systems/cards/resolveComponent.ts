@@ -1,7 +1,36 @@
-import type { CardEntry, ComponentDefinition } from './types';
+import type { CardEntry, ComponentDefinition, SheetTemplate } from './types';
 
 /** Maps a community component name to its definition, for recursive expansion. */
 export type ComponentRegistry = Record<string, ComponentDefinition>;
+
+/** No components declared — the shape every bundled template resolves to. */
+const NO_COMPONENTS: ComponentRegistry = {};
+
+/**
+ * Builds the lookup `CardRenderer` expands against from a template's declared
+ * `components`.
+ *
+ * @remarks
+ * Returns a shared frozen-in-practice empty object when a template declares
+ * none, so the common case does not allocate a new identity on every render and
+ * cannot re-trigger a memo downstream.
+ *
+ * A duplicate name is resolved last-wins, matching how a plain object literal
+ * would behave, rather than throwing — a template is importable, and a bad one
+ * should degrade rather than take the dashboard down. `CardRenderer` already
+ * treats an unexpandable component as "render nothing" for the same reason.
+ *
+ * @param template - The parsed sheet template, or `null`/`undefined` while it
+ *   loads or when the system ships none.
+ * @returns Component definitions keyed by name.
+ */
+export function componentRegistryOf(template: SheetTemplate | null | undefined): ComponentRegistry {
+  const declared = template?.components;
+  if (!declared || declared.length === 0) return NO_COMPONENTS;
+  const registry: ComponentRegistry = {};
+  for (const definition of declared) registry[definition.name] = definition;
+  return registry;
+}
 
 /** Maximum nesting depth of component expansion before it is rejected. */
 export const MAX_COMPONENT_DEPTH = 10;

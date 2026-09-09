@@ -48,7 +48,7 @@ export async function getNoteById(id: string, options?: { includeDeleted?: boole
     if (!options?.includeDeleted && parsed.data.deletedAt) return undefined;
     return parsed.data;
   } catch (e) {
-    throw new Error(`noteRepository.getNoteById failed: ${e}`);
+    throw new Error(`noteRepository.getNoteById failed: ${e}`, { cause: e });
   }
 }
 
@@ -84,7 +84,7 @@ export async function getNotesByCampaign(campaignId: string, options?: { include
       .filter((n): n is Note => n !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`noteRepository.getNotesByCampaign failed: ${e}`);
+    throw new Error(`noteRepository.getNotesByCampaign failed: ${e}`, { cause: e });
   }
 }
 
@@ -121,7 +121,7 @@ export async function getNotesBySession(sessionId: string, options?: { includeDe
       .filter((n): n is Note => n !== undefined);
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    throw new Error(`noteRepository.getNotesBySession failed: ${e}`);
+    throw new Error(`noteRepository.getNotesBySession failed: ${e}`, { cause: e });
   }
 }
 
@@ -166,7 +166,7 @@ export async function createNote(data: Omit<Note, 'id' | 'createdAt' | 'updatedA
     getSyncModule().then((m) => m.syncNote(note.id)).catch(() => {});
     return note;
   } catch (e) {
-    throw new Error(`noteRepository.createNote failed: ${e}`);
+    throw new Error(`noteRepository.createNote failed: ${e}`, { cause: e });
   }
 }
 
@@ -200,7 +200,7 @@ export async function updateNote(id: string, data: Partial<Note>): Promise<Note>
     getSyncModule().then((m) => m.syncNote(id)).catch(() => {});
     return updated as Note;
   } catch (e) {
-    throw new Error(`noteRepository.updateNote failed: ${e}`);
+    throw new Error(`noteRepository.updateNote failed: ${e}`, { cause: e });
   }
 }
 
@@ -233,7 +233,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
     // panel was unaffected only because it intersects nodes with live notes.
     getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
   } catch (e) {
-    throw new Error(`noteRepository.softDelete failed: ${e}`);
+    throw new Error(`noteRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -274,7 +274,7 @@ export async function softDeleteWithLinks(id: string, txId?: string): Promise<vo
     });
     getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
   } catch (e) {
-    throw new Error(`noteRepository.softDeleteWithLinks failed: ${e}`);
+    throw new Error(`noteRepository.softDeleteWithLinks failed: ${e}`, { cause: e });
   }
 }
 
@@ -305,7 +305,7 @@ export async function restore(id: string): Promise<void> {
     // browsable again rather than surviving only in the notes table.
     getSyncModule().then((m) => m.syncNote(id)).catch(() => {});
   } catch (e) {
-    throw new Error(`noteRepository.restore failed: ${e}`);
+    throw new Error(`noteRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -317,7 +317,7 @@ export async function getDeleted(campaignId: string): Promise<Note[]> {
       .filter((r) => r.campaignId === campaignId)
       .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
   } catch (e) {
-    throw new Error(`noteRepository.getDeleted failed: ${e}`);
+    throw new Error(`noteRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 
@@ -335,7 +335,7 @@ export async function hardDelete(id: string): Promise<void> {
     // Fire-and-forget KB graph cleanup, mirroring `softDelete`.
     getSyncModule().then((m) => m.deleteNoteNode(id)).catch(() => {});
   } catch (e) {
-    throw new Error(`noteRepository.hardDelete failed: ${e}`);
+    throw new Error(`noteRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -363,7 +363,7 @@ export async function listLogEntriesBySession(sessionId: string): Promise<Note[]
       .filter(n => n.type === 'log');
     return excludeDeleted(parsed).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   } catch (e) {
-    throw new Error(`noteRepository.listLogEntriesBySession failed: ${e}`);
+    throw new Error(`noteRepository.listLogEntriesBySession failed: ${e}`, { cause: e });
   }
 }
 
@@ -434,7 +434,7 @@ export async function updateLogEntry(id: string, body: unknown): Promise<Note> {
     // clobber the field if the read that produced it were ever stale.
     return await updateNote(id, { body });
   } catch (e) {
-    throw new Error(`noteRepository.updateLogEntry failed: ${e}`);
+    throw new Error(`noteRepository.updateLogEntry failed: ${e}`, { cause: e });
   }
 }
 
@@ -484,7 +484,7 @@ export async function promoteEntriesToNewNote(
       await addPromotedIntoEdges(entries, noteId, now);
     });
   } catch (e) {
-    throw new Error(`noteRepository.promoteEntriesToNewNote failed: ${e}`);
+    throw new Error(`noteRepository.promoteEntriesToNewNote failed: ${e}`, { cause: e });
   }
   await getSyncModule().then(m => m.syncNote(noteId)).catch(() => {});
   return noteId;
@@ -533,7 +533,7 @@ export async function appendEntriesToNote(
       await addPromotedIntoEdges(entries, targetNoteId, now);
     });
   } catch (e) {
-    throw new Error(`noteRepository.appendEntriesToNote failed: ${e}`);
+    throw new Error(`noteRepository.appendEntriesToNote failed: ${e}`, { cause: e });
   }
   // Awaited for the same reason as promoteEntriesToNewNote — the caller
   // refreshes KB-backed surfaces the moment this resolves.
@@ -575,7 +575,7 @@ export async function addTagsToNotes(notes: Note[], tags: string[]): Promise<voi
       await updateNote(note.id, { tags: merged });
     }
   } catch (e) {
-    throw new Error(`noteRepository.addTagsToNotes failed: ${e}`);
+    throw new Error(`noteRepository.addTagsToNotes failed: ${e}`, { cause: e });
   }
 }
 
@@ -625,7 +625,7 @@ export async function saveInkPage(noteId: string, page: StrokePage): Promise<Not
     };
     return await updateNote(noteId, { typeData: mergedTypeData });
   } catch (e) {
-    throw new Error(`noteRepository.saveInkPage failed: ${e}`);
+    throw new Error(`noteRepository.saveInkPage failed: ${e}`, { cause: e });
   }
 }
 

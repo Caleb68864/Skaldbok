@@ -11,6 +11,7 @@ import {
   removeGroup,
   restoreGroup,
 } from './referenceSectionRepository';
+import { resetDatabase } from '../../test-utils/resetDatabase';
 
 /**
  * Covers the import path's binding of sections to their grouping card.
@@ -22,8 +23,7 @@ import {
  */
 
 beforeEach(async () => {
-  await db.referenceSections.clear();
-  await db.referenceGroups.clear();
+  await resetDatabase();
 });
 
 describe('importBundle', () => {

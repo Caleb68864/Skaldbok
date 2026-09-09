@@ -6,6 +6,9 @@ import type { ParsedBundleResult } from '../../utils/import/bundleParser';
 import type { MergeOptions } from '../../utils/import/mergeEngine';
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
 import { useToast } from '../../context/ToastContext';
+import { useCampaignContext } from '../campaign/CampaignContext';
+import { getCampaignById } from '../../storage/repositories/campaignRepository';
+import { resolveImportCampaignTarget } from '../../utils/import/importCampaignTarget';
 import { db } from '../../storage/db/client';
 import { BUNDLE_TABLE_BY_KEY } from '../../types/bundleTables';
 
@@ -77,6 +80,11 @@ async function computeConflicts(bundle: BundleEnvelope): Promise<ImportConflict[
  */
 export function useImportActions() {
   const { showToast } = useToast();
+  // Needed for the restore path: a device with no campaign that has just
+  // restored one must end up *in* it. Without this the fresh-install user
+  // imports a whole campaign and is still looking at "No campaign", which reads
+  // exactly like an import that silently did nothing.
+  const { activeCampaign, setActiveCampaign } = useCampaignContext();
   const [isImporting, setIsImporting] = useState(false);
   const [parsedResult, setParsedResult] = useState<ParsedBundleResult | null>(null);
   const [contentHashMismatch, setContentHashMismatch] = useState(false);
@@ -125,10 +133,19 @@ export function useImportActions() {
   const executeImport = useCallback(async (options: MergeOptions) => {
     if (!parsedResult || !parsedResult.success) return;
 
-    // For campaign imports, auto-target the campaign in the bundle
+    // A bundle that carries its own campaign is restored under that campaign's
+    // own id — the user is never asked to invent a campaign to restore one into,
+    // and re-importing the same file updates that campaign instead of creating a
+    // second copy. Resolved from the selected rows rather than `bundle.type`,
+    // so the hook and the preview dialog cannot disagree about what a bundle
+    // needs. See `resolveImportCampaignTarget`.
+    const campaignTarget = resolveImportCampaignTarget(
+      parsedResult.bundle,
+      options.selectedEntityTypes as Set<string>,
+    );
     const effectiveOptions = { ...options };
-    if (parsedResult.bundle.type === 'campaign' && parsedResult.bundle.contents.campaign && !effectiveOptions.targetCampaignId) {
-      effectiveOptions.targetCampaignId = parsedResult.bundle.contents.campaign.id;
+    if (campaignTarget.kind === 'bundled' && !effectiveOptions.targetCampaignId) {
+      effectiveOptions.targetCampaignId = campaignTarget.campaignId;
     }
 
     setIsImporting(true);
@@ -160,6 +177,29 @@ export function useImportActions() {
         }
       }
 
+      // Land the user in the campaign they just restored.
+      //
+      // This is the fresh-install recovery path: no campaign existed, so there
+      // is nothing to switch away from and exactly one sane destination. On a
+      // device that already has a campaign open we leave it alone — silently
+      // moving someone out of the campaign they were working in is a different
+      // and worse surprise.
+      //
+      // Read back through the repository rather than trusting the merge report:
+      // a rolled-back transaction reports zero inserts but so does a bundle
+      // whose campaign row was skipped as an id collision, and activating a
+      // campaign that is not in the database would strand the shell.
+      if (campaignTarget.kind === 'bundled' && !activeCampaign) {
+        try {
+          const restored = await getCampaignById(campaignTarget.campaignId);
+          if (restored) await setActiveCampaign(restored.id);
+        } catch (err) {
+          // Non-fatal: the rows are committed. The campaign is selectable from
+          // the header either way.
+          console.error('[useImportActions] could not activate the restored campaign', err);
+        }
+      }
+
       if (report.errors.length > 0) {
         // Name the first failures rather than only counting them — "40
         // error(s)" with no reason told the user nothing they could act on.
@@ -188,7 +228,7 @@ export function useImportActions() {
     } finally {
       setIsImporting(false);
     }
-  }, [parsedResult, showToast]);
+  }, [parsedResult, showToast, activeCampaign, setActiveCampaign]);
 
   const cancelImport = useCallback(() => {
     setShowPreview(false);

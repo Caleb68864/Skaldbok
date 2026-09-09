@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../db/client';
 import type { ReferenceNote } from '../db/client';
 import { getAll, getDeleted, save, softDelete, restore, hardDelete } from './referenceNoteRepository';
+import { resetDatabase } from '../../test-utils/resetDatabase';
 
 /**
  * The Reference screen's Notes tab deletes user content, and this covers the
@@ -28,7 +29,7 @@ function note(id: string, title: string): ReferenceNote {
 }
 
 beforeEach(async () => {
-  await db.referenceNotes.clear();
+  await resetDatabase();
 });
 
 describe('referenceNoteRepository soft delete', () => {

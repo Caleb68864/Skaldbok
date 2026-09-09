@@ -136,7 +136,7 @@ export async function getDeleted(campaignId: string): Promise<LedgerEntry[]> {
     const rows = await db.ledgerEntries.where('campaignId').equals(campaignId).toArray();
     return onlyDeleted(rows);
   } catch (e) {
-    throw new Error(`ledgerRepository.getDeleted failed: ${e}`);
+    throw new Error(`ledgerRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 

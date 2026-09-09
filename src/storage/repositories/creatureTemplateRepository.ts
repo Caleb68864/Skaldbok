@@ -119,7 +119,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       await entityLinkRepository.softDeleteLinksForCreature(id, finalTxId, now);
     });
   } catch (e) {
-    throw new Error(`creatureTemplateRepository.softDelete failed: ${e}`);
+    throw new Error(`creatureTemplateRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -146,7 +146,7 @@ export async function restore(id: string): Promise<void> {
       }
     });
   } catch (e) {
-    throw new Error(`creatureTemplateRepository.restore failed: ${e}`);
+    throw new Error(`creatureTemplateRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -171,7 +171,7 @@ export async function getDeleted(campaignId: string): Promise<CreatureTemplate[]
       .filter((r): r is CreatureTemplate => !!(r as CreatureTemplate).deletedAt)
       .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
   } catch (e) {
-    throw new Error(`creatureTemplateRepository.getDeleted failed: ${e}`);
+    throw new Error(`creatureTemplateRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 
@@ -180,6 +180,6 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.creatureTemplates.delete(id);
   } catch (e) {
-    throw new Error(`creatureTemplateRepository.hardDelete failed: ${e}`);
+    throw new Error(`creatureTemplateRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }

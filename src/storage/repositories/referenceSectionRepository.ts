@@ -26,9 +26,9 @@ export async function saveGroup(group: ReferenceGroup): Promise<void> {
     await db.referenceGroups.put(group);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to save reference card: ${String(err)}`);
+    throw new Error(`Failed to save reference card: ${String(err)}`, { cause: err });
   }
 }
 
@@ -56,7 +56,7 @@ export async function removeGroup(id: string): Promise<void> {
       );
     });
   } catch (err) {
-    throw new Error(`Failed to delete reference card: ${String(err)}`);
+    throw new Error(`Failed to delete reference card: ${String(err)}`, { cause: err });
   }
 }
 
@@ -84,7 +84,7 @@ export async function restoreGroup(id: string): Promise<void> {
       );
     });
   } catch (err) {
-    throw new Error(`Failed to restore reference card: ${String(err)}`);
+    throw new Error(`Failed to restore reference card: ${String(err)}`, { cause: err });
   }
 }
 
@@ -123,9 +123,9 @@ export async function save(section: ReferenceSection): Promise<void> {
     await db.referenceSections.put(section);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to save reference section: ${String(err)}`);
+    throw new Error(`Failed to save reference section: ${String(err)}`, { cause: err });
   }
 }
 
@@ -134,7 +134,7 @@ export async function remove(id: string): Promise<void> {
   try {
     await db.referenceSections.update(id, { deletedAt: nowISO(), softDeletedBy: generateId() });
   } catch (err) {
-    throw new Error(`Failed to delete reference section: ${String(err)}`);
+    throw new Error(`Failed to delete reference section: ${String(err)}`, { cause: err });
   }
 }
 
@@ -143,7 +143,7 @@ export async function restore(id: string): Promise<void> {
   try {
     await db.referenceSections.update(id, { deletedAt: undefined, softDeletedBy: undefined });
   } catch (err) {
-    throw new Error(`Failed to restore reference section: ${String(err)}`);
+    throw new Error(`Failed to restore reference section: ${String(err)}`, { cause: err });
   }
 }
 
@@ -164,7 +164,7 @@ export async function getDeleted(): Promise<ReferenceSection[]> {
   try {
     return onlyDeleted(await db.referenceSections.toArray());
   } catch (err) {
-    throw new Error(`Failed to list deleted reference sections: ${String(err)}`);
+    throw new Error(`Failed to list deleted reference sections: ${String(err)}`, { cause: err });
   }
 }
 
@@ -181,7 +181,7 @@ export async function getDeletedGroups(): Promise<ReferenceGroup[]> {
   try {
     return onlyDeleted(await db.referenceGroups.toArray());
   } catch (err) {
-    throw new Error(`Failed to list deleted reference cards: ${String(err)}`);
+    throw new Error(`Failed to list deleted reference cards: ${String(err)}`, { cause: err });
   }
 }
 

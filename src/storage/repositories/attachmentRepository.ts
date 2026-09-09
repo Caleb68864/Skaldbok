@@ -38,11 +38,14 @@ export async function createAttachment(
     return record;
   } catch (e) {
     if (e instanceof Error && e.name === 'QuotaExceededError') {
-      const quotaError = new Error('Storage full');
+      // The caught error is re-labelled, not replaced: the caller wants a
+      // recognisable name, and the original is still the only thing that says
+      // which write ran out of room.
+      const quotaError = new Error('Storage full', { cause: e });
       quotaError.name = 'QuotaExceededError';
       throw quotaError;
     }
-    throw new Error(`attachmentRepository.createAttachment failed: ${e}`);
+    throw new Error(`attachmentRepository.createAttachment failed: ${e}`, { cause: e });
   }
 }
 
@@ -66,7 +69,7 @@ export async function getAttachmentsByNote(
       .filter((a): a is Attachment => a !== undefined)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   } catch (e) {
-    throw new Error(`attachmentRepository.getAttachmentsByNote failed: ${e}`);
+    throw new Error(`attachmentRepository.getAttachmentsByNote failed: ${e}`, { cause: e });
   }
 }
 
@@ -90,7 +93,7 @@ export async function getAttachmentsByCampaign(
       .filter((a): a is Attachment => a !== undefined)
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   } catch (e) {
-    throw new Error(`attachmentRepository.getAttachmentsByCampaign failed: ${e}`);
+    throw new Error(`attachmentRepository.getAttachmentsByCampaign failed: ${e}`, { cause: e });
   }
 }
 
@@ -110,7 +113,7 @@ export async function deleteAttachment(id: string): Promise<void> {
   try {
     await db.attachments.delete(id);
   } catch (e) {
-    throw new Error(`attachmentRepository.deleteAttachment failed: ${e}`);
+    throw new Error(`attachmentRepository.deleteAttachment failed: ${e}`, { cause: e });
   }
 }
 
@@ -136,7 +139,7 @@ export async function softDeleteAttachmentsByNote(noteId: string, txId: string):
       rows.map(row => ({ key: row.id, changes: { deletedAt: now, softDeletedBy: txId } })),
     );
   } catch (e) {
-    throw new Error(`attachmentRepository.softDeleteAttachmentsByNote failed: ${e}`);
+    throw new Error(`attachmentRepository.softDeleteAttachmentsByNote failed: ${e}`, { cause: e });
   }
 }
 
@@ -149,7 +152,7 @@ export async function restoreAttachmentsForTxId(txId: string): Promise<void> {
       rows.map(row => ({ key: row.id, changes: { deletedAt: undefined, softDeletedBy: undefined } })),
     );
   } catch (e) {
-    throw new Error(`attachmentRepository.restoreAttachmentsForTxId failed: ${e}`);
+    throw new Error(`attachmentRepository.restoreAttachmentsForTxId failed: ${e}`, { cause: e });
   }
 }
 
@@ -166,7 +169,7 @@ export async function deleteAttachmentsByNote(noteId: string): Promise<void> {
   try {
     await db.attachments.where('noteId').equals(noteId).delete();
   } catch (e) {
-    throw new Error(`attachmentRepository.deleteAttachmentsByNote failed: ${e}`);
+    throw new Error(`attachmentRepository.deleteAttachmentsByNote failed: ${e}`, { cause: e });
   }
 }
 
@@ -175,6 +178,6 @@ export async function updateAttachmentCaption(id: string, caption: string): Prom
   try {
     await db.attachments.update(id, { caption });
   } catch (e) {
-    throw new Error(`attachmentRepository.updateAttachmentCaption failed: ${e}`);
+    throw new Error(`attachmentRepository.updateAttachmentCaption failed: ${e}`, { cause: e });
   }
 }

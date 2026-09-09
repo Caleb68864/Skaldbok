@@ -92,9 +92,9 @@ export async function save(character: CharacterRecord): Promise<void> {
     await db.characters.put(normalizeCharacter(character, { system }));
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to save character: ${String(err)}`);
+    throw new Error(`Failed to save character: ${String(err)}`, { cause: err });
   }
 }
 
@@ -143,9 +143,9 @@ export async function patch(
     });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to update character: ${String(err)}`);
+    throw new Error(`Failed to update character: ${String(err)}`, { cause: err });
   }
 }
 
@@ -190,7 +190,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       await softDeleteLinksForEntity(id, finalTxId, now);
     });
   } catch (e) {
-    throw new Error(`characterRepository.softDelete failed: ${e}`);
+    throw new Error(`characterRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -227,7 +227,7 @@ export async function restore(id: string): Promise<void> {
       await restoreLinksForTxId(txId);
     });
   } catch (e) {
-    throw new Error(`characterRepository.restore failed: ${e}`);
+    throw new Error(`characterRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -242,7 +242,7 @@ export async function getDeleted(): Promise<CharacterRecord[]> {
       .map((r) => upgradeCharacter(r) as CharacterRecord)
       .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
   } catch (e) {
-    throw new Error(`characterRepository.getDeleted failed: ${e}`);
+    throw new Error(`characterRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 
@@ -251,6 +251,6 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.characters.delete(id);
   } catch (e) {
-    throw new Error(`characterRepository.hardDelete failed: ${e}`);
+    throw new Error(`characterRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }

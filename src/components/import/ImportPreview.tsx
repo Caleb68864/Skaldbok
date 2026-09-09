@@ -5,6 +5,7 @@ import type { MergeOptions } from '../../utils/import/mergeEngine';
 import { getAllCampaigns } from '../../storage/repositories/campaignRepository';
 import type { Campaign } from '../../types/campaign';
 import { BUNDLE_ENTITY_LABELS } from '../../types/bundleTables';
+import { resolveImportCampaignTarget } from '../../utils/import/importCampaignTarget';
 import { cn } from '../../lib/utils';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
 
@@ -74,19 +75,34 @@ export function ImportPreview({
   const [targetCampaignId, setTargetCampaignId] = useState<string | undefined>();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
 
-  const needsCampaignSelector = bundle.type === 'session' || bundle.type === 'character';
+  // What this import needs in the way of a campaign, answered from the rows the
+  // user actually selected rather than from `bundle.type`. Branching on the
+  // declared scope demanded a target campaign for every character bundle — even
+  // though a `CharacterRecord` has no `campaignId` — which on a fresh install
+  // meant the restore path was gated on already having the thing being restored.
+  const campaignTarget = resolveImportCampaignTarget(bundle, selectedTypes);
+  const needsCampaignSelector = campaignTarget.kind === 'required';
   const canImport = selectedTypes.size > 0 && (!needsCampaignSelector || !!targetCampaignId);
+
+  // A bundle that brings its own campaign is restored under that campaign's own
+  // id; nothing is asked and no second campaign is invented.
+  const effectiveTargetCampaignId =
+    campaignTarget.kind === 'bundled' ? campaignTarget.campaignId : targetCampaignId;
 
   const totalSelected = availableTypes
     .filter((type) => selectedTypes.has(type))
     .reduce((sum, type) => sum + getEntityCount(bundle.contents, type), 0);
 
-  // Load campaigns for the selector
+  // Loaded unconditionally: the dialog has to be able to say "there are no
+  // campaigns yet" as distinct from "pick one", and the requirement now moves
+  // as the user ticks and unticks groups rather than being fixed on open.
   useEffect(() => {
-    if (needsCampaignSelector) {
-      getAllCampaigns().then(setCampaigns);
-    }
-  }, [needsCampaignSelector]);
+    let cancelled = false;
+    getAllCampaigns()
+      .then((all) => { if (!cancelled) setCampaigns(all); })
+      .catch((err) => { console.error('[ImportPreview] could not list campaigns', err); });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleToggle = (type: string, checked: boolean) => {
     const next = new Set(selectedTypes);
@@ -97,7 +113,7 @@ export function ImportPreview({
 
   const handleImport = async () => {
     await onImport({
-      targetCampaignId,
+      targetCampaignId: effectiveTargetCampaignId,
       selectedEntityTypes: selectedTypes as Set<keyof BundleContents>,
     });
   };
@@ -210,26 +226,52 @@ export function ImportPreview({
           </div>
         )}
 
-        {/* Campaign selector */}
+        {/* Restoring a bundle that brought its own campaign — nothing to ask. */}
+        {campaignTarget.kind === 'bundled' && (
+          <div
+            data-testid="import-restores-campaign"
+            className="mb-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-raised)] px-3 py-2 text-xs text-[var(--color-text-muted)]"
+          >
+            Restores the campaign <span className="font-semibold text-[var(--color-text)]">{campaignTarget.campaignName}</span>{' '}
+            under its own identity. Re-importing this file updates that campaign rather than
+            creating a second copy.
+          </div>
+        )}
+
+        {/* Campaign selector — only for rows that carry a campaignId and have no
+            campaign of their own in the bundle. */}
         {needsCampaignSelector && (
           <div className="mb-4">
             <label className="block text-[var(--color-text-muted)] text-xs font-semibold mb-1">
               Import into campaign
             </label>
-            <select
-              value={targetCampaignId ?? ''}
-              onChange={(e) => setTargetCampaignId(e.target.value || undefined)}
-              className="w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm"
-            >
-              <option value="">Select a campaign...</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            {!targetCampaignId && (
-              <p className="text-xs text-red-500 mt-1">Select a campaign to enable import.</p>
+            {campaigns.length === 0 ? (
+              <p data-testid="import-no-campaigns" className="text-xs text-amber-700 dark:text-amber-300">
+                {campaignTarget.groupLabels.join(', ')} belong to a campaign, and this device has
+                none yet. Untick {campaignTarget.groupLabels.length > 1 ? 'those groups' : 'that group'} to
+                import the rest now, or create a campaign first from the campaign menu.
+              </p>
+            ) : (
+              <>
+                <select
+                  value={targetCampaignId ?? ''}
+                  onChange={(e) => setTargetCampaignId(e.target.value || undefined)}
+                  className="w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm"
+                >
+                  <option value="">Select a campaign...</option>
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+                {!targetCampaignId && (
+                  <p className="text-xs text-red-500 mt-1">
+                    {campaignTarget.groupLabels.join(', ')} need a campaign. Select one, or untick
+                    them to import the rest.
+                  </p>
+                )}
+              </>
             )}
           </div>
         )}

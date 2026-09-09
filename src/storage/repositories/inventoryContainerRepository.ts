@@ -68,9 +68,9 @@ export async function save(container: InventoryContainer): Promise<void> {
     await db.inventoryContainers.put({ ...container, updatedAt: nowISO() });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to save container: ${String(err)}`);
+    throw new Error(`Failed to save container: ${String(err)}`, { cause: err });
   }
 }
 
@@ -113,7 +113,7 @@ export async function getDeleted(campaignId: string): Promise<InventoryContainer
     const rows = await db.inventoryContainers.where('campaignId').equals(campaignId).toArray();
     return onlyDeleted(rows);
   } catch (e) {
-    throw new Error(`inventoryContainerRepository.getDeleted failed: ${e}`);
+    throw new Error(`inventoryContainerRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 

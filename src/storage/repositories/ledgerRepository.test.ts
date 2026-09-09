@@ -11,6 +11,7 @@ import {
   hardDelete,
 } from './ledgerRepository';
 import type { LedgerLeg, SplitSnapshot } from '../../types/ledger';
+import { resetDatabase } from '../../test-utils/resetDatabase';
 
 /**
  * The repository that writes the money.
@@ -44,7 +45,7 @@ const LEGS: LedgerLeg[] = [
 
 describe('ledgerRepository', () => {
   beforeEach(async () => {
-    await db.ledgerEntries.clear();
+    await resetDatabase();
   });
 
   describe('create', () => {

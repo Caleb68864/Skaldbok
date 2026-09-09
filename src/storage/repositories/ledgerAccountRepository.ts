@@ -203,7 +203,7 @@ export async function getDeleted(campaignId: string): Promise<LedgerAccount[]> {
     const rows = await db.ledgerAccounts.where('campaignId').equals(campaignId).toArray();
     return onlyDeleted(rows);
   } catch (e) {
-    throw new Error(`ledgerAccountRepository.getDeleted failed: ${e}`);
+    throw new Error(`ledgerAccountRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 

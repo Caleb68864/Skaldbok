@@ -226,7 +226,7 @@ export async function getActiveEncounterForSession(sessionId: string): Promise<E
     });
     return active ?? null;
   } catch (e) {
-    throw new Error(`encounterRepository.getActiveEncounterForSession failed: ${e}`);
+    throw new Error(`encounterRepository.getActiveEncounterForSession failed: ${e}`, { cause: e });
   }
 }
 
@@ -261,7 +261,7 @@ export async function getRecentEndedEncountersForSession(
       });
     return ended.slice(0, limit);
   } catch (e) {
-    throw new Error(`encounterRepository.getRecentEndedEncountersForSession failed: ${e}`);
+    throw new Error(`encounterRepository.getRecentEndedEncountersForSession failed: ${e}`, { cause: e });
   }
 }
 
@@ -293,7 +293,7 @@ export async function pushSegment(
       updatedAt: nowISO(),
     });
   } catch (e) {
-    throw new Error(`encounterRepository.pushSegment failed: ${e}`);
+    throw new Error(`encounterRepository.pushSegment failed: ${e}`, { cause: e });
   }
 }
 
@@ -328,7 +328,7 @@ export async function endActiveSegment(encounterId: string): Promise<void> {
       updatedAt: nowISO(),
     });
   } catch (e) {
-    throw new Error(`encounterRepository.endActiveSegment failed: ${e}`);
+    throw new Error(`encounterRepository.endActiveSegment failed: ${e}`, { cause: e });
   }
 }
 
@@ -366,7 +366,7 @@ export async function reopenEncounter(
       });
     });
   } catch (e) {
-    throw new Error(`encounterRepository.reopenEncounter failed: ${e}`);
+    throw new Error(`encounterRepository.reopenEncounter failed: ${e}`, { cause: e });
   }
 }
 
@@ -395,7 +395,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
       await entityLinkRepository.softDeleteLinksForEncounter(id, finalTxId, now);
     });
   } catch (e) {
-    throw new Error(`encounterRepository.softDelete failed: ${e}`);
+    throw new Error(`encounterRepository.softDelete failed: ${e}`, { cause: e });
   }
 }
 
@@ -425,7 +425,7 @@ export async function restore(id: string): Promise<void> {
       }
     });
   } catch (e) {
-    throw new Error(`encounterRepository.restore failed: ${e}`);
+    throw new Error(`encounterRepository.restore failed: ${e}`, { cause: e });
   }
 }
 
@@ -434,6 +434,6 @@ export async function hardDelete(id: string): Promise<void> {
   try {
     await db.encounters.delete(id);
   } catch (e) {
-    throw new Error(`encounterRepository.hardDelete failed: ${e}`);
+    throw new Error(`encounterRepository.hardDelete failed: ${e}`, { cause: e });
   }
 }

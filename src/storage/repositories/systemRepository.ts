@@ -24,8 +24,8 @@ export async function save(system: SystemDefinition): Promise<void> {
     await db.systems.put(system);
   } catch (err) {
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      throw new Error('Storage is full. Please free up space and try again.');
+      throw new Error('Storage is full. Please free up space and try again.', { cause: err });
     }
-    throw new Error(`Failed to save system: ${String(err)}`);
+    throw new Error(`Failed to save system: ${String(err)}`, { cause: err });
   }
 }

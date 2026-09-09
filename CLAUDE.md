@@ -234,9 +234,12 @@ free-string field — the valid values are listed in a comment at the top of
 | `happened_during` | `encounter` → `encounter`               | The source encounter occurred while the target was active (soft parent link) |
 | `represents`      | `encounterParticipant` → `creature` / `character` | The in-scene participant represents this bestiary creature or PC |
 | `promoted_into`   | `note (log)` → `note`                   | The log note was promoted into this target note     |
+| `migrated_from`   | `note` → `note`                         | Written by the `version(6)` upgrade when a row was rewritten into a new shape — present in every database that came up through v6 |
 
 When adding a new relationship type, update the table above **and** the comment
-inside `entityLinkRepository.ts`.
+inside `entityLinkRepository.ts` — `softDeleteCoverage.test.ts` scans `src` for
+every `relationshipType` literal and fails if any of the three lists is missing
+one. `migrated_from` was missing from all three for as long as it has existed.
 
 ### Standard operations
 
@@ -297,10 +300,20 @@ boolean. `softDeletedBy` is a transaction-scoped UUID shared by every row
 deleted together as part of a single cascade — it's how `restore` knows which
 rows to bring back atomically.
 
-Entities that carry these fields: `Session`, `Encounter`, `Note`,
-`CreatureTemplate`, `Character`, `Party`, `PartyMember`, `Campaign`,
-and **`EntityLink`**. Yes — even edges. This keeps encounter-deletion cascades
-reversible without losing the original edge identities.
+**20 of the 26 tables carry these fields** — effectively everything the user can
+delete, edges included. Yes, even edges: that is what keeps an
+encounter-deletion cascade reversible without losing the original edge
+identities.
+
+Which six do *not* is the part worth writing down, so that is what is written
+down. `TABLES_WITHOUT_SOFT_DELETE` in `src/types/bundleTables.ts` names them
+with a reason each — derived projections (`kb_nodes`, `kb_edges`), per-device
+rows (`appSettings`, `metadata`), version-replaced rulesets (`systems`) and one
+legacy table. Everything else is soft-deletable by default, and
+`softDeleteCoverage.test.ts` walks the live Dexie schema against that map, so a
+new table cannot join without a decision and this paragraph cannot drift from
+the code. An earlier version of it listed nine entities by name and was wrong by
+eleven.
 
 ### Default query behavior (non-negotiable)
 

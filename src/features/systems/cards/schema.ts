@@ -57,41 +57,6 @@ export const surfaceLayoutSchema = z.object({
   regions: z.array(regionSchema).max(100).describe('Regions: a full-width stack (array) or a grid row ({columns, cells})'),
 });
 
-/**
- * A full `sheet.json` template: a `version` plus optional play/sheet/print
- * surfaces. Bump `version` when editing a bundled template so the IndexedDB cache
- * refreshes.
- *
- * @example A minimal sheet.json exercising both region forms + a guarded card:
- * ```jsonc
- * {
- *   "version": 1,
- *   "play": {
- *     "regions": [
- *       ["vitals", "conditions"],                        // full-width stack of two cards
- *       {                                                // two-column grid row
- *         "columns": "2fr 1fr",
- *         "cells": [
- *           [{ "card": "skills" }],
- *           [{ "card": "magic", "when": "hasMagic" }]    // guarded card
- *         ]
- *       },
- *       [{ "card": "tile", "props": { "title": "Speed", "source": "derived:pace" } }]
- *     ]
- *   }
- * }
- * ```
- */
-export const sheetTemplateSchema = z.object({
-  version: z.number().int().positive().describe('Template schema version'),
-  play: surfaceLayoutSchema.optional().describe('Play-surface layout'),
-  sheet: surfaceLayoutSchema.optional().describe('Sheet-surface layout'),
-  // Reserved / not yet consumed: the print route renders via the hardcoded
-  // PrintableSheet component, not this surface. Authoring a `print` block is a
-  // no-op today.
-  print: surfaceLayoutSchema.optional().describe('Print-surface layout (reserved — not yet rendered)'),
-});
-
 const propSlotSchema = z.object({
   $prop: z.string().min(1).describe('Name of the component prop this slot resolves to'),
 });
@@ -126,3 +91,54 @@ export const componentDefinitionSchema = z.object({
   props: z.array(z.string().min(1)).optional().describe('Names of props this component accepts'),
   body: z.array(componentCardEntrySchema).max(100).describe('Card entries making up this component'),
 });
+
+/**
+ * A full `sheet.json` template: a `version` plus optional play/sheet/print
+ * surfaces. Bump `version` when editing a bundled template so the IndexedDB cache
+ * refreshes.
+ *
+ * @example A minimal sheet.json exercising both region forms + a guarded card:
+ * ```jsonc
+ * {
+ *   "version": 1,
+ *   "play": {
+ *     "regions": [
+ *       ["vitals", "conditions"],                        // full-width stack of two cards
+ *       {                                                // two-column grid row
+ *         "columns": "2fr 1fr",
+ *         "cells": [
+ *           [{ "card": "skills" }],
+ *           [{ "card": "magic", "when": "hasMagic" }]    // guarded card
+ *         ]
+ *       },
+ *       [{ "card": "tile", "props": { "title": "Speed", "source": "derived:pace" } }]
+ *     ]
+ *   }
+ * }
+ * ```
+ */
+export const sheetTemplateSchema = z.object({
+  version: z.number().int().positive().describe('Template schema version'),
+  play: surfaceLayoutSchema.optional().describe('Play-surface layout'),
+  sheet: surfaceLayoutSchema.optional().describe('Sheet-surface layout'),
+  /**
+   * Reusable components this template's card entries may reference by name.
+   *
+   * @remarks
+   * The other half of the `$prop` subsystem. `componentDefinitionSchema`,
+   * `resolveComponent` and `CardRenderer`'s expansion path all existed and were
+   * tested, but there was nowhere in a `sheet.json` to *declare* a component and
+   * no caller passed `CardRenderer` a registry — so 156 lines of hardened,
+   * covered code could not run. Tested and unreachable is the worst of the three
+   * states a feature can be in: it reads as working and guards nothing.
+   *
+   * Declaring none, which every bundled template does, behaves exactly as before.
+   */
+  components: z.array(componentDefinitionSchema).max(100).optional()
+    .describe('Reusable component definitions, referenced by CardEntry.card'),
+  // Reserved / not yet consumed: the print route renders via the hardcoded
+  // PrintableSheet component, not this surface. Authoring a `print` block is a
+  // no-op today.
+  print: surfaceLayoutSchema.optional().describe('Print-surface layout (reserved — not yet rendered)'),
+});
+

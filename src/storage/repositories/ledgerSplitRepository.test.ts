@@ -5,6 +5,7 @@ import { getOrCreateForCampaign, update } from './ledgerSplitRepository';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
 import type { PayoutSplit } from '../../types/payoutSplit';
+import { resetDatabase } from '../../test-utils/resetDatabase';
 
 /**
  * `getOrCreateForCampaign` is the one repository method the ledger screen
@@ -34,7 +35,7 @@ async function seedSplit(campaignId: string, createdAt: string): Promise<PayoutS
 
 describe('ledgerSplitRepository.getOrCreateForCampaign', () => {
   beforeEach(async () => {
-    await db.ledgerSplits.clear();
+    await resetDatabase();
   });
 
   it('creates a split on first read', async () => {
