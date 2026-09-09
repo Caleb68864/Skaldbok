@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor, cleanup } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { ActiveCharacterProvider, useActiveCharacter } from './ActiveCharacterContext';
 import { registerFlush } from '../features/persistence/autosaveFlush';
@@ -76,6 +76,9 @@ beforeEach(() => {
 
 afterEach(() => {
   for (const handle of registrations.splice(0)) handle.unregister();
+  // Testing Library only auto-cleans when Vitest globals are on, and they are
+  // not; an unmount here is also what unregisters the provider's own flushes.
+  cleanup();
 });
 
 describe('setCharacter', () => {

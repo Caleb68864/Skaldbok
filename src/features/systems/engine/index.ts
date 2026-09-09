@@ -13,16 +13,43 @@ export { classicFantasyEngine } from './classicFantasyEngine';
 export { travellerEngine } from './travellerEngine';
 export { savageWorldsEngine } from './savageWorldsEngine';
 
+/**
+ * Every system id that has a rules adapter.
+ *
+ * @remarks
+ * A map rather than a chain of `if (system.id === …)` so that "does this system
+ * have an adapter?" is a question the code can answer, not just a fallthrough.
+ * `engineRegistryParity.test.ts` asserts this stays in lockstep with
+ * `BUNDLED_SYSTEMS`; CLAUDE.md names these as two hand-maintained lists, and a
+ * bundled system registered without an adapter used to be invisible.
+ */
+export const SYSTEM_ADAPTERS: Record<string, SystemEngine> = {
+  'classic-fantasy': classicFantasyEngine,
+  traveller: travellerEngine,
+  'savage-worlds': savageWorldsEngine,
+};
+
+/** Ids already reported, so a warning during render does not repeat every frame. */
+const warnedSystemIds = new Set<string>();
+
 /** Base adapter for a system id, before any system.json overrides are applied. */
 function baseEngineFor(system: SystemDefinition | undefined | null): SystemEngine {
   if (!system) return classicFantasyEngine;
-  if (system.id === 'traveller') return travellerEngine;
-  if (system.id === 'savage-worlds') return savageWorldsEngine;
-  // classic-fantasy is the fail-safe default. A registered-but-unmapped id
-  // (a system with a definition but no adapter yet) reaching this fallback is a
-  // wiring gap, so surface it in dev instead of silently rendering as Dragonbane.
-  if (import.meta.env.DEV && system.id !== 'classic-fantasy') {
-    console.warn(`getEngine: no adapter for system "${system.id}", defaulting to classic-fantasy`);
+  const adapter = SYSTEM_ADAPTERS[system.id];
+  if (adapter) return adapter;
+
+  // classic-fantasy is the fail-safe default, but it is not a neutral one: it
+  // brings Dragonbane's derived stats, rest, death and encumbrance rules with
+  // it. This warning used to be `import.meta.env.DEV`-gated, so in a production
+  // build a user-authored system ran another ruleset's maths in total silence —
+  // the exact failure the "author your own system" feature cannot survive. The
+  // engine also carries `fallbackRulesFor` from here, so the UI can say so.
+  if (!warnedSystemIds.has(system.id)) {
+    warnedSystemIds.add(system.id);
+    console.warn(
+      `getEngine: no rules adapter for system "${system.id}". ` +
+      `Falling back to classic-fantasy's rules, which are almost certainly not this system's.`,
+    );
   }
   return classicFantasyEngine;
 }
@@ -85,6 +112,10 @@ export function getEngine(system: SystemDefinition | undefined | null): SystemEn
 
   const merged: SystemEngine = {
     ...base,
+    // Undefined, not `false`, for a system that has its own adapter: the field
+    // is the id of the system whose rules are missing, so its absence is the
+    // normal case and its presence is the whole message.
+    fallbackRulesFor: SYSTEM_ADAPTERS[system.id] ? undefined : system.id,
     // Derive attributeIds from the definition so adding/renaming a characteristic
     // in system.json fully wires it (DM badge, characteristic grid, modifier
     // targets) without also editing the adapter's hardcoded array.

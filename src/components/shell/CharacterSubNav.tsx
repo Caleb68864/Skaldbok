@@ -76,11 +76,32 @@ export function CharacterSubNav() {
     )?.to ?? tabs[0].to;
 
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(value) => navigate(value)}
-      className="bg-surface border-b border-border"
-    >
+    <>
+      {/*
+        The one place every character screen passes through, so the one place
+        worth saying it: the numbers on the sheet, in the gear list and on the
+        skills screen were computed by a ruleset this character does not use.
+        `getEngine` falls back to classic-fantasy for a system with no adapter,
+        which is right — the alternative is a blank app — but doing it silently
+        is not. The warning behind this used to be DEV-only, so in a production
+        build a user-authored system ran Dragonbane's maths with nothing to say
+        so.
+      */}
+      {engine.fallbackRulesFor && (
+        <div
+          role="status"
+          className="px-3 py-2 text-[length:var(--font-size-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] border-b border-[var(--color-border)]"
+        >
+          <strong>No rules for “{engine.fallbackRulesFor}”.</strong>{' '}
+          Derived stats, rest, death and encumbrance below are computed with the
+          bundled classic-fantasy rules, not this system's.
+        </div>
+      )}
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => navigate(value)}
+        className="bg-surface border-b border-border"
+      >
       <TabsList className="w-full justify-start">
         {tabs.map(({ id, to, label, icon }) => (
           <TabsTrigger
@@ -93,6 +114,7 @@ export function CharacterSubNav() {
           </TabsTrigger>
         ))}
       </TabsList>
-    </Tabs>
+      </Tabs>
+    </>
   );
 }

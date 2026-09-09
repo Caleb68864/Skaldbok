@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook, cleanup } from '@testing-library/react';
 import { useAutosave } from './useAutosave';
 import { flushAll } from '../features/persistence/autosaveFlush';
 import { createBlankCharacter } from '../features/characters/characterMappers';
@@ -62,6 +62,9 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // Unmount before dropping the fake timers, so a hook still mounted cannot
+  // leave a pending flush registered for the next test to trip over.
+  cleanup();
   vi.useRealTimers();
 });
 

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, act } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, act, cleanup } from '@testing-library/react';
 import { ManagePartyDrawer } from './ManagePartyDrawer';
 import type { Campaign } from '../../types/campaign';
 
@@ -59,6 +59,9 @@ function campaign(): Campaign {
 beforeEach(() => {
   activeCampaign = null;
 });
+
+// Testing Library only auto-cleans when Vitest globals are on, and they are not.
+afterEach(cleanup);
 
 describe('ManagePartyDrawer', () => {
   it('survives the campaign arriving after the first render', async () => {

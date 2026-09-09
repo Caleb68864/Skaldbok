@@ -656,6 +656,23 @@ export interface DerivedFieldDef {
 }
 
 export interface SystemEngine {
+  /**
+   * The system id whose rules are *not* being applied, when no adapter matched.
+   *
+   * @remarks
+   * Absent for every system that has its own adapter, which is the normal case.
+   * Set to the system's own id when `getEngine` fell back to classic-fantasy —
+   * a user-authored ruleset, or a bundled system added to the registry without
+   * an adapter. That fallback is not a cosmetic default: it applies
+   * Dragonbane's derived-stat formulas, rest and death rules, encumbrance and
+   * skill base chances to somebody else's system. The app's headline promise is
+   * that you can author your own; silently running another ruleset's maths
+   * against it breaks that promise in a way no error ever surfaces.
+   *
+   * Carrying the id rather than a boolean lets the notice name the system, and
+   * keeps one field instead of two.
+   */
+  fallbackRulesFor?: string;
   attributeBadge: (attributeId: string, character: CharacterRecord) => string | null;
   attributeIds: string[];
   skill: SkillEngineConfig;
