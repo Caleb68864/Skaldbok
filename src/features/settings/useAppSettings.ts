@@ -2,17 +2,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import * as settingsRepository from '../../storage/repositories/settingsRepository';
 import type { AppSettings } from '../../types/settings';
 
-/** Default visibility of each bottom-nav tab, merged into stored settings so new tabs appear for existing users. */
-export const DEFAULT_BOTTOM_NAV_TABS: Record<string, boolean> = {
-  sheet: true,
-  skills: true,
-  gear: true,
-  magic: true,
-  combat: true,
-  reference: true,
-  profile: false,
-};
-
 const DEFAULT_SETTINGS: AppSettings = {
   id: 'default',
   schemaVersion: 1,
@@ -20,7 +9,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   mode: 'play',
   wakeLockEnabled: false,
-  bottomNavTabs: DEFAULT_BOTTOM_NAV_TABS,
   showGlobalFAB: true,
 };
 
