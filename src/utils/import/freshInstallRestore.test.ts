@@ -249,6 +249,104 @@ describe('restoring a campaign onto a device with no campaigns', () => {
     expect(report.errors[0]?.message).toMatch(/^Import rolled back:/);
   });
 
+  /**
+   * The same rollback, when the fatal error arrives wrapped.
+   *
+   * @remarks
+   * The test above injects a `QuotaExceededError` **directly**, which is what a
+   * raw `db.*` call produces — and `mergeEngine` makes raw `db.*` calls today,
+   * so it passes. It therefore says nothing about the shape the repository
+   * layer produces, which is what `CLAUDE.md` says this layer should be calling:
+   * every repository write re-throws as `new Error("Failed to …", { cause: e })`,
+   * a plain `Error` whose `name` is `'Error'`.
+   *
+   * `isFatalMergeError` read `err.name` off the top-level error only, so one
+   * wrapping layer was enough to make a full disk read as a per-row problem —
+   * the rollback that was just fixed and verified would not fire, and a fresh
+   * install would be left holding half a campaign. The 130 `{ cause: … }` sites
+   * `4083893` added exist for exactly this and nothing was reading them.
+   *
+   * Two layers deep, because one is the shape that happens to exist today and
+   * two is the shape the next refactor produces.
+   */
+  it('rolls back when the fatal error arrives wrapped in a cause chain', async () => {
+    await seedCampaign();
+    const json = await exportThenWipe();
+
+    const parsed = parseBundle(json);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    const quota = new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    const wrapped = new Error('Failed to save entity link: QuotaExceededError', { cause: quota });
+    const outer = new Error('Import step failed', { cause: wrapped });
+    const put = vi.spyOn(db.table('entityLinks'), 'put').mockRejectedValue(outer);
+
+    let report;
+    // Read before `mockRestore`, which clears the call history along with the
+    // mock — asserting on the spy afterwards reports "never called" for a spy
+    // that was called on every edge in the bundle.
+    let putCalls: number;
+    try {
+      report = await mergeBundle(parsed.bundle, {
+        selectedEntityTypes: new Set(BUNDLE_PROCESSING_ORDER),
+        targetCampaignId: CAMPAIGN_ID,
+      });
+    } finally {
+      putCalls = put.mock.calls.length;
+      put.mockRestore();
+    }
+
+    // The fixture reached the subject: the merge got as far as writing edges,
+    // so the rejection above is the one being classified.
+    expect(putCalls, 'the bundle carried no edge, so nothing threw').toBeGreaterThan(0);
+
+    expect(
+      await getAllCampaigns(),
+      'a quota failure one wrapper deep was classified as a per-row problem, so '
+      + 'the import "finished" and left a fresh install holding half a campaign.',
+    ).toEqual([]);
+    expect(await db.sessions.count()).toBe(0);
+    expect(await db.notes.count()).toBe(0);
+    expect(await db.characters.count()).toBe(0);
+    expect(report.inserted).toBe(0);
+    expect(report.updated).toBe(0);
+    expect(report.skipped).toBe(0);
+    expect(report.errors[0]?.message).toMatch(/^Import rolled back:/);
+  });
+
+  it('does not roll back on a wrapped error that is not DB-fatal', async () => {
+    // The other direction: walking the chain must not turn every wrapped
+    // failure into a whole-import abort. A malformed single row stays a
+    // per-entity error, which is the distinction the function exists to draw.
+    await seedCampaign();
+    const json = await exportThenWipe();
+
+    const parsed = parseBundle(json);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+
+    const bad = new DOMException('Bad base64.', 'InvalidCharacterError');
+    const outer = new Error('Failed to restore attachment', { cause: bad });
+    const put = vi.spyOn(db.table('entityLinks'), 'put').mockRejectedValue(outer);
+
+    let report;
+    let putCalls: number;
+    try {
+      report = await mergeBundle(parsed.bundle, {
+        selectedEntityTypes: new Set(BUNDLE_PROCESSING_ORDER),
+        targetCampaignId: CAMPAIGN_ID,
+      });
+    } finally {
+      putCalls = put.mock.calls.length;
+      put.mockRestore();
+    }
+
+    expect(putCalls, 'the bundle carried no edge, so nothing threw').toBeGreaterThan(0);
+    expect((await getAllCampaigns()).length).toBe(1);
+    expect(report.errors.some((e) => /rolled back/.test(e.message))).toBe(false);
+  });
+
   it('voids every tally and leads with the rollback when other errors preceded it', async () => {
     // What the user is told, on the shape that actually produces the bad copy:
     // a re-restore where most rows collide harmlessly (so `skipped` climbs) and
