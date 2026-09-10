@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { sheetTemplateSchema } from './schema';
 import { componentRegistryOf, resolveComponent } from './resolveComponent';
 import type { SheetTemplate } from './types';
@@ -22,7 +22,7 @@ import type { SheetTemplate } from './types';
  * links that were missing, which is the part its own tests could never fail on.
  */
 
-const DASHBOARD = join(process.cwd(), 'src/screens/PlayDashboardScreen.tsx');
+const SRC = join(process.cwd(), 'src');
 
 describe('a sheet.json can declare components', () => {
   it('accepts a components block in the template schema', () => {
@@ -91,27 +91,85 @@ describe('componentRegistryOf', () => {
   });
 });
 
-describe('the play dashboard passes the registry', () => {
-  const source = readFileSync(DASHBOARD, 'utf8');
+/**
+ * Every `<CardRenderer …/>` tag in a file, sliced whole.
+ *
+ * @remarks
+ * The predecessor was `/<CardRenderer\b[^>]*?\/>/gs`, which cannot cross a `>`.
+ * An arrow function in a prop — `onReady={() => undefined}`, ordinary JSX —
+ * ends the match early, and the tag then simply is not in the match set. With
+ * two tags in a file, giving one of them an arrow prop and dropping its
+ * registry left the guard green: the sibling kept the "found some" assertion
+ * satisfied and the modified tag was invisible.
+ *
+ * So the scan walks to a balanced `/>` instead, tracking nesting depth through
+ * braces so a `>` inside a prop expression cannot end the tag.
+ */
+function cardRendererTags(source: string): string[] {
+  const tags: string[] = [];
+  for (const open of source.matchAll(/<CardRenderer\b/g)) {
+    let depth = 0;
+    for (let i = open.index; i < source.length; i++) {
+      const ch = source[i];
+      if (ch === '{') depth++;
+      else if (ch === '}') depth--;
+      else if (depth === 0 && ch === '/' && source[i + 1] === '>') {
+        tags.push(source.slice(open.index, i + 2));
+        break;
+      }
+      else if (depth === 0 && ch === '>' && source[i - 1] !== '=') {
+        // An opening tag with children rather than a self-closing one. The
+        // registry prop, if any, is in the part scanned so far.
+        tags.push(source.slice(open.index, i + 1));
+        break;
+      }
+    }
+  }
+  return tags;
+}
 
-  it('renders no CardRenderer without a componentRegistry prop', () => {
-    // `componentRegistry` defaults to `{}`, so a forgotten prop is not a type
-    // error and not a runtime error — the component simply never expands, which
-    // is exactly how this went unnoticed. Checked in the source because that
-    // silence is the failure mode.
-    const renders = [...source.matchAll(/<CardRenderer\b[^>]*?\/>/gs)];
-    expect(renders.length, 'no <CardRenderer> found — has the dashboard changed shape?')
-      .toBeGreaterThan(0);
+/** Every `.tsx` file under `src`, so no call site is out of scope. */
+function tsxFiles(dir: string, out: string[] = []): string[] {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) tsxFiles(full, out);
+    else if (entry.name.endsWith('.tsx') && !entry.name.includes('.test.')) out.push(full);
+  }
+  return out;
+}
 
-    const missing = renders
-      .map((m) => m[0])
-      .filter((tag) => !tag.includes('componentRegistry='));
+describe('every CardRenderer passes the registry on', () => {
+  const sites = tsxFiles(SRC)
+    .flatMap((file) =>
+      cardRendererTags(readFileSync(file, 'utf8')).map((tag) => ({
+        path: relative(SRC, file).split('\\').join('/'),
+        tag,
+      })),
+    );
 
-    expect(
-      missing,
-      'A <CardRenderer> in PlayDashboardScreen does not receive componentRegistry. '
-      + 'The prop is optional and defaults to {}, so this fails silently: a template '
-      + 'that declares components renders nothing where they were used.',
-    ).toEqual([]);
+  it('finds the call sites', () => {
+    // Three of them: two on the play dashboard and — the one that matters —
+    // `CardRenderer`'s own recursive render of an expanded component's body.
+    expect(sites.length).toBeGreaterThanOrEqual(3);
+    expect(sites.map((s) => s.path)).toContain('features/systems/cards/CardRenderer.tsx');
+    expect(sites.map((s) => s.path)).toContain('screens/PlayDashboardScreen.tsx');
   });
+
+  it.each(sites.map((s, i) => [`${s.path} #${i}`, s.tag]))(
+    '%s receives componentRegistry',
+    (_label, tag) => {
+      // `componentRegistry` defaults to `{}`, so a forgotten prop is not a type
+      // error and not a runtime error — the component simply never expands,
+      // which is exactly how this went unnoticed. Checked in the source because
+      // that silence is the failure mode.
+      expect(
+        tag.includes('componentRegistry='),
+        'This <CardRenderer> does not receive componentRegistry. The prop is '
+        + 'optional and defaults to {}, so this fails silently: a template that '
+        + 'declares components renders nothing where they were used. On the '
+        + 'recursive site inside CardRenderer itself, it means a component whose '
+        + 'body references another component stops expanding one level down.',
+      ).toBe(true);
+    },
+  );
 });
