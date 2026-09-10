@@ -6,6 +6,7 @@ import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { useFieldEditable, FIELD_PATHS } from '../utils/modeGuards';
 import { useAutosave } from '../hooks/useAutosave';
+import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import { Chip } from '../components/primitives/Chip';
 import { GameIcon } from '../components/primitives/GameIcon';
 import { AddCustomSkillForm, type CustomSkillDraft } from '../components/fields/AddCustomSkillForm';
@@ -89,7 +90,7 @@ export default function SkillsScreen() {
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
   /** Draft for the "add a skill" form; `null` when the form is closed. */
   const [draft, setDraft] = useState<CustomSkillDraft | null>(null);
-  useAutosave(character, characterRepository.save, 1000);
+  const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
   const engine = getEngine(system);
   const skillRange = engine.skill.range;
 
@@ -317,6 +318,7 @@ export default function SkillsScreen() {
 
   return (
     <div className="p-[var(--space-md)]">
+      <AutosaveErrorBanner error={saveError} />
       {/* Header */}
       <div className="flex justify-between items-center mb-[var(--space-md)] flex-wrap gap-[var(--space-sm)]">
         <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)]">Skills</h1>

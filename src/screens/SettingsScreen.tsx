@@ -4,6 +4,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import { useAppState } from '../context/AppStateContext';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAutosave } from '../hooks/useAutosave';
+import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import { Card } from '../components/primitives/Card';
 import { Button } from '../components/primitives/Button';
 import { StorageSafetyCard } from '../features/settings/StorageSafetyCard';
@@ -69,7 +70,7 @@ export default function SettingsScreen() {
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
 
-  useAutosave(character, characterRepository.save, 1000);
+  const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
 
   async function handleClearAll() {
     if (confirmText !== 'DELETE') return;
@@ -91,6 +92,7 @@ export default function SettingsScreen() {
 
   return (
     <div className="p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
+      <AutosaveErrorBanner error={saveError} />
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(-1)} className="min-h-11 min-w-11 flex items-center justify-center bg-transparent border-none cursor-pointer text-[var(--color-text)]" aria-label="Back">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>

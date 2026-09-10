@@ -48,6 +48,20 @@ const files = testFiles(SRC).map(path => ({
 // comment, and matching a bare substring made it its own first offender.
 const domFiles = files.filter(f => /from\s+['"]@testing-library\/react['"]/.test(f.source));
 
+/**
+ * Files that drive the DOM without rendering a component.
+ *
+ * @remarks
+ * Rendering is not the only reason to need a document. `utils/export/delivery.ts`
+ * creates an anchor, attaches it and dispatches a click, and its test has to
+ * observe exactly that — no component involved. Such a file needs the pragma
+ * and does **not** need `cleanup()`, so it is exempt from the stray-pragma
+ * check below rather than added to {@link domFiles}.
+ */
+const domApiFiles = files.filter(
+  f => !domFiles.includes(f) && /\b(?:document|navigator|window)\s*\./.test(f.source),
+);
+
 describe('the jsdom boundary', () => {
   it('finds the test files and the DOM ones among them', () => {
     // Both counts guard the walk: a broken glob would make every case vacuous.
@@ -87,6 +101,7 @@ describe('the jsdom boundary', () => {
     const strays = files
       .filter(f => f.source.startsWith('// @vitest-environment jsdom'))
       .filter(f => !domFiles.some(d => d.path === f.path))
+      .filter(f => !domApiFiles.some(d => d.path === f.path))
       .map(f => f.path);
     expect(strays).toEqual([]);
   });

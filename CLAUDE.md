@@ -300,20 +300,27 @@ boolean. `softDeletedBy` is a transaction-scoped UUID shared by every row
 deleted together as part of a single cascade — it's how `restore` knows which
 rows to bring back atomically.
 
-**20 of the 26 tables carry these fields** — effectively everything the user can
+**21 of the 26 tables carry these fields** — effectively everything the user can
 delete, edges included. Yes, even edges: that is what keeps an
 encounter-deletion cascade reversible without losing the original edge
 identities.
 
-Which six do *not* is the part worth writing down, so that is what is written
+Which five do *not* is the part worth writing down, so that is what is written
 down. `TABLES_WITHOUT_SOFT_DELETE` in `src/types/bundleTables.ts` names them
 with a reason each — derived projections (`kb_nodes`, `kb_edges`), per-device
-rows (`appSettings`, `metadata`), version-replaced rulesets (`systems`) and one
-legacy table. Everything else is soft-deletable by default, and
-`softDeleteCoverage.test.ts` walks the live Dexie schema against that map, so a
-new table cannot join without a decision and this paragraph cannot drift from
-the code. An earlier version of it listed nine entities by name and was wrong by
-eleven.
+rows (`appSettings`, `metadata`) and version-replaced rulesets (`systems`).
+Everything else is soft-deletable by default, and `softDeleteCoverage.test.ts`
+walks the live Dexie schema against that map, so a new table cannot join without
+a decision and this paragraph cannot drift from the code. An earlier version of
+it listed nine entities by name and was wrong by eleven.
+
+A recorded reason is not a checked one. `referenceNotes` sat on that list
+claiming its content "lives in `notes` now, where it is soft-deleted like every
+other note", while its own repository soft-deleted it, the Trash listed it and
+the Reference screen served a delete button for it. Nothing checked the claim,
+so the count above read 20 for as long as that entry stood. Each exemption is
+now checked against the repository layer's own writes rather than against the
+map that records it.
 
 ### Default query behavior (non-negotiable)
 

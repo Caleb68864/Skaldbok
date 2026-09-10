@@ -30,6 +30,7 @@ import type { RestDefinition } from '../features/systems/engine/types';
 import type { FinanceField } from '../types/system';
 import { summariseCounters, vehicleSubtitle } from '../features/vehicles/vehicleView';
 import { useAutosave } from '../hooks/useAutosave';
+import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
 import { useFieldEditable, useIsEditMode, FIELD_PATHS } from '../utils/modeGuards';
 import { AttributeField } from '../components/fields/AttributeField';
@@ -1304,7 +1305,7 @@ export default function SheetScreen() {
 
   return (
     <div className="p-[var(--space-sm)]">
-      {saveError && <div className="text-[var(--color-danger)] mb-[var(--space-sm)] text-[length:var(--font-size-sm)]">{saveError}</div>}
+      <AutosaveErrorBanner error={saveError} />
 
       {isPlayMode && (
         <div className="mb-[var(--space-sm)] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] px-[var(--space-md)] py-[var(--space-sm)]">

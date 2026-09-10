@@ -1,7 +1,7 @@
 // Must run before the Dexie `db` singleton is imported so it opens against the
 // in-memory fake IndexedDB.
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db } from '../../storage/db/client';
 import { collectCampaignBundle, collectCharacterBundle } from '../export/collectors';
 import { serializeBundle } from '../export/bundleSerializer';
@@ -184,6 +184,23 @@ describe('restoring a campaign onto a device with no campaigns', () => {
     expect(await db.sessions.count()).toBe(1);
   });
 
+  /**
+   * The rollback, exercised.
+   *
+   * @remarks
+   * This test used to call `db.close()` **before** `mergeBundle`.
+   * `db.transaction(...)` then failed at open, no row was ever written, and
+   * "leaves nothing behind" was trivially true. It proved that a closed
+   * database imports nothing; it never touched the rollback it is named for.
+   * Deleting `if (isFatalMergeError(err)) throw err` from `mergeEngine.ts` —
+   * the entire abort-and-roll-back mechanism — left the whole suite green.
+   *
+   * So the failure has to arrive *mid-import*, after rows have already been
+   * written: `entityLinks` are processed last, so the campaign, session, party,
+   * character and note are all in the transaction by the time this one throws.
+   * A `QuotaExceededError` is what a full disk actually produces, and is one of
+   * the names `isFatalMergeError` recognises.
+   */
   it('leaves nothing behind when the restore is rolled back', async () => {
     await seedCampaign();
     const json = await exportThenWipe();
@@ -192,21 +209,125 @@ describe('restoring a campaign onto a device with no campaigns', () => {
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
 
-    // Close the database under the merge: a DB-fatal failure must roll the whole
-    // import back rather than leave a campaign with half its rows. A fresh
-    // install has no earlier state to fall back on, so a partial restore here is
-    // not recoverable by retrying from the UI.
-    db.close();
-    const report = await mergeBundle(parsed.bundle, {
-      selectedEntityTypes: new Set(BUNDLE_PROCESSING_ORDER),
-      targetCampaignId: CAMPAIGN_ID,
-    });
-    expect(report.errors.length).toBeGreaterThan(0);
-    expect(report.inserted).toBe(0);
+    // Entity links are written last; everything else is already in the
+    // transaction when this rejects.
+    const quota = new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    const put = vi.spyOn(db.table('entityLinks'), 'put').mockRejectedValue(quota);
 
-    await db.open();
+    let report;
+    try {
+      report = await mergeBundle(parsed.bundle, {
+        selectedEntityTypes: new Set(BUNDLE_PROCESSING_ORDER),
+        targetCampaignId: CAMPAIGN_ID,
+      });
+    } finally {
+      put.mockRestore();
+    }
+
+    // The whole import is void, not just the row that failed. A fresh install
+    // has no earlier state to fall back on, so a campaign left with half its
+    // rows is not recoverable by retrying from the UI.
     expect(await getAllCampaigns()).toEqual([]);
+    expect(await db.sessions.count()).toBe(0);
     expect(await db.notes.count()).toBe(0);
+    expect(await db.characters.count()).toBe(0);
+    expect(await db.entityLinks.count()).toBe(0);
+
+    // And the report says so. `inserted`/`updated`/`skipped` all describe work
+    // that was rolled back, so all three are void — `skipped` was left standing
+    // at its running total, which is how "Import completed with N error(s).
+    // Imported 0 new, updated 0, skipped 12." reached the screen after a restore
+    // that restored nothing.
+    expect(report.inserted).toBe(0);
+    expect(report.updated).toBe(0);
+    expect(report.skipped).toBe(0);
+
+    // The one sentence saying nothing was restored has to be the one the user
+    // sees: `useImportActions` renders `errors.slice(0, 3)` and puts the rest
+    // in the console.
+    expect(report.errors.length).toBeGreaterThan(0);
+    expect(report.errors[0]?.message).toMatch(/^Import rolled back:/);
+  });
+
+  it('voids every tally and leads with the rollback when other errors preceded it', async () => {
+    // What the user is told, on the shape that actually produces the bad copy:
+    // a re-restore where most rows collide harmlessly (so `skipped` climbs) and
+    // at least one row errors before the fatal failure arrives.
+    await seedCampaign();
+    const json = await exportThenWipe();
+    await importAsTheAppWould(json);
+
+    const parsed = parseBundle(json);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    // An edge pointing at a note that is not in the bundle: a per-entity error,
+    // collected and skipped, exactly as intended.
+    (parsed.bundle.contents.entityLinks ??= []).unshift({
+      id: 'link-dangling',
+      fromEntityId: 'sess-1',
+      fromEntityType: 'session',
+      toEntityId: 'note-that-is-not-here',
+      toEntityType: 'note',
+      relationshipType: 'contains',
+      schemaVersion: 1,
+      createdAt: NOW,
+      updatedAt: NOW,
+    } as never);
+
+    const quota = new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+    const get = vi.spyOn(db.table('entityLinks'), 'get').mockRejectedValue(quota);
+
+    let report;
+    try {
+      report = await mergeBundle(parsed.bundle, {
+        selectedEntityTypes: new Set(BUNDLE_PROCESSING_ORDER),
+        targetCampaignId: CAMPAIGN_ID,
+      });
+    } finally {
+      get.mockRestore();
+    }
+
+    // Rows were skipped as no-op collisions before the failure; the rollback
+    // makes that work void too, so the count must not survive into the summary.
+    expect(report.skipped).toBe(0);
+    expect(report.inserted).toBe(0);
+    expect(report.updated).toBe(0);
+    // A per-entity error came first chronologically. The rollback still leads.
+    expect(report.errors.length).toBeGreaterThan(1);
+    expect(report.errors[0]?.message).toMatch(/^Import rolled back:/);
+  });
+
+  it('reports a per-row failure as one error and keeps the rest of the import', async () => {
+    // The other side of the same branch, so "roll back on anything" cannot pass
+    // for the fix. A malformed single row is not a DB-fatal failure: it is
+    // collected and skipped, and the restore still lands.
+    await seedCampaign();
+    const json = await exportThenWipe();
+
+    const parsed = parseBundle(json);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    // The name `isFatalMergeError` does not recognise — a bad row, not a bad
+    // database.
+    const bad = new DOMException('bad base64', 'InvalidCharacterError');
+    const put = vi.spyOn(db.table('entityLinks'), 'put').mockRejectedValue(bad);
+
+    let report;
+    try {
+      report = await mergeBundle(parsed.bundle, {
+        selectedEntityTypes: new Set(BUNDLE_PROCESSING_ORDER),
+        targetCampaignId: CAMPAIGN_ID,
+      });
+    } finally {
+      put.mockRestore();
+    }
+
+    expect(await getAllCampaigns()).toHaveLength(1);
+    expect(await db.notes.count()).toBe(1);
+    expect(await db.entityLinks.count()).toBe(0);
+    expect(report.inserted).toBeGreaterThan(0);
+    expect(report.errors).toHaveLength(1);
+    expect(report.errors[0]?.entityType).toBe('entityLinks');
   });
 });
 

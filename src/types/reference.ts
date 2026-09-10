@@ -2,6 +2,53 @@ import { z } from 'zod';
 
 export type ReferenceSectionType = 'table' | 'key_value_list' | 'rules_text';
 
+/**
+ * Zod schema for a standalone reference note.
+ *
+ * @remarks
+ * The `referenceNotes` table is old — it predates user-owned reference sections
+ * (v11) and the v7 fold of reference content into `notes` — but it is not dead.
+ * `ReferenceScreen`'s Notes tab still creates and edits rows here through
+ * `referenceNoteRepository`, and there is no dual-write to `notes`.
+ *
+ * The bundle registry nevertheless excluded the table with the reason "its live
+ * content is already exported as notes", so every reference note a user has
+ * written since v7 existed in one table on one device and in no backup. This
+ * schema is what lets it travel: every entity type in a bundle is validated
+ * row-by-row on import, so a table with no schema cannot join one.
+ *
+ * The type is inferred from the schema — the same arrangement as
+ * `types/knowledgeBase.ts` — and re-exported from `storage/db/client.ts` so
+ * every existing import still resolves.
+ */
+export const referenceNoteSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  content: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  /**
+   * ISO timestamp set when the row is soft-deleted.
+   *
+   * @remarks
+   * Both soft-delete fields are unindexed and need no `version()` block: Dexie
+   * only requires a schema entry for fields queried *by index*, and this table
+   * is small enough to filter in memory.
+   */
+  deletedAt: z.string().optional(),
+  /** Transaction id shared by every row deleted in the same cascade. */
+  softDeletedBy: z.string().optional(),
+});
+
+/**
+ * A standalone reference note.
+ *
+ * @remarks
+ * Inferred from {@link referenceNoteSchema} so the row shape and the shape the
+ * importer validates against cannot drift.
+ */
+export type ReferenceNote = z.infer<typeof referenceNoteSchema>;
+
 export interface ReferenceSection {
   id: string;
   title: string;

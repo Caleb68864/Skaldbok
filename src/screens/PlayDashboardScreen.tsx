@@ -9,6 +9,7 @@ import { getEngine } from '../features/systems/engine';
 import { CardRenderer } from '../features/systems/cards/CardRenderer';
 import { componentRegistryOf } from '../features/systems/cards/resolveComponent';
 import { useAutosave } from '../hooks/useAutosave';
+import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { ResourceModule } from '../features/playDashboard/ResourceModule';
 import { ConditionModule } from '../features/playDashboard/ConditionModule';
@@ -87,7 +88,7 @@ export default function PlayDashboardScreen() {
 
   return (
     <div className="p-[var(--space-xs)] md:p-[var(--space-sm)]">
-      {error && <div className="mb-[var(--space-sm)] text-[var(--color-danger)] text-[length:var(--font-size-sm)]">{error}</div>}
+      <AutosaveErrorBanner error={error} />
       <div className="flex flex-col gap-[var(--space-sm)] md:gap-[var(--space-md)]">
         {playTemplate ? (
           playTemplate.regions.map((region, index) =>

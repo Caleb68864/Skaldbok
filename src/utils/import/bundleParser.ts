@@ -18,7 +18,7 @@ import { payoutSplitSchema } from '../../types/payoutSplit';
 import { recurringBillSchema } from '../../types/recurringBill';
 import { routeStopSchema } from '../../types/routeStop';
 import { routePlanSchema } from '../../types/routePlan';
-import { referenceGroupSchema, referenceSectionSchema } from '../../types/reference';
+import { referenceGroupSchema, referenceNoteSchema, referenceSectionSchema } from '../../types/reference';
 import { kbNodeSchema, kbEdgeSchema } from '../../types/knowledgeBase';
 import { systemDefinitionSchema } from '../../../schemas/system.schema';
 import { migrateCharacter } from '../migrations';
@@ -244,6 +244,7 @@ function validateContentsEntities(
   validated.routePlans = validateArray(contents.routePlans, 'routePlans', routePlanSchema);
   validated.referenceGroups = validateArray(contents.referenceGroups, 'referenceGroups', referenceGroupSchema);
   validated.referenceSections = validateArray(contents.referenceSections, 'referenceSections', referenceSectionSchema);
+  validated.referenceNotes = validateArray(contents.referenceNotes, 'referenceNotes', referenceNoteSchema);
   validated.kbNodes = validateArray(contents.kbNodes, 'kbNodes', kbNodeSchema);
   validated.kbEdges = validateArray(contents.kbEdges, 'kbEdges', kbEdgeSchema);
   // A system definition is the one bundle payload that can change how every

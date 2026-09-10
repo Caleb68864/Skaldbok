@@ -46,6 +46,7 @@ export const BUNDLE_TABLE_ENTRIES: ReadonlyArray<readonly [keyof BundleContents,
   ['routePlans', 'routePlans'],
   ['referenceGroups', 'referenceGroups'],
   ['referenceSections', 'referenceSections'],
+  ['referenceNotes', 'referenceNotes'],
   ['notes', 'notes'],
   ['kbNodes', 'kb_nodes'],
   ['kbEdges', 'kb_edges'],
@@ -74,10 +75,6 @@ export const TABLES_OUTSIDE_BUNDLE: Record<string, string> = {
   metadata:
     'Internal bookkeeping — migration markers and schema housekeeping. Meaningless '
     + 'off the device that wrote it, and the importing database maintains its own.',
-  referenceNotes:
-    'Legacy table, superseded at v7 when its content was folded into `notes` with '
-    + '`scope: \'shared\'`. Retained only so the old table still types during upgrades; '
-    + 'its live content is already exported as notes.',
 };
 
 /**
@@ -87,14 +84,23 @@ export const TABLES_OUTSIDE_BUNDLE: Record<string, string> = {
  * @remarks
  * Written the same way as {@link TABLES_OUTSIDE_BUNDLE}, and for the same
  * reason: the exclusion is the decision worth recording. Everything not listed
- * here is soft-deletable, so this is six entries rather than twenty and a new
- * table forces a choice instead of quietly defaulting either way.
+ * here is soft-deletable, so this is five entries rather than twenty-one and a
+ * new table forces a choice instead of quietly defaulting either way.
  *
  * `CLAUDE.md` and `AGENTS.md` used to carry the *inclusion* list instead —
- * nine entities named in prose against twenty tables that actually declare the
+ * nine entities named in prose against the tables that actually declare the
  * fields, in two files that nothing kept in step. They now state the count and
  * point here. `softDeleteCoverage.test.ts` walks `db.tables` against this map,
  * so neither the map nor the count in the docs can drift from the schema.
+ *
+ * A recorded reason is not a true one. `referenceNotes` sat here claiming its
+ * content "lives in `notes` now, where it is soft-deleted like every other
+ * note", while `referenceNoteRepository` soft-deleted it directly, listed it in
+ * the Trash and served a delete button on the Reference screen. The map was
+ * consistent with itself and wrong about the schema, and the count in both docs
+ * was one short for as long as that entry stood. `softDeleteCoverage.test.ts`
+ * now checks each exemption against the repository layer's own writes rather
+ * than against this map.
  */
 export const TABLES_WITHOUT_SOFT_DELETE: Record<string, string> = {
   systems:
@@ -107,10 +113,6 @@ export const TABLES_WITHOUT_SOFT_DELETE: Record<string, string> = {
   metadata:
     'Internal bookkeeping (migration markers, the active-campaign id). Keys are '
     + 'written and overwritten by the app, never deleted by a user.',
-  referenceNotes:
-    'Legacy table superseded at schema v7. Its content lives in `notes` now, where it '
-    + 'is soft-deleted like every other note; the old table is retained only so '
-    + 'upgrades still type.',
   kb_nodes:
     'A derived projection of `notes` and the entities they link, rebuilt from source by '
     + '`linkSyncEngine`. Deleting the note is the delete; a tombstone here would be a '
@@ -146,6 +148,7 @@ export const BUNDLE_ENTITY_LABELS: Record<string, string> = {
   routePlans: 'Route Plans',
   referenceGroups: 'Reference Groups',
   referenceSections: 'Reference Sections',
+  referenceNotes: 'Reference Notes',
   notes: 'Notes',
   kbNodes: 'Knowledge Base Nodes',
   kbEdges: 'Knowledge Base Links',

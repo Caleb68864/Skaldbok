@@ -73,9 +73,16 @@ function declaredProperties(source: string): string[] {
     unparenthesised = next;
   }
   const own = [...unparenthesised.matchAll(/^\s+([a-zA-Z][a-zA-Z0-9]*)\??\s*:/gm)].map(m => m[1]);
-  const inline = [...code.matchAll(/[{;]\s*([a-zA-Z][a-zA-Z0-9]*)\??\s*:[^;{}\n]*[;}]/g)].map(
-    m => m[1],
-  );
+  // The closing separator is a *lookahead*, not a consumed character.
+  // `matchAll` is non-overlapping, so consuming it swallowed the `;` that
+  // introduces the next member: in
+  // `{ traitId: string; targetNumber: number; onCriticalFailure?: string }`
+  // the first match ate `{ traitId: string;`, the scan resumed past it, and the
+  // middle member was never seen. All three of those are unread; two were
+  // allowlisted and the guard could not see the third at all.
+  const inline = [
+    ...code.matchAll(/[{;]\s*([a-zA-Z][a-zA-Z0-9]*)\??\s*:[^;{}\n]*(?=[;}])/g),
+  ].map(m => m[1]);
   return [...own, ...inline];
 }
 
@@ -123,6 +130,7 @@ const KNOWN_UNIMPLEMENTED: Record<string, string> = {
   // declared-and-inert all along, and is written down here rather than merely
   // absent.
   traitId: 'condition.recovery is declared by savage-worlds/system.json (Shaken → Spirit 4) and no surface offers the recovery roll',
+  targetNumber: 'the third member of condition.recovery, and the one the guard could not see until the inline extractor stopped consuming its own separator. Populated in shipped data (savage-worlds/system.json:109,156,170) and validated by system.schema.ts:38, so it is worse than its two line-mates, not better: the file says Shaken recovers on Spirit 4 and nothing anywhere asks for that roll',
   onCriticalFailure: 'same as traitId — the whole condition.recovery object is inert, so its consequence string is too',
   depleted: 'DamageHealModule reads resources/dealt/unassigned/status; which tracks are full is implied by status and never named',
   raises: 'accepted for forward-compatibility by the toughness comparison and deliberately unread — savageWorldsEngine.ts:287 says why',
@@ -168,16 +176,34 @@ const declared = [
  *
  * Destructuring is still a real read, so it is matched specifically: a brace
  * group containing the name and followed by `=` (`const { depleted } = …`), `:`
- * (a typed parameter) or `)` (an inline destructured parameter). What that
- * excludes is the object-literal *construction*, where the closing brace is
- * followed by `;`, `,` or a newline.
+ * (a typed parameter) or `)` (an inline destructured parameter).
+ *
+ * The claim that this "excludes the object-literal construction, where the
+ * closing brace is followed by `;`, `,` or a newline" was only three-quarters
+ * true. `updateCampaign(id, { activePartyId: party.id })` ends `}` + `)`, which
+ * the third form accepts — so writing a field counted as reading it, on
+ * `campaignSchema.activePartyId`, which is written by three real UI flows and
+ * read by none of them (the active party is resolved by querying `db.parties`
+ * and taking the first row instead).
+ *
+ * A shorthand destructure has no colon after the name; a constructed key does.
+ * So the `}` + `)` form is rejected when the name is followed by `:` inside the
+ * braces. The `=` and `:` forms keep their looser reading, because a renamed
+ * destructure (`const { activePartyId: id } = campaign`) is a genuine read and
+ * does carry a colon.
  */
-function isRead(name: string): boolean {
-  return (
-    new RegExp(`\\.${name}\\b`).test(consumerSource) ||
-    new RegExp(`\\['${name}'\\]`).test(consumerSource) ||
-    new RegExp(`\\{[^{}\\n]*\\b${name}\\b[^{}\\n]*\\}\\s*[=:)]`).test(consumerSource)
+function isRead(name: string, corpus: string = consumerSource): boolean {
+  if (new RegExp(`\\.${name}\\b`).test(corpus)) return true;
+  if (new RegExp(`\\['${name}'\\]`).test(corpus)) return true;
+  const groups = corpus.matchAll(
+    new RegExp(`\\{[^{}\\n]*\\b${name}\\b[^{}\\n]*\\}\\s*[=:)]`, 'g'),
   );
+  for (const match of groups) {
+    const writesTheKey = new RegExp(`\\b${name}\\b\\s*:`).test(match[0]);
+    if (writesTheKey && /\}\s*\)$/.test(match[0])) continue; // a call argument
+    return true;
+  }
+  return false;
 }
 
 describe('declared capabilities have readers', () => {
@@ -198,6 +224,37 @@ describe('declared capabilities have readers', () => {
     for (const name of ['allowsPlus', 'printAbilities', 'hiddenBuiltIns', 'traitId']) {
       expect(declared, `${name} is no longer being extracted as a declared field`).toContain(name);
     }
+  });
+
+  it('sees every member of an inline object, not just the first and last', () => {
+    // `recovery?: { traitId: string; targetNumber: number; onCriticalFailure?: string }`
+    // — three members, all unread. `traitId` and `onCriticalFailure` were
+    // allowlisted; `targetNumber` sat between them and was invisible, because
+    // `matchAll` is non-overlapping and the first match consumed the `;` that
+    // would have introduced the next member. The scan resumed past it and
+    // matched `; onCriticalFailure?: string }`.
+    //
+    // Deleting the two allowlist entries made the guard name both of them and
+    // say nothing about the one in the middle, which is populated in shipped
+    // data (`savage-worlds/system.json:109,156,170`).
+    for (const name of ['traitId', 'targetNumber', 'onCriticalFailure']) {
+      expect(declared, `${name} is not being extracted — see the note above`).toContain(name);
+    }
+  });
+
+  it('does not mistake writing a field for reading it', () => {
+    // The corpus is a parameter so this can be pinned by example rather than
+    // asserted about in a comment. `updateCampaign(id, { activePartyId: … })`
+    // ends `}` + `)`, which the destructuring pattern accepted — so three real
+    // UI flows *writing* `campaignSchema.activePartyId` read to this guard as
+    // three readers of it, while the app resolves the active party by querying
+    // `db.parties` and taking the first row.
+    expect(isRead('activePartyId', 'await updateCampaign(id, { activePartyId: party.id });')).toBe(false);
+    // Genuine reads, all still reads.
+    expect(isRead('depleted', 'const { depleted } = applyDamage(character, 3);')).toBe(true);
+    expect(isRead('activePartyId', 'const { activePartyId: chosen } = campaign;')).toBe(true);
+    expect(isRead('allowsPlus', 'if (engine.scale.allowsPlus) return true;')).toBe(true);
+    expect(isRead('refresh', "const mode = resource['refresh'];")).toBe(true);
   });
 
   it('does not mistake a parameter or a doc comment for a declaration', () => {

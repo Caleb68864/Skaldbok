@@ -43,8 +43,19 @@ import { join } from 'node:path';
  * So both are fingerprinted here as well, and so is
  * `writePreEncounterReworkBackup`, which the frozen v8 block calls out to. The
  * behavioural tests stay: they say what the upgrade *does*, this says it has
- * not moved. A named `.upgrade(fn)` with no fingerprint fails, so the next
- * extracted upgrade cannot join silently.
+ * not moved. An upgrade reached by `.upgrade(...)` with no fingerprint fails,
+ * so the next extracted upgrade cannot join silently.
+ *
+ * **How the syntax used to defeat it.** The check matched
+ * `/\.upgrade\(\s*([A-Za-z_$][\w$]*)\s*\)/` — a bare identifier and nothing
+ * else. `.upgrade((tx) => fn(tx))` matched nothing at all, and neither did
+ * `.upgrade(ns.fn)` or `.upgrade(fn as UpgradeFn)`. For an *existing* released
+ * block that was harmless, because the block's own hash covers the call text;
+ * for a *new* block it meant a released extracted upgrade could ship entirely
+ * unfrozen while every test passed. The argument is now read whole and every
+ * identifier in it checked, with a second assertion that needs no parsing at
+ * all: a function called `upgrade*` in one of these modules must be
+ * fingerprinted however it is referenced.
  *
  * **Where the freeze still stops**, stated rather than left to be discovered: a
  * shared utility called from inside an upgrade is not fingerprinted.
@@ -161,20 +172,89 @@ const UPGRADE_SOURCE_FILES = [
   join(process.cwd(), 'src/storage/db/migrations/pre-encounter-rework-backup.ts'),
 ];
 
-/** Every identifier passed by name to `.upgrade(...)` in the constructor. */
-function namedUpgrades(): string[] {
-  const body = constructorBody(readFileSync(CLIENT_PATH, 'utf8'));
-  return [...body.matchAll(/\.upgrade\(\s*([A-Za-z_$][\w$]*)\s*\)/g)].map((m) => m[1]!);
+/** True if one of the upgrade modules declares a function of this name. */
+function declaresUpgradeFunction(name: string): boolean {
+  const declaration = new RegExp(`(?:export\\s+)?(?:async\\s+)?function\\s+${name}\\s*\\(`);
+  return UPGRADE_SOURCE_FILES.some((file) => declaration.test(readFileSync(file, 'utf8')));
 }
 
 /**
- * Source text of `export async function <name>(…) { … }`, matched by balancing
- * braces so a nested block cannot end it early.
+ * Every upgrade function reachable from a `.upgrade(...)` call in the
+ * constructor, however it is referenced.
+ *
+ * @remarks
+ * This used to be `/\.upgrade\(\s*([A-Za-z_$][\w$]*)\s*\)/g` — a **bare
+ * identifier only**. `.upgrade((tx) => fn(tx))` matched nothing, and so did
+ * `.upgrade(ns.fn)` and `.upgrade(fn as UpgradeFn)`. For an already-released
+ * version that did no harm, because the block's own hash covers the
+ * `.upgrade(...)` call text. For a **new** version block it was a hole you could
+ * drive a migration through: add `this.version(21).stores({}).upgrade((tx) =>
+ * probeUpgradeV21(tx))`, add the v21 *block* fingerprint the test correctly
+ * demands, and the released upgrade itself is entirely unfrozen — its body can
+ * then be edited with the whole suite green.
+ *
+ * An arrow-wrapped upgrade is not exotic. It is what you write the moment the
+ * upgrade takes a second argument, and what a formatter produces when the call
+ * wraps.
+ *
+ * So the whole argument is read by balancing parentheses and every identifier in
+ * it is extracted. Identifiers that are not upgrade functions — `tx`, a type
+ * name, a keyword — are dropped by asking whether an upgrade module declares
+ * them.
+ */
+function namedUpgrades(): string[] {
+  const body = constructorBody(readFileSync(CLIENT_PATH, 'utf8'));
+  const names = new Set<string>();
+  for (const call of body.matchAll(/\.upgrade\s*\(/g)) {
+    const open = call.index + call[0].length - 1;
+    let depth = 0;
+    let close = body.length;
+    for (let i = open; i < body.length; i++) {
+      if (body[i] === '(') depth++;
+      else if (body[i] === ')') {
+        depth--;
+        if (depth === 0) { close = i; break; }
+      }
+    }
+    for (const id of body.slice(open + 1, close).matchAll(/[A-Za-z_$][\w$]*/g)) {
+      if (declaresUpgradeFunction(id[0])) names.add(id[0]);
+    }
+  }
+  return [...names];
+}
+
+/**
+ * Every function an upgrade module declares whose name says it is an upgrade.
+ *
+ * @remarks
+ * The backstop to {@link namedUpgrades}, which can only see what it can parse.
+ * A released upgrade that reaches `.upgrade()` by some route this file does not
+ * recognise is still frozen, because it is still declared here under a name
+ * that says what it is.
+ */
+function declaredUpgradeFunctions(): string[] {
+  const found = new Set<string>();
+  for (const file of UPGRADE_SOURCE_FILES) {
+    const source = readFileSync(file, 'utf8');
+    for (const m of source.matchAll(/(?:export\s+)?(?:async\s+)?function\s+(upgrade[A-Za-z0-9_$]*)\s*\(/g)) {
+      found.add(m[1]!);
+    }
+  }
+  return [...found];
+}
+
+/**
+ * Source text of `function <name>(…) { … }`, matched by balancing braces so a
+ * nested block cannot end it early.
+ *
+ * @remarks
+ * `export` and `async` are both optional: extracting a released upgrade into a
+ * module-private helper does not unfreeze it.
  */
 function upgradeFunctionSource(name: string): string {
   for (const file of UPGRADE_SOURCE_FILES) {
     const source = readFileSync(file, 'utf8');
-    const declaration = new RegExp(`export\\s+async\\s+function\\s+${name}\\s*\\(`);
+    const declaration = new RegExp(`(?:export\\s+)?(?:async\\s+)?function\\s+${name}\\s*\\(`);
     const match = declaration.exec(source);
     if (!match) continue;
     const open = source.indexOf('{', match.index + match[0].length);
@@ -228,19 +308,37 @@ describe('released schema versions', () => {
     ).toEqual([]);
   });
 
-  it('records a fingerprint for every named upgrade function', () => {
+  it('records a fingerprint for every upgrade function a version block reaches', () => {
     // The widening blind spot, closed. `.upgrade(someFunction)` is the pattern
     // this file recommends, so without this check the freeze would cover a
-    // smaller share of the ladder with every version that used it.
+    // smaller share of the ladder with every version that used it — and until
+    // now `.upgrade((tx) => someFunction(tx))`, the same thing with an argument,
+    // was invisible to it.
     const named = namedUpgrades();
-    expect(named.length, 'no `.upgrade(name)` calls found — has the pattern changed?')
+    expect(named.length, 'no `.upgrade(...)` calls found — has the pattern changed?')
       .toBeGreaterThan(0);
     const unpinned = named.filter(name => !(name in EXTRACTED_UPGRADE_FINGERPRINTS));
     expect(
       unpinned,
-      `${unpinned.join(', ')} is passed to .upgrade() but has no fingerprint. An `
+      `${unpinned.join(', ')} is reached by .upgrade() but has no fingerprint. An `
       + 'extracted upgrade is still a released migration — add its entry to '
       + 'EXTRACTED_UPGRADE_FINGERPRINTS in the same commit as the version block.',
+    ).toEqual([]);
+  });
+
+  it('records a fingerprint for every function named as an upgrade', () => {
+    // The backstop. `namedUpgrades()` can only see what it can parse, and its
+    // predecessor's confident-looking regex saw one syntax out of four. This
+    // asks a question that needs no parsing: a function in an upgrade module
+    // called `upgradeSomething` is a released migration whatever route it takes
+    // to `.upgrade()`.
+    const declared = declaredUpgradeFunctions();
+    expect(declared.length, 'no upgrade* functions found — has the pattern changed?')
+      .toBeGreaterThan(0);
+    const unpinned = declared.filter(name => !(name in EXTRACTED_UPGRADE_FINGERPRINTS));
+    expect(
+      unpinned,
+      `${unpinned.join(', ')} is declared as an upgrade but has no fingerprint.`,
     ).toEqual([]);
   });
 

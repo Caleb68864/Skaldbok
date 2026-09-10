@@ -15,7 +15,7 @@ import { payoutSplitSchema } from './payoutSplit';
 import { recurringBillSchema } from './recurringBill';
 import { routeStopSchema } from './routeStop';
 import { routePlanSchema } from './routePlan';
-import { referenceGroupSchema, referenceSectionSchema } from './reference';
+import { referenceGroupSchema, referenceNoteSchema, referenceSectionSchema } from './reference';
 import { kbNodeSchema, kbEdgeSchema } from './knowledgeBase';
 
 /**
@@ -89,6 +89,17 @@ export const bundleContentsSchema = z.object({
   routePlans: z.array(routePlanSchema).optional(),
   referenceGroups: z.array(referenceGroupSchema).optional(),
   referenceSections: z.array(referenceSectionSchema).optional(),
+  /**
+   * Standalone reference notes.
+   *
+   * @remarks
+   * Excluded from every bundle until now on the grounds that "its live content
+   * is already exported as notes". There is no such dual-write — the Reference
+   * screen's Notes tab writes this table and only this table — so every
+   * reference note a user had written since v7 existed in one place and had no
+   * backup path at all.
+   */
+  referenceNotes: z.array(referenceNoteSchema).optional(),
   kbNodes: z.array(kbNodeSchema).optional(),
   kbEdges: z.array(kbEdgeSchema).optional(),
 });

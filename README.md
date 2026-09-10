@@ -62,15 +62,15 @@ you, so the campaign export below is the only copy that survives the device.
 ## Backup and portability
 
 A campaign export is a single `.skaldbok.json` file (schema `version: 1`)
-carrying **every Dexie table the app persists** — 23 exported tables, plus 3
-deliberately excluded and named as such (`appSettings` and `metadata` are
-per-device; `referenceNotes` is a legacy table superseded at schema v7). The
-bundle includes the system definitions themselves, so a restore on a new device
-does not point a campaign at a ruleset that device has never seen.
+carrying **every Dexie table the app persists** — 24 exported tables, plus 2
+deliberately excluded and named as such (`appSettings` and `metadata`, both
+per-device). The bundle includes the system definitions themselves, so a restore
+on a new device does not point a campaign at a ruleset that device has never
+seen.
 
 This is enforced, not asserted: `src/utils/export/bundleParity.test.ts` walks
 the live Dexie schema and fails if a table is neither exported nor explicitly
-excluded, seeds a row into all 23 tables and fails if any comes back empty from
+excluded, seeds a row into all 24 tables and fails if any comes back empty from
 the collector, and round-trips export → delete the database → import →
 assert every table repopulated.
 
