@@ -9,26 +9,36 @@ import * as entityLinkRepository from './entityLinkRepository';
 /**
  * Creates a new encounter in IndexedDB.
  *
+ * @remarks
+ * Throws on failure, like every other write in this layer. It used to catch
+ * everything — `QuotaExceededError` included — `console.warn` it and return
+ * `undefined`, so a failed write was indistinguishable from a successful one at
+ * every call site. This is local-first; there is no server copy and no later
+ * retry.
+ *
  * @param data - All fields except auto-generated ones (id, timestamps, schemaVersion).
  * @returns The newly created encounter record.
+ * @throws If the row cannot be written — "Storage is full…" on a quota failure.
  */
 export async function create(
   data: Omit<Encounter, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>
-): Promise<Encounter | undefined> {
+): Promise<Encounter> {
+  const now = nowISO();
+  const record: Encounter = {
+    ...data,
+    id: generateId(),
+    createdAt: now,
+    updatedAt: now,
+    schemaVersion: 1,
+  };
   try {
-    const now = nowISO();
-    const record: Encounter = {
-      ...data,
-      id: generateId(),
-      createdAt: now,
-      updatedAt: now,
-      schemaVersion: 1,
-    };
     await db.encounters.add(record);
     return record;
   } catch (e) {
-    console.warn('encounterRepository.create: failed', e);
-    return undefined;
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      throw new Error('Storage is full. Please free up space and try again.', { cause: e });
+    }
+    throw new Error(`encounterRepository.create failed: ${e}`, { cause: e });
   }
 }
 

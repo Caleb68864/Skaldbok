@@ -96,14 +96,31 @@ export function BestiaryScreen({ campaignId, campaignName, systemId, activeEncou
     return () => document.removeEventListener('keydown', onKey);
   }, [viewingTemplate]);
 
+  /**
+   * @remarks
+   * The form stays open on a failure. It used to close unconditionally, because
+   * `creatureTemplateRepository.create` swallowed every error and returned
+   * `undefined` — so on a full disk the user watched the form close and the
+   * creature was simply gone, with nothing on screen.
+   */
   const handleCreate = async (data: Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>) => {
-    await create(data);
+    try {
+      await create(data);
+    } catch (err) {
+      showToast(`Could not save ${data.name || 'the creature'} — ${String(err)}`, 'error', 8000);
+      return;
+    }
     setShowForm(false);
   };
 
   const handleEdit = async (data: Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>) => {
     if (!editingTemplate) return;
-    await update(editingTemplate.id, data);
+    try {
+      await update(editingTemplate.id, data);
+    } catch (err) {
+      showToast(`Could not save ${data.name || 'the creature'} — ${String(err)}`, 'error', 8000);
+      return;
+    }
     setEditingTemplate(null);
     setViewingTemplate(null);
   };
@@ -116,24 +133,37 @@ export function BestiaryScreen({ campaignId, campaignName, systemId, activeEncou
    * ids and timestamps, and a batch small enough to review in a preview table is
    * not worth a second code path. Sequential, so a failure part-way leaves the
    * creatures already written intact rather than rolling back a library the user
-   * watched arrive.
+   * watched arrive — and the count of what did land is reported, which is the
+   * half that was missing. This docstring used to claim that behaviour while
+   * `create` could not fail, so there was never a failure to observe.
    */
   const handleImport = async (creatures: ParsedCreature[]) => {
-    for (const creature of creatures) {
-      await create({
-        campaignId,
-        name: creature.name,
-        category: creature.category,
-        role: creature.role,
-        affiliation: creature.affiliation,
-        stats: creature.stats,
-        attacks: creature.attacks,
-        abilities: creature.abilities,
-        skills: creature.skills,
-        tags: creature.tags,
-        description: creature.description,
-        status: 'active',
-      });
+    let written = 0;
+    try {
+      for (const creature of creatures) {
+        await create({
+          campaignId,
+          name: creature.name,
+          category: creature.category,
+          role: creature.role,
+          affiliation: creature.affiliation,
+          stats: creature.stats,
+          attacks: creature.attacks,
+          abilities: creature.abilities,
+          skills: creature.skills,
+          tags: creature.tags,
+          description: creature.description,
+          status: 'active',
+        });
+        written++;
+      }
+    } catch (err) {
+      showToast(
+        `Import stopped after ${written} of ${creatures.length} — ${String(err)}`,
+        'error',
+        8000,
+      );
+      return;
     }
     setShowImport(false);
     showToast(

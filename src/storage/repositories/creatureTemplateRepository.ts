@@ -9,26 +9,37 @@ import * as entityLinkRepository from './entityLinkRepository';
 /**
  * Creates a new creature template in IndexedDB.
  *
+ * @remarks
+ * Throws on failure, like every other write in this layer. It used to catch
+ * everything — `QuotaExceededError` included — `console.warn` it and return
+ * `undefined`, and the chain above it was unbroken: `useBestiary` ignored the
+ * return value and `BestiaryScreen` closed the form unconditionally, so on a
+ * full disk the user watched the form close and the creature was gone with no
+ * message. This is local-first; there is no server copy and no later retry.
+ *
  * @param data - All fields except auto-generated ones (id, timestamps, schemaVersion).
  * @returns The newly created creature template record.
+ * @throws If the row cannot be written — "Storage is full…" on a quota failure.
  */
 export async function create(
   data: Omit<CreatureTemplate, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>
-): Promise<CreatureTemplate | undefined> {
+): Promise<CreatureTemplate> {
+  const now = nowISO();
+  const record: CreatureTemplate = {
+    ...data,
+    id: generateId(),
+    createdAt: now,
+    updatedAt: now,
+    schemaVersion: 1,
+  };
   try {
-    const now = nowISO();
-    const record: CreatureTemplate = {
-      ...data,
-      id: generateId(),
-      createdAt: now,
-      updatedAt: now,
-      schemaVersion: 1,
-    };
     await db.creatureTemplates.add(record);
     return record;
   } catch (e) {
-    console.warn('creatureTemplateRepository.create: failed', e);
-    return undefined;
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      throw new Error('Storage is full. Please free up space and try again.', { cause: e });
+    }
+    throw new Error(`creatureTemplateRepository.create failed: ${e}`, { cause: e });
   }
 }
 

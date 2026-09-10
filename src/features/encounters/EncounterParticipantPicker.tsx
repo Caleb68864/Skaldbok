@@ -40,6 +40,8 @@ export function EncounterParticipantPicker({
   const [newCategory, setNewCategory] = useState<'monster' | 'npc' | 'animal'>('monster');
   const [newHp, setNewHp] = useState<string>('');
   const [newDescription, setNewDescription] = useState('');
+  /** A failed write, shown in the form rather than swallowed. */
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +101,7 @@ export function EncounterParticipantPicker({
   const handleCreateNew = useCallback(async () => {
     if (!newName.trim()) return;
     setSubmitting(true);
+    setError(null);
     try {
       const hpNum = newHp ? parseInt(newHp, 10) : 0;
       const created = await creatureTemplateRepository.create({
@@ -113,9 +116,12 @@ export function EncounterParticipantPicker({
         tags: [],
         status: 'active',
       });
-      if (!created) return;
       await onSelect(created);
       onClose?.();
+    } catch (err) {
+      // `create` used to return `undefined` on a failed write and the guard
+      // below simply returned, leaving the dialog open with no explanation.
+      setError(`Could not save ${newName.trim()} — ${String(err)}`);
     } finally {
       setSubmitting(false);
     }
@@ -165,6 +171,9 @@ export function EncounterParticipantPicker({
             rows={2}
           />
         </label>
+        {error && (
+          <p role="alert" className="m-0 text-sm text-[var(--color-danger)]">{error}</p>
+        )}
         <div className="flex gap-2 justify-end">
           <button
             type="button"

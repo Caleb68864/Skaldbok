@@ -279,3 +279,71 @@ describe('repository soft-delete conventions', () => {
     });
   });
 });
+
+/**
+ * Every catch block, by brace balancing so a nested block cannot end one early.
+ */
+function catchBlocks(body: string): string[] {
+  const blocks: string[] = [];
+  const opener = /catch\s*(?:\([^)]*\))?\s*\{/g;
+  for (const match of body.matchAll(opener)) {
+    const open = match.index + match[0].length - 1;
+    let depth = 0;
+    for (let i = open; i < body.length; i++) {
+      if (body[i] === '{') depth++;
+      else if (body[i] === '}') {
+        depth--;
+        if (depth === 0) {
+          blocks.push(body.slice(open, i + 1));
+          break;
+        }
+      }
+    }
+  }
+  return blocks;
+}
+
+/** A Dexie write — the operations that can fail on a full disk. */
+const WRITES_A_ROW = /\bdb\.[A-Za-z0-9_]+\s*\.\s*(?:add|put|update|bulkAdd|bulkPut|bulkUpdate|bulkDelete|delete|clear)\s*\(/;
+
+describe('a failed write reaches the caller', () => {
+  /**
+   * @remarks
+   * This is local-first: a write that does not land has no server copy to fall
+   * back on, and no later retry. So a repository write either succeeds or says
+   * so — every one of the ~130 write functions in this layer propagates, except
+   * two that caught *everything* from `db.<table>.add(record)`, `console.warn`ed
+   * and returned `undefined`.
+   *
+   * `creatureTemplateRepository.create` and `encounterRepository.create` were
+   * the two. `useBestiary.ts:43-46` ignored the return value and
+   * `BestiaryScreen.tsx:99-102` called `setShowForm(false)` unconditionally, so
+   * on a quota failure the user watched the form close and the creature was
+   * gone with no message. `BestiaryScreen.handleImport`'s docstring claimed "a
+   * failure part-way leaves the creatures already written intact" — there was no
+   * failure to observe, because `create` never threw.
+   *
+   * The `preserve-caught-error` lint rule cannot find this. It is structurally
+   * blind to a `catch` that never constructs an error at all: there is nothing
+   * for a `cause` to be attached to.
+   */
+  const swallowing = functions.filter(
+    fn => WRITES_A_ROW.test(fn.body) && catchBlocks(fn.body).some(block => !/\bthrow\b/.test(block)),
+  );
+
+  it('found write functions to check', () => {
+    // Without this a broken walk makes the assertion below vacuous.
+    expect(functions.filter(fn => WRITES_A_ROW.test(fn.body)).length).toBeGreaterThan(50);
+  });
+
+  it('has no repository write that catches a failure and returns anyway', () => {
+    const names = swallowing.map(fn => `${fn.repo}.${fn.name}`).sort();
+    expect(
+      names,
+      `${names.join(', ')} catches every error from a Dexie write — QuotaExceededError ` +
+      'included — and returns as though it succeeded. The caller cannot tell a saved ' +
+      'record from a lost one, and on a local-first app a lost record is lost for good. ' +
+      'Throw, the way the rest of this layer does.',
+    ).toEqual([]);
+  });
+});

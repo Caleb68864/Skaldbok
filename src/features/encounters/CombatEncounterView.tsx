@@ -240,21 +240,27 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
     const existing = (await creatureTemplateRepository.listByCampaign(encounter.campaignId)).find(
       (t) => t.name.toLowerCase() === name.toLowerCase(),
     );
-    const template = existing ?? await creatureTemplateRepository.create({
-      campaignId: encounter.campaignId,
-      name,
-      category: 'monster',
-      // Keyed by the ruleset's own ids. The quick-create flow still collects
-      // three numbers (health/armour/movement) under engine labels; a ruleset
-      // declaring more stats fills the rest in from the bestiary afterwards.
-      stats: { [healthStatId]: stats.hp ?? 0, [armorStatId]: stats.armor ?? 0, movement: stats.movement ?? 0 },
-      attacks: [],
-      abilities: [],
-      skills: [],
-      tags: [],
-      status: 'active',
-    });
-    if (!template) return;
+    let template;
+    try {
+      template = existing ?? await creatureTemplateRepository.create({
+        campaignId: encounter.campaignId,
+        name,
+        category: 'monster',
+        // Keyed by the ruleset's own ids. The quick-create flow still collects
+        // three numbers (health/armour/movement) under engine labels; a ruleset
+        // declaring more stats fills the rest in from the bestiary afterwards.
+        stats: { [healthStatId]: stats.hp ?? 0, [armorStatId]: stats.armor ?? 0, movement: stats.movement ?? 0 },
+        attacks: [],
+        abilities: [],
+        skills: [],
+        tags: [],
+        status: 'active',
+      });
+    } catch (err) {
+      // `create` used to return `undefined` here and the dialog closed anyway.
+      showToast(`Could not add ${name} — ${String(err)}`, 'error', 8000);
+      return;
+    }
 
     // Create participant + represents edge in one transaction so the
     // relationship is observable by the rest of the app atomically.
