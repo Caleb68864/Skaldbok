@@ -154,11 +154,18 @@ export async function mergeBundle(
       }
     );
   } catch (err) {
-    // The transaction aborted and rolled back — nothing was committed, so the
-    // running insert/update tallies are void.
+    // The transaction aborted and rolled back — nothing was committed, so every
+    // running tally is void, `skipped` included. Leaving `skipped` standing is
+    // how "Import completed with N error(s). Imported 0 new, updated 0, skipped
+    // 12." reached the screen after a restore that restored nothing.
     report.inserted = 0;
     report.updated = 0;
-    report.errors.push({ entityType: 'unknown', entityId: 'unknown', message: `Import rolled back: ${String(err)}` });
+    report.skipped = 0;
+    // First, not last. `useImportActions` renders `errors.slice(0, 3)` and puts
+    // the rest behind "(+N more in the console)", so with three or more prior
+    // per-entity errors the one sentence saying nothing was restored was the one
+    // the user could not see.
+    report.errors.unshift({ entityType: 'unknown', entityId: 'unknown', message: `Import rolled back: ${String(err)}` });
     return report;
   }
 
