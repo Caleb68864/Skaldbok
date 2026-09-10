@@ -25,6 +25,7 @@ import { listByCampaign as listRoutePlansByCampaign } from '../../storage/reposi
 import { getNodesByCampaign as listKBNodesByCampaign } from '../../storage/repositories/kbNodeRepository';
 import { getEdgesByCampaign as listKBEdgesByCampaign } from '../../storage/repositories/kbEdgeRepository';
 import { getAll as getAllReferenceSections, getGroups as getAllReferenceGroups } from '../../storage/repositories/referenceSectionRepository';
+import { getAll as getAllReferenceNotes } from '../../storage/repositories/referenceNoteRepository';
 import { getById as getSystemById } from '../../storage/repositories/systemRepository';
 
 /**
@@ -333,9 +334,10 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
  * seeds one row in each of those tables and fails if any of them does not come
  * back out of here.
  *
- * Three tables are deliberately absent, with reasons recorded in
- * `TABLES_OUTSIDE_BUNDLE`: `appSettings`, `metadata` and the legacy
- * `referenceNotes`.
+ * Two tables are deliberately absent, with reasons recorded in
+ * `TABLES_OUTSIDE_BUNDLE`: `appSettings` and `metadata`, both per-device.
+ * `referenceNotes` used to be a third, on the stated grounds that its content
+ * was "already exported as notes" — it was not, and is now collected below.
  *
  * @param campaignId - The ID of the campaign to export.
  */
@@ -412,9 +414,13 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
     //     a campaign export is the app's only export, so leaving it out means
     //     hand-authored rules content has no backup path at all. Soft-deleted
     //     rows are excluded by default, matching every other collector.
-    const [referenceSections, referenceGroups] = await Promise.all([
+    //     `referenceNotes` joins them: the Notes tab of that screen is the only
+    //     writer of that table and there is no dual-write to `notes`, so it was
+    //     live user content with no backup path at all.
+    const [referenceSections, referenceGroups, referenceNotes] = await Promise.all([
       getAllReferenceSections(),
       getAllReferenceGroups(),
+      getAllReferenceNotes(),
     ]);
 
     // 12. The campaign's system definition. A user-authored ruleset lives only
@@ -449,6 +455,7 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
       routePlans,
       referenceGroups,
       referenceSections,
+      referenceNotes,
       kbNodes,
       kbEdges,
     };

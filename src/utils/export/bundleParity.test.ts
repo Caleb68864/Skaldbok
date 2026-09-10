@@ -263,6 +263,14 @@ async function seedOneRowPerTable(): Promise<void> {
     updatedAt: NOW,
   } as never);
 
+  await db.referenceNotes.add({
+    id: 'refnote-1',
+    title: 'House rule: flanking',
+    content: 'A flanked target defends at a bane.',
+    createdAt: NOW,
+    updatedAt: NOW,
+  } as never);
+
   await db.kb_nodes.add({
     id: 'kbnode-1',
     type: 'note',

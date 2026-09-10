@@ -47,7 +47,8 @@ function rowSchemaOf(field: z.ZodTypeAny): z.ZodObject<z.ZodRawShape> | null {
  * `characters` and `systems` are device-global; `partyMembers` reach their
  * campaign through `partyId`; `entityLinks` are endpoint-scoped and are
  * dropped by the merge engine when an endpoint is missing; and the reference
- * library (`referenceGroups`/`referenceSections`) is device-wide.
+ * library (`referenceGroups`/`referenceSections`/`referenceNotes`) is
+ * device-wide.
  */
 export const CAMPAIGN_SCOPED_BUNDLE_KEYS: ReadonlySet<string> = new Set(
   Object.entries(bundleContentsSchema.shape)

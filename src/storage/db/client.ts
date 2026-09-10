@@ -13,7 +13,7 @@ import type { Attachment } from '../../types/attachment';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { Encounter } from '../../types/encounter';
 import type { InventoryContainer } from '../../types/inventoryContainer';
-import type { ReferenceGroup, ReferenceSection } from '../../types/reference';
+import type { ReferenceGroup, ReferenceNote, ReferenceSection } from '../../types/reference';
 import type { LedgerEntry } from '../../types/ledger';
 import type { PayoutSplit } from '../../types/payoutSplit';
 import type { RouteStop } from '../../types/routeStop';
@@ -25,34 +25,20 @@ import { generateId } from '../../utils/ids';
 import { writePreEncounterReworkBackup } from './migrations/pre-encounter-rework-backup';
 
 /**
- * Legacy standalone reference note.
+ * A standalone reference note.
  *
  * @remarks
- * Superseded by user-owned reference sections (v11) and by folding reference
- * content into the `notes` table with `scope: 'shared'` (v7 migration). Retained
- * so the old table still types correctly during upgrades.
+ * Older than user-owned reference sections (v11) and the v7 fold of reference
+ * content into `notes`, but not superseded by either in practice: the Reference
+ * screen's Notes tab still creates and edits rows here, and nothing writes the
+ * same content anywhere else. It was declared here as a bare interface, which
+ * left it as the only user-writable table with no schema to validate against —
+ * and therefore no way to travel in a bundle. It now lives in
+ * `types/reference.ts` as a Zod schema with the type inferred from it, the same
+ * arrangement as the KB rows below, and is re-exported here so every existing
+ * `from '.../db/client'` import still resolves.
  */
-export interface ReferenceNote {
-  id: string;
-  title: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-  /**
-   * ISO timestamp set when the row is soft-deleted.
-   *
-   * @remarks
-   * Legacy table, live schema. The Reference screen still creates rows here and
-   * its delete button used to call an irreversible `db.referenceNotes.delete`,
-   * making this the one user-facing control in the app that destroyed content
-   * outright. Both fields are unindexed and need no `version()` block: Dexie
-   * only requires a schema entry for fields queried *by index*, and this table
-   * is small enough to filter in memory.
-   */
-  deletedAt?: string;
-  /** Transaction id shared by every row deleted in the same cascade. */
-  softDeletedBy?: string;
-}
+export type { ReferenceNote } from '../../types/reference';
 
 /**
  * The knowledge-base graph row types.

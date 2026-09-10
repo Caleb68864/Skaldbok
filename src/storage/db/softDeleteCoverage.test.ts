@@ -19,10 +19,19 @@ import { TABLES_WITHOUT_SOFT_DELETE, TABLES_OUTSIDE_BUNDLE } from '../../types/b
  *
  * The fix was to delete the parallel list rather than correct it. The docs now
  * state a count and point at `TABLES_WITHOUT_SOFT_DELETE`, which records the
- * *six exclusions* with their reasons — the same shape as
+ * *five exclusions* with their reasons — the same shape as
  * `TABLES_OUTSIDE_BUNDLE`, and small enough to stay true. These tests walk the
  * live Dexie schema against that map so a new table forces a decision, and check
  * the count the docs state against what comes out.
+ *
+ * That apparatus was internally consistent and externally wrong for as long as
+ * it existed. `SOFT_DELETE_TABLES` is derived from the exemption map, and both
+ * the pinned count and the docs check are computed from that derivation — so
+ * nothing anywhere checked that an exempted table *actually* lacks `deletedAt`.
+ * `referenceNotes` was exempt while being soft-deleted by its own repository,
+ * listed in the Trash and served by a delete button, and every count stated was
+ * one short. The exemption is now checked against evidence outside the map:
+ * repository writes that stamp `deletedAt` onto that table's rows.
  */
 
 const ROOT = process.cwd();
@@ -33,6 +42,41 @@ const TABLE_NAMES = db.tables.map((t) => t.name).sort();
 
 /** Tables not listed as exempt — i.e. the ones expected to carry `deletedAt`. */
 const SOFT_DELETE_TABLES = TABLE_NAMES.filter((name) => !(name in TABLES_WITHOUT_SOFT_DELETE));
+
+const REPOS_DIR = join(ROOT, 'src/storage/repositories');
+
+/**
+ * Repository files that write `deletedAt` onto rows of a given table.
+ *
+ * @remarks
+ * Evidence independent of {@link TABLES_WITHOUT_SOFT_DELETE}, which is the whole
+ * point: the rest of this file derives what it checks from that map, so it can
+ * only ever confirm the map agrees with itself. A repository statement that
+ * updates `db.<table>` and sets `deletedAt` in the same expression is a soft
+ * delete no matter what any list claims.
+ */
+function repositoryFilesWritingDeletedAt(table: string): string[] {
+  const found: string[] = [];
+  for (const name of readdirSync(REPOS_DIR).sort()) {
+    if (!name.endsWith('.ts') || name.includes('.test.')) continue;
+    const source = readFileSync(join(REPOS_DIR, name), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/(^|\s)\/\/[^\n]*/g, '$1');
+    // `db.<table>.update(…)` / `.bulkUpdate(…)` / `.put(…)`, up to the closing
+    // paren of that call, containing a `deletedAt:` assignment.
+    const call = new RegExp(
+      `\\bdb\\.${table}\\s*\\.\\s*(?:update|bulkUpdate|put|bulkPut)\\s*\\(([\\s\\S]*?)\\)\\s*;`,
+      'g',
+    );
+    for (const match of source.matchAll(call)) {
+      if (/\bdeletedAt\s*:/.test(match[1] ?? '')) {
+        found.push(name);
+        break;
+      }
+    }
+  }
+  return found;
+}
 
 describe('the soft-delete exemption list', () => {
   it('accounts for every Dexie table', () => {
@@ -48,10 +92,42 @@ describe('the soft-delete exemption list', () => {
     }
   });
 
-  it('leaves twenty tables soft-deletable', () => {
+  it('leaves twenty-one tables soft-deletable', () => {
     // Pinned so that adding a table and forgetting to decide shows up as a
-    // number moving, not as silence.
-    expect(SOFT_DELETE_TABLES).toHaveLength(20);
+    // number moving, not as silence. It read 20 until `referenceNotes` — which
+    // has always been soft-deletable — came off the exemption list.
+    expect(SOFT_DELETE_TABLES).toHaveLength(21);
+  });
+
+  it('exempts only tables that really have no soft delete', () => {
+    // The hole this closes. `SOFT_DELETE_TABLES` above is derived from
+    // `TABLES_WITHOUT_SOFT_DELETE`, and the count and the docs check are both
+    // computed from that same derivation — so the whole apparatus was
+    // internally consistent and nothing whatsoever checked that an exempted
+    // table actually lacks `deletedAt`.
+    //
+    // `referenceNotes` was exempt, with a reason saying its content "lives in
+    // `notes` now". It does not: the Reference screen's Notes tab still writes
+    // that table, and `referenceNoteRepository` exports `getDeleted`,
+    // `softDelete`, `restore` and `hardDelete` against it, with a Trash entry
+    // and a delete button on screen. Every count the docs stated was one short.
+    //
+    // The evidence used here is the repository layer's own writes: a table
+    // whose repository stamps `deletedAt` onto a row is soft-deletable, whatever
+    // a map says.
+    const offenders: string[] = [];
+    for (const name of Object.keys(TABLES_WITHOUT_SOFT_DELETE)) {
+      const writers = repositoryFilesWritingDeletedAt(name);
+      if (writers.length > 0) {
+        offenders.push(`${name} (${writers.join(', ')})`);
+      }
+    }
+    expect(
+      offenders,
+      `${offenders.join('; ')} is exempted from soft delete but a repository `
+      + 'stamps `deletedAt` onto its rows. Either the exemption is wrong — remove '
+      + 'it and update the count in CLAUDE.md and AGENTS.md — or the write is.',
+    ).toEqual([]);
   });
 
   it('does not exempt a table the bundle also leaves behind for a different reason', () => {
