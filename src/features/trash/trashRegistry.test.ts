@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RESTORE_WITHOUT_LISTING, TRASH_ENTITY_TYPES } from './trashRegistry';
+import { readSoftDeleteCapabilities, tablesRestorableButUnlistable } from '../../test-utils/softDeleteCapabilities';
 import { resetDatabase } from '../../test-utils/resetDatabase';
 import * as shipRepository from '../../storage/repositories/shipRepository';
 import * as inventoryContainerRepository from '../../storage/repositories/inventoryContainerRepository';
@@ -75,69 +76,74 @@ describe('registry completeness', () => {
     expect(listers.length).toBeGreaterThan(4);
   });
 
+  it('reads the repository layer, and every listing in it', () => {
+    // Guards the guard twice over. A walk that found nothing would make both
+    // assertions below vacuous, and a listing written in an idiom the reader
+    // cannot recognise would make a listed table look unlistable — sending the
+    // next person to write an exemption for a listing that already exists.
+    const report = readSoftDeleteCapabilities(REPO_DIR);
+    expect(report.tables.length, 'found no soft-deletable tables at all').toBeGreaterThanOrEqual(15);
+    expect(
+      report.unrecognisedListings,
+      `${report.unrecognisedListings.join(', ')} is named as a deleted-row listing but `
+      + 'its body is not one this guard can read. Use `onlyDeleted(...)` or '
+      + "`.where('deletedAt').above('')`, or teach `readSoftDeleteCapabilities` the idiom.",
+    ).toEqual([]);
+  });
+
   /**
-   * The other direction: a repository that can delete and restore must be able
-   * to list, or say why not.
+   * The other direction: a row that can be deleted and restored must be
+   * listable, or say why not.
    *
    * @remarks
    * The completeness test above runs `getDeleted → registry`. That is the half
    * that had already failed, but it is the second half of the sequence. A
-   * repository gains `softDelete` and `restore` first, and until it also gains
-   * `getDeleted` the rows it tombstones are invisible to the Trash — with the
-   * guard above passing, because it is never asked about a repository with no
-   * listing. Six repositories are in that state today; each is exempted in
-   * `RESTORE_WITHOUT_LISTING` with a reason, and a seventh cannot appear
-   * silently.
+   * table gains a soft delete and a restore first, and until it also gains a
+   * listing the rows it tombstones are invisible to the Trash — with the guard
+   * above passing, because it is never asked about something with no listing.
+   *
+   * Judged per **table** and from the repository layer's own writes rather than
+   * per module and from function names. That is what makes `parties` visible:
+   * `partyRepository` soft-deletes and restores both the party row and its
+   * member seats, lists only the seats, and a per-module check saw
+   * `getDeletedMembers` and asked no further. The same change makes
+   * `attachments` visible without a second, differently-detected copy of this
+   * invariant living in `repositoryConventions.test.ts` — that copy is gone,
+   * and `test-utils/softDeleteCapabilities.ts` explains why it could not simply
+   * be merged.
    */
-  it('lets no repository delete and restore without either a listing or a stated reason', () => {
-    const files = readdirSync(REPO_DIR).filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'));
-
-    const undecided = files
-      .map((file) => {
-        const source = readFileSync(join(REPO_DIR, file), 'utf8');
-        const exports = (prefix: string) =>
-          [...source.matchAll(new RegExp(`export async function (${prefix}[A-Za-z]*)\\s*\\(`, 'g'))];
-        return {
-          module: file.replace(/\.ts$/, ''),
-          deletes: exports('softDelete').length > 0,
-          restores: exports('restore').length > 0,
-          lists: exports('getDeleted').length > 0,
-        };
-      })
-      .filter((repo) => repo.deletes && repo.restores && !repo.lists)
-      .filter((repo) => !(repo.module in RESTORE_WITHOUT_LISTING))
-      .map((repo) => repo.module);
+  it('lets no table be deleted and restored without either a listing or a stated reason', () => {
+    const report = readSoftDeleteCapabilities(REPO_DIR);
+    const undecided = tablesRestorableButUnlistable(report)
+      .filter((table) => !(table in RESTORE_WITHOUT_LISTING));
 
     expect(
       undecided,
-      `${undecided.join(', ')} can soft-delete and restore a row but cannot list one. `
+      `${undecided.join(', ')} can be soft-deleted and restored but never listed. `
       + 'Those rows are tombstoned somewhere the Trash cannot reach — the exact bug '
       + 'this registry exists to prevent, one step earlier than the guard above '
-      + 'catches it. Add a `getDeleted` and a registry entry, or add the repository '
+      + 'catches it. Add a listing and a registry entry, or add the table '
       + 'to RESTORE_WITHOUT_LISTING with the reason it stays out.',
     ).toEqual([]);
   });
 
   it('keeps the exemption list honest', () => {
-    const files = new Set(
-      readdirSync(REPO_DIR)
-        .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))
-        .map((f) => f.replace(/\.ts$/, '')),
-    );
+    const report = readSoftDeleteCapabilities(REPO_DIR);
+    const known = new Set(report.tables.map((t) => t.table));
+    const unlistable = new Set(tablesRestorableButUnlistable(report));
 
-    for (const [module, reason] of Object.entries(RESTORE_WITHOUT_LISTING)) {
-      expect(files, `RESTORE_WITHOUT_LISTING names "${module}", which is not a repository`)
-        .toContain(module);
-      expect(reason.length, `"${module}" is exempted with no stated reason`).toBeGreaterThan(60);
+    for (const [table, reason] of Object.entries(RESTORE_WITHOUT_LISTING)) {
+      expect(known, `RESTORE_WITHOUT_LISTING names "${table}", which no repository soft-deletes`)
+        .toContain(table);
+      expect(reason.length, `"${table}" is exempted with no stated reason`).toBeGreaterThan(60);
 
-      // And the exemption must still be needed: a repository that has since
-      // grown a listing should be in the registry, not on this list.
-      const source = readFileSync(join(REPO_DIR, `${module}.ts`), 'utf8');
+      // And the exemption must still be needed: a table that has since gained a
+      // listing belongs in the registry, not on this list.
       expect(
-        /export async function getDeleted[A-Za-z]*\s*\(/.test(source),
-        `"${module}" now exports a deleted-row listing, so its exemption is stale — `
+        unlistable.has(table),
+        `"${table}" can now list its deleted rows, so its exemption is stale — `
         + 'give it a Trash entry and remove it from RESTORE_WITHOUT_LISTING.',
-      ).toBe(false);
+      ).toBe(true);
     }
   });
 

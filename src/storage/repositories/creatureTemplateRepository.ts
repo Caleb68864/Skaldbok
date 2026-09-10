@@ -3,7 +3,7 @@ import { creatureTemplateSchema } from '../../types/creatureTemplate';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
-import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
+import { excludeDeleted, generateSoftDeleteTxId, onlyDeleted } from '../../utils/softDelete';
 import * as entityLinkRepository from './entityLinkRepository';
 
 /**
@@ -178,9 +178,13 @@ export async function restore(id: string): Promise<void> {
 export async function getDeleted(campaignId: string): Promise<CreatureTemplate[]> {
   try {
     const rows = await db.creatureTemplates.where('campaignId').equals(campaignId).toArray();
-    return rows
-      .filter((r): r is CreatureTemplate => !!(r as CreatureTemplate).deletedAt)
-      .sort((a, b) => (b.deletedAt ?? '').localeCompare(a.deletedAt ?? ''));
+    // `onlyDeleted` rather than the same filter-and-sort written out again: its
+    // docstring calls itself "the shared body of every repository's
+    // getDeleted", and this was the last one that had not been folded in. A
+    // third hand-rolled dialect of "keep the tombstoned rows" is also a third
+    // shape for any guard reading this layer to recognise, and
+    // `test-utils/softDeleteCapabilities.ts` is now such a guard.
+    return onlyDeleted(rows as CreatureTemplate[]);
   } catch (e) {
     throw new Error(`creatureTemplateRepository.getDeleted failed: ${e}`, { cause: e });
   }
