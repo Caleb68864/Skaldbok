@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as settingsRepository from '../../storage/repositories/settingsRepository';
+import { onDatabaseBlocked } from '../../storage/db/client';
 import type { AppSettings } from '../../types/settings';
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -51,6 +52,16 @@ export function useAppSettings() {
 
   useEffect(() => {
     let mounted = true;
+    // A blocked upgrade is the one storage problem that never reaches the
+    // `catch` below, because it is not a failure: Dexie fires `blocked` and
+    // waits, so the read neither resolves nor rejects and the app renders
+    // "Loading..." forever. Turning it into the same `storageError` the other
+    // causes produce is what puts "close the other tab" on screen instead.
+    const stopWatchingBlocked = onDatabaseBlocked((message) => {
+      if (!mounted) return;
+      setStorageError(message);
+      setIsLoading(false);
+    });
     settingsRepository.get().then(stored => {
       if (!mounted) return;
       if (stored) {
@@ -63,15 +74,22 @@ export function useAppSettings() {
       }
       setIsLoading(false);
     }).catch((err: unknown) => {
-      // A failed *read* here means IndexedDB itself is unavailable (blocked,
-      // corrupt, a version the installed app cannot open). Rendering on
-      // defaults would look fine and lose every save; say so instead.
+      // A failed *read* here means IndexedDB itself is unavailable (corrupt, a
+      // version the installed app cannot open, site data blocked by the
+      // browser). Rendering on defaults would look fine and lose every save; say
+      // so instead. This comment used to list "blocked" — an upgrade held up by
+      // another tab — among those causes, and that is the one thing it could
+      // never see, because Dexie leaves the promise pending rather than
+      // rejecting it. That case is handled above.
       console.error('[useAppSettings] settings load failed', err);
       if (!mounted) return;
       setStorageError(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
       setIsLoading(false);
     });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+      stopWatchingBlocked();
+    };
   }, [applySettings]);
 
   const updateSettings = useCallback(async (partial: Partial<AppSettings>) => {
