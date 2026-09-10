@@ -99,7 +99,13 @@ async function seedOneRowPerTable(): Promise<void> {
     status: 'ended',
     tags: [],
     segments: [],
-    participants: [],
+    // A participant, not an empty list. This seed used to have none, so the
+    // round-trip below passed on a bundle with nothing to lose — which is
+    // exactly why every `represents` edge could be dropped from every export
+    // without a test noticing. See `participantLinks.test.ts`.
+    participants: [
+      { id: 'part-1', name: 'Wolf', type: 'monster', instanceState: {}, sortOrder: 0 },
+    ],
     ...stamp,
   } as never);
 
@@ -136,6 +142,20 @@ async function seedOneRowPerTable(): Promise<void> {
     toEntityId: 'note-1',
     toEntityType: 'note',
     relationshipType: 'contains',
+    ...stamp,
+  } as never);
+
+  // The binding between the participant above and the bestiary creature — the
+  // only record that this combatant is the Wolf. Its `from` end is an encounter
+  // *participant*, an id nested inside the encounter row, which is the endpoint
+  // kind the old hand-written `entityIds` list could not contain.
+  await db.entityLinks.add({
+    id: 'link-represents',
+    fromEntityId: 'part-1',
+    fromEntityType: 'encounterParticipant',
+    toEntityId: 'creature-1',
+    toEntityType: 'creature',
+    relationshipType: 'represents',
     ...stamp,
   } as never);
 

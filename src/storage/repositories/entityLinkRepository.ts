@@ -129,6 +129,42 @@ export async function getAllLinksTo(toEntityId: string, options?: { includeDelet
 }
 
 /**
+ * Every edge in the database, regardless of endpoint or relationship type.
+ *
+ * @remarks
+ * For callers that decide which edges they want by looking at the *endpoints*
+ * rather than by naming ids up front — the export collectors, which have to
+ * keep every edge whose two ends both travel in the bundle.
+ *
+ * They previously queried per-id from a hand-written list of note and encounter
+ * ids, which is why every `represents` edge was dropped from every export: its
+ * `from` end is an encounter *participant*, an id nested inside an encounter row
+ * that no such list contained. One scan plus a membership test cannot forget an
+ * endpoint kind, and costs one table read instead of two indexed lookups per id.
+ *
+ * Soft-deleted edges are excluded unless `includeDeleted` is set, matching every
+ * other read here.
+ */
+export async function getAllLinks(options?: { includeDeleted?: boolean }): Promise<EntityLink[]> {
+  try {
+    const records = await db.entityLinks.toArray();
+    const parsed = records
+      .map(r => {
+        const result = entityLinkSchema.safeParse(r);
+        if (!result.success) {
+          console.warn('entityLinkRepository.getAllLinks: validation failed', result.error);
+          return undefined;
+        }
+        return result.data;
+      })
+      .filter((l): l is EntityLink => l !== undefined);
+    return options?.includeDeleted ? parsed : excludeDeleted(parsed);
+  } catch (e) {
+    throw new Error(`entityLinkRepository.getAllLinks failed: ${e}`, { cause: e });
+  }
+}
+
+/**
  * Creates a new directed edge between two entities.
  *
  * @remarks

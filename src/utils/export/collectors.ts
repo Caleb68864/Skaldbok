@@ -8,7 +8,8 @@ import { getById as getCharacterById } from '../../storage/repositories/characte
 import { getCampaignById } from '../../storage/repositories/campaignRepository';
 import { getSessionById, getSessionsByCampaign } from '../../storage/repositories/sessionRepository';
 import { getNoteById, getNotesBySession, getNotesByCampaign } from '../../storage/repositories/noteRepository';
-import { getAllLinksFrom, getAllLinksTo } from '../../storage/repositories/entityLinkRepository';
+import { getAllLinks, getAllLinksFrom, getAllLinksTo } from '../../storage/repositories/entityLinkRepository';
+import type { EntityLink } from '../../types/entityLink';
 import { getPartyByCampaign, getPartyMembers } from '../../storage/repositories/partyRepository';
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
 import { getById as getCreatureTemplateById, listByCampaign as listCreatureTemplatesByCampaign } from '../../storage/repositories/creatureTemplateRepository';
@@ -50,6 +51,65 @@ async function getAllLinksForEntity(entityId: string): Promise<import('../../typ
     map.set(link.id, link);
   }
   return [...map.values()];
+}
+
+/**
+ * Every entity id carried anywhere inside a set of assembled bundle contents,
+ * including ids nested inside a row.
+ *
+ * @remarks
+ * This replaces the hand-written `[...noteIds, ...encounters.map(e => e.id)]`
+ * that decided which edges an export kept. That list named two endpoint kinds
+ * out of the six the app writes, so every `represents` edge — the only record
+ * that a participant is the bestiary Wolf or the PC Astrid — was dropped from
+ * every export. Its `from` end is an **encounter participant**: an id that lives
+ * nested inside an encounter row and therefore cannot appear in a list of
+ * top-level row ids, no matter how carefully that list is maintained.
+ *
+ * So the set is *derived* rather than enumerated. Walking the rows means a
+ * nested id, a new endpoint kind or a whole new table joins the export the
+ * moment the collector emits its rows, with nothing left to remember. Extra ids
+ * are harmless: the set is only ever used as a membership test against edge
+ * endpoints, never to issue a query.
+ *
+ * @param contents - Assembled bundle contents, complete or partial.
+ * @returns Every string `id` reachable from those contents.
+ */
+export function collectBundleEntityIds(contents: Partial<BundleContents>): Set<string> {
+  const ids = new Set<string>();
+  const seen = new Set<object>();
+  const walk = (value: unknown): void => {
+    if (value === null || typeof value !== 'object') return;
+    // Payloads, not records: a Blob has no ids and walking one is pointless.
+    if (typeof Blob !== 'undefined' && value instanceof Blob) return;
+    if (value instanceof Date) return;
+    if (seen.has(value)) return;
+    seen.add(value);
+    if (Array.isArray(value)) {
+      for (const item of value) walk(item);
+      return;
+    }
+    const row = value as Record<string, unknown>;
+    if (typeof row.id === 'string') ids.add(row.id);
+    for (const child of Object.values(row)) walk(child);
+  };
+  walk(contents);
+  return ids;
+}
+
+/**
+ * The edges a bundle may carry: those with both endpoints inside it.
+ *
+ * @remarks
+ * An edge with one end outside the bundle has no relationship left to express
+ * once restored — `closeBundleReferences` prunes those it can verify, and this
+ * catches the rest, including endpoint types the importer treats as
+ * unverifiable (`encounterParticipant`). Keeping "any edge that mentions
+ * something we carry" would export a foreign encounter's participant binding
+ * just because the creature it names happens to travel.
+ */
+function linksWithinBundle(links: EntityLink[], ids: ReadonlySet<string>): EntityLink[] {
+  return links.filter((link) => ids.has(link.fromEntityId) && ids.has(link.toEntityId));
 }
 
 /**
@@ -204,41 +264,49 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
       await Promise.all([...characterIds].map((id) => getCharacterById(id)))
     ).filter((c): c is CharacterRecord => c !== undefined);
 
-    // 7. Load entity links for notes + encounters
-    const entityIds = [...noteIds, ...encounters.map((e) => e.id)];
-    const entityLinksNested = await Promise.all(
-      entityIds.map((id) => getAllLinksForEntity(id))
-    );
-    const entityLinkMap = new Map<string, import('../../types/entityLink').EntityLink>();
-    for (const links of entityLinksNested) {
-      for (const link of links) {
-        entityLinkMap.set(link.id, link);
-      }
-    }
-    const entityLinks = [...entityLinkMap.values()];
-
-    // 8. Load attachments for notes
+    // 7. Load attachments for notes
     const attachments = (
       await Promise.all(noteIds.map((id) => getAttachmentsByNote(id)))
     ).flat();
 
-    // 9. Load inventory containers for the campaign — they belong to the
+    // 8. Load inventory containers for the campaign — they belong to the
     //    party, not the session, but a session export should bring the
     //    party's shared loot, pack animals, etc. along with it.
     const inventoryContainers = await listInventoryContainersByCampaign(session.campaignId);
 
+    // 9. Entity links, chosen by endpoint rather than by a list of ids. See
+    //    `collectBundleEntityIds`: the id set is derived from the rows this
+    //    collector has already gathered, participants included, so no endpoint
+    //    kind can be left out of an enumeration nobody thought to update.
+    const allLinks = await getAllLinks();
+    const collected = {
+      sessions: [session],
+      notes,
+      encounters,
+      creatureTemplates,
+      parties,
+      partyMembers,
+      attachments: attachments.map(toBundleAttachment),
+      inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
+    };
+    const seedIds = collectBundleEntityIds({
+      ...collected,
+      characters: characters as unknown as BundleContents['characters'],
+    });
+    const touching = allLinks.filter(
+      (l) => seedIds.has(l.fromEntityId) || seedIds.has(l.toEntityId),
+    );
+    const allCharacters = await withLinkedCharacters(touching, characters);
+    const bundleIds = collectBundleEntityIds({
+      ...collected,
+      characters: allCharacters as unknown as BundleContents['characters'],
+    });
+    const entityLinks = linksWithinBundle(allLinks, bundleIds);
+
     const assembled = {
-        sessions: [session],
-        notes,
-        encounters,
-        creatureTemplates,
-        parties,
-        partyMembers,
-        characters: (await withLinkedCharacters(entityLinks, characters))
-          .map((c) => c as unknown as Record<string, unknown>),
+        ...collected,
+        characters: allCharacters.map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
-        attachments: attachments.map(toBundleAttachment),
-        inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
       };
     const closed = closeBundleReferences(assembled as unknown as BundleContents);
     if (closed.droppedLinks > 0) {
@@ -305,28 +373,15 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
       await Promise.all([...characterIds].map((id) => getCharacterById(id)))
     ).filter((c): c is CharacterRecord => c !== undefined);
 
-    // 8. All entity links (for notes + encounters)
-    const entityIds = [...noteIds, ...encounters.map((e) => e.id)];
-    const entityLinksNested = await Promise.all(
-      entityIds.map((id) => getAllLinksForEntity(id))
-    );
-    const entityLinkMap = new Map<string, import('../../types/entityLink').EntityLink>();
-    for (const links of entityLinksNested) {
-      for (const link of links) {
-        entityLinkMap.set(link.id, link);
-      }
-    }
-    const entityLinks = [...entityLinkMap.values()];
-
-    // 9. All attachments
+    // 8. All attachments
     const attachments = (
       await Promise.all(noteIds.map((id) => getAttachmentsByNote(id)))
     ).flat();
 
-    // 10. All inventory containers (party coffer, pack animals, hirelings).
+    // 9. All inventory containers (party coffer, pack animals, hirelings).
     const inventoryContainers = await listInventoryContainersByCampaign(campaignId);
 
-    // 11. Everything else the campaign owns. These tables existed for several
+    // 10. Everything else the campaign owns. These tables existed for several
     //     releases without ever reaching a bundle, so a "complete" export
     //     silently dropped every ship, the entire ledger, the route plan and
     //     the knowledge-base graph. `bundleParity.test.ts` now walks `db.tables`
@@ -353,7 +408,7 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
       listKBEdgesByCampaign(campaignId),
     ]);
 
-    // 12. The reference library. Device-global rather than campaign-scoped, but
+    // 11. The reference library. Device-global rather than campaign-scoped, but
     //     a campaign export is the app's only export, so leaving it out means
     //     hand-authored rules content has no backup path at all. Soft-deleted
     //     rows are excluded by default, matching every other collector.
@@ -362,38 +417,59 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
       getAllReferenceGroups(),
     ]);
 
-    // 13. The campaign's system definition. A user-authored ruleset lives only
+    // 12. The campaign's system definition. A user-authored ruleset lives only
     //     in the local `systems` table; without it a restored campaign points at
     //     a system the importing device has never seen. Bundled systems ship
     //     with the app, so an absent row is simply nothing to carry.
     const systemDefinition = await getSystemById(campaign.system);
     const systems = systemDefinition ? [systemDefinition as unknown as Record<string, unknown>] : [];
 
+    // 13. Entity links, chosen by endpoint rather than by a list of ids. The id
+    //     set is walked out of the rows collected above — participants included
+    //     — so a `represents` edge cannot be lost to an enumeration that named
+    //     only notes and encounters. See `collectBundleEntityIds`.
+    const allLinks = await getAllLinks();
+    const collected = {
+      campaign,
+      systems,
+      sessions,
+      notes,
+      creatureTemplates,
+      encounters,
+      parties,
+      partyMembers,
+      attachments: attachments.map(toBundleAttachment),
+      inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
+      ships,
+      ledgerAccounts,
+      ledgerEntries,
+      ledgerSplits,
+      recurringBills,
+      routeStops,
+      routePlans,
+      referenceGroups,
+      referenceSections,
+      kbNodes,
+      kbEdges,
+    };
+    const seedIds = collectBundleEntityIds({
+      ...collected,
+      characters: characters as unknown as BundleContents['characters'],
+    } as unknown as Partial<BundleContents>);
+    const touching = allLinks.filter(
+      (l) => seedIds.has(l.fromEntityId) || seedIds.has(l.toEntityId),
+    );
+    const allCharacters = await withLinkedCharacters(touching, characters);
+    const bundleIds = collectBundleEntityIds({
+      ...collected,
+      characters: allCharacters as unknown as BundleContents['characters'],
+    } as unknown as Partial<BundleContents>);
+    const entityLinks = linksWithinBundle(allLinks, bundleIds);
+
     const assembled = {
-        campaign,
-        systems,
-        sessions,
-        notes,
-        creatureTemplates,
-        encounters,
-        parties,
-        partyMembers,
-        characters: (await withLinkedCharacters(entityLinks, characters))
-          .map((c) => c as unknown as Record<string, unknown>),
+        ...collected,
+        characters: allCharacters.map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
-        attachments: attachments.map(toBundleAttachment),
-        inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
-        ships,
-        ledgerAccounts,
-        ledgerEntries,
-        ledgerSplits,
-        recurringBills,
-        routeStops,
-        routePlans,
-        referenceGroups,
-        referenceSections,
-        kbNodes,
-        kbEdges,
       };
     const closed = closeBundleReferences(assembled as unknown as BundleContents);
     if (closed.droppedLinks > 0) {
