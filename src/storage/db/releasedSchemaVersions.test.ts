@@ -54,8 +54,8 @@ import { join } from 'node:path';
  * for a *new* block it meant a released extracted upgrade could ship entirely
  * unfrozen while every test passed. The argument is now read whole and every
  * identifier in it checked, with a second assertion that needs no parsing at
- * all: a function called `upgrade*` in one of these modules must be
- * fingerprinted however it is referenced.
+ * all: a binding called `upgrade*` in one of these modules — a `function`
+ * declaration or a `const` — must be fingerprinted however it is referenced.
  *
  * **Where the freeze still stops**, stated rather than left to be discovered: a
  * shared utility called from inside an upgrade is not fingerprinted.
@@ -63,6 +63,39 @@ import { join } from 'node:path';
  * with its own reasons to change; freezing it would freeze the codebase. If a
  * released upgrade's behaviour depends on a helper's exact output, inline the
  * helper's logic into the upgrade rather than relying on this file to notice.
+ *
+ * ### An upgrade body has exactly two legal homes
+ *
+ * Everything above assumes an upgrade's code is somewhere a hash can reach it,
+ * and until now nothing checked that assumption. There are two places a hash
+ * reaches: **inline in the version block**, covered by the block fingerprint,
+ * and **a function declaration in an upgrade module**, covered by
+ * {@link EXTRACTED_UPGRADE_FINGERPRINTS}. An upgrade body that lives anywhere
+ * else is frozen by nothing:
+ *
+ * ```ts
+ * const UPGRADES = { 21: async (tx) => { … } };   // an anonymous body in a map
+ * this.version(21).stores({}).upgrade(UPGRADES[21]);
+ * ```
+ *
+ * The v21 *block* fingerprint was correctly demanded and correctly recorded —
+ * it covers the text `.upgrade(UPGRADES[21])` and stops there. The body was
+ * covered by nothing, and editing it after release left this file at 29 of 29
+ * green. {@link declaredUpgradeFunctions} did not catch it either: it matched
+ * `function upgrade*(…)`, so it covered routes to a *named declaration*, never
+ * an anonymous body, which is narrower than its own docstring used to claim.
+ *
+ * So {@link upgradeCalls} now classifies every `.upgrade(...)` argument, and an
+ * argument that neither carries its body inline nor names a function an upgrade
+ * module declares is a **failure**. Not a warning, and not a pass: this file
+ * protects released migrations, and "I could not tell what this upgrade runs" is
+ * the one answer that must never read as "fine".
+ *
+ * That leaves one documented boundary, which is the shared-helper stop above
+ * seen from the other side: a call *out of* an inline block body —
+ * `async (tx) => { await UPGRADES[21](tx); }` — is a helper call, and helper
+ * calls are not followed. An upgrade whose body is a delegation should be
+ * written as the delegation (`.upgrade(upgradeFooToV21)`), where it is frozen.
  */
 
 const CLIENT_PATH = join(process.cwd(), 'src/storage/db/client.ts');
@@ -172,10 +205,21 @@ const UPGRADE_SOURCE_FILES = [
   join(process.cwd(), 'src/storage/db/migrations/pre-encounter-rework-backup.ts'),
 ];
 
-/** True if one of the upgrade modules declares a function of this name. */
+/**
+ * A declaration of `name` in an upgrade module — `function name(`, or `const
+ * name = (…) =>` / `= function`. Returns its offset in the file, or `-1`.
+ */
+function declarationOffset(source: string, name: string): number {
+  const declaration = new RegExp(
+    `(?:export\\s+)?(?:(?:async\\s+)?function\\s+${name}\\s*\\(`
+    + `|(?:const|let|var)\\s+${name}\\s*(?::[^=;]+?)?=\\s*(?:async\\s*)?(?:\\(|function\\b|[A-Za-z_$][\\w$]*\\s*=>))`,
+  );
+  return declaration.exec(source)?.index ?? -1;
+}
+
+/** True if one of the upgrade modules declares a binding of this name. */
 function declaresUpgradeFunction(name: string): boolean {
-  const declaration = new RegExp(`(?:export\\s+)?(?:async\\s+)?function\\s+${name}\\s*\\(`);
-  return UPGRADE_SOURCE_FILES.some((file) => declaration.test(readFileSync(file, 'utf8')));
+  return UPGRADE_SOURCE_FILES.some(file => declarationOffset(readFileSync(file, 'utf8'), name) >= 0);
 }
 
 /**
@@ -203,8 +247,46 @@ function declaresUpgradeFunction(name: string): boolean {
  * them.
  */
 function namedUpgrades(): string[] {
+  return [...new Set(upgradeCalls().flatMap(call => call.targets))];
+}
+
+/** One `.upgrade(...)` call in the constructor, and where its body lives. */
+interface UpgradeCall {
+  /** The `this.version(n)` the call hangs off. */
+  version: number;
+  /** The argument text, for the failure message. */
+  argument: string;
+  /** True when the argument itself carries the body, so the block hash covers it. */
+  inline: boolean;
+  /** Upgrade functions the argument names, which the extracted hashes cover. */
+  targets: string[];
+}
+
+/**
+ * True when the argument's own text carries the upgrade body — an arrow or
+ * function expression with a `{ … }` block, written inside the version block
+ * and therefore inside its fingerprint.
+ *
+ * @remarks
+ * An *expression*-bodied arrow is deliberately not inline: `(tx) => fn(tx)`
+ * carries no body, it forwards to one, and where it forwards has to resolve.
+ * That is the shape the arrow-wrapper fix already handles by extracting `fn`;
+ * this is the same judgement applied to `(tx) => UPGRADES[21](tx)`, which
+ * forwards somewhere no hash reaches.
+ */
+function hasInlineBody(argument: string): boolean {
+  const code = argument
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|\s)\/\/[^\n]*/g, '$1')
+    .trim();
+  return /^(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*(?::[^=]*)?=>\s*\{/.test(code)
+    || /^(?:async\s+)?function\b[^{]*\{/.test(code);
+}
+
+/** Every `.upgrade(...)` call in the constructor, classified. */
+function upgradeCalls(): UpgradeCall[] {
   const body = constructorBody(readFileSync(CLIENT_PATH, 'utf8'));
-  const names = new Set<string>();
+  const calls: UpgradeCall[] = [];
   for (const call of body.matchAll(/\.upgrade\s*\(/g)) {
     const open = call.index + call[0].length - 1;
     let depth = 0;
@@ -216,54 +298,87 @@ function namedUpgrades(): string[] {
         if (depth === 0) { close = i; break; }
       }
     }
-    for (const id of body.slice(open + 1, close).matchAll(/[A-Za-z_$][\w$]*/g)) {
-      if (declaresUpgradeFunction(id[0])) names.add(id[0]);
+    const argument = body.slice(open + 1, close);
+    const targets = new Set<string>();
+    for (const id of argument.matchAll(/[A-Za-z_$][\w$]*/g)) {
+      if (declaresUpgradeFunction(id[0])) targets.add(id[0]);
     }
+    // The version this call hangs off: the last `this.version(n)` before it.
+    const preceding = [...body.slice(0, open).matchAll(/this\.version\((\d+)\)/g)].pop();
+    calls.push({
+      version: preceding ? Number(preceding[1]) : -1,
+      argument,
+      inline: hasInlineBody(argument),
+      targets: [...targets],
+    });
   }
-  return [...names];
+  return calls;
 }
 
 /**
- * Every function an upgrade module declares whose name says it is an upgrade.
+ * Matches a declaration of an upgrade-named binding: `function upgradeX(`, or
+ * `const upgradeX = (…) =>` / `= function`. Group 1 is the name.
+ */
+const UPGRADE_DECLARATION =
+  /(?:export\s+)?(?:(?:async\s+)?function\s+(upgrade[A-Za-z0-9_$]*)\s*\(|(?:const|let|var)\s+(upgrade[A-Za-z0-9_$]*)\s*(?::[^=;]+?)?=\s*(?:async\s*)?(?:\(|function\b|[A-Za-z_$][\w$]*\s*=>))/g;
+
+/**
+ * Every binding an upgrade module declares whose name says it is an upgrade.
  *
  * @remarks
  * The backstop to {@link namedUpgrades}, which can only see what it can parse.
  * A released upgrade that reaches `.upgrade()` by some route this file does not
  * recognise is still frozen, because it is still declared here under a name
  * that says what it is.
+ *
+ * It used to match `function upgrade*(…)` and nothing else, which made it a
+ * backstop for routes to a **named function declaration** rather than for
+ * routes generally — narrower than the sentence above claimed. An arrow bound
+ * to a `const` is the same released migration, so it counts here too.
  */
 function declaredUpgradeFunctions(): string[] {
   const found = new Set<string>();
   for (const file of UPGRADE_SOURCE_FILES) {
     const source = readFileSync(file, 'utf8');
-    for (const m of source.matchAll(/(?:export\s+)?(?:async\s+)?function\s+(upgrade[A-Za-z0-9_$]*)\s*\(/g)) {
-      found.add(m[1]!);
-    }
+    for (const m of source.matchAll(UPGRADE_DECLARATION)) found.add((m[1] ?? m[2])!);
   }
   return [...found];
 }
 
 /**
- * Source text of `function <name>(…) { … }`, matched by balancing braces so a
- * nested block cannot end it early.
+ * Source text of a released upgrade's declaration, whole.
  *
  * @remarks
+ * `function <name>(…) { … }` ends at the brace that balances its body, so a
+ * nested block cannot end it early. `const <name> = …;` ends at the first `;`
+ * outside any bracket, which covers an arrow with a block body and an
+ * expression-bodied one alike.
+ *
  * `export` and `async` are both optional: extracting a released upgrade into a
  * module-private helper does not unfreeze it.
  */
 function upgradeFunctionSource(name: string): string {
   for (const file of UPGRADE_SOURCE_FILES) {
     const source = readFileSync(file, 'utf8');
-    const declaration = new RegExp(`(?:export\\s+)?(?:async\\s+)?function\\s+${name}\\s*\\(`);
-    const match = declaration.exec(source);
-    if (!match) continue;
-    const open = source.indexOf('{', match.index + match[0].length);
-    let depth = 0;
-    for (let i = open; i < source.length; i++) {
-      if (source[i] === '{') depth++;
-      else if (source[i] === '}') {
-        depth--;
-        if (depth === 0) return source.slice(match.index, i + 1);
+    const start = declarationOffset(source, name);
+    if (start < 0) continue;
+    if (/^(?:export\s+)?(?:async\s+)?function\b/.test(source.slice(start, start + 40))) {
+      const open = source.indexOf('{', start);
+      let depth = 0;
+      for (let i = open; i < source.length; i++) {
+        if (source[i] === '{') depth++;
+        else if (source[i] === '}') {
+          depth--;
+          if (depth === 0) return source.slice(start, i + 1);
+        }
+      }
+    } else {
+      let depth = 0;
+      for (let i = start; i < source.length; i++) {
+        const ch = source[i]!;
+        if (ch === '(' || ch === '[' || ch === '{') depth++;
+        else if (ch === ')' || ch === ']' || ch === '}') depth--;
+        else if (ch === ';' && depth === 0) return source.slice(start, i + 1);
       }
     }
   }
@@ -323,6 +438,34 @@ describe('released schema versions', () => {
       `${unpinned.join(', ')} is reached by .upgrade() but has no fingerprint. An `
       + 'extracted upgrade is still a released migration — add its entry to '
       + 'EXTRACTED_UPGRADE_FINGERPRINTS in the same commit as the version block.',
+    ).toEqual([]);
+  });
+
+  it('leaves no .upgrade() whose body it cannot account for', () => {
+    // An upgrade body has two homes a hash reaches: inline in the version block,
+    // or a declaration in an upgrade module. Nothing checked that it was in one
+    // of them. Proven: `this.version(21).stores({}).upgrade(UPGRADES[21])`, body
+    // an anonymous arrow in a module-level map — the v21 *block* fingerprint was
+    // demanded and recorded (it covers `.upgrade(UPGRADES[21])` and stops), the
+    // body was covered by nothing, and editing it after release left this file
+    // at 29 of 29 green.
+    //
+    // Silence is the wrong answer for a released migration, so an argument this
+    // file cannot place fails and says which version it is.
+    const calls = upgradeCalls();
+    expect(calls.length, 'no `.upgrade(...)` calls found — has the pattern changed?')
+      .toBeGreaterThan(0);
+    const unaccounted = calls
+      .filter(call => !call.inline && call.targets.length === 0)
+      .map(call => `version(${call.version}).upgrade(${call.argument.trim()})`);
+    expect(
+      unaccounted,
+      `${unaccounted.join('; ')} — this upgrade's body is neither written inline in `
+      + 'the version block (where the block fingerprint covers it) nor a function an '
+      + 'upgrade module declares (where EXTRACTED_UPGRADE_FINGERPRINTS covers it), so '
+      + 'nothing freezes it and it can be edited after release with this file green. '
+      + 'Give the body a declaration in client.ts or an UPGRADE_SOURCE_FILES module, '
+      + 'name it `upgrade*`, pass it directly, and record its fingerprint.',
     ).toEqual([]);
   });
 
