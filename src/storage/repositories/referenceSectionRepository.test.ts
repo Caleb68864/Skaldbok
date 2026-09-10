@@ -12,6 +12,7 @@ import {
   restoreGroup,
 } from './referenceSectionRepository';
 import { resetDatabase } from '../../test-utils/resetDatabase';
+import type { ReferenceSection } from '../../types/reference';
 
 /**
  * Covers the import path's binding of sections to their grouping card.
@@ -35,7 +36,7 @@ describe('importBundle', () => {
         { id: 's2', title: 'Cover', category: 'Combat', order: 1, type: 'rules_text' },
       ],
     });
-    expect(result).toEqual({ imported: 2, skipped: [] });
+    expect(result).toEqual({ imported: 2, skipped: [], collisions: [] });
     const stored = await db.referenceSections.toArray();
     expect(stored.map(s => s.groupId)).toEqual(['g-combat', 'g-combat']);
   });
@@ -152,7 +153,7 @@ describe('importBundle validation', () => {
       referenceSections: [{ title: 'Falling' }],
     });
 
-    expect(result).toEqual({ imported: 1, skipped: [] });
+    expect(result).toEqual({ imported: 1, skipped: [], collisions: [] });
     const [stored] = await db.referenceSections.toArray();
     expect(stored.id).toBeTruthy();
     expect(stored.type).toBe('rules_text');
@@ -225,5 +226,149 @@ describe('removeGroup / restoreGroup round trip', () => {
     await removeGroup('g-combat');
     await restoreGroup('g-combat');
     expect((await getAll()).map(s => s.id)).toEqual(['s1']);
+  });
+});
+
+/**
+ * An import may not overwrite a local row just because it re-uses its id.
+ *
+ * @remarks
+ * `importBundle` used to `bulkPut` groups and sections straight in. The
+ * reference library is the user's own house rules, and on the restore path a
+ * silent overwrite is data loss wearing the costume of a successful import: the
+ * screen said "Imported 3 reference sections" and three sections the user wrote
+ * were gone, with no trace and nothing to restore from.
+ *
+ * The policy is not invented here — `mergeEngine.mergeEntity` already decides
+ * this for every other table, and these tests are written against its rules
+ * rather than against a new one:
+ *
+ * - **Same id, same `createdAt`** — the same row, newer content. Write it.
+ * - **Same id, different or missing `createdAt`** — two different entities that
+ *   happen to share an id. Keep local, report. (Missing counts as different:
+ *   the engine's comment records that requiring *both* to be present let "a
+ *   bundle row with no `createdAt` and a far-future `updatedAt`" through, which
+ *   is the one shape a careless hand-edited bundle actually has.)
+ * - **Local row soft-deleted** — keep the deletion rather than resurrecting a
+ *   record the user deleted, under whatever content the bundle carries.
+ *
+ * Cards differ from sections in one respect, and only one: a card is a
+ * container whose id this format *already* synthesises when the bundle omits it
+ * (`raw?.id ?? generateId()`), while a section is the content itself. So a
+ * colliding card is re-keyed rather than dropped — the sections that named its
+ * title still land under a card with the right title instead of being filed
+ * into an unrelated local card. Both are reported.
+ */
+describe('importBundle collisions', () => {
+  const T1 = '2026-01-01T00:00:00.000Z';
+  const T2 = '2026-02-02T00:00:00.000Z';
+
+  /** A local section the user wrote, under an id an import may re-use. */
+  async function seedLocalSection(overrides: Partial<ReferenceSection> = {}): Promise<void> {
+    await db.referenceSections.put({
+      id: 's1',
+      title: 'My House Rule',
+      category: 'Combat',
+      order: 0,
+      type: 'rules_text',
+      paragraphs: ['Mine.'],
+      createdAt: T1,
+      updatedAt: T1,
+      ...overrides,
+    });
+  }
+
+  it('keeps a local section whose id an import re-uses', async () => {
+    await seedLocalSection();
+
+    const result = await importBundle({
+      referenceSections: [
+        { id: 's1', title: 'Somebody Else\'s Rule', category: 'Combat', type: 'rules_text', createdAt: T2, paragraphs: ['Theirs.'] },
+      ],
+    });
+
+    // The fixture reached the subject: the parser accepted the row, so this is
+    // a decision about a collision and not a row that never arrived.
+    expect(result.skipped).toEqual([]);
+
+    const stored = await db.referenceSections.get('s1');
+    expect(stored?.title, 'the user\'s own section was overwritten by an import').toBe('My House Rule');
+    expect(stored?.paragraphs).toEqual(['Mine.']);
+    expect(result.imported).toBe(0);
+    expect(result.collisions).toHaveLength(1);
+    expect(result.collisions[0]).toMatchObject({ entityType: 'referenceSection', path: 'id' });
+    expect(result.collisions[0]?.message).toContain('s1');
+  });
+
+  it('treats a bundle row with no createdAt as a collision, not a pass', async () => {
+    await seedLocalSection();
+
+    const result = await importBundle({
+      referenceSections: [
+        { id: 's1', title: 'Undated', category: 'Combat', type: 'rules_text', paragraphs: ['Theirs.'] },
+      ],
+    });
+
+    expect(result.skipped).toEqual([]);
+    expect((await db.referenceSections.get('s1'))?.title).toBe('My House Rule');
+    expect(result.imported).toBe(0);
+    expect(result.collisions).toHaveLength(1);
+  });
+
+  it('updates the same section when createdAt matches', async () => {
+    await seedLocalSection();
+
+    const result = await importBundle({
+      referenceSections: [
+        { id: 's1', title: 'My House Rule, Revised', category: 'Combat', type: 'rules_text', createdAt: T1, paragraphs: ['Revised.'] },
+      ],
+    });
+
+    expect(result.collisions).toEqual([]);
+    expect(result.imported).toBe(1);
+    const stored = await db.referenceSections.get('s1');
+    expect(stored?.title).toBe('My House Rule, Revised');
+    expect(stored?.paragraphs).toEqual(['Revised.']);
+  });
+
+  it('does not resurrect a soft-deleted section', async () => {
+    await seedLocalSection({ deletedAt: T1, softDeletedBy: 'tx-1' });
+
+    const result = await importBundle({
+      referenceSections: [
+        { id: 's1', title: 'Back From The Dead', category: 'Combat', type: 'rules_text', createdAt: T1 },
+      ],
+    });
+
+    const stored = await db.referenceSections.get('s1');
+    expect(stored?.deletedAt, 'an import resurrected a section the user deleted').toBe(T1);
+    expect(stored?.title).toBe('My House Rule');
+    expect(result.imported).toBe(0);
+    expect(result.collisions).toHaveLength(1);
+  });
+
+  it('keeps a local card whose id an import re-uses, and still files the sections under their own', async () => {
+    await db.referenceGroups.put({
+      id: 'g1', title: 'Rituals', order: 0, createdAt: T1, updatedAt: T1,
+    });
+
+    const result = await importBundle({
+      referenceGroups: [{ id: 'g1', title: 'Combat', order: 0, createdAt: T2 }],
+      referenceSections: [
+        { id: 's9', title: 'Initiative', category: 'Combat', type: 'rules_text', createdAt: T2 },
+      ],
+    });
+
+    expect(result.skipped).toEqual([]);
+    expect((await db.referenceGroups.get('g1'))?.title, 'the local card was renamed by an import').toBe('Rituals');
+
+    // The imported section still reached a card of its own title rather than
+    // being filed into the unrelated local one.
+    const section = await db.referenceSections.get('s9');
+    expect(section?.groupId).toBeDefined();
+    expect(section?.groupId).not.toBe('g1');
+    expect((await db.referenceGroups.get(section!.groupId!))?.title).toBe('Combat');
+    expect(result.imported).toBe(1);
+    expect(result.collisions.some(c => c.entityType === 'referenceGroup')).toBe(true);
   });
 });

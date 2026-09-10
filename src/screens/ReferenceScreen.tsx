@@ -345,14 +345,22 @@ export default function ReferenceScreen() {
       // Parsed, not cast. `importBundle` takes `unknown` and validates every
       // row, so a malformed section is dropped and reported here rather than
       // written to IndexedDB and crashing this screen on the next visit.
-      const { imported, skipped } = await referenceSectionRepository.importBundle(
+      const { imported, skipped, collisions } = await referenceSectionRepository.importBundle(
         JSON.parse(await readTextFile(file)),
       );
       await loadSections();
       const skippedNote = skipped.length > 0
         ? ` Skipped ${skipped.length} malformed row${skipped.length === 1 ? '' : 's'}: ${skipped[0]!.entityType} #${skipped[0]!.entityIndex}${skipped[0]!.path ? `.${skipped[0]!.path}` : ''} — ${skipped[0]!.message}`
         : '';
-      setError(`Imported ${imported} reference section${imported === 1 ? '' : 's'}.${skippedNote}`);
+      // A collision is not a skipped row and must not read as one: it means the
+      // import deliberately did less than it was asked to, so that what is
+      // already on this device survived. Said out loud, because the alternative
+      // is the import quietly replacing the user's own reference library and
+      // still reporting a clean run.
+      const collisionNote = collisions.length > 0
+        ? ` Kept ${collisions.length} existing row${collisions.length === 1 ? '' : 's'} rather than overwriting: ${collisions[0]!.message}`
+        : '';
+      setError(`Imported ${imported} reference section${imported === 1 ? '' : 's'}.${collisionNote}${skippedNote}`);
     } catch (e) {
       setError(`Could not import reference JSON. ${String(e)}`);
     } finally {
