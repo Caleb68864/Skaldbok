@@ -1,5 +1,5 @@
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
-import { shareFile } from './delivery';
+import { shareFile, type DeliveryOutcome } from './delivery';
 
 /** Optional metadata stamped onto a serialized bundle envelope. */
 export interface SerializeOptions {
@@ -66,13 +66,20 @@ export async function serializeBundle(
 /**
  * Delivers a serialized bundle as a downloadable `.skaldbok.json` file.
  *
+ * @remarks
+ * Returns the outcome rather than `void` so a caller can tell "the file went to
+ * the user" from "the user changed their mind". `exportCampaign` is the one
+ * caller that must: it stamps `lastBackupAt` on the strength of this, and that
+ * is the only thing in the app allowed to claim a campaign is backed up.
+ *
  * @param slug - Base name for the file (e.g. "campaign-abc-1234").
  * @param json - The serialized JSON string from {@link serializeBundle}.
+ * @returns How the file was delivered, or `'cancelled'` if the user declined.
  */
-export async function deliverBundle(slug: string, json: string): Promise<void> {
+export async function deliverBundle(slug: string, json: string): Promise<DeliveryOutcome> {
   const filename = `${slug}.skaldbok.json`;
   const blob = new Blob([json], { type: 'application/json' });
-  await shareFile(blob, filename);
+  return shareFile(blob, filename);
 }
 
 // --- Helpers ---

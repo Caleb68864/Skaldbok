@@ -437,10 +437,22 @@ export function useExportActions() {
       const filtered = applyPrivacyFilter(result.contents, includePrivate);
       const json = await serializeBundle('campaign', filtered);
       const slug = `campaign-${campaignId.slice(0, 8)}-${Date.now()}`;
-      await deliverBundle(slug, json);
+      const outcome = await deliverBundle(slug, json);
+      if (outcome === 'cancelled') {
+        // The user dismissed the share sheet. Nothing left the device, so the
+        // reminder must not reset and the toast must not say it did.
+        showToast('Export cancelled');
+        return;
+      }
       // Recorded only here, and only after delivery succeeded. This is the one
       // export that produces something able to restore a campaign, so it is the
       // only one that may claim the app is backed up — see `lastBackupAt`.
+      //
+      // "Succeeded" now means something: `deliverBundle` reports an outcome and
+      // throws when it cannot start the transfer. It used to resolve `void` off
+      // a `.click()` on a detached anchor whose object URL was revoked on the
+      // next line — a DOM call with no failure mode, turning the safety card
+      // green whether or not a file was ever written.
       void updateSettings({ lastBackupAt: new Date().toISOString() });
       showToast('Campaign exported');
     } catch (err) {
