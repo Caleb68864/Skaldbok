@@ -193,6 +193,54 @@ export interface ReferenceImportResult {
   imported: number;
   /** One entry per row rejected by validation; empty on a clean import. */
   skipped: ValidationWarning[];
+  /**
+   * One entry per row whose id already belonged to something local.
+   *
+   * @remarks
+   * Separate from {@link skipped} because the two need different words on
+   * screen: a skipped row was malformed and the user can fix the file, while a
+   * collision means the local row was *kept* and the import deliberately did
+   * less than it was asked to. Reporting them together is how a restore that
+   * quietly replaced the user's own house rules could still read as a clean
+   * import.
+   */
+  collisions: ValidationWarning[];
+}
+
+/** Why an incoming row may not be written over the local row sharing its id. */
+type CollisionKind = 'deleted' | 'different-entity';
+
+/**
+ * Whether an incoming row may overwrite the local row sharing its id.
+ *
+ * @remarks
+ * The rules are `mergeEngine.mergeEntity`'s, not new ones. `createdAt` is
+ * immutable, so same-id-different-`createdAt` is two entities that happen to
+ * share an id rather than one entity edited; a *missing* `createdAt` counts as
+ * different because the engine's own comment records that requiring both to be
+ * present let "a bundle row with no `createdAt` and a far-future `updatedAt`"
+ * overwrite the local row — the one shape a hand-edited bundle actually has. A
+ * tombstoned local row is a collision too: overwriting one resurrects a record
+ * the user deleted, under whatever content the bundle carries.
+ *
+ * @param local - The stored row sharing the id, if there is one.
+ * @param incomingCreatedAt - The bundle row's own `createdAt`, before synthesis.
+ * @returns `null` when the write is safe, else why it is not.
+ */
+function collisionKind(
+  local: { createdAt?: string; deletedAt?: string } | undefined,
+  incomingCreatedAt: string | undefined,
+): CollisionKind | null {
+  if (local === undefined) return null;
+  if (local.deletedAt) return 'deleted';
+  if (
+    incomingCreatedAt === undefined
+    || local.createdAt === undefined
+    || incomingCreatedAt !== local.createdAt
+  ) {
+    return 'different-entity';
+  }
+  return null;
 }
 
 /**
@@ -214,9 +262,27 @@ export interface ReferenceImportResult {
  * category and ordering for its listed sections. What is no longer tolerated is
  * a field of the wrong type — that row is dropped and reported.
  *
+ * Nor is a row that lands on top of a local one. This path used to `bulkPut`
+ * both tables straight in, so an imported section replaced a locally-authored
+ * section sharing its id and could resurrect a soft-deleted one — on the
+ * restore path, a silent overwrite of the user's own house rules that still
+ * reported "Imported 3 reference sections". The policy is
+ * `mergeEngine.mergeEntity`'s rather than a new one (see {@link collisionKind}):
+ * same `createdAt` is the same row and is written, anything else keeps the
+ * local row and is reported. That does mean re-importing an *undated*
+ * hand-authored file no longer overwrites what is already there — which is the
+ * point, since that is exactly the file that cannot say whether its rows are
+ * the local ones or someone else's.
+ *
+ * Cards differ from sections in one respect: a card's id is already
+ * synthesisable by this format (`raw?.id ?? generateId()`), while a section's
+ * content is the thing being imported. So a colliding card is re-keyed rather
+ * than dropped, and the sections that named its title land under a card of that
+ * title instead of being filed into an unrelated local one.
+ *
  * @param bundle - The parsed JSON of an import file, unvalidated.
  * @throws If the file is not a reference bundle at all.
- * @returns The number of sections imported and the rows that were rejected.
+ * @returns What was imported, what was rejected, and what was kept local.
  */
 export async function importBundle(bundle: unknown): Promise<ReferenceImportResult> {
   const parsed = parseReferenceBundle(bundle);
@@ -251,6 +317,12 @@ export async function importBundle(bundle: unknown): Promise<ReferenceImportResu
     };
   });
 
+  // The bundle's own `createdAt` per section, before the synthesis above
+  // replaces a missing one with `now`. The collision check needs the raw value:
+  // a row the bundle never dated must not read as "created at the same instant
+  // as the local row" and sail through.
+  const sectionCreatedAt = (validated.referenceSections ?? []).map(raw => raw.createdAt);
+
   const groupTitles = new Set<string>();
   for (const group of validated.referenceGroups ?? []) {
     if (group.title) groupTitles.add(group.title);
@@ -259,7 +331,7 @@ export async function importBundle(bundle: unknown): Promise<ReferenceImportResu
     groupTitles.add(section.category || 'General');
   }
 
-  const groups = Array.from(groupTitles).map((title, index): ReferenceGroup => {
+  const groups = Array.from(groupTitles).map((title, index): ReferenceGroup & { rawCreatedAt?: string } => {
     const raw = validated.referenceGroups?.find(group => group.title === title);
     return {
       id: raw?.id ?? generateId(),
@@ -267,25 +339,69 @@ export async function importBundle(bundle: unknown): Promise<ReferenceImportResu
       order: Number.isFinite(raw?.order) ? Number(raw?.order) : index,
       createdAt: raw?.createdAt ?? now,
       updatedAt: now,
+      // Kept alongside the synthesised value so the collision check can tell
+      // "the bundle dated this row" from "we dated it just now". Stripped
+      // before the write.
+      rawCreatedAt: raw?.createdAt,
     };
   });
 
-  // Bind each imported section to its card by id. Title is the only key a
-  // bundle carries, so matching on it here is right — but leaving it at that
-  // wrote sections with no `groupId`, which has been the authoritative join
-  // since v14. They rendered only through the legacy category fallback, and
-  // renaming the card they arrived in stranded them.
-  const groupIdByTitle = new Map(groups.map(group => [group.title, group.id]));
-  const boundSections = sections.map(section => ({
-    ...section,
-    groupId: groupIdByTitle.get(section.category || 'General') ?? section.groupId,
-  }));
+  const collisions: ValidationWarning[] = [];
+  let imported = 0;
 
   await db.transaction('rw', [db.referenceSections, db.referenceGroups], async () => {
-    await db.referenceGroups.bulkPut(groups);
-    await db.referenceSections.bulkPut(boundSections);
+    // Cards first, because a card that has to be re-keyed changes which id the
+    // sections below bind to.
+    const localGroups = await db.referenceGroups.bulkGet(groups.map(group => group.id));
+    const resolvedGroups = groups.map(({ rawCreatedAt, ...group }, index): ReferenceGroup => {
+      const kind = collisionKind(localGroups[index], rawCreatedAt);
+      if (kind === null) return group;
+      const rekeyed = generateId();
+      collisions.push({
+        entityType: 'referenceGroup',
+        entityIndex: index,
+        path: 'id',
+        message: kind === 'deleted'
+          ? `Id "${group.id}" belongs to a deleted local card; imported "${group.title}" as a new card rather than resurrecting it.`
+          : `Id "${group.id}" already belongs to a different local card; imported "${group.title}" as a new card rather than overwriting it.`,
+      });
+      return { ...group, id: rekeyed };
+    });
+
+    // Bind each imported section to its card by id. Title is the only key a
+    // bundle carries, so matching on it here is right — but leaving it at that
+    // wrote sections with no `groupId`, which has been the authoritative join
+    // since v14. They rendered only through the legacy category fallback, and
+    // renaming the card they arrived in stranded them.
+    const groupIdByTitle = new Map(resolvedGroups.map(group => [group.title, group.id]));
+    const boundSections = sections.map(section => ({
+      ...section,
+      groupId: groupIdByTitle.get(section.category || 'General') ?? section.groupId,
+    }));
+
+    const localSections = await db.referenceSections.bulkGet(boundSections.map(section => section.id));
+    const toWrite: ReferenceSection[] = [];
+    boundSections.forEach((section, index) => {
+      const kind = collisionKind(localSections[index], sectionCreatedAt[index]);
+      if (kind === null) {
+        toWrite.push(section);
+        return;
+      }
+      collisions.push({
+        entityType: 'referenceSection',
+        entityIndex: index,
+        path: 'id',
+        message: kind === 'deleted'
+          ? `Id "${section.id}" belongs to a reference section you deleted; kept the deletion rather than restoring "${section.title}" over it.`
+          : `Id "${section.id}" already belongs to a different local reference section; kept yours rather than overwriting it with "${section.title}".`,
+      });
+    });
+
+    await db.referenceGroups.bulkPut(resolvedGroups);
+    await db.referenceSections.bulkPut(toWrite);
+    imported = toWrite.length;
   });
-  return { imported: boundSections.length, skipped: parsed.warnings };
+  return { imported, skipped: parsed.warnings, collisions };
 }
 
 /**

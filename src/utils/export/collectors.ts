@@ -78,6 +78,29 @@ async function getAllLinksForEntity(entityId: string): Promise<import('../../typ
  */
 export function collectBundleEntityIds(contents: Partial<BundleContents>): Set<string> {
   const ids = new Set<string>();
+  walkBundleRows(contents, (row) => {
+    if (typeof row.id === 'string') ids.add(row.id);
+  });
+  return ids;
+}
+
+/**
+ * Visits every record-shaped object reachable from a set of bundle contents.
+ *
+ * @remarks
+ * The one traversal both derived sets are built on — which edges a bundle keeps
+ * ({@link collectBundleEntityIds}) and which rulesets it carries
+ * ({@link collectBundleSystemIds}). Both questions are "what do the rows I have
+ * already assembled refer to", and both used to be answered by a hand-written
+ * list in one collector out of three.
+ *
+ * @param contents - Assembled bundle contents, complete or partial.
+ * @param visit - Called once per record object, before its children.
+ */
+function walkBundleRows(
+  contents: Partial<BundleContents>,
+  visit: (row: Record<string, unknown>) => void,
+): void {
   const seen = new Set<object>();
   const walk = (value: unknown): void => {
     if (value === null || typeof value !== 'object') return;
@@ -91,11 +114,67 @@ export function collectBundleEntityIds(contents: Partial<BundleContents>): Set<s
       return;
     }
     const row = value as Record<string, unknown>;
-    if (typeof row.id === 'string') ids.add(row.id);
+    visit(row);
     for (const child of Object.values(row)) walk(child);
   };
   walk(contents);
+}
+
+/**
+ * Every ruleset id named anywhere inside a set of assembled bundle contents.
+ *
+ * @remarks
+ * A `CharacterRecord` names its ruleset in `systemId`, a `Campaign` names its
+ * own in `system`, and neither carries the ruleset itself: that lives in the
+ * local `systems` table and travels only if a collector puts it in the bundle.
+ * Only `collectCampaignBundle` did, through a single hand-written
+ * `getSystemById(campaign.system)` — so exporting a character or a session
+ * built on a **user-authored** ruleset shipped a record naming a system the
+ * importing device has never seen. `engine/index.ts` then falls back to
+ * classic-fantasy, which `CLAUDE.md` says "is not a neutral default — it brings
+ * Dragonbane's formulas with it", and the character is silently reinterpreted
+ * under the wrong rules. It matters most on the scope that has no campaign at
+ * all: a character bundle is the documented way to restore onto a fresh
+ * install.
+ *
+ * Derived rather than enumerated, for the same reason as
+ * {@link collectBundleEntityIds}: the ids come out of the rows the collector
+ * has already assembled, so a second ruleset in the same campaign, a new scope,
+ * or a new row kind that names a system all carry it with nothing left to
+ * remember. Over-capture is harmless — an id that names no stored ruleset
+ * resolves to nothing, costing one lookup and putting no row in the bundle.
+ *
+ * @param contents - Assembled bundle contents, complete or partial.
+ * @returns Every ruleset id those contents refer to.
+ */
+export function collectBundleSystemIds(contents: Partial<BundleContents>): Set<string> {
+  const ids = new Set<string>();
+  walkBundleRows(contents, (row) => {
+    if (typeof row.systemId === 'string') ids.add(row.systemId);
+    if (typeof row.system === 'string') ids.add(row.system);
+  });
   return ids;
+}
+
+/**
+ * Loads the stored ruleset rows an assembled bundle refers to.
+ *
+ * @remarks
+ * A bundled ruleset ships with the app, so an id with no stored row is simply
+ * nothing to carry rather than an error.
+ *
+ * @param contents - Assembled bundle contents.
+ * @returns One row per referenced ruleset that exists in the local cache.
+ */
+async function loadBundleSystems(
+  contents: Partial<BundleContents>,
+): Promise<Record<string, unknown>[]> {
+  const ids = [...collectBundleSystemIds(contents)];
+  if (ids.length === 0) return [];
+  const loaded = await Promise.all(ids.map((id) => getSystemById(id)));
+  return loaded
+    .filter((s): s is NonNullable<typeof s> => s !== undefined)
+    .map((s) => s as unknown as Record<string, unknown>);
 }
 
 /**
@@ -157,7 +236,8 @@ async function withLinkedCharacters(
  * Collects all entities belonging to a character export scope.
  *
  * Includes: character record, notes linked via entity links (from OR to),
- * those notes' entity links, and attachments for those notes.
+ * those notes' entity links, attachments for those notes, and the ruleset the
+ * character names.
  *
  * @param characterId - The ID of the character to export.
  */
@@ -187,12 +267,16 @@ export async function collectCharacterBundle(characterId: string): Promise<Colle
       await Promise.all([...noteIds].map((id) => getAttachmentsByNote(id)))
     ).flat();
 
-    const assembled = {
+    const rows = {
         characters: [character as unknown as Record<string, unknown>],
         notes,
         entityLinks: allLinks,
         attachments: attachments.map(toBundleAttachment),
       };
+    // 6. The rulesets those rows name. See `collectBundleSystemIds`: a
+    //    character bundle is the documented way to restore onto a fresh
+    //    install, and it was the one scope that carried no ruleset at all.
+    const assembled = { ...rows, systems: await loadBundleSystems(rows) };
     const closed = closeBundleReferences(assembled as unknown as BundleContents);
     if (closed.droppedLinks > 0) {
       console.warn(
@@ -212,7 +296,8 @@ export async function collectCharacterBundle(characterId: string): Promise<Colle
  *
  * Includes: session, notes (by sessionId), active party + party members,
  * linked characters, encounters (by sessionId), creature templates referenced
- * by encounter participants, entity links, and attachments.
+ * by encounter participants, entity links, attachments, and the rulesets those
+ * rows name.
  *
  * @param sessionId - The ID of the session to export.
  */
@@ -304,11 +389,14 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
     });
     const entityLinks = linksWithinBundle(allLinks, bundleIds);
 
-    const assembled = {
+    const rows = {
         ...collected,
         characters: allCharacters.map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
       };
+    // 10. The rulesets those rows name — derived, not enumerated. See
+    //     `collectBundleSystemIds`.
+    const assembled = { ...rows, systems: await loadBundleSystems(rows) };
     const closed = closeBundleReferences(assembled as unknown as BundleContents);
     if (closed.droppedLinks > 0) {
       console.warn(
@@ -423,21 +511,13 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
       getAllReferenceNotes(),
     ]);
 
-    // 12. The campaign's system definition. A user-authored ruleset lives only
-    //     in the local `systems` table; without it a restored campaign points at
-    //     a system the importing device has never seen. Bundled systems ship
-    //     with the app, so an absent row is simply nothing to carry.
-    const systemDefinition = await getSystemById(campaign.system);
-    const systems = systemDefinition ? [systemDefinition as unknown as Record<string, unknown>] : [];
-
-    // 13. Entity links, chosen by endpoint rather than by a list of ids. The id
+    // 12. Entity links, chosen by endpoint rather than by a list of ids. The id
     //     set is walked out of the rows collected above — participants included
     //     — so a `represents` edge cannot be lost to an enumeration that named
     //     only notes and encounters. See `collectBundleEntityIds`.
     const allLinks = await getAllLinks();
     const collected = {
       campaign,
-      systems,
       sessions,
       notes,
       creatureTemplates,
@@ -473,11 +553,17 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
     } as unknown as Partial<BundleContents>);
     const entityLinks = linksWithinBundle(allLinks, bundleIds);
 
-    const assembled = {
+    const rows = {
         ...collected,
         characters: allCharacters.map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
       };
+    // 13. Every ruleset the assembled rows name — the campaign's own, and any
+    //     other a character in this campaign was built on. This used to be one
+    //     `getSystemById(campaign.system)`, which is why a party holding an
+    //     imported character on a second authored ruleset backed up without it.
+    //     See `collectBundleSystemIds`.
+    const assembled = { ...rows, systems: await loadBundleSystems(rows) };
     const closed = closeBundleReferences(assembled as unknown as BundleContents);
     if (closed.droppedLinks > 0) {
       console.warn(

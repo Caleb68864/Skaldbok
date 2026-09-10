@@ -183,14 +183,58 @@ export async function mergeBundle(
  * back (vs a per-entity data error that's logged and skipped). Quota/closed/
  * aborted DB conditions are fatal; a malformed single row (e.g. bad base64 in an
  * attachment → InvalidCharacterError) is not.
+ *
+ * @remarks
+ * The **whole chain** is examined, not just the top-level error. This read
+ * `err.name` off the outermost error only, which works today for the accidental
+ * reason that `mergeEngine` makes raw `db.*` calls: a quota failure arrives as
+ * `QuotaExceededError` itself. `CLAUDE.md` says this layer should be calling
+ * repositories, and every repository write re-throws as
+ * `new Error("Failed to …", { cause: err })` — a plain `Error` whose `name` is
+ * `'Error'`. One wrapping layer was therefore enough to make a full disk read
+ * as a per-row problem, so the import "finished", the rollback never fired, and
+ * a fresh install was left holding half a campaign with nothing to fall back
+ * on. The 130 `{ cause: … }` sites `4083893` added exist for exactly this
+ * question and, until now, nothing in production read one.
+ *
+ * A chain deeper than {@link MAX_CAUSE_DEPTH} is treated as **fatal**, not as
+ * safe. It is a shape this classifier cannot reason about, and on the restore
+ * path the two wrong answers are not symmetrical: aborting an import the user
+ * can retry costs a retry, while continuing past a fatal failure leaves a
+ * device holding a partial campaign it cannot recover from. A cycle in the
+ * chain is different — every distinct link has been examined by the time one
+ * repeats, so that is a real answer rather than a give-up.
  */
 function isFatalMergeError(err: unknown): boolean {
-  const name = (err as { name?: string } | null)?.name ?? '';
-  // Dexie never assigns the name 'DexieError' to a thrown error — concrete
-  // failures carry their own names — so the old check let a closed or
-  // mis-versioned database read as a per-row problem and the import "finished".
-  return FATAL_MERGE_ERROR_NAMES.has(name);
+  const seen = new Set<unknown>();
+  let current: unknown = err;
+  for (let depth = 0; depth < MAX_CAUSE_DEPTH; depth++) {
+    if (current === null || current === undefined) return false;
+    // Every distinct link already examined; the chain just loops.
+    if (seen.has(current)) return false;
+    seen.add(current);
+    // Dexie never assigns the name 'DexieError' to a thrown error — concrete
+    // failures carry their own names — so the old check let a closed or
+    // mis-versioned database read as a per-row problem and the import
+    // "finished".
+    const name = (current as { name?: string }).name ?? '';
+    if (FATAL_MERGE_ERROR_NAMES.has(name)) return true;
+    if (typeof current !== 'object') return false;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return true;
 }
+
+/**
+ * How many `cause` links deep to look before giving up.
+ *
+ * @remarks
+ * Generous: the deepest chain this codebase can produce is repository wrapper →
+ * Dexie error, and a refactor adding two more layers should still be classified
+ * rather than assumed. Giving up resolves to *fatal* — see
+ * {@link isFatalMergeError}.
+ */
+const MAX_CAUSE_DEPTH = 16;
 
 /** Error names that mean the database itself is unusable, not one row. */
 const FATAL_MERGE_ERROR_NAMES = new Set([

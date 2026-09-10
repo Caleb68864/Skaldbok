@@ -192,47 +192,26 @@ describe('repository soft-delete conventions', () => {
     });
   });
 
-  describe('a soft-deleted row can be listed again', () => {
-    /**
-     * `restore` with no `getDeleted` is a row the Trash cannot show, so the
-     * capability exists and nothing surfaces it — the exact bug the Trash
-     * registry was built to fix. `trashRegistry.test.ts` enforces
-     * `getDeleted → registry` and not the reverse, so these pass there.
-     */
-    const NO_GET_DELETED: Record<string, string> = {
-      campaignRepository: 'a deleted campaign cannot be listed or restored; no UI deletes one today',
-      encounterRepository: 'same — encounters are deleted only as part of a session cascade so far',
-      ledgerSplitRepository: 'restored with its parent entry by txId, never on its own',
-      routePlanRepository: 'no UI deletes a route plan today',
-      entityLinkRepository: 'edges are restored with the entity they belong to, by txId, never listed',
-      // Found by this test rather than by the scan that prompted it: the Trash
-      // lists deleted party *members* (getDeletedMembers) and there is no
-      // equivalent for the party itself, so partyRepository.restore has no way
-      // to be reached.
-      partyRepository: 'getDeletedMembers covers members; a deleted party itself cannot be listed',
-    };
-
-    const restorable = new Set(
-      functions.filter(fn => fn.name === 'restore').map(fn => fn.repo),
-    );
-    const listable = new Set(functions.filter(fn => fn.name === 'getDeleted').map(fn => fn.repo));
-    const unlistable = new Set([...restorable].filter(repo => !listable.has(repo)));
-
-    it('lists only repositories that still cannot list their deleted rows', () => {
-      assertListIsCurrent(NO_GET_DELETED, unlistable, 'having restore without getDeleted');
-    });
-
-    it.each([...restorable].sort())('%s can list what it deleted', repo => {
-      if (NO_GET_DELETED[repo]) return;
-      expect(
-        unlistable.has(repo),
-        `${repo} has restore() and no getDeleted(). The row is recoverable in ` +
-        'principle and unreachable in practice: the Trash builds its sections ' +
-        'from getDeleted, so the day this gains a delete button the row lands ' +
-        'somewhere the user cannot see it.',
-      ).toBe(false);
-    });
-  });
+  /*
+   * "A row that can be restored must be listable, or say why not" used to be
+   * enforced *here too*, by a `NO_GET_DELETED` map keyed by repository module
+   * and detected on the exact names `restore` / `getDeleted`. The same
+   * invariant, with a different detector, lived in `RESTORE_WITHOUT_LISTING`
+   * (`features/trash/trashRegistry.ts`), keyed by module and detected on the
+   * name *prefix* `getDeleted[A-Za-z]*`.
+   *
+   * Each was blind exactly where the other had an entry, and both were proved:
+   * removing `attachmentRepository` from the trash list turned its own guard
+   * red while every one of the 101 tests in this file stayed green, because
+   * `restoreAttachmentsForTxId` is not exactly `restore`; removing
+   * `partyRepository` from `NO_GET_DELETED` turned this file red while the
+   * trash guard stayed green, because `getDeletedMembers` matches the prefix.
+   *
+   * The parallel list is deleted rather than corrected. The invariant is
+   * enforced once, in `trashRegistry.test.ts`, from the repository layer's own
+   * writes per Dexie table — see `test-utils/softDeleteCapabilities.ts`, which
+   * also records why merging the two lists as they stood was not possible.
+   */
 
   describe('rows are validated on the way out of the database', () => {
     /**

@@ -45,49 +45,66 @@ export interface TrashEntityType {
 }
 
 /**
- * Repositories that can soft-delete and restore a row but deliberately offer no
- * `getDeleted` listing, with the reason.
+ * Tables the repository layer can soft-delete and restore but deliberately does
+ * not list, with the reason.
  *
  * @remarks
  * `trashRegistry.test.ts` enforced one direction only — a `getDeleted` must
  * reach this registry — which is the direction that had already gone wrong.
- * The other direction is the same bug one step earlier: a repository that gains
- * a `softDelete` and a `restore` without a listing puts rows somewhere the
- * Trash cannot see, and the test passed because it was never asked.
+ * The other direction is the same bug one step earlier: something that gains a
+ * soft delete and a restore without a listing puts rows somewhere the Trash
+ * cannot see, and the test passed because it was never asked.
  *
  * Now both directions are enforced, and this map is where a deliberate absence
  * is recorded. Written the same way as `TABLES_OUTSIDE_BUNDLE`: the reason is
  * the point, because an exemption someone can re-read and disagree with is a
- * decision, and a repository silently missing a listing is the bug.
+ * decision, and a row silently missing a listing is the bug.
  *
- * Each entry is keyed by repository module name.
+ * **Keyed by Dexie table, and derived from behaviour rather than from function
+ * names.** It used to be keyed by repository module and detected by a
+ * `getDeleted[A-Za-z]*` name prefix, with a second, differently-detected copy
+ * of the same invariant living in `repositoryConventions.test.ts` under exact
+ * names. Each list was blind exactly where the other had an entry —
+ * `partyRepository` was invisible to this one because `getDeletedMembers`
+ * *named* a listing for a different entity, and `attachmentRepository` was
+ * invisible to that one because its methods are `softDeleteAttachmentsByNote` /
+ * `restoreAttachmentsForTxId`. The parallel list is gone and the evidence now
+ * comes from `test-utils/softDeleteCapabilities.ts`, which reads what the code
+ * writes: per table, not per module, and by the write rather than by the name.
  */
 export const RESTORE_WITHOUT_LISTING: Record<string, string> = {
-  attachmentRepository:
+  attachments:
     'A cascade child, never deleted on its own. Attachments are soft-deleted with '
     + 'their note and come back through `restoreAttachmentsForTxId`, matching the '
     + "note's `softDeletedBy`. A standalone listing would offer the user an "
     + 'attachment whose note is still in the trash.',
-  entityLinkRepository:
+  entityLinks:
     'The same, for edges. Links are soft-deleted as part of whatever cascade owns '
     + 'their endpoints and restored by that cascade\'s txId. An edge listed on its '
     + 'own could be restored into a dangling state.',
-  campaignRepository:
+  campaigns:
     'No user-facing delete exists. `softDelete` is reachable only from code, and '
     + 'the campaign cascade does not yet carry its sessions, notes and encounters '
     + 'with it — so a Trash entry would restore an empty shell. Add the listing '
     + 'with the delete button, not before.',
-  encounterRepository:
+  encounters:
     'No user-facing delete exists; encounters end rather than being deleted. The '
     + 'Trash has a Sessions section that is already unreachable in normal use for '
     + 'the same reason, and a second one would not earn its heading.',
-  ledgerSplitRepository:
+  ledgerSplits:
     'One lazily-created row per campaign, with no user-facing delete at all. A '
     + 'listing here would be dead code — the same call this project made when it '
     + 'declined to add `getDeleted` to it during the Trash rework.',
-  routePlanRepository:
+  routePlans:
     'One lazily-created row per campaign, as above. The route *stops* are the '
     + 'user-deletable part and they are listed.',
+  parties:
+    'The party *row* itself, as distinct from its members. `partyRepository` '
+    + 'soft-deletes and restores it, with no user-facing delete: a campaign has '
+    + 'one party and deleting it would strand every member seat. The member seats '
+    + 'are the user-deletable part and `getDeletedMembers` lists them — which is '
+    + 'exactly why this went unrecorded for so long, since a per-module check saw '
+    + 'that listing and asked no further.',
 };
 
 /** Leading characters of a note body used as a title fallback. */

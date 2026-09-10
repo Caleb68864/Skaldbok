@@ -694,3 +694,62 @@ if (typeof window !== 'undefined') {
     return false;
   });
 }
+
+/**
+ * What to tell the user when the database cannot be upgraded.
+ *
+ * @remarks
+ * The advice is the whole value of the message: closing the other tab is what
+ * unblocks it, and there is nothing else the user can do from here.
+ */
+export const DB_BLOCKED_MESSAGE =
+  'Skaldbok is open in another tab, and that tab is holding the old version of '
+  + "the database open. Close Skaldbok's other tabs to finish updating, then reload.";
+
+/** Whether `blocked` has already fired on this connection. */
+let blockedFired = false;
+/** Everyone waiting to hear that the database is blocked. */
+const blockedListeners = new Set<(message: string) => void>();
+
+/**
+ * The complementary half of `versionchange`: *this* tab cannot upgrade because
+ * another connection still holds the old version open.
+ *
+ * @remarks
+ * Registered unconditionally rather than behind the `window` guard above,
+ * because unlike `versionchange` this handler navigates nothing — it records a
+ * fact and hands it to whoever is listening.
+ *
+ * Dexie does **not** reject the open promise for this. It fires `blocked` and
+ * waits. So the settings read in `useAppSettings` neither resolved nor
+ * rejected, `setIsLoading(false)` never ran, and the app rendered its loading
+ * state forever with no message and no way out — while the comment on that very
+ * `catch` listed "blocked" among the causes it handled. It was the one item in
+ * that list the handler could not reach, because a block is not a failure, it
+ * is a pending promise.
+ */
+db.on('blocked', () => {
+  blockedFired = true;
+  console.warn(`[db] ${DB_BLOCKED_MESSAGE}`);
+  for (const listener of blockedListeners) listener(DB_BLOCKED_MESSAGE);
+});
+
+/**
+ * Subscribes to the database being blocked by another connection.
+ *
+ * @remarks
+ * A listener registered *after* the block still hears about it. The race is
+ * real and is exactly the shape that hangs: the block fires while the first
+ * settings read is in flight, and a subscriber a tick behind it would otherwise
+ * hear nothing and go on waiting for a promise that never settles.
+ *
+ * @param listener - Called with {@link DB_BLOCKED_MESSAGE}.
+ * @returns An unsubscribe function.
+ */
+export function onDatabaseBlocked(listener: (message: string) => void): () => void {
+  blockedListeners.add(listener);
+  if (blockedFired) listener(DB_BLOCKED_MESSAGE);
+  return () => {
+    blockedListeners.delete(listener);
+  };
+}
