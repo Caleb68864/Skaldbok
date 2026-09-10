@@ -163,13 +163,27 @@ export function collectBundleSystemIds(contents: Partial<BundleContents>): Set<s
  * A bundled ruleset ships with the app, so an id with no stored row is simply
  * nothing to carry rather than an error.
  *
+ * `alsoNamed` exists for the one scope the rows cannot answer for themselves. A
+ * `Session` row carries `campaignId`, not `systemId`, and the campaign row does
+ * not travel in a session bundle — so a session whose party holds no character
+ * assembles nothing that names a ruleset, and an export of a session run under
+ * a hand-authored ruleset carried none of it. The session's own campaign is the
+ * answer and the collector already holds its id, so it is passed in rather than
+ * inferred.
+ *
  * @param contents - Assembled bundle contents.
+ * @param alsoNamed - Extra ruleset ids the scope knows about; `undefined`s ignored.
  * @returns One row per referenced ruleset that exists in the local cache.
  */
 async function loadBundleSystems(
   contents: Partial<BundleContents>,
+  alsoNamed: ReadonlyArray<string | undefined> = [],
 ): Promise<Record<string, unknown>[]> {
-  const ids = [...collectBundleSystemIds(contents)];
+  const named = collectBundleSystemIds(contents);
+  for (const id of alsoNamed) {
+    if (typeof id === 'string' && id.length > 0) named.add(id);
+  }
+  const ids = [...named];
   if (ids.length === 0) return [];
   const loaded = await Promise.all(ids.map((id) => getSystemById(id)));
   return loaded
@@ -394,9 +408,11 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
         characters: allCharacters.map((c) => c as unknown as Record<string, unknown>),
         entityLinks,
       };
-    // 10. The rulesets those rows name — derived, not enumerated. See
-    //     `collectBundleSystemIds`.
-    const assembled = { ...rows, systems: await loadBundleSystems(rows) };
+    // 10. The rulesets those rows name — derived, not enumerated — plus the
+    //     session's own campaign ruleset, which no row in a session bundle
+    //     names. See `loadBundleSystems`.
+    const campaign = await getCampaignById(session.campaignId);
+    const assembled = { ...rows, systems: await loadBundleSystems(rows, [campaign?.system]) };
     const closed = closeBundleReferences(assembled as unknown as BundleContents);
     if (closed.droppedLinks > 0) {
       console.warn(

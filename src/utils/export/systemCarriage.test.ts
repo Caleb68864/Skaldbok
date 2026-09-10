@@ -128,6 +128,28 @@ describe('a user-authored ruleset travels with every scope that names it', () =>
     expect(systemIds(result.contents.systems)).toEqual([AUTHORED_SYSTEM_ID]);
   });
 
+  it('carries the ruleset in a session bundle with no party characters', async () => {
+    // The case deriving the ids from the rows alone does not reach: a session
+    // row carries `campaignId`, not `systemId`, and the campaign row does not
+    // travel in a session scope — so with no character in the party there is
+    // nothing in the bundle naming a ruleset, and the export of a session run
+    // under a hand-authored ruleset carried none of it. The session's own
+    // campaign is the answer, and the collector already holds its id.
+    await db.partyMembers.clear();
+    await db.characters.clear();
+
+    const result = await collectSessionBundle('sess-1');
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    // The fixture reached the subject: this really is a session with no
+    // characters, rather than a collector that gathered none.
+    expect(result.contents.characters ?? []).toEqual([]);
+    expect((result.contents.sessions as Array<{ id: string }> | undefined)?.map((s) => s.id)).toEqual(['sess-1']);
+
+    expect(systemIds(result.contents.systems)).toEqual([AUTHORED_SYSTEM_ID]);
+  });
+
   it('carries the ruleset in a campaign bundle', async () => {
     const result = await collectCampaignBundle(CAMPAIGN_ID);
     expect(result.success).toBe(true);
