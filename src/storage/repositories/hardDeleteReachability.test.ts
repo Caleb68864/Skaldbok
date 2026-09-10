@@ -131,14 +131,70 @@ function stripComments(body: string): string {
   return body.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/[^\n]*/g, '$1');
 }
 
-/** True if the code permanently removes rows from a *named* Dexie table. */
+/**
+ * A reference to a Dexie table: the static property `db.notes`, or the dynamic
+ * accessor `db.table(<expr>)`.
+ *
+ * @remarks
+ * The dynamic accessor was invisible to this file until now, and it is not an
+ * exotic shape — it is *this codebase's own idiom*, at eight sites
+ * (`utils/import/mergeEngine.ts` ×6, `features/kb/linkSyncEngine.ts`,
+ * `features/import/useImportActions.ts` — the last a hook, not storage). The
+ * old pattern demanded a statically named table, so the `('notes')` call sat
+ * exactly where it expected a `.` and the match failed:
+ *
+ * ```ts
+ * await db.notes.delete('probe-id');          // caught
+ * await db.table('notes').delete('probe-id'); // was not caught — same delete
+ * ```
+ *
+ * **The table's identity is never needed here, and that is the point.** This
+ * guard reports the *operation*, not the table, so `db.table(name)` with a
+ * variable name — which no regex can resolve to a table — is caught on exactly
+ * the same footing as a literal. There is no "could not resolve the name" branch
+ * to fall through, because the name is never asked for. An unresolvable table in
+ * a permanent delete fails loudly, like every other permanent delete.
+ *
+ * `\s*` around the dots is also load-bearing: `db\n  .table('metadata')` is how
+ * this codebase already writes a wrapped chain (`screens/KnowledgeBaseScreen.tsx`),
+ * and the old pattern's literal `db\.` could not see past the line break.
+ */
+const TABLE_REF = String.raw`\bdb\s*\.\s*(?:table\s*\((?:[^()]|\([^()]*\))*\)|[A-Za-z0-9_]+)`;
+
+/** A chain of intermediate calls — `.where(...).equals(...)` and friends. */
+const CHAIN = String.raw`(?:\s*\.\s*[A-Za-z0-9_]+\s*\((?:[^()]|\([^()]*\))*\))*`;
+
+/**
+ * Local names bound to a table object, e.g. `const rows = db.table(name);`.
+ *
+ * @remarks
+ * The one escape a pattern over `db.…` cannot see: hold the table in a variable
+ * and the delete no longer mentions `db` at all. Resolving the binding is a few
+ * lines and costs nothing, and it keeps the promise this file makes — that it
+ * checks the operation — from depending on how the expression was spelled.
+ * Nothing in `src` outside `src/storage` does this today; the check exists so
+ * that staying true is not left to habit.
+ */
+function tableAliases(code: string): string[] {
+  const pattern = new RegExp(
+    String.raw`\b(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*(?::[^=;]+?)?=\s*${TABLE_REF}\s*(?=[;\n])`,
+    'g',
+  );
+  return [...code.matchAll(pattern)].map(m => m[1]!);
+}
+
+/** True if the code permanently removes rows from an individual Dexie table. */
 function removesNamedTableRows(body: string): boolean {
   const code = stripComments(body);
   // `clear` joins `delete`/`bulkDelete`: it is the most destructive of the
   // three and was in neither pattern, so `db.notes.clear()` in a repository
   // passed the guard that exists to name every permanent delete.
-  return /\bdb\.[A-Za-z0-9_]+(?:\s*\.[A-Za-z0-9_]+\([^)]*\))*\s*\.(?:bulkDelete|delete|clear)\s*\(/.test(code)
-    || /\bdb\.[A-Za-z0-9_]+\s*\.\s*where\([\s\S]*?\.delete\s*\(\s*\)/.test(code);
+  const receivers = [TABLE_REF, ...tableAliases(code).map(name => String.raw`\b${name}\b`)];
+  return receivers.some(
+    receiver =>
+      new RegExp(`${receiver}${CHAIN}\\s*\\.\\s*(?:bulkDelete|delete|clear)\\s*\\(`).test(code)
+      || new RegExp(`${receiver}\\s*\\.\\s*where\\([\\s\\S]*?\\.delete\\s*\\(\\s*\\)`).test(code),
+  );
 }
 
 /**
