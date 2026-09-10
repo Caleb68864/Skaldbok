@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useIsEditMode } from '../utils/modeGuards';
 import { useAutosave } from '../hooks/useAutosave';
+import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import { useToast } from '../context/ToastContext';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import { nowISO } from '../utils/dates';
@@ -66,7 +67,7 @@ export default function ProfileScreen() {
   const isEditMode = useIsEditMode();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
-  useAutosave(character, characterRepository.save, 1000);
+  const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
 
   useEffect(() => {
     if (!isLoading && !character) {
@@ -132,6 +133,7 @@ export default function ProfileScreen() {
 
   return (
     <div className="profile-screen relative">
+      <AutosaveErrorBanner error={saveError} />
       {/* Back button */}
       <div className="absolute top-2 left-2 z-10">
         <button onClick={() => navigate(-1)} className="min-h-11 min-w-11 flex items-center justify-center bg-[var(--color-surface)]/80 backdrop-blur-sm rounded-full border border-[var(--color-border)] cursor-pointer text-[var(--color-text)]" aria-label="Back">

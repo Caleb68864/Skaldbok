@@ -9,6 +9,7 @@ import { SectionPanel } from '../components/primitives/SectionPanel';
 import { Button } from '../components/primitives/Button';
 import { Drawer } from '../components/primitives/Drawer';
 import { useAutosave } from '../hooks/useAutosave';
+import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import type { Spell, HeroicAbility, TempModifier } from '../types/character';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
@@ -42,7 +43,7 @@ export default function MagicScreen() {
   const showMagic = settings.showCharacterMagic === true;
   const isEditMode = useIsEditMode();
   const { showToast } = useToast();
-  useAutosave(character, characterRepository.save, 1000);
+  const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
 
   // Preparation filter tab
   const [filter, setFilter] = useState<PrepFilter>('prepared');
@@ -290,6 +291,7 @@ export default function MagicScreen() {
 
   return (
     <div className="p-[var(--space-md)]">
+      <AutosaveErrorBanner error={saveError} />
       {/* ── Page header with prepared counter + show-magic toggle ── */}
       <div className="flex items-center justify-between mb-[var(--space-sm)] flex-wrap gap-[var(--space-sm)]">
         <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] m-0">

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAutosave } from '../hooks/useAutosave';
+import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import { WeaponCard } from '../components/fields/WeaponCard';
 import { CurrencyAdjuster } from '../components/fields/CurrencyAdjuster';
 import { WeaponEditor } from '../components/fields/WeaponEditor';
@@ -156,7 +157,7 @@ export default function GearScreen() {
   const [helmetWeight, setHelmetWeight] = useState(0);
   const [helmetEquipped, setHelmetEquipped] = useState(false);
   const [helmetSystemFields, setHelmetSystemFields] = useState<Record<string, unknown>>({});
-  useAutosave(character, characterRepository.save, 1000);
+  const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
 
   // Populate armor form when drawer opens
   useEffect(() => {
@@ -400,6 +401,7 @@ export default function GearScreen() {
   return (
     <div className="p-[var(--space-md)]">
       <h1 className="text-[length:var(--font-size-xl)] text-[var(--color-text)] mb-[var(--space-md)]">Gear</h1>
+      <AutosaveErrorBanner error={saveError} />
 
       {/* Tab bar */}
       <div className="flex rounded-[var(--radius-md)] overflow-hidden border border-[var(--color-border)] mb-[var(--space-md)]" role="tablist" aria-label="Gear view">
