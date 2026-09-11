@@ -10,7 +10,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBacklinks } from './KnowledgeBaseContext';
-import { db } from '../../storage/db/client';
+import { getNodeById } from '../../storage/repositories/kbNodeRepository';
 import type { KBNode } from '../../storage/db/client';
 
 /** Props for {@link BacklinksPanel}. */
@@ -40,7 +40,7 @@ export function BacklinksPanel({ nodeId, onPeek }: BacklinksPanelProps) {
       const nodes: KBNode[] = [];
       for (const edge of backlinks) {
         try {
-          const node = await db.kb_nodes.get(edge.fromId);
+          const node = await getNodeById(edge.fromId);
           if (node) nodes.push(node);
         } catch {
           // skip unresolvable

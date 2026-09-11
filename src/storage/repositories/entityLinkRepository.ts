@@ -56,6 +56,47 @@ export async function getLinksFrom(fromEntityId: string, relationshipType: strin
 }
 
 /**
+ * Outgoing edges of one relationship type from any of several entities.
+ *
+ * @remarks
+ * The batched form of {@link getLinksFrom}, and the reason it exists is
+ * `encounterRepository.addRepresentedParticipants`: deduplicating a whole party
+ * against the participants already in an encounter is one question about *n*
+ * ids, and asking it as *n* queries inside a write transaction is the shape
+ * that used to scan the entire `entityLinks` table and filter in memory.
+ * `anyOf` on the `[fromEntityId+relationshipType]` compound index answers it in
+ * one indexed pass.
+ *
+ * @param fromEntityIds - Source ids. An empty array returns `[]` without a query.
+ */
+export async function getLinksFromMany(
+  fromEntityIds: string[],
+  relationshipType: string,
+  options?: { includeDeleted?: boolean },
+): Promise<EntityLink[]> {
+  if (fromEntityIds.length === 0) return [];
+  try {
+    const records = await db.entityLinks
+      .where('[fromEntityId+relationshipType]')
+      .anyOf(fromEntityIds.map((id) => [id, relationshipType]))
+      .toArray();
+    const parsed = records
+      .map(r => {
+        const result = entityLinkSchema.safeParse(r);
+        if (!result.success) {
+          console.warn('entityLinkRepository.getLinksFromMany: validation failed', result.error);
+          return undefined;
+        }
+        return result.data;
+      })
+      .filter((l): l is EntityLink => l !== undefined);
+    return options?.includeDeleted ? parsed : excludeDeleted(parsed);
+  } catch (e) {
+    throw new Error(`entityLinkRepository.getLinksFromMany failed: ${e}`, { cause: e });
+  }
+}
+
+/**
  * Incoming edges of one relationship type into an entity.
  *
  * @remarks
@@ -244,6 +285,117 @@ export async function softDeleteLinksForEntity(
   if (ids.size === 0) return;
   await db.entityLinks.bulkUpdate(
     [...ids].map((id) => ({ key: id, changes: { deletedAt: now, softDeletedBy: txId, updatedAt: now } })),
+  );
+}
+
+/**
+ * Moves a note from whatever encounter contains it to another, or to none.
+ *
+ * @remarks
+ * Lifted out of `useSessionLog.reassignNote`, which opened its own
+ * `db.transaction('rw', [db.entityLinks], …)` and resolved the target with a
+ * bare `db.encounters.get(id)`. It checked that the encounter existed and that
+ * its session matched, and **not that it was still alive** — so a note could be
+ * filed into a soft-deleted encounter, stay live itself, and drop out of every
+ * encounter-scoped list. That failure does not look like loss; it looks like the
+ * note was *moved*, which is why nobody found it by looking in the Trash.
+ *
+ * The invariants it already had are kept: same-session only, a repeat
+ * reassignment to the current target is a silent no-op rather than a churn of
+ * the edge, and the replaced edges are tombstoned under one shared
+ * `softDeletedBy` so the move can be restored as a unit. A refused reassignment
+ * tombstones nothing — the throw happens before the transaction opens.
+ *
+ * @param noteId - Note to move.
+ * @param encounterId - Target encounter, or `null` to detach the note entirely.
+ * @throws If the note or the target does not exist, if the target is
+ * soft-deleted, or if the target belongs to a different session.
+ */
+export async function reassignNoteToEncounter(
+  noteId: string,
+  encounterId: string | null,
+): Promise<void> {
+  const note = await db.notes.get(noteId);
+  if (!note) {
+    throw new Error(`entityLinkRepository.reassignNoteToEncounter: note ${noteId} not found`);
+  }
+  if (encounterId) {
+    const target = await db.encounters.get(encounterId);
+    if (!target) {
+      throw new Error(
+        `entityLinkRepository.reassignNoteToEncounter: encounter ${encounterId} not found`,
+      );
+    }
+    if ((target as { deletedAt?: string }).deletedAt) {
+      throw new Error(
+        `entityLinkRepository.reassignNoteToEncounter: encounter ${encounterId} is deleted`,
+      );
+    }
+    const targetSession = (target as { sessionId?: string }).sessionId;
+    const noteSession = (note as { sessionId?: string }).sessionId;
+    if (targetSession !== noteSession) {
+      throw new Error(
+        `entityLinkRepository.reassignNoteToEncounter: session mismatch `
+        + `(note.sessionId=${noteSession}, encounter.sessionId=${targetSession})`,
+      );
+    }
+  }
+
+  await db.transaction('rw', [db.entityLinks], async () => {
+    const existing = await getLinksTo(noteId, 'contains');
+    const encounterEdges = existing.filter((l) => l.fromEntityType === 'encounter');
+    if (
+      encounterId
+      && encounterEdges.length === 1
+      && encounterEdges[0]!.fromEntityId === encounterId
+    ) {
+      return;
+    }
+    if (encounterEdges.length > 0) {
+      const txId = generateSoftDeleteTxId();
+      const now = nowISO();
+      await db.entityLinks.bulkUpdate(
+        encounterEdges.map((edge) => ({
+          key: edge.id,
+          changes: { deletedAt: now, softDeletedBy: txId, updatedAt: now },
+        })),
+      );
+    }
+    if (encounterId) {
+      await createLink({
+        fromEntityId: encounterId,
+        fromEntityType: 'encounter',
+        toEntityId: noteId,
+        toEntityType: 'note',
+        relationshipType: 'contains',
+      });
+    }
+  });
+}
+
+/**
+ * Soft-delete the outgoing edges of one relationship type from an entity.
+ *
+ * @remarks
+ * Narrower than {@link softDeleteLinksForEntity}, which sweeps both directions
+ * and every relationship type. Removing an encounter participant has to
+ * tombstone that participant's `represents` edges and nothing else, so the
+ * narrowness is the point rather than an omission: a wider sweep here would
+ * take edges the removal was never asked about.
+ *
+ * All matched edges share `txId`, so {@link restoreLinksForTxId} brings the
+ * removal back as a unit. Already-deleted edges keep their own transaction.
+ */
+export async function softDeleteLinksFromEntity(
+  fromEntityId: string,
+  relationshipType: string,
+  txId: string,
+  now: string,
+): Promise<void> {
+  const links = await getLinksFrom(fromEntityId, relationshipType);
+  if (links.length === 0) return;
+  await db.entityLinks.bulkUpdate(
+    links.map((l) => ({ key: l.id, changes: { deletedAt: now, softDeletedBy: txId, updatedAt: now } })),
   );
 }
 

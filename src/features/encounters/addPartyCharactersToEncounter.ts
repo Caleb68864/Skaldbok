@@ -1,15 +1,28 @@
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
-import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
-import { db } from '../../storage/db/client';
-import { generateId } from '../../utils/ids';
-import { nowISO } from '../../utils/dates';
+import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import type { CharacterRecord } from '../../types/character';
-import type { EncounterParticipant } from '../../types/encounter';
 
 /**
  * Adds linked party characters to an encounter, skipping PCs already present.
  *
- * @returns number of newly-added participants
+ * @remarks
+ * This used to open `db.transaction('rw', [db.encounters, db.entityLinks], …)`
+ * by hand, read the encounter and write straight into it — **without checking
+ * `deletedAt`**, so adding the party to a soft-deleted encounter succeeded and
+ * put every PC somewhere no screen lists and no Trash entry reaches. Proved
+ * directly: the whole party landed in a tombstoned encounter and the function
+ * reported the number added.
+ *
+ * The transaction, the tombstone refusal, the `represents` edges and the PC
+ * deduplication now all live in
+ * {@link encounterRepository.addRepresentedParticipants}, which three other
+ * screens reach through as well. What is left here is the part that is actually
+ * this file's own: resolving character ids to records.
+ *
+ * @param encounterId - Encounter to add to.
+ * @param characterIds - Character ids to add; unresolvable ones are skipped.
+ * @returns Number of newly-added participants. `0` if the encounter is
+ * soft-deleted, if no id resolved, or if every character was already present.
  */
 export async function addPartyCharactersToEncounter(
   encounterId: string,
@@ -23,65 +36,13 @@ export async function addPartyCharactersToEncounter(
 
   if (characters.length === 0) return 0;
 
-  const now = nowISO();
-  let addedCount = 0;
-
-  await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
-    const enc = await db.encounters.get(encounterId);
-    if (!enc) throw new Error(`encounter ${encounterId} not found`);
-
-    const participantIds = (enc.participants ?? []).map((p) => p.id);
-    // Indexed lookup on the participants' outgoing `represents` edges — this
-    // used to scan the whole entityLinks table and filter in memory.
-    const existingLinks = participantIds.length === 0
-      ? []
-      : await db.entityLinks
-          .where('[fromEntityId+relationshipType]')
-          .anyOf(participantIds.map((id) => [id, 'represents']))
-          .toArray();
-    const existingCharacterIds = new Set(
-      existingLinks
-        .filter((link) => !link.deletedAt && link.toEntityType === 'character')
-        .map((link) => link.toEntityId),
-    );
-
-    const updatedParticipants = [...(enc.participants ?? [])];
-
-    for (const character of characters) {
-      if (existingCharacterIds.has(character.id)) continue;
-
-      const participantId = generateId();
-      const newParticipant: EncounterParticipant = {
-        id: participantId,
-        name: character.name,
-        type: 'pc',
-        instanceState: {},
-        // max(existing)+1, not length+1 — recomputed each iteration (it includes
-        // the just-pushed ones) so keys stay unique even after prior removals.
-        sortOrder: Math.max(0, ...updatedParticipants.map(p => p.sortOrder)) + 1,
-      };
-
-      updatedParticipants.push(newParticipant);
-
-      await entityLinkRepository.createLink({
-        fromEntityId: participantId,
-        fromEntityType: 'encounterParticipant',
-        toEntityId: character.id,
-        toEntityType: 'character',
-        relationshipType: 'represents',
-      });
-
-      existingCharacterIds.add(character.id);
-      addedCount += 1;
-    }
-
-    if (addedCount > 0) {
-      await db.encounters.update(encounterId, {
-        participants: updatedParticipants,
-        updatedAt: now,
-      });
-    }
-  });
-
-  return addedCount;
+  const added = await encounterRepository.addRepresentedParticipants(
+    encounterId,
+    characters.map((character) => ({
+      name: character.name,
+      type: 'pc' as const,
+      represents: { id: character.id, type: 'character' as const },
+    })),
+  );
+  return added.length;
 }

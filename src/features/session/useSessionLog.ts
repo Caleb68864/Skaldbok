@@ -8,7 +8,6 @@ import * as encounterRepository from '../../storage/repositories/encounterReposi
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
-import { generateSoftDeleteTxId } from '../../utils/softDelete';
 import {
   buildNoteRecord,
   persistCanonicalNoteLinks,
@@ -676,59 +675,14 @@ export function useSessionLog() {
       throw new Error('useSessionLog.reassignNote: no active session');
     }
 
-    const note = await db.notes.get(noteId);
-    if (!note) {
-      throw new Error(`useSessionLog.reassignNote: note ${noteId} not found`);
-    }
-
-    if (newEncounterId) {
-      const target = await db.encounters.get(newEncounterId);
-      if (!target) {
-        throw new Error(`useSessionLog.reassignNote: encounter ${newEncounterId} not found`);
-      }
-      if (target.sessionId !== note.sessionId) {
-        throw new Error(
-          `useSessionLog.reassignNote: session mismatch (note.sessionId=${note.sessionId}, encounter.sessionId=${target.sessionId})`,
-        );
-      }
-    }
-
-    await db.transaction('rw', [db.entityLinks], async () => {
-      // Find existing encounter→note contains edges
-      const existing = await entityLinkRepository.getLinksTo(noteId, 'contains');
-      const encounterEdges = existing.filter((l) => l.fromEntityType === 'encounter');
-
-      // Silent no-op if already pointing at the requested target
-      if (
-        newEncounterId &&
-        encounterEdges.length === 1 &&
-        encounterEdges[0].fromEntityId === newEncounterId
-      ) {
-        return;
-      }
-
-      // Soft-delete existing edges under a shared cascade id
-      const txId = generateSoftDeleteTxId();
-      const now = nowISO();
-      for (const edge of encounterEdges) {
-        await db.entityLinks.update(edge.id, {
-          deletedAt: now,
-          softDeletedBy: txId,
-          updatedAt: now,
-        });
-      }
-
-      // Create new edge if target is non-null
-      if (newEncounterId) {
-        await entityLinkRepository.createLink({
-          fromEntityId: newEncounterId,
-          fromEntityType: 'encounter',
-          toEntityId: noteId,
-          toEntityType: 'note',
-          relationshipType: 'contains',
-        });
-      }
-    });
+    // The edge rewrite, and the checks in front of it, moved to
+    // `entityLinkRepository.reassignNoteToEncounter`. The target used to be
+    // resolved with a bare `db.encounters.get(id)`: existence checked, session
+    // checked, `deletedAt` not — so a note could be filed into a deleted
+    // encounter, stay live itself, and disappear from every encounter-scoped
+    // list. That does not read as loss, it reads as a move, which is why it
+    // would never have been looked for in the Trash.
+    await entityLinkRepository.reassignNoteToEncounter(noteId, newEncounterId);
   }, [activeSession]);
 
   // Flush buffers when session ends

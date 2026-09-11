@@ -23,8 +23,19 @@ import {
 } from '../../storage/repositories/kbEdgeRepository';
 import { extractLinksFromTiptapJSON } from './tiptapParser';
 import { nowISO } from '../../utils/dates';
+import * as metadataRepository from '../../storage/repositories/metadataRepository';
 import { db } from '../../storage/db/client';
 import type { KBNode, KBEdge } from '../../storage/db/client';
+
+/**
+ * Metadata key recording that the KB graph has been built for this database.
+ *
+ * @remarks
+ * Exported because `KnowledgeBaseScreen` reads it to decide whether to rebuild
+ * on mount and this file writes it. Two hand-spelled copies of a string that
+ * gates a full graph rebuild is one typo away from rebuilding on every mount.
+ */
+export const KB_GRAPH_BUILT_KEY = 'migration_kb_graph_v1';
 
 /**
  * Maps a note's type to the corresponding KB node type.
@@ -424,11 +435,14 @@ export async function bulkRebuildGraph(campaignId: string): Promise<void> {
     for (const note of notes) {
       await syncNote(note.id);
     }
-    await db.table('metadata').put({
-      id: 'migration_kb_graph_v1',
-      key: 'migration_kb_graph_v1',
-      value: 'true',
-    });
+    // Was `db.table('metadata').put({ id: key, key, value })`, which is
+    // self-idempotent and not idempotent against `metadataRepository.set`:
+    // `metadata` is declared `'id, &key'`, so a row already holding this key
+    // under a *generated* id makes the put a unique-index violation. The catch
+    // below then swallowed it, and the marker whose whole job is to answer "has
+    // the KB graph been built?" silently kept its old value — a full rebuild on
+    // every mount, forever, reported as success.
+    await metadataRepository.set(KB_GRAPH_BUILT_KEY, 'true');
     if (import.meta.env.DEV) {
       console.debug(`[linkSyncEngine] bulkRebuildGraph: synced ${notes.length} notes for campaign ${campaignId}`);
     }

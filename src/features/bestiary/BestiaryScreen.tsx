@@ -11,11 +11,7 @@ import {
 } from '../../utils/bestiary/renderCreatureExport';
 import { copyToClipboard, shareFile } from '../../utils/export/delivery';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
-import type { EncounterParticipant } from '../../types/encounter';
-import { db } from '../../storage/db/client';
-import { createLink } from '../../storage/repositories/entityLinkRepository';
-import { generateId } from '../../utils/ids';
-import { nowISO } from '../../utils/dates';
+import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
@@ -408,36 +404,30 @@ export function BestiaryScreen({ campaignId, campaignName, systemId, activeEncou
               {activeEncounterId && (
                 <button
                   onClick={async () => {
-                    // Create the participant and its `represents` edge in a
-                    // single transaction so the two rows land atomically.
-                    const now = nowISO();
-                    const participantId = generateId();
-                    const templateId = viewingTemplate.id;
+                    // This was `db.transaction('rw', [db.encounters,
+                    // db.entityLinks], …)` written out by hand — byte-for-byte
+                    // the one in `useEncounter.ts` minus its
+                    // `if (enc.deletedAt) return;` line, so a creature added to
+                    // a soft-deleted encounter landed where nothing lists it.
+                    // It also computed `sortOrder` as `participants.length + 1`,
+                    // which reuses a live key after a mid-list removal. Both are
+                    // the repository's problem now.
                     const templateName = viewingTemplate.name;
-                    const templateCategory = viewingTemplate.category;
-                    const templateHp = readCreatureStat(viewingTemplate, healthStatId);
-                    await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
-                      const enc = await db.encounters.get(activeEncounterId);
-                      if (!enc) throw new Error(`encounter ${activeEncounterId} not found`);
-                      const newParticipant: EncounterParticipant = {
-                        id: participantId,
+                    const added = await encounterRepository.addRepresentedParticipants(
+                      activeEncounterId,
+                      [{
                         name: templateName,
-                        type: templateCategory === 'monster' ? 'monster' : 'npc',
-                        instanceState: { currentHp: templateHp },
-                        sortOrder: (enc.participants?.length ?? 0) + 1,
-                      };
-                      await db.encounters.update(activeEncounterId, {
-                        participants: [...(enc.participants ?? []), newParticipant],
-                        updatedAt: now,
-                      });
-                      await createLink({
-                        fromEntityId: participantId,
-                        fromEntityType: 'encounterParticipant',
-                        toEntityId: templateId,
-                        toEntityType: 'creature',
-                        relationshipType: 'represents',
-                      });
-                    });
+                        type: viewingTemplate.category === 'monster' ? 'monster' : 'npc',
+                        instanceState: {
+                          currentHp: readCreatureStat(viewingTemplate, healthStatId),
+                        },
+                        represents: { id: viewingTemplate.id, type: 'creature' },
+                      }],
+                    );
+                    if (added.length === 0) {
+                      showToast('That encounter is no longer available', 'error');
+                      return;
+                    }
                     showToast(`Added ${templateName} to encounter`, 'success');
                     setViewingTemplate(null);
                   }}

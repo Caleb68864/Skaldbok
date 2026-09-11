@@ -8,10 +8,6 @@ import * as creatureTemplateRepository from '../../storage/repositories/creature
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 import { getNoteById } from '../../storage/repositories/noteRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
-import { db } from '../../storage/db/client';
-import { generateId } from '../../utils/ids';
-import { nowISO } from '../../utils/dates';
-import { generateSoftDeleteTxId } from '../../utils/softDelete';
 
 /**
  * Hook for managing a single encounter: loading data, adding/updating
@@ -89,69 +85,28 @@ export function useEncounter(encounterId: string | null) {
         isCreature = 'category' in template;
       }
 
-      const now = nowISO();
-      const participantId = generateId();
+      const hp = isCreature
+        ? (template as CreatureTemplate).stats?.hp
+        : undefined;
+      const participantType: EncounterParticipant['type'] = isCreature
+        ? ((template as CreatureTemplate).category === 'monster' ? 'monster' : 'npc')
+        : 'pc';
 
-      await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
-        const enc = await db.encounters.get(encounterId);
-        if (!enc) throw new Error(`encounter ${encounterId} not found`);
-        // A tombstoned encounter is invisible in the UI, so writing to one adds
-        // a participant nobody can see or remove. The repository's `update`
-        // refuses this; the participant paths need their own transaction (they
-        // touch entityLinks too), so they have to make the same check.
-        if (enc.deletedAt) return;
-
-        const participantType: EncounterParticipant['type'] = isCreature
-          ? ((template as CreatureTemplate).category === 'monster' ? 'monster' : 'npc')
-          : 'pc';
-
-        // PCs should only appear once in an encounter. Creature templates are
-        // intentionally allowed to repeat so the GM can add multiple goblins,
-        // wolves, etc.
-        if (!isCreature) {
-          const participantIds = new Set((enc.participants ?? []).map((p) => p.id));
-          const links = await db.entityLinks
-            .where('toEntityId')
-            .equals(template.id)
-            .toArray();
-          const alreadyPresent = links.some((link) =>
-            !link.deletedAt
-            && link.relationshipType === 'represents'
-            && link.toEntityType === 'character'
-            && participantIds.has(link.fromEntityId),
-          );
-          if (alreadyPresent) return;
-        }
-
-        const hp = isCreature
-          ? (template as CreatureTemplate).stats?.hp
-          : undefined;
-
-        const newParticipant: EncounterParticipant = {
-          id: participantId,
+      // The transaction, the tombstone refusal, the PC deduplication and the
+      // `represents` edge all live in the repository now. The rule this hook
+      // used to be the only keeper of — "a tombstoned encounter is invisible in
+      // the UI, so writing to one adds a participant nobody can see or remove"
+      // — had three siblings that opened the identical transaction and never
+      // made the check. It has one implementation now instead of a correct copy
+      // and three wrong ones.
+      await encounterRepository.addRepresentedParticipants(encounterId, [
+        {
           name: template.name,
           type: participantType,
           instanceState: hp !== undefined ? { currentHp: hp } : {},
-          // max(existing sortOrder) + 1, not length + 1: after a mid-list removal
-          // length can collide with an existing sortOrder (add P1,P2,P3; remove
-          // P2; the next add would reuse 3), leaving a non-unique ordering key.
-          sortOrder: Math.max(0, ...(enc.participants ?? []).map(p => p.sortOrder)) + 1,
-        };
-
-        const updatedParticipants = [...(enc.participants ?? []), newParticipant];
-        await db.encounters.update(encounterId, {
-          participants: updatedParticipants,
-          updatedAt: now,
-        });
-
-        await entityLinkRepository.createLink({
-          fromEntityId: participantId,
-          fromEntityType: 'encounterParticipant',
-          toEntityId: template.id,
-          toEntityType: isCreature ? 'creature' : 'character',
-          relationshipType: 'represents',
-        });
-      });
+          represents: { id: template.id, type: isCreature ? 'creature' : 'character' },
+        },
+      ]);
 
       await loadEncounter();
     },
@@ -181,33 +136,10 @@ export function useEncounter(encounterId: string | null) {
   const removeParticipant = useCallback(
     async (participantId: string) => {
       if (!encounterId) return;
-      const txId = generateSoftDeleteTxId();
-      const now = nowISO();
-
-      await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
-        const enc = await db.encounters.get(encounterId);
-        if (!enc || enc.deletedAt || !enc.participants) return;
-
-        const updatedParticipants = enc.participants.filter((p) => p.id !== participantId);
-        await db.encounters.update(encounterId, {
-          participants: updatedParticipants,
-          updatedAt: now,
-        });
-
-        const edges = await db.entityLinks
-          .where('fromEntityId')
-          .equals(participantId)
-          .and((l) => (l as { relationshipType?: string }).relationshipType === 'represents')
-          .toArray();
-        for (const edge of edges) {
-          if ((edge as { deletedAt?: string }).deletedAt) continue;
-          await db.entityLinks.update(edge.id, {
-            deletedAt: now,
-            softDeletedBy: txId,
-            updatedAt: now,
-          });
-        }
-      });
+      // Same move as the add path: the removal has to tombstone the
+      // participant's `represents` edges in the same transaction that drops it
+      // from the list, so both halves live behind one repository call.
+      await encounterRepository.removeRepresentedParticipant(encounterId, participantId);
 
       await loadEncounter();
     },

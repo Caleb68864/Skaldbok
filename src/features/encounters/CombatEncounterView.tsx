@@ -4,12 +4,10 @@ import * as encounterRepository from '../../storage/repositories/encounterReposi
 import * as creatureTemplateRepository from '../../storage/repositories/creatureTemplateRepository';
 import { getById as getCreatureTemplateById } from '../../storage/repositories/creatureTemplateRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
-import { db } from '../../storage/db/client';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { ParticipantDrawer } from './ParticipantDrawer';
 import { QuickCreateParticipantFlow } from './QuickCreateParticipantFlow';
 import { generateId } from '../../utils/ids';
-import { nowISO } from '../../utils/dates';
 import { cn } from '../../lib/utils';
 import { registerFlush } from '../persistence/autosaveFlush';
 import { useSystemEngineFor } from '../systems/engine';
@@ -262,33 +260,20 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       return;
     }
 
-    // Create participant + represents edge in one transaction so the
-    // relationship is observable by the rest of the app atomically.
-    const now = nowISO();
-    const participantId = generateId();
-    await db.transaction('rw', [db.encounters, db.entityLinks], async () => {
-      const enc = await db.encounters.get(encounter.id);
-      if (!enc) throw new Error(`encounter ${encounter.id} not found`);
-      const newParticipant: EncounterParticipant = {
-        id: participantId,
-        name: template.name,
-        type: 'monster',
-        instanceState: { currentHp: readCreatureStat(template, healthStatId) },
-        // max(existing)+1, not length+1, so it stays unique after a mid-list removal.
-        sortOrder: Math.max(0, ...(enc.participants ?? []).map(p => p.sortOrder)) + 1,
-      };
-      await db.encounters.update(encounter.id, {
-        participants: [...(enc.participants ?? []), newParticipant],
-        updatedAt: now,
-      });
-      await entityLinkRepository.createLink({
-        fromEntityId: participantId,
-        fromEntityType: 'encounterParticipant',
-        toEntityId: template.id,
-        toEntityType: 'creature',
-        relationshipType: 'represents',
-      });
-    });
+    // Was a hand-written `db.transaction('rw', [db.encounters,
+    // db.entityLinks], …)` that read the encounter without checking
+    // `deletedAt`. Participant and `represents` edge still land atomically —
+    // that part was right — but the refusal now comes with them.
+    const added = await encounterRepository.addRepresentedParticipants(encounter.id, [{
+      name: template.name,
+      type: 'monster',
+      instanceState: { currentHp: readCreatureStat(template, healthStatId) },
+      represents: { id: template.id, type: 'creature' },
+    }]);
+    if (added.length === 0) {
+      showToast('That encounter is no longer available', 'error');
+      return;
+    }
     setShowQuickCreate(false);
     await refresh();
   };

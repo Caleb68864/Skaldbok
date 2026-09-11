@@ -25,7 +25,7 @@ import * as entityLinkRepository from '../../storage/repositories/entityLinkRepo
 import { useForwardLinks } from './KnowledgeBaseContext';
 import { BacklinksPanel } from './BacklinksPanel';
 import { PeekCard } from './PeekCard';
-import { db } from '../../storage/db/client';
+import { getNodeById } from '../../storage/repositories/kbNodeRepository';
 import type { Note } from '../../types/note';
 import type { Attachment } from '../../types/attachment';
 import type { KBNode } from '../../storage/db/client';
@@ -96,7 +96,7 @@ export function NoteReader({ noteId }: NoteReaderProps) {
     async function load() {
       try {
         // First try to find the KB node
-        const node = await db.kb_nodes.get(noteId);
+        const node = await getNodeById(noteId);
         if (node) {
           if (mounted) setKbNode(node);
           // Load the actual note from sourceId
@@ -123,7 +123,7 @@ export function NoteReader({ noteId }: NoteReaderProps) {
               const atts = await getAttachmentsByNote(n.id);
               setAttachments(atts);
               // Look up the KB node
-              const kbn = await db.kb_nodes.get(`note-${n.id}`);
+              const kbn = await getNodeById(`note-${n.id}`);
               if (kbn) setKbNode(kbn);
             } else {
               setNotFound(true);
@@ -396,7 +396,7 @@ function ForwardLinksList({
     async function loadNodes() {
       const results: KBNode[] = [];
       for (const edge of edges) {
-        const node = await db.kb_nodes.get(edge.toId);
+        const node = await getNodeById(edge.toId);
         if (node) results.push(node);
       }
       if (mounted) setNodes(results);

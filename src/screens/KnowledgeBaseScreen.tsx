@@ -18,8 +18,8 @@ import { KnowledgeBaseProvider } from '../features/kb/KnowledgeBaseContext';
 import { VaultBrowser } from '../features/kb/VaultBrowser';
 import { NoteReader } from '../features/kb/NoteReader';
 import { GraphView } from '../features/kb/GraphView';
-import { bulkRebuildGraph } from '../features/kb/linkSyncEngine';
-import { db } from '../storage/db/client';
+import { bulkRebuildGraph, KB_GRAPH_BUILT_KEY } from '../features/kb/linkSyncEngine';
+import * as metadataRepository from '../storage/repositories/metadataRepository';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 
 export default function KnowledgeBaseScreen() {
@@ -38,12 +38,11 @@ export default function KnowledgeBaseScreen() {
     async function checkAndRebuild() {
       if (!activeCampaign?.id) return;
       try {
-        const meta = await db
-          .table('metadata')
-          .where('key')
-          .equals('migration_kb_graph_v1')
-          .first();
-        if (!meta) {
+        // Was a raw wrapped `db.table('metadata')…` chain — the one call in the
+        // codebase a same-line regex could not see, which is how this whole file
+        // stayed out of two surveys of direct Dexie access.
+        const built = await metadataRepository.get(KB_GRAPH_BUILT_KEY);
+        if (!built) {
           if (mounted) setIsBuilding(true);
           await bulkRebuildGraph(activeCampaign.id);
           if (mounted) setIsBuilding(false);
