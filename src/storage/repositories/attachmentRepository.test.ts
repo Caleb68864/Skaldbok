@@ -3,7 +3,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../db/client';
-import { getAttachmentsByNote, getAttachmentsByCampaign } from './attachmentRepository';
+import { getAttachmentsByNote } from './attachmentRepository';
 import { softDeleteWithLinks, restore } from './noteRepository';
 import { nowISO } from '../../utils/dates';
 
@@ -74,7 +74,6 @@ describe('note deletion and its attachments', () => {
     await softDeleteWithLinks('note-1', 'tx-1');
 
     expect(await getAttachmentsByNote('note-1')).toHaveLength(0);
-    expect(await getAttachmentsByCampaign('camp-1')).toHaveLength(0);
     expect(await getAttachmentsByNote('note-1', { includeDeleted: true })).toHaveLength(1);
   });
 

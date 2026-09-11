@@ -21,6 +21,12 @@ export function renderAttachmentSidecar(attachment: Attachment, parentNote: Note
     campaignId: attachment.campaignId,
     caption: attachment.caption ?? '',
     originalFilename: attachment.filename,
+    // `sizeBytes` is required on every attachment, stamped on add and recomputed
+    // on import, and travels in every bundle — and the one file whose stated job
+    // is to preserve attachment metadata was omitting it. Outside the app the
+    // sidecar is all the metadata there is, so the number that says how much of
+    // the device this photo costs belongs in it.
+    sizeBytes: attachment.sizeBytes,
     createdAt: attachment.createdAt,
   };
 
