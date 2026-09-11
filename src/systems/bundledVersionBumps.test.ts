@@ -54,11 +54,11 @@ interface Fingerprint {
  */
 const FINGERPRINTS: Record<string, Fingerprint> = {
   'classic-fantasy/system.json': { version: 3, hash: '753df20550b1d64a' },
-  'classic-fantasy/sheet.json': { version: 7, hash: '56dcaa0ca7bd67e7' },
+  'classic-fantasy/sheet.json': { version: 8, hash: 'c49a19522c387d59' },
   'savage-worlds/system.json': { version: 7, hash: 'a3be2b7150842d78' },
-  'savage-worlds/sheet.json': { version: 4, hash: 'f0f0310965793924' },
+  'savage-worlds/sheet.json': { version: 5, hash: '3d7be8f99aa172b0' },
   'traveller/system.json': { version: 24, hash: '9f35a813067bc656' },
-  'traveller/sheet.json': { version: 8, hash: '27c4b001cf2aebaf' },
+  'traveller/sheet.json': { version: 9, hash: '3cba59389c7e5989' },
 };
 
 /**

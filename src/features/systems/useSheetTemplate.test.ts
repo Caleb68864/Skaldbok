@@ -3,12 +3,12 @@ import { resolveSheetTemplate } from './useSheetTemplate';
 
 const validV1 = {
   version: 1,
-  sheet: { layout: 'default', regions: [['SomeCard']] },
+  sheet: { regions: [['SomeCard']] },
 };
 
 const validV2 = {
   version: 2,
-  sheet: { layout: 'default', regions: [['SomeCard'], ['OtherCard']] },
+  sheet: { regions: [['SomeCard'], ['OtherCard']] },
 };
 
 describe('resolveSheetTemplate', () => {
@@ -41,7 +41,7 @@ describe('resolveSheetTemplate', () => {
   it('keeps the cache and writes nothing when versions are equal (no IndexedDB thrash)', () => {
     // Same version, different content: the tie must keep the cached copy and NOT
     // rewrite it, so a load doesn't churn IndexedDB every time.
-    const bundledSameVersion = { version: 1, sheet: { layout: 'default', regions: [['DifferentCard']] } };
+    const bundledSameVersion = { version: 1, sheet: { regions: [['DifferentCard']] } };
     const result = resolveSheetTemplate(bundledSameVersion, validV1);
     expect(result.template).toEqual(validV1);
     expect(result.cacheWrite).toBeNull();

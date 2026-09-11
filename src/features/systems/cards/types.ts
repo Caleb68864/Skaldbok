@@ -17,12 +17,16 @@ export type CardEntry = z.infer<typeof cardEntrySchema>;
 export type GridRegion = z.infer<typeof gridRegionSchema>;
 /** A layout region: a full-width `CardEntry[]` stack, or a `{ columns, cells }` grid row. */
 export type Region = z.infer<typeof regionSchema>;
-/** A surface (play/sheet/print) layout: an ordered list of {@link Region}s. */
+/** A surface layout: an ordered list of {@link Region}s. */
 export type SurfaceLayout = z.infer<typeof surfaceLayoutSchema>;
 /**
  * A full sheet template: `version` plus optional `play` and `sheet`
- * {@link SurfaceLayout}s. The `print` surface is reserved but not yet consumed —
- * the print route renders via a hardcoded component today.
+ * {@link SurfaceLayout}s and reusable `components`.
+ *
+ * @remarks
+ * There are two surfaces, not three. A reserved `print` surface used to be
+ * declared here and rendered by nothing — `/print` goes through the hardcoded
+ * `PrintableSheet` component. See the note in `schema.ts`.
  */
 export type SheetTemplate = z.infer<typeof sheetTemplateSchema>;
 /** A reusable community component: `{ name, props?, body }`, expanded via `$prop` slots. */

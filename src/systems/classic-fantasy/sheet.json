@@ -1,7 +1,6 @@
 {
-  "version": 7,
+  "version": 8,
   "play": {
-    "layout": "three-column",
     "regions": [
       {
         "columns": "1fr minmax(200px, 1fr) 1fr",
