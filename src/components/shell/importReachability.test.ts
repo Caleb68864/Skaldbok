@@ -30,18 +30,20 @@ const HEADER = join(__dirname, 'CampaignHeader.tsx');
  * matched by balancing braces and parentheses rather than by regex, so
  * reformatting the JSX cannot quietly turn the guard off.
  */
-function withoutCampaignGatedRegions(source: string): string {
+function withoutCampaignGatedRegions(source: string): { ungated: string; removed: number } {
   const OPENER = '{activeCampaign && (';
   let out = '';
   let index = 0;
+  let removed = 0;
 
   for (;;) {
     const start = source.indexOf(OPENER, index);
     if (start === -1) {
       out += source.slice(index);
-      return out;
+      return { ungated: out, removed };
     }
     out += source.slice(index, start);
+    removed++;
 
     // Walk from the region's opening brace until it balances.
     let depth = 0;
@@ -69,8 +71,29 @@ describe('the Import action is reachable without a campaign', () => {
     expect(source).toContain('{activeCampaign && (');
   });
 
+  it('strips every campaign-gated region, not merely one of them', () => {
+    // The residual the `toContain` above leaves. There are two of these regions,
+    // so a reformatted opener in *one* of them — `{activeCampaign &&(`, or the
+    // `(` moved to the next line — leaves that region unstripped while the other
+    // still satisfies the self-check. Import could then sit inside the
+    // unrecognised gate and every assertion below would pass.
+    //
+    // Counted independently of the stripper: a positive `activeCampaign &&`,
+    // excluding the negated `!activeCampaign &&` that renders the no-campaign
+    // prompt.
+    const gates = [...source.matchAll(/(?<![!\w])activeCampaign\s*&&/g)].length;
+    const { removed } = withoutCampaignGatedRegions(source);
+    expect(
+      removed,
+      `CampaignHeader has ${gates} campaign gates and this guard recognised ${removed}. `
+      + 'The ones it cannot see are regions it will not strip, so anything inside them '
+      + 'reads as ungated. Restore the `{activeCampaign && (` spelling, or teach the '
+      + 'walker the new one.',
+    ).toBe(gates);
+  });
+
   it('calls startImport outside every activeCampaign-gated region', () => {
-    const ungated = withoutCampaignGatedRegions(source);
+    const { ungated } = withoutCampaignGatedRegions(source);
     expect(
       ungated,
       'Import is gated on an active campaign again. A device restoring a backup '
@@ -80,7 +103,7 @@ describe('the Import action is reachable without a campaign', () => {
   });
 
   it('still gates the campaign exports, which genuinely need a campaign', () => {
-    const ungated = withoutCampaignGatedRegions(source);
+    const { ungated } = withoutCampaignGatedRegions(source);
     expect(ungated).not.toContain('exportCampaign(');
     expect(ungated).not.toContain('exportAllNotes(');
   });

@@ -581,13 +581,13 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
     <div>
       {showToolbar && (
         <div className="flex flex-wrap gap-2 p-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] border-b-0 rounded-t">
-          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} className={toolbarBtnClass(editor.isActive('bold'))}>B</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} className={toolbarBtnClass(editor.isActive('italic'))}><em>I</em></button>
-          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} className={toolbarBtnClass(editor.isActive('heading', { level: 2 }))}>H2</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} className={toolbarBtnClass(editor.isActive('heading', { level: 3 }))}>H3</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} className={toolbarBtnClass(editor.isActive('bulletList'))}>• List</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} className={toolbarBtnClass(editor.isActive('orderedList'))}>1. List</button>
-          <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} className={toolbarBtnClass(editor.isActive('blockquote'))}>❝</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleBold().run()} aria-pressed={editor.isActive('bold')} className={toolbarBtnClass(editor.isActive('bold'))}>B</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleItalic().run()} aria-pressed={editor.isActive('italic')} className={toolbarBtnClass(editor.isActive('italic'))}><em>I</em></button>
+          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} aria-pressed={editor.isActive('heading', { level: 2 })} className={toolbarBtnClass(editor.isActive('heading', { level: 2 }))}>H2</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} aria-pressed={editor.isActive('heading', { level: 3 })} className={toolbarBtnClass(editor.isActive('heading', { level: 3 }))}>H3</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} aria-pressed={editor.isActive('bulletList')} className={toolbarBtnClass(editor.isActive('bulletList'))}>• List</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} aria-pressed={editor.isActive('orderedList')} className={toolbarBtnClass(editor.isActive('orderedList'))}>1. List</button>
+          <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} aria-label="Blockquote" aria-pressed={editor.isActive('blockquote')} className={toolbarBtnClass(editor.isActive('blockquote'))}>❝</button>
           <button type="button" onClick={() => {
             if (editor.isActive('link')) {
               editor.chain().focus().unsetLink().run();
@@ -595,7 +595,7 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
               const url = window.prompt('URL');
               if (url) editor.chain().focus().setLink({ href: url }).run();
             }
-          }} className={toolbarBtnClass(editor.isActive('link'))}>Link</button>
+          }} aria-pressed={editor.isActive('link')} className={toolbarBtnClass(editor.isActive('link'))}>Link</button>
         </div>
       )}
       <EditorContent

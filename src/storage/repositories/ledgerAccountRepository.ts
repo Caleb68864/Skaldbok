@@ -1,7 +1,7 @@
 import { db } from '../db/client';
 import type { LedgerAccount } from '../../types/ledgerAccount';
 import { DEFAULT_PRIMARY_ACCOUNT_NAME } from '../../config/defaults/ledger';
-import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
+import { excludeDeleted, generateSoftDeleteTxId, onlyDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
 
@@ -178,7 +178,7 @@ export async function softDelete(
 
   await db.ledgerAccounts.update(id, {
     deletedAt: nowISO(),
-    softDeletedBy: txId ?? generateId(),
+    softDeletedBy: txId ?? generateSoftDeleteTxId(),
   });
   return null;
 }

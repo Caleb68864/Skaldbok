@@ -25,8 +25,16 @@ import { createNote } from './noteRepository';
  * a toast, the two were indistinguishable.
  *
  * `preserve-caught-error` is now `error` in `eslint.config.js`, which is the
- * guard for all 129 sites. These tests are the reason: they assert the chain is
+ * guard for every site. These tests are the reason: they assert the chain is
  * actually walkable at runtime, not merely that a token appears in the source.
+ *
+ * **No number is written down here any more, and that is the fix.** The count
+ * has been stated as 119 (`eslint.config.js`), 128 (the commit body), 129 (here
+ * and in `O2`) and 130 (scan 2 §18) — four numbers for one set, each recorded as
+ * fact, none of them re-measured. A count in prose is a claim that goes stale
+ * silently, which is precisely the shape this codebase keeps finding and
+ * deleting rather than correcting. The census below derives it, and the two
+ * sentences that used to carry a figure now describe the change instead.
  */
 
 const REPO_DIR = __dirname;
@@ -184,5 +192,39 @@ describe('every repository rethrow carries a cause', () => {
       + 'as an ordinary validation failure. `preserve-caught-error` is `error` '
       + 'in eslint.config.js for the same reason.',
     ).toEqual([]);
+  });
+
+  it('still carries a cause chain worth the rule', () => {
+    // The census, derived rather than recorded. It exists so the rule cannot
+    // quietly stop applying to anything — a layer that had lost its causes
+    // would leave this at a handful and fail — and so nobody writes the number
+    // into a comment again.
+    //
+    // Comments are stripped first: two lines in `mergeEngine.ts` *discuss*
+    // `{ cause: … }` in prose, and every naive `grep -c` of this pattern,
+    // including the one that produced the most recent correction, counted them
+    // as code.
+    const SRC = join(REPO_DIR, '../..');
+    const count = (dir: string): number => {
+      let total = 0;
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = join(dir, entry.name);
+        if (entry.isDirectory()) { total += count(path); continue; }
+        if (!/\.tsx?$/.test(entry.name) || entry.name.includes('.test.')) continue;
+        const code = readFileSync(path, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/(^|\s)\/\/[^\n]*/g, '$1');
+        total += [...code.matchAll(/\{\s*cause:/g)].length;
+      }
+      return total;
+    };
+
+    const sites = count(SRC);
+    expect(
+      sites,
+      `only ${sites} \`{ cause: … }\` sites remain in non-test src. The rule was taken `
+      + 'across the whole repository layer; a number this low means the causes have been '
+      + 'unwound, not that the layer shrank.',
+    ).toBeGreaterThan(100);
   });
 });

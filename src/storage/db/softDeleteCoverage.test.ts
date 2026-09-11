@@ -3,7 +3,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { db } from './client';
 import { TABLES_WITHOUT_SOFT_DELETE, TABLES_OUTSIDE_BUNDLE } from '../../types/bundleTables';
 
@@ -204,24 +204,112 @@ describe('CLAUDE.md and AGENTS.md', () => {
 });
 
 describe('the documented relationship types', () => {
-  /** Every `relationshipType` literal written anywhere in `src`. */
-  function relationshipTypesInSource(): string[] {
+  /**
+   * Every shape this codebase writes or reads a relationship-type literal in.
+   *
+   * @remarks
+   * The scan used to be two patterns — `relationshipType: '…'` and
+   * `getLinksFrom/To(…, '…')`, single quotes only. Three shapes already present
+   * in the tree were invisible to it, and the cost is not hypothetical: a new
+   * relationship type introduced through any of them is documented nowhere and
+   * this test says nothing.
+   *
+   * - **A comparison.** `collectors.ts` decides what an export carries with
+   *   `link.relationshipType === 'represents'`. A type that is only ever *read*
+   *   is still a type the next reader needs to know exists.
+   * - **A double-quoted literal.** Nothing in the tree writes one today, which
+   *   is exactly why it would slip through — the pattern's single quote was
+   *   habit, not a rule.
+   * - **A positional argument.** `noteCreationService.ensureLink` takes the
+   *   type as its last parameter, so `ensureLink(note.id, 'note', sessionId,
+   *   'session', 'introduced_in')` names a type in a position neither old
+   *   pattern looked at. `introduced_in` was covered only by accident, because
+   *   an unrelated `getLinksFrom` call in the export path spells it too.
+   */
+  const LITERAL_SHAPES: RegExp[] = [
+    /relationshipType:\s*(['"])([a-z_]+)\1/g,
+    /relationshipType\s*[!=]==\s*(['"])([a-z_]+)\1/g,
+    /getLinks(?:From|To)\([^,]+,\s*(['"])([a-z_]+)\1/g,
+    /ensureLink\([^()]*,\s*(['"])([a-z_]+)\1\s*\)/g,
+  ];
+
+  /**
+   * Sites where the type is a variable, so no pattern can resolve it.
+   *
+   * @remarks
+   * Reported rather than skipped. A guard that silently narrows its own domain
+   * when it meets something it cannot parse is the failure mode every gap in
+   * this codebase's guards has had — so an unresolvable site is either
+   * allowlisted here with a reason, or it fails.
+   */
+  const UNRESOLVABLE_SHAPES: RegExp[] = [
+    /relationshipType\s*[,}]/g,
+    /getLinks(?:From|To)\([^,]+,\s*([A-Za-z_$][\w$]*)\s*[,)]/g,
+  ];
+
+  /** Files allowed to pass a relationship type around as a variable. */
+  const PASSES_THE_TYPE_THROUGH: Record<string, string> = {
+    'storage/repositories/entityLinkRepository.ts':
+      '`softDeleteLinksFromEntity(fromEntityId, relationshipType, …)` forwards its own parameter '
+      + 'to `getLinksFrom`. This is the repository that owns the edge table; the type it deletes '
+      + 'is whatever its caller names, and its callers spell literals.',
+    'storage/noteCreationService.ts':
+      '`ensureLink` takes the type as a parameter and forwards it to `createLink` and '
+      + '`getLinksFrom`. Every caller spells a literal, and those literals are read by the '
+      + 'positional-argument shape above, so nothing is lost — the variable is the hop, not the source.',
+  };
+
+  /** Every relationship type written or read in `src`, and every site that hides one. */
+  function scanSource(): { types: string[]; unresolvable: string[] } {
     const found = new Set<string>();
+    const unresolvable = new Set<string>();
     const walk = (dir: string) => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         const path = join(dir, entry.name);
         if (entry.isDirectory()) { walk(path); continue; }
         if (!/\.tsx?$/.test(entry.name) || entry.name.includes('.test.')) continue;
         const source = readFileSync(path, 'utf8');
-        for (const m of source.matchAll(/relationshipType:\s*'([a-z_]+)'/g)) found.add(m[1]!);
-        for (const m of source.matchAll(/getLinks(?:From|To)\([^,]+,\s*'([a-z_]+)'/g)) found.add(m[1]!);
+        const rel = relative(join(ROOT, 'src'), path).split('\\').join('/');
+        for (const pattern of LITERAL_SHAPES) {
+          for (const m of source.matchAll(pattern)) found.add(m[2]!);
+        }
+        for (const pattern of UNRESOLVABLE_SHAPES) {
+          for (const m of source.matchAll(pattern)) {
+            // A parameter or property *declaration* names no type — `relationshipType:
+            // string` is the contract, not a write. The Dexie compound-index strings
+            // (`[fromEntityId+relationshipType]`) are excluded by the same token.
+            if (/^relationshipType\s*[,}]$/.test(m[0]) && /relationshipType\s*\}/.test(m[0])) continue;
+            unresolvable.add(`${rel}: ${m[0].trim()}`);
+          }
+        }
       }
     };
     walk(join(ROOT, 'src'));
-    return [...found].sort();
+    return { types: [...found].sort(), unresolvable: [...unresolvable].sort() };
   }
 
-  const types = relationshipTypesInSource();
+  const { types, unresolvable } = scanSource();
+
+  it('reports every site whose relationship type it cannot read', () => {
+    const offenders = unresolvable.filter(
+      site => !Object.keys(PASSES_THE_TYPE_THROUGH).some(file => site.startsWith(`${file}:`)),
+    );
+    expect(
+      offenders,
+      `${offenders.join('; ')} passes a relationship type this scan cannot resolve, so a `
+      + 'type introduced there would be documented nowhere and this file would stay green. '
+      + 'Spell the literal at the call, or record the file in PASSES_THE_TYPE_THROUGH with '
+      + 'a reason saying where the literals actually are.',
+    ).toEqual([]);
+    // And the allowlist cannot rot: an entry describing nothing is a permission
+    // left lying around for the next person to inherit.
+    for (const file of Object.keys(PASSES_THE_TYPE_THROUGH)) {
+      expect(
+        unresolvable.some(site => site.startsWith(`${file}:`)),
+        `${file} is allowlisted as passing the type through, but no longer does — remove the entry.`,
+      ).toBe(true);
+    }
+  });
   const claude = readFileSync(join(ROOT, 'CLAUDE.md'), 'utf8');
   const agents = readFileSync(join(ROOT, 'AGENTS.md'), 'utf8');
   const repository = readFileSync(

@@ -92,6 +92,16 @@ describe('syncNote concurrency', () => {
 
 describe('unresolved placeholders', () => {
   beforeEach(async () => {
+    // Two tables by hand rather than `test-utils/resetDatabase`, and
+    // deliberately so — recorded here because this is the one hand-listed reset
+    // left in the suite and it reads like the dialect that module replaced.
+    //
+    // It is not the same operation. The notes these tests sync are served from
+    // `noteOverrides`, not from Dexie, so emptying the whole database would
+    // clear tables the fixtures never fill and say nothing about the two the
+    // subject actually writes. `resetDatabase`'s docstring names the sanctioned
+    // dialects; this is a narrower one, on purpose, for a test whose subject is
+    // a projection of two tables.
     const { db } = await import('../../storage/db/client');
     await db.kb_nodes.clear();
     await db.kb_edges.clear();

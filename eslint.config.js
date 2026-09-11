@@ -56,13 +56,20 @@ export default tseslint.config(
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
 
-      // On. This was deferred when the config landed — 129 mechanical rewrites
-      // of error handling in the same change that introduces a linter is how a
-      // linter gets reverted — and taken afterwards, as its own commit, once
+      // On. This was deferred when the config landed — rewriting every catch in
+      // the repository layer in the same change that introduces a linter is how
+      // a linter gets reverted — and taken afterwards, as its own commit, once
       // the config was green.
       //
-      // It matters more here than the rule's name suggests. Every one of those
-      // sites was in `src/storage/repositories/`, and every one interpolated the
+      // The count that stood here said 129; the commit body said 128, the
+      // roadmap 130, and a later re-measure 140. It is not written down any
+      // more, in any of them. `errorCause.test.ts` derives it, which is the only
+      // form of that sentence that cannot go stale. The same goes for "all in
+      // repositories", which stopped being true when `mergeEngine` and
+      // `linkSyncEngine` grew cause-carrying rethrows of their own.
+      //
+      // It matters more here than the rule's name suggests. Almost every one of
+      // those sites is in `src/storage/repositories/`, and every one interpolated the
       // caught error into a string: `` `${e}` `` renders a Dexie failure as
       // "ConstraintError: Key already exists" and throws away both the stack and
       // `err.name`. In an app whose only copy of the user's data is one

@@ -1,9 +1,10 @@
 import { db } from '../db/client';
 import type { Ship } from '../../types/ship';
 import { CURRENT_SHIP_SCHEMA_VERSION, upgradeShip } from '../../types/ship';
-import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
+import { excludeDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
+import { createDeletedListing, createHardDelete, createSoftDeleteOps } from './createRepository';
 
 /**
  * Repository for {@link Ship} rows. Ships are campaign-scoped and optionally
@@ -100,16 +101,31 @@ export async function update(id: string, changes: Partial<Ship>): Promise<void> 
   await db.ships.put({ ...upgradeShip(stored), ...changes, updatedAt: nowISO() });
 }
 
-/** Soft-deletes a ship (reversible via {@link restore}). */
-export async function softDelete(id: string): Promise<void> {
-  const txId = generateId();
-  await db.ships.update(id, { deletedAt: nowISO(), softDeletedBy: txId });
-}
+/**
+ * The soft-delete lifecycle, from the shared factory.
+ *
+ * @remarks
+ * `shipRepository` was the worst of the twenty-four for divergence and the only
+ * entry on all three of `repositoryConventions.test.ts`'s write lists: its
+ * `softDelete` took no `txId` at all — so a ship could not go down with its
+ * campaign or come back with it — it re-stamped `softDeletedBy` on an
+ * already-deleted row, orphaning the first cascade, and it minted the id with
+ * the raw `generateId` rather than the alias the cascade sites are grepped by.
+ * All three are closed by construction now, and `softDelete` gained the
+ * optional `txId` parameter without breaking its callers.
+ */
+const lifecycle = createSoftDeleteOps({ repository: 'shipRepository', table: 'ships' });
+
+/**
+ * Soft-deletes a ship (reversible via {@link restore}).
+ *
+ * @param id - Ship to delete.
+ * @param txId - Cascade to join, when a parent is taking this ship down with it.
+ */
+export const softDelete = lifecycle.softDelete;
 
 /** Restores a soft-deleted ship. */
-export async function restore(id: string): Promise<void> {
-  await db.ships.update(id, { deletedAt: undefined, softDeletedBy: undefined });
-}
+export const restore = lifecycle.restore;
 
 /**
  * Every soft-deleted Ship in a campaign, newest deletion first.
@@ -118,19 +134,12 @@ export async function restore(id: string): Promise<void> {
  * Feeds the Trash screen, which is the only way a user gets one of these back.
  * Deleting a ship is a soft delete with no cascade, so the row and its
  * counters come back exactly as they were.
- *
- * @param campaignId - Campaign whose trash is being listed.
  */
-export async function getDeleted(campaignId: string): Promise<Ship[]> {
-  try {
-    const rows = await db.ships.where('campaignId').equals(campaignId).toArray();
-    return onlyDeleted(rows);
-  } catch (e) {
-    throw new Error(`shipRepository.getDeleted failed: ${e}`, { cause: e });
-  }
-}
+export const getDeleted = createDeletedListing<Ship>({
+  repository: 'shipRepository',
+  table: 'ships',
+  scopeIndex: 'campaignId',
+});
 
 /** Permanently removes a ship. Internal — never call from UI. */
-export async function hardDelete(id: string): Promise<void> {
-  await db.ships.delete(id);
-}
+export const hardDelete = createHardDelete({ repository: 'shipRepository', table: 'ships' });

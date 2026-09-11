@@ -29,9 +29,38 @@ import { join } from 'node:path';
  * **A new repository is on none of them and must therefore comply.** That is
  * the point: this stops the drift widening while the existing entries are worked
  * off one at a time.
+ *
+ * ## The factory, and why it is checked rather than trusted
+ *
+ * `createRepository.ts` now writes the lifecycle once, built to what this file
+ * states. Five repositories delegate to it and three whole exception lists
+ * emptied as a result — which is also the moment a source-scanning guard is most
+ * at risk: `export const softDelete = lifecycle.softDelete` is not
+ * `export async function softDelete`, so a guard reading declarations would
+ * simply stop seeing those five and report nothing.
+ *
+ * It does not. Three things keep that honest:
+ *
+ * 1. {@link exportedNames} reads `export const` as well as `export function`, so
+ *    a factory-backed repository is still *counted* — the floor assertion in
+ *    "found the repository layer" stays load-bearing.
+ * 2. A repository is excused the pattern checks **only** if its `softDelete`
+ *    demonstrably comes from the factory. Anything else — a repository that
+ *    exports a `softDelete` this file cannot attribute to either route — is
+ *    reported, not skipped.
+ * 3. The factory itself is held to the same three patterns, in the same run. It
+ *    is one file, so a divergence there is a divergence everywhere; checking it
+ *    costs three assertions and closes the obvious laundering route, which is to
+ *    move a non-compliant write behind a helper the guard does not read.
  */
 
 const REPOS_DIR = join(process.cwd(), 'src/storage/repositories');
+
+/**
+ * The shared lifecycle factory. Not a repository: it owns no entity and names
+ * no table.
+ */
+const FACTORY = 'createRepository';
 
 interface RepoFunction {
   repo: string;
@@ -67,10 +96,61 @@ const repoSources = new Map(
     .map(f => [f.replace(/\.ts$/, ''), stripComments(readFileSync(join(REPOS_DIR, f), 'utf8'))]),
 );
 
+/**
+ * Names a module exports, by either route.
+ *
+ * @remarks
+ * `export const softDelete = lifecycle.softDelete` is as much an export as
+ * `export async function softDelete`. Reading only the second is how a guard
+ * over a hand-written layer quietly stops covering a layer that has been
+ * factored.
+ */
+function exportedNames(source: string): Set<string> {
+  const names = new Set<string>();
+  for (const match of source.matchAll(/\bexport\s+(?:async\s+)?function\s+([A-Za-z0-9_]+)/g)) {
+    names.add(match[1]!);
+  }
+  for (const match of source.matchAll(/\bexport\s+const\s+([A-Za-z0-9_]+)\s*(?:[:=])/g)) {
+    names.add(match[1]!);
+  }
+  return names;
+}
+
 /** The canonical single-row user-facing delete: `softDelete(id, txId?)`. */
 const canonical = functions.filter(fn => fn.name === 'softDelete');
-/** Repositories exposing one. */
-const softDeleting = [...new Set(canonical.map(fn => fn.repo))].sort();
+
+/**
+ * Repositories whose `softDelete` is built by the factory, so the three
+ * patterns below are satisfied by construction.
+ *
+ * @remarks
+ * Detected from the two facts together — the module calls `createSoftDeleteOps`
+ * *and* exports a `softDelete` — rather than from the call alone, so a file that
+ * takes the factory and then exports something else of its own is not excused by
+ * it.
+ */
+const factoryBacked = new Set(
+  [...repoSources.entries()]
+    .filter(
+      ([repo, source]) =>
+        repo !== FACTORY
+        && /\bcreateSoftDeleteOps\s*\(/.test(source)
+        && exportedNames(source).has('softDelete'),
+    )
+    .map(([repo]) => repo),
+);
+
+/** Repositories exposing a single-row `softDelete`, by either route. */
+const softDeleting = [
+  ...new Set([...canonical.map(fn => fn.repo), ...factoryBacked]),
+].filter(repo => repo !== FACTORY).sort();
+
+/** Every repository exporting a `softDelete` this file can attribute to neither route. */
+const unattributedSoftDeletes = [...repoSources.entries()]
+  .filter(([repo, source]) => repo !== FACTORY && exportedNames(source).has('softDelete'))
+  .map(([repo]) => repo)
+  .filter(repo => !factoryBacked.has(repo) && !canonical.some(fn => fn.repo === repo))
+  .sort();
 
 /** Asserts a divergence list names only repositories that still diverge. */
 function assertListIsCurrent(
@@ -91,6 +171,23 @@ describe('repository soft-delete conventions', () => {
     // Every check below is a filter over these, so a broken walk passes them all.
     expect(repoSources.size).toBeGreaterThanOrEqual(20);
     expect(softDeleting.length).toBeGreaterThanOrEqual(15);
+    // And the factory has to be reachable, or "factory-backed" excuses nothing
+    // because nothing is.
+    expect(repoSources.has(FACTORY), 'the lifecycle factory is missing').toBe(true);
+    expect(factoryBacked.size, 'no repository uses the factory').toBeGreaterThan(0);
+  });
+
+  it('can account for every softDelete in the layer', () => {
+    // The branch that would let the checks below go quiet. A `softDelete` this
+    // file can attribute to neither a declaration it can read nor the factory
+    // is excused by *default* — which is the shape of every guard gap in this
+    // codebase. Report it instead.
+    expect(
+      unattributedSoftDeletes,
+      `${unattributedSoftDeletes.join(', ')} exports a softDelete that is neither an ` +
+      '`export async function` this file can read nor built by `createSoftDeleteOps`. ' +
+      'It is therefore checked by nothing. Declare it, or build it from the factory.',
+    ).toEqual([]);
   });
 
   describe('softDelete can join a cascade', () => {
@@ -98,13 +195,16 @@ describe('repository soft-delete conventions', () => {
      * A `softDelete` with no `txId` parameter can never be enlisted by a
      * parent's cascade: whatever it deletes gets its own transaction id, so a
      * later `restore` of the parent leaves it behind.
+     *
+     * @remarks
+     * Empty. `shipRepository` was the only entry — its `softDelete` took `(id)`
+     * alone, so a ship could not go down with its campaign or come back with
+     * it, and `ledgerRepository` documented choosing the wider signature
+     * "rather than `shipRepository`'s narrower one", which recorded the drift
+     * without closing it. Both come from the factory now, whose signature is
+     * `(id, txId?)`.
      */
-    const NO_TX_ID: Record<string, string> = {
-      shipRepository:
-        'takes only (id) — a ship cannot go down with its campaign or come back with it. ' +
-        'ledgerRepository documents choosing the wider signature "rather than shipRepository\'s narrower one", ' +
-        'so the drift is known; widening it is a signature change with call sites to follow.',
-    };
+    const NO_TX_ID: Record<string, string> = {};
 
     const missing = new Set(
       canonical.filter(fn => !/^\s*\([^)]*\btxId\b/.test(fn.body)).map(fn => fn.repo),
@@ -115,7 +215,7 @@ describe('repository soft-delete conventions', () => {
     });
 
     it.each(softDeleting)('%s.softDelete accepts a txId', repo => {
-      if (NO_TX_ID[repo]) return;
+      if (NO_TX_ID[repo] || factoryBacked.has(repo)) return;
       expect(
         missing.has(repo),
         `${repo}.softDelete takes no txId, so it can never be enlisted in a parent's ` +
@@ -129,14 +229,15 @@ describe('repository soft-delete conventions', () => {
      * Re-deleting an already-deleted row overwrites `softDeletedBy` with a
      * fresh transaction id, orphaning the first cascade: `restore` then brings
      * back the row and not its children.
+     *
+     * @remarks
+     * Empty. All five entries — ledger, ledgerSplit, recurringBill, routePlan
+     * and ship — were the same missing line, and all five now take the guard
+     * from the factory. `ledgerSplitRepository`'s entry was the one that said
+     * what the cost is: splits are cascaded from their entry, so a re-stamp
+     * strands them, and restoring the entry brings back the row without them.
      */
-    const NO_GUARD: Record<string, string> = {
-      ledgerRepository: 'no `if (row.deletedAt) return`; a re-delete re-stamps the txId',
-      ledgerSplitRepository: 'same; splits are cascaded from the entry, so a re-stamp strands them',
-      recurringBillRepository: 'same',
-      routePlanRepository: 'same',
-      shipRepository: 'same, and it has no txId either — see the list above',
-    };
+    const NO_GUARD: Record<string, string> = {};
 
     const unguarded = new Set(
       canonical.filter(fn => !/\.deletedAt\s*\)\s*return/.test(fn.body)).map(fn => fn.repo),
@@ -147,7 +248,7 @@ describe('repository soft-delete conventions', () => {
     });
 
     it.each(softDeleting)('%s.softDelete no-ops on an already-deleted row', repo => {
-      if (NO_GUARD[repo]) return;
+      if (NO_GUARD[repo] || factoryBacked.has(repo)) return;
       expect(
         unguarded.has(repo),
         `${repo}.softDelete does not check \`if (row.deletedAt) return\`. Deleting ` +
@@ -162,16 +263,19 @@ describe('repository soft-delete conventions', () => {
      * `generateSoftDeleteTxId` is a thin alias over `generateId` and exists
      * purely so the cascade sites are greppable. A bare `generateId()` in a
      * `softDelete` defeats the one thing the alias is for.
+     *
+     * @remarks
+     * Empty. Five of the seven entries moved onto the factory, which mints
+     * through the alias; the two that keep a hand-written `softDelete` because
+     * it does more than tombstone a row — `ledgerAccountRepository`, which
+     * refuses the delete when entries or bills still name the account, and
+     * `routeRepository`, which closes the gap in the stop order — were changed
+     * to call the alias directly. The two duplicate-collapsing soft deletes in
+     * `ledgerSplitRepository.getOrCreateForCampaign` and
+     * `routePlanRepository.getOrCreateForCampaign` were switched with them: they
+     * are cascade sites too, and the grep the alias exists for should find them.
      */
-    const BARE_GENERATE_ID: Record<string, string> = {
-      ledgerAccountRepository: 'uses generateId() directly',
-      ledgerRepository: 'uses generateId() directly',
-      ledgerSplitRepository: 'uses generateId() directly',
-      recurringBillRepository: 'uses generateId() directly',
-      routePlanRepository: 'uses generateId() directly',
-      routeRepository: 'uses generateId() directly',
-      shipRepository: 'uses generateId() directly',
-    };
+    const BARE_GENERATE_ID: Record<string, string> = {};
 
     const bare = new Set(
       canonical.filter(fn => !fn.body.includes('generateSoftDeleteTxId()')).map(fn => fn.repo),
@@ -182,13 +286,59 @@ describe('repository soft-delete conventions', () => {
     });
 
     it.each(softDeleting)('%s.softDelete uses generateSoftDeleteTxId', repo => {
-      if (BARE_GENERATE_ID[repo]) return;
+      if (BARE_GENERATE_ID[repo] || factoryBacked.has(repo)) return;
       expect(
         bare.has(repo),
         `${repo}.softDelete mints its transaction id with generateId() rather than ` +
         'generateSoftDeleteTxId(). The alias exists so every cascade site is ' +
         'findable with one grep; using the raw generator makes this one invisible.',
       ).toBe(false);
+    });
+  });
+
+  describe('the factory is held to the same three patterns', () => {
+    /**
+     * The laundering route, closed.
+     *
+     * @remarks
+     * Every check above excuses a factory-backed repository on the grounds that
+     * the factory complies. That is only worth anything if something says so.
+     * These read `createRepository.ts` with the *same* three patterns the
+     * hand-written repositories are read with, so "move it behind the factory"
+     * cannot become a way to stop being checked — and because it is one file,
+     * a divergence here would be a divergence in every repository at once.
+     *
+     * **The slice below is the load-bearing part, and the first version of it
+     * was wrong.** The `SoftDeleteOps` interface declares
+     * `softDelete(id: string, txId?: string)` a few lines above the
+     * implementation, so a pattern searching the whole file matched the
+     * *declaration*: a probe that removed `txId` from the implementation left
+     * all four assertions green, because the file still contained the words —
+     * in the type. The search therefore starts past the interface, at
+     * `export function createSoftDeleteOps`, and the implementation is told
+     * apart by its `async`, which an interface member cannot carry.
+     */
+    const factory = repoSources.get(FACTORY) ?? '';
+    const implementation = factory.slice(factory.indexOf('export function createSoftDeleteOps'));
+    const softDeleteImpl = /async softDelete\([^)]*\)[\s\S]*?\n {4}\},/.exec(implementation)?.[0] ?? '';
+
+    it('reached the implementation, not the interface describing it', () => {
+      // Without the first line the assertions below pass on an empty string;
+      // without the second they pass on the interface.
+      expect(softDeleteImpl, 'could not find the factory softDelete').toContain('rows.update(');
+      expect(softDeleteImpl, 'matched a declaration rather than a body').toContain('async softDelete(');
+    });
+
+    it('takes a txId', () => {
+      expect(/async softDelete\(id: string, txId\?: string\)/.test(softDeleteImpl)).toBe(true);
+    });
+
+    it('refuses to re-delete', () => {
+      expect(/\.deletedAt\s*\)\s*return/.test(softDeleteImpl)).toBe(true);
+    });
+
+    it('mints through the shared helper', () => {
+      expect(softDeleteImpl).toContain('generateSoftDeleteTxId()');
     });
   });
 
@@ -221,6 +371,9 @@ describe('repository soft-delete conventions', () => {
      * matters after a partial migration.
      */
     const UNVALIDATED_READS: Record<string, string> = {
+      createRepository:
+        'not a repository — it owns no entity and no schema. It reads only the four soft-delete '
+        + 'columns, through `Table<SoftDeletableRow>`, so there is nothing entity-shaped to parse.',
       characterRepository: 'upgrades on read instead (upgradeCharacter); deliberate — one malformed field must not stop the library loading',
       inventoryContainerRepository: 'no schema check on read',
       kbEdgeRepository: 'KB graph is a derived projection of notes, rebuilt by syncNote',
@@ -282,8 +435,24 @@ function catchBlocks(body: string): string[] {
   return blocks;
 }
 
-/** A Dexie write — the operations that can fail on a full disk. */
-const WRITES_A_ROW = /\bdb\.[A-Za-z0-9_]+\s*\.\s*(?:add|put|update|bulkAdd|bulkPut|bulkUpdate|bulkDelete|delete|clear)\s*\(/;
+/**
+ * A Dexie write — the operations that can fail on a full disk.
+ *
+ * @remarks
+ * The table is `db.notes` **or** `db.table(<expr>)`. The second form was
+ * missing, and it is not exotic: it is this codebase's own idiom, it is what the
+ * lifecycle factory writes through, and `hardDeleteReachability.test.ts` had
+ * already been widened for exactly this — its `db.notes.delete` pattern could
+ * not see `db.table('notes').delete`, because the `('notes')` call sits where
+ * the pattern expects a `.`. The same hole was here, in the census that decides
+ * whether a failed write reaches the caller.
+ *
+ * A binding is allowed between the accessor and the operation
+ * (`const rows = db.table(...); await rows.update(...)`), since that is how the
+ * factory reads: matching the two halves separately would be a pattern that
+ * cannot see a wrapped chain.
+ */
+const WRITES_A_ROW = /\bdb\s*\.\s*(?:table\s*(?:<[^<>]*>\s*)?\([^()]*\)|[A-Za-z0-9_]+)[\s\S]{0,200}?\.\s*(?:add|put|update|bulkAdd|bulkPut|bulkUpdate|bulkDelete|delete|clear)\s*\(/;
 
 describe('a failed write reaches the caller', () => {
   /**

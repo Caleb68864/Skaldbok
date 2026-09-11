@@ -19,6 +19,18 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > markers below were added as that work landed and were not re-verified in
 > this pass.
 
+> **Reconciled 2026-09-11 (second entry).** Four more commits closed the last of
+> the queue — **workstream Q**: the repository factory (`S22`), the second scan's
+> ~20-row tail, the `logNpcCapture` decision, and `H4`'s banner. `H4`'s automatic
+> snapshot is **declined rather than deferred**, with the reason recorded in its
+> entry. Baseline re-measured at the merge: `npx vitest run` **137 files / 2089
+> tests** green · `npx tsc -b` exit 0 · `npx eslint .` **0 errors / 35 warnings** ·
+> `npx vite build` exit 0.
+>
+> One of the corrected counts below is corrected again: the
+> `preserve-caught-error` figure of 140 was measured with a grep that counts
+> comments as code. It is now derived rather than written down.
+
 > **Reconciled 2026-09-11.** Thirty-one non-merge commits landed between the last
 > update to this file (`3fcb91e`) and now: a second five-pass scan
 > (`vault/scan2-findings.md`), the nine fixes it ranked, the three residual guard
@@ -41,7 +53,7 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > | claim, as this file or the code carried it | measured 2026-09-11 | how |
 > |---|---|---|
 > | direct Dexie outside `src/storage/`: "42 calls in 13 files" (`O6`), then 56 in 14 (scan 2 §17) | **5 files**, each entry per-operation with a written reason | the keys of `DIRECT_DEXIE_ACCESS` in `directDexieAccess.test.ts`, with the guard green, so the allowlist *is* the surface |
-> | `preserve-caught-error`: 119 (`eslint.config.js`), 128 (commit body), 129 (`O2`, `errorCause.test.ts`), 130 (scan 2 §18) | **140** `{ cause: … }` sites in non-test `src` — **136** in repositories, **4** outside (two in `mergeEngine`, two in `linkSyncEngine`) | `grep -rn "{ cause:" src \| grep -v "\.test\."` |
+> | `preserve-caught-error`: 119 (`eslint.config.js`), 128 (commit body), 129 (`O2`, `errorCause.test.ts`), 130 (scan 2 §18) | ~~**140**~~ — **this correction was itself two too high**, see `Q3`. The number is no longer recorded anywhere; `errorCause.test.ts` derives it. Two of `mergeEngine`'s four "outside" hits are comment lines *about* `{ cause: … }`, which the grep below cannot tell from code. | ~~`grep -rn "{ cause:" src \| grep -v "\.test\."`~~ — a census that strips comments first |
 > | one-way trash registrations: "four" (scan 1), corrected to six (`O`) | **7** — `attachments`, `entityLinks`, `campaigns`, `encounters`, `ledgerSplits`, `routePlans`, `parties` | the keys of `RESTORE_WITHOUT_LISTING` in `features/trash/trashRegistry.ts` |
 > | `sheetTemplateSchema.print` is "the only reserved-and-unread surface left in that file" (`O6`) | **false** — `surfaceLayoutSchema.layout` sat beside it, unlabelled and populated in all three shipped `sheet.json` | `P5` |
 >
@@ -878,12 +890,14 @@ is a hard delete from the user's point of view.
   the sections that went down with it, through a `softDeletedBy` query that only
   became legal at schema v19 and that nothing had ever called.
 
-### H4. A campaign export is the only backup, and only Settings knows — OPEN (V)
+### H4. A campaign export is the only backup, and only Settings knows — DONE for the banner (Q4); the snapshot is WONTFIX as written
 - **Where:** `lastBackupAt` is written in exactly one place,
-  `src/features/export/useExportActions.ts:439`, after a campaign export.
-  `StorageSafetyCard` (the stale-backup warning) is mounted only at
-  `SettingsScreen.tsx:310`. `config/defaults/backup.ts:13` sets the reminder at
-  30 days.
+  `src/features/export/useExportActions.ts:456`, after a campaign export.
+  `StorageSafetyCard` (the stale-backup warning) was mounted only at
+  `src/screens/SettingsScreen.tsx:207`. `config/defaults/backup.ts:13` sets the
+  reminder at 30 days. (Two of the three citations this entry carried had
+  drifted — `:439` and `SettingsScreen.tsx:310` — and there is no
+  `features/settings/SettingsScreen.tsx`. Re-measured 2026-09-11.)
 - **What:** A player who never opens Settings never sees the warning. Nothing
   in the app creates a second copy of the data automatically.
 - **Still OPEN, but its evidence changed (2026-09-11).** `lastBackupAt` now
@@ -892,12 +906,35 @@ is a hard delete from the user's point of view.
   every `represents` edge and every reference note until `8969435` / `068c634`
   (P1). The shell banner and the automatic snapshot are still not built — that
   is the whole of what remains here.
-- **Fix:** Surface the stale/never state as a dismissible banner in the shell
-  (session screen is where people spend time). Then add an automatic local
-  snapshot: write the campaign bundle into a `snapshots` table on a schedule
-  (rotate the last N) or, where the File System Access API is available, into a
-  user-chosen directory. Persisted storage (`storage/persistence.ts`) reduces
-  eviction risk but is not a backup.
+- **Banner — DONE (`Q4`).** `components/shell/BackupReminderBanner.tsx`, mounted
+  in `ShellLayout` above the outlet, so it is on every route rather than on the
+  one screen you only open when you have already thought about backups. It
+  deliberately offers no one-tap export: `exportCampaign(id, includePrivate =
+  false)` excludes private notes by default and stamps `lastBackupAt` either
+  way, so a button there would write a partial copy and report the campaign as
+  safe — `P1`'s defect, rebuilt. Dismissal is session-scoped and persists
+  nothing.
+- **Snapshot — WONTFIX as specified.** The proposal is two features and neither
+  is the one this entry is filed under.
+  - **A `snapshots` table is not a backup.** It lives in the same IndexedDB as
+    the campaign it copies, so site-data clearing, eviction and corruption take
+    both. This entry's own last line makes the argument about persisted storage;
+    a copy stored inside the thing being protected is the same case. What it
+    *would* be is an **undo** for user error — an accidental delete, a bad
+    import — which is a real feature with its own questions (retention, a size
+    budget against the quota the safety card already reports, per-entity
+    restore). Worth scoping as undo. Shipping it as "backup" would put a second
+    green tick on a screen whose tick already meant less than it looked.
+  - **The File System Access route is a real backup and is unavailable here.**
+    `showSaveFilePicker` / `showDirectoryPicker` are Chromium-desktop only — not
+    Safari, not Firefox, not Chrome on Android. This app installs on tablets
+    over LAN HTTPS, which is exactly the device class without the API. It would
+    serve desktop Chrome and silently do nothing everywhere else.
+- **What is actually left**, if someone wants to take it further: an export the
+  user cannot get wrong. The privacy toggle is the reason a backup button cannot
+  live on a banner, and it is the reason `lastBackupAt` can be stamped by an
+  export that omits data. A "full backup" path with no options, separate from the
+  shareable export, would collapse both problems.
 
 ### H5. Browser-native `confirm`/`prompt` dialogs — OPEN (V)
 - **Where:** `TiptapNoteEditor.tsx:595` `window.prompt('URL')` for links;
@@ -1938,6 +1975,143 @@ Recorded so nobody re-derives them.
 
 ---
 
+## Workstream Q — The repository factory, the scan-2 tail, and H4's banner (2026-09-11)
+
+The last of the queue. Four commits: `S22`, the ~20 smaller rows of the second
+scan, the `logNpcCapture` decision, and `H4`.
+
+> **Baseline measured at the merge, not taken from a commit message:**
+> `npx vitest run` **137 files / 2089 tests** green · `npx tsc -b` exit 0 ·
+> `npx eslint .` **0 errors / 35 warnings** · `npx vite build` exit 0.
+> (Was 134 / 2051 at `d5cc397`.)
+
+### Q1. The repository factory — DONE
+`S22`, and the sequencing held: `repositoryConventions.test.ts` was written
+first, deliberately, so that the factory could be built to a stated convention
+rather than hardening whatever shape happened to exist.
+
+`createRepository.ts` writes the no-cascade lifecycle once. Five repositories
+take it and **three of the four divergence lists empty**: no `softDelete` in the
+layer now lacks a `txId` (a ship could not go down with its campaign or come
+back with it), none skips the re-delete guard, and none mints with the bare
+generator. `UNVALIDATED_READS` is untouched on purpose — validating on read
+decides what happens to a row that fails, and dropping it is data loss in an app
+whose data exists in one browser. That is a decision per entity.
+
+**No cascade support**, deliberately: three repositories take entity links down
+with them and eleven do not, so a hook would be a capability declared for callers
+that mostly do not exist — the shape `declaredCapabilities.test.ts` exists to
+catch.
+
+**The larger half of the work was keeping the guards honest.** Moving a lifecycle
+behind a builder is the moment a source-scanning guard goes quiet, and this was
+measured rather than assumed. With the five repositories moved and the guards
+unchanged: `repositoryConventions` counted 12 soft-deleting repositories where it
+had counted 17 and refused via its own floor; `softDeleteCapabilities` lost every
+attribution for all five tables and `trashRegistry.test.ts` reported two **live**
+exemptions as stale, which would have invited the next reader to delete a
+permission still doing its job; and `hardDeleteReachability` could not see the
+factory's permanent delete at all. All three now read the factory, and a
+`softDelete` attributable to neither route is reported rather than excused.
+
+Two false results of this pass's own, recorded where they happened:
+- A pattern searching the whole factory file matched the `SoftDeleteOps`
+  **interface** rather than the implementation, so removing `txId` from the body
+  left four assertions green.
+- `db.table<Note, string>('notes')` puts a `<` where `hardDeleteReachability`'s
+  table pattern wanted a `(`, so the layer's one shared permanent delete could
+  have been renamed to anything. A **pre-existing** hole, surfaced because the
+  factory writes through that form. Closed in both guards that carry the pattern.
+
+Also measured and worth knowing: `db.ships === db.table('ships')` is **false**.
+Same object store, so data and transaction scoping are unaffected — but a test
+spying `db.ships.update` does not see a factory write and passes having tested
+nothing.
+
+### Q2. `logNpcCapture` removed — DONE
+No caller since `f1dd4c4` (2026-07-29). **The opposite decision to
+`resolveComponent`, on a distinction worth keeping:** `resolveComponent` was
+*unfinished* — nobody had decided against it and the wires were simply never
+attached, so fifteen lines of wiring bought back ~250 lines of finished
+hardening. `logNpcCapture` is *deprecated*, and the decision is written down:
+`docs/plans/2026-07-29-notes-overhaul-completion-design.md` lists
+`QuickNpcAction.tsx` under **Deleted** with the reason "NPC capture lives on the
+Bestiary screen", says the Session tab "loses its capture role", and states
+"The deletion is the feature, not a regression to compensate for." Wiring it back
+would rebuild the surface that overhaul removed on purpose.
+
+Checked before deciding, because "it is a duplicate" would have been the easy
+reason and it is false: the three wired creature-creation flows write a template
+and nothing else, so `captureNpcWithNote` was a real capability — one the product
+chose not to offer from that tab. The one edge worth checking, `introduced_in`,
+stays live through `useNoteActions.createNote`. Its only test went with it, so
+two replace it against `persistCanonicalNoteLinks` directly, with a control.
+
+215 lines out. Two rounds of maintenance had already been paid on it while it was
+unreachable.
+
+### Q3. The scan-2 tail — DONE
+Re-verified every row before acting. **Five were already closed** and are
+recorded as such rather than re-fixed: `bulkRebuildGraph` rejects now, the
+timeline README no longer names `TimelineExample`, `softDeleteCoverage`'s field
+floor is derived rather than the literal 20, `KnowledgeBaseScreen` has a heading,
+and four screens explain what Play mode hides.
+
+Three guard holes closed, each with a counterfactual showing the previous
+version green:
+- **The relationship-type scan** saw neither a comparison
+  (`link.relationshipType === 'represents'`, in the export collector) nor a
+  double-quoted literal nor a positional argument (`ensureLink(…, 'introduced_in')`
+  — covered only by accident, via an unrelated `getLinksFrom`). Widened, and a
+  site whose type is a *variable* is now reported rather than skipped.
+- **`importReachability`** stripped one campaign-gated region and called it all
+  of them. `CampaignHeader` has two, so reformatting one opener left it
+  unstripped while the other satisfied the self-check.
+- **`preserve-caught-error`'s site count** has now been wrong five times — 119,
+  128, 129, 130, 140. It is written down nowhere; a census derives it, and strips
+  comments first, because every naive `grep -c` of that pattern (including the
+  one behind this file's own most recent correction) counted two lines of
+  `mergeEngine` prose *about* `{ cause: … }` as code. The true figure is **139**
+  today, and the point is that no one should need to know that.
+
+One warning nobody could read: `EndSessionModal` said "An active encounter will
+be ended automatically" in `text-amber-700 dark:text-amber-300` with no
+background of its own. Tailwind's `dark:` follows `prefers-color-scheme`; this
+app themes by `data-theme` and has **ten themes**. On OS-dark / app-light that is
+amber-300 on `#F7F1E2` — about **1.3:1**. All nine `dark:` usages moved to the
+tokens every theme defines, and `themeVariants.test.ts` forbids the variant and
+asserts the tokens exist in every theme, since otherwise the advice resolves to
+transparent text.
+
+Smaller and true: the Tiptap toolbar conveyed state by colour alone (eight
+`aria-pressed`, fed by the same expression as the class); `ShipsScreen`'s empty
+state said "Add your first above" while the create row is `isEditMode &&`, so in
+Play mode — the default — it pointed at a control that is not rendered;
+`bundleParser`'s scope warning justified itself by a branch `f3142e7` deleted;
+`useImportActions`' campaign read-back had its collision case backwards; three of
+four README "Known gaps" were stale and one **contradicted the Backup section two
+pages up**, and its test counts read 99 files and "no config file" against 135
+and a declared `test:` block.
+
+### Q4. H4's banner — DONE; its snapshot — WONTFIX as written
+See `H4` above for both halves and the reasoning.
+
+### Recorded, not fixed — the gated sweep's queue grew by two
+- **Attachments can be read but not created.** `createAttachment` still has zero
+  callers; storage, soft delete, bundles, ZIP export and rendering all exist and
+  nothing puts a file in. Measured, because a reader of this in passing concluded
+  otherwise from the note-reader gallery. Now in the README's Known gaps, since
+  the feature list says "attachments".
+- **`useSystemDefinition.error` is computed and dropped at all eighteen call
+  sites** — the same shape, and `isLoading` with it.
+- `sessionRepository.softDelete` cascades only edges and
+  `campaignRepository.softDelete` cascades nothing: orphans rather than loss, and
+  a design change rather than a fix.
+- A throwing migration still leaves only a Reload that re-runs it.
+- No purge, so "free up space" remains advice nobody can take.
+
+---
+
 ## Suggested order of attack
 
 Each line is a self-contained change that can ship on its own and be verified
@@ -2030,8 +2204,14 @@ on the way in, six writes that could land in a deleted encounter, a set of KB
 reads that bypassed their repository, and the graph marker of P7 — none of them
 reported by the scan. `O6`'s other two open items
 are closed with it (`declaredCapabilities`' blind spots, `sheetTemplateSchema.print`),
-and one of `O6`'s claims is withdrawn. The repository factory is the only one of
-the four still open.
+and one of `O6`'s claims is withdrawn.
+
+**Workstream Q then closed the last of the queue** on 2026-09-11: the repository
+factory (`S22`, the fourth and last of `O6`'s items), the second scan's tail, the
+`logNpcCapture` decision, and `H4`'s banner — with `H4`'s snapshot declined
+rather than left open, because the version written down would not have been a
+backup. What remains is the gated sweep for unwired and half-wired surfaces,
+which `Q` added two entries to rather than acting on.
 
 Two things from that workstream are worth carrying forward more than the ticks:
 

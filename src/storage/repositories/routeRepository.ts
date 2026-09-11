@@ -1,6 +1,6 @@
 import { db } from '../db/client';
 import type { RouteStop } from '../../types/routeStop';
-import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
+import { excludeDeleted, generateSoftDeleteTxId, onlyDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
 
@@ -103,7 +103,7 @@ export async function importStops(
 
     let base = existing.length;
     if (options?.replace && existing.length > 0) {
-      const txId = generateId();
+      const txId = generateSoftDeleteTxId();
       await db.routeStops.bulkUpdate(
         existing.map(s => ({ key: s.id, changes: { deletedAt: now, softDeletedBy: txId } })),
       );
@@ -161,7 +161,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
     const row = await db.routeStops.get(id);
     if (!row || row.deletedAt) return;
     const now = nowISO();
-    await db.routeStops.update(id, { deletedAt: now, softDeletedBy: txId ?? generateId() });
+    await db.routeStops.update(id, { deletedAt: now, softDeletedBy: txId ?? generateSoftDeleteTxId() });
 
     const remaining = excludeDeleted(
       await db.routeStops.where('campaignId').equals(row.campaignId).toArray(),

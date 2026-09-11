@@ -378,7 +378,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
                     </div>
                   </div>
                   {p.instanceState.conditions && p.instanceState.conditions.length > 0 && (
-                    <div className="text-amber-600 dark:text-amber-400 text-[10px] mt-0.5">
+                    <div className="text-[var(--color-warning)] text-[10px] mt-0.5">
                       {p.instanceState.conditions.join(', ')}
                     </div>
                   )}

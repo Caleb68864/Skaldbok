@@ -29,7 +29,7 @@ export function EndSessionModal({ sessionTitle, hasActiveEncounter, busy = false
           {sessionTitle}
         </p>
         {hasActiveEncounter && (
-          <p className="text-amber-700 dark:text-amber-300 text-sm mb-4">
+          <p className="text-[var(--color-warning)] text-sm mb-4">
             An active encounter will be ended automatically.
           </p>
         )}

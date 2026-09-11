@@ -2,13 +2,9 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
 import { getEngine } from '../systems/engine';
-import { newCreatureStatBlock } from '../bestiary/creatureStats';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
-import {
-  captureNpcWithNote,
-  createSessionLogNote,
-} from '../../storage/noteCreationService';
+import { createSessionLogNote } from '../../storage/noteCreationService';
 import { textToDoc } from '../notes/textToDoc';
 
 // Lazy import to avoid circular dependency and keep note saves resilient if
@@ -53,33 +49,6 @@ export interface LogToSessionOptions {
    * this.
    */
   body?: string;
-}
-
-/**
- * Input shape for `logNpcCapture` (returned by {@link useSessionLog}).
- *
- * @remarks
- * Captures the minimal fields needed to stand up a new `CreatureTemplate`
- * bestiary row + a note that references it. Description is stored both on
- * the template and the note's `typeData` for later editing convenience.
- */
-export interface LogNpcCaptureInput {
-  /** Display name for the NPC / creature. */
-  name: string;
-  /** Bestiary category discriminator. */
-  category: 'monster' | 'npc' | 'animal';
-  /**
-   * Optional starting value for the ruleset's health stat; 0 when omitted.
-   *
-   * @remarks
-   * Named `health`, not `hp`: `hp` is Dragonbane's id for this, and which id it
-   * is stored under is decided by `system.creatures.healthStatId`, not here.
-   */
-  health?: number;
-  /** Optional description (plain string stored on the template + note). */
-  description?: string;
-  /** Optional tag strings applied to the creature template. */
-  tags?: string[];
 }
 
 /**
@@ -543,55 +512,6 @@ export function useSessionLog() {
   }, [logToSession]);
 
   /**
-   * Captures an NPC encountered mid-session as a bestiary creature template
-   * + a note referencing it, wired up with the standard session / encounter
-   * entity links.
-   *
-   * @remarks
-   * Template, note and links land in one commit, in
-   * `noteCreationService.captureNpcWithNote`. The stat block is built here
-   * because the active ruleset is a *hook* concern — `systemRef` follows the
-   * campaign — while the write is a storage concern.
-   *
-   * @param input - The NPC's name, category, and optional health/description.
-   * @param options - Optional encounter-attach override.
-   * @returns The new note and creature-template ids.
-   */
-  const logNpcCapture = useCallback(async (
-    input: LogNpcCaptureInput,
-    options?: LogToSessionOptions,
-  ): Promise<{ noteId: string; creatureId: string }> => {
-    if (!activeSession) {
-      throw new Error('useSessionLog.logNpcCapture: no active session');
-    }
-
-    const { note, creatureId } = await captureNpcWithNote({
-      session: activeSession,
-      name: input.name,
-      category: input.category,
-      // Under the active ruleset's own stat ids. This was
-      // `{ hp: input.hp ?? 0, armor: 0, movement: 0 }` — three Dragonbane ids
-      // applied to every system, which is a `systemId ===` branch with no
-      // `systemId` in it and therefore invisible to the guard that forbids
-      // them. `engineConsumers.test.ts` reads the shape instead.
-      stats: newCreatureStatBlock(systemRef.current, { health: input.health }),
-      description: input.description,
-      tags: input.tags,
-      targetEncounterId: options?.targetEncounterId,
-    });
-    const noteId = note.id;
-
-    try {
-      const module = await getSyncModule();
-      await module.syncNote(noteId);
-    } catch {
-      // NPC + note persistence succeeded; leave the note available even if KB sync fails.
-    }
-
-    return { noteId, creatureId };
-  }, [activeSession]);
-
-  /**
    * Reassigns an existing note to a different encounter (or detaches it from
    * any encounter).
    *
@@ -665,7 +585,6 @@ export function useSessionLog() {
     logRest,
     logCoinChange,
     logGenericNote,
-    logNpcCapture,
     reassignNote,
   };
 }

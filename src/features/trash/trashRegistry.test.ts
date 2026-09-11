@@ -89,6 +89,13 @@ describe('registry completeness', () => {
       + 'its body is not one this guard can read. Use `onlyDeleted(...)` or '
       + "`.where('deletedAt').above('')`, or teach `readSoftDeleteCapabilities` the idiom.",
     ).toEqual([]);
+    expect(
+      report.unreadableFactoryCalls,
+      `${report.unreadableFactoryCalls.join(', ')} calls the repository factory with a `
+      + '`table:` this guard cannot read, so whichever table it is looks untouched by the '
+      + 'repository layer — which turns a live exemption below into one that reads as '
+      + 'stale. Pass the table as a string literal, or teach `factoryCalls` the spelling.',
+    ).toEqual([]);
   });
 
   /**

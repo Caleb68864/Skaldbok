@@ -40,9 +40,20 @@ const REPOS_DIR = join(SRC, 'storage/repositories');
  * inventing a name — the point of the convention is that one grep finds them
  * all. Each of these carries a `@remarks` in its own file explaining why it is
  * permanent; none has a caller today.
+ *
+ * `createHardDelete` is the shared lifecycle factory's permanent delete — the
+ * one every repository that adopts the factory re-exports as its own
+ * `hardDelete`. It is a *builder*, so the name reads oddly beside the others,
+ * and it is deliberately a separate export rather than a third member of
+ * `createSoftDeleteOps`: this guard attributes an operation to the function it
+ * is written in, so folding the `.delete(` into the lifecycle builder would make
+ * *that* the sanctioned permanent delete and hand every repository's soft-delete
+ * path the permission. Listing it here also means the second assertion below
+ * forbids calling it from outside `src/storage`, exactly as for `hardDelete`.
  */
 const DOMAIN_HARD_DELETES = new Set([
   'hardDelete',
+  'createHardDelete',
   'deleteAttachment',
   'deleteAttachmentsByNote',
   'removePartyMember',
@@ -158,8 +169,17 @@ function stripComments(body: string): string {
  * `\s*` around the dots is also load-bearing: `db\n  .table('metadata')` is how
  * this codebase already writes a wrapped chain (`screens/KnowledgeBaseScreen.tsx`),
  * and the old pattern's literal `db\.` could not see past the line break.
+ *
+ * So is the optional `<…>`. `db.table<Note, string>('notes')` — the accessor with
+ * its type arguments spelled out, which is what you write the moment the row type
+ * is not inferable — put a `<` where this pattern wanted a `(`, and the whole
+ * match failed. **Proven:** with the generic form unmatched, renaming
+ * `createRepository.createHardDelete` to `tidyUpRows` left this file green at
+ * 6 of 6, so the layer's one shared permanent delete could have been called
+ * anything at all. Found by probing the guard rather than trusting it, after the
+ * factory started writing through exactly that form.
  */
-const TABLE_REF = String.raw`\bdb\s*\.\s*(?:table\s*\((?:[^()]|\([^()]*\))*\)|[A-Za-z0-9_]+)`;
+const TABLE_REF = String.raw`\bdb\s*\.\s*(?:table\s*(?:<[^<>]*>\s*)?\((?:[^()]|\([^()]*\))*\)|[A-Za-z0-9_]+)`;
 
 /** A chain of intermediate calls — `.where(...).equals(...)` and friends. */
 const CHAIN = String.raw`(?:\s*\.\s*[A-Za-z0-9_]+\s*\((?:[^()]|\([^()]*\))*\))*`;

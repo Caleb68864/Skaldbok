@@ -1,8 +1,9 @@
 import { db } from '../db/client';
 import type { LedgerEntry, LedgerLeg, SplitSnapshot } from '../../types/ledger';
-import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
+import { excludeDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
+import { createDeletedListing, createHardDelete, createSoftDeleteOps } from './createRepository';
 
 /**
  * Repository for {@link LedgerEntry} rows — a campaign's shared cashbook.
@@ -102,24 +103,29 @@ export async function update(
   await db.ledgerEntries.update(id, { ...patch, updatedAt: nowISO() });
 }
 
+const lifecycle = createSoftDeleteOps({
+  repository: 'ledgerRepository',
+  table: 'ledgerEntries',
+});
+
 /**
  * Soft-deletes an entry (the user-facing delete).
  *
- * @param txId - Pass an existing transaction id to enlist this row in a wider
- * cascade, following `campaignRepository`'s signature rather than
- * `shipRepository`'s narrower one.
+ * @remarks
+ * The doc comment here used to note that the wider `(id, txId?)` signature
+ * followed `campaignRepository` "rather than `shipRepository`'s narrower one" —
+ * a divergence recorded rather than closed. Both come from the factory now, so
+ * there is no narrower one to choose against. The re-delete guard arrives with
+ * it: this used to re-stamp `softDeletedBy` on an already-deleted row, which
+ * strands the splits that went down with it in the first cascade.
+ *
+ * @param id - Entry to delete.
+ * @param txId - Cascade to join, when a parent is taking this entry down too.
  */
-export async function softDelete(id: string, txId?: string): Promise<void> {
-  await db.ledgerEntries.update(id, {
-    deletedAt: nowISO(),
-    softDeletedBy: txId ?? generateId(),
-  });
-}
+export const softDelete = lifecycle.softDelete;
 
 /** Restores a soft-deleted entry. */
-export async function restore(id: string): Promise<void> {
-  await db.ledgerEntries.update(id, { deletedAt: undefined, softDeletedBy: undefined });
-}
+export const restore = lifecycle.restore;
 
 /**
  * Every soft-deleted LedgerEntry in a campaign, newest deletion first.
@@ -128,19 +134,15 @@ export async function restore(id: string): Promise<void> {
  * Feeds the Trash screen, which is the only way a user gets one of these back.
  * A deleted entry still has its legs and split snapshot on the row, so a
  * restore puts the running balance back where it was.
- *
- * @param campaignId - Campaign whose trash is being listed.
  */
-export async function getDeleted(campaignId: string): Promise<LedgerEntry[]> {
-  try {
-    const rows = await db.ledgerEntries.where('campaignId').equals(campaignId).toArray();
-    return onlyDeleted(rows);
-  } catch (e) {
-    throw new Error(`ledgerRepository.getDeleted failed: ${e}`, { cause: e });
-  }
-}
+export const getDeleted = createDeletedListing<LedgerEntry>({
+  repository: 'ledgerRepository',
+  table: 'ledgerEntries',
+  scopeIndex: 'campaignId',
+});
 
 /** Permanently removes an entry. Internal — never call from UI. */
-export async function hardDelete(id: string): Promise<void> {
-  await db.ledgerEntries.delete(id);
-}
+export const hardDelete = createHardDelete({
+  repository: 'ledgerRepository',
+  table: 'ledgerEntries',
+});
