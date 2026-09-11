@@ -9,12 +9,33 @@ import { excludeDeleted, generateSoftDeleteTxId, onlyDeleted } from '../../utils
  * The party for a campaign, if one exists.
  *
  * @remarks
- * A campaign has at most one party, so the first validating, non-deleted row is
- * returned. Rows that fail validation are skipped with a warning.
+ * A campaign is *meant* to have at most one party, and every flow that makes one
+ * creates it only when none exists. Two live parties are still reachable —
+ * restore a party from Trash after a replacement was lazily created, or import a
+ * bundle from another device — and the invariant is a convention, not an index.
+ *
+ * `preferPartyId` is what `campaignSchema.activePartyId` is for. That field was
+ * written by **three real UI flows** (campaign creation, the Manage Party drawer,
+ * and adding a character from the library) and read by nobody: this function
+ * returned whichever row Dexie handed back first, so in the one case where the
+ * field carries information — more than one live party — the user's recorded
+ * choice was the thing being ignored. `campaign.activeCharacterMemberId`, one
+ * line above it in the same schema and the same shape, has been read all along;
+ * this is the sibling that never was.
+ *
+ * Preference, not requirement: an `activePartyId` naming a deleted or foreign
+ * row falls through to the scan, so a stale pointer degrades to the old
+ * behaviour rather than leaving the campaign with no party at all.
+ *
+ * Rows that fail validation are skipped with a warning.
  */
-export async function getPartyByCampaign(campaignId: string, options?: { includeDeleted?: boolean }): Promise<Party | undefined> {
+export async function getPartyByCampaign(
+  campaignId: string,
+  options?: { includeDeleted?: boolean; preferPartyId?: string },
+): Promise<Party | undefined> {
   try {
     const records = await db.parties.where('campaignId').equals(campaignId).toArray();
+    const usable: Party[] = [];
     for (const record of records) {
       const parsed = partySchema.safeParse(record);
       if (!parsed.success) {
@@ -22,9 +43,13 @@ export async function getPartyByCampaign(campaignId: string, options?: { include
         continue;
       }
       if (!options?.includeDeleted && parsed.data.deletedAt) continue;
-      return parsed.data;
+      usable.push(parsed.data);
     }
-    return undefined;
+    if (options?.preferPartyId) {
+      const chosen = usable.find(party => party.id === options.preferPartyId);
+      if (chosen) return chosen;
+    }
+    return usable[0];
   } catch (e) {
     throw new Error(`partyRepository.getPartyByCampaign failed: ${e}`, { cause: e });
   }
