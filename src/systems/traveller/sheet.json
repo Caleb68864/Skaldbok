@@ -1,7 +1,6 @@
 {
-  "version": 8,
+  "version": 9,
   "play": {
-    "layout": "two-column",
     "regions": [
       {
         "columns": "1fr 2fr",

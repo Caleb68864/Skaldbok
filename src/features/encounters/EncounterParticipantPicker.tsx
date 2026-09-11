@@ -4,7 +4,7 @@ import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { CharacterRecord } from '../../types/character';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
-import { creatureStatLabel, resolveCreatureHealthStatId } from '../bestiary/creatureStats';
+import { creatureStatLabel, newCreatureStatBlock, resolveCreatureHealthStatId } from '../bestiary/creatureStats';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 
@@ -109,7 +109,10 @@ export function EncounterParticipantPicker({
         name: newName.trim(),
         description: newDescription.trim() ? newDescription.trim() : undefined,
         category: newCategory,
-        stats: { hp: Number.isNaN(hpNum) ? 0 : hpNum, armor: 0, movement: 0 },
+        // The one number this form collects lands on the ruleset's health stat,
+        // and the rest of its declared block starts at 0. It used to write
+        // `{ hp, armor: 0, movement: 0 }` regardless of ruleset.
+        stats: newCreatureStatBlock(system, { health: Number.isNaN(hpNum) ? 0 : hpNum }),
         attacks: [],
         abilities: [],
         skills: [],
@@ -125,7 +128,7 @@ export function EncounterParticipantPicker({
     } finally {
       setSubmitting(false);
     }
-  }, [newName, newCategory, newHp, newDescription, campaignId, onSelect, onClose]);
+  }, [newName, newCategory, newHp, newDescription, campaignId, system, onSelect, onClose]);
 
   if (mode === 'create') {
     return (

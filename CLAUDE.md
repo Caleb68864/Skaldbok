@@ -43,7 +43,7 @@ The `tests/` directory additionally contains a Python Playwright E2E script
 
 ### Storage layer (Dexie / IndexedDB)
 - `src/storage/db/client.ts` defines the `SkaldbokDatabase` Dexie class and all `version(n).stores(...)` migrations. **Schema changes = add a new `version()` block; never edit an old one.** That is enforced: `releasedSchemaVersions.test.ts` fingerprints every released block including its inline `.upgrade(...)` body, and adding a version means adding its fingerprint there in the same commit. See the existing compound indexes on `entityLinks` (`[fromEntityId+relationshipType]`, `[toEntityId+relationshipType]`) — any new link-lookup pattern wants a matching compound index.
-- Every domain entity is accessed through a repository in `src/storage/repositories/*.ts`. UI code and hooks call repositories; they **never** touch the Dexie tables directly. If you find yourself reaching into `db.notes.where(...)` from a component, stop and add/extend a repo method. That rule is now enforced rather than remembered: `directDexieAccess.test.ts` walks every non-test file outside `src/storage/` and fails on any Dexie access not listed in `DIRECT_DEXIE_ACCESS` with a written reason. The permission is **per operation** (`<table>:read|write|delete|ref`), not per file, so a file allowed to read one table is not thereby allowed to write it; an expression the scanner cannot classify is reported rather than skipped; and a permission for an access the file no longer makes fails too, so the surface can only shrink. It was 14 files when the guard landed and is 6 now.
+- Every domain entity is accessed through a repository in `src/storage/repositories/*.ts`. UI code and hooks call repositories; they **never** touch the Dexie tables directly. If you find yourself reaching into `db.notes.where(...)` from a component, stop and add/extend a repo method. That rule is now enforced rather than remembered: `directDexieAccess.test.ts` walks every non-test file outside `src/storage/` and fails on any Dexie access not listed in `DIRECT_DEXIE_ACCESS` with a written reason. The permission is **per operation** (`<table>:read|write|delete|ref`), not per file, so a file allowed to read one table is not thereby allowed to write it; an expression the scanner cannot classify is reported rather than skipped; and a permission for an access the file no longer makes fails too, so the surface can only shrink. It was 14 files when the guard landed and is 5 now.
 - Shared utilities live in `src/utils/` — notably `softDelete.ts` (`excludeDeleted` helper) and `ids.ts` (`generateId`). The ID generator is used for both entity IDs and soft-delete transaction IDs.
 
 ### Domain model
@@ -110,6 +110,15 @@ dead-end screen. `terms` and `labels` can be overridden per-system from
 ### Rules of thumb
 
 - **Never** reintroduce a `systemId ===` branch. Add an engine field instead.
+- **A branch does not need the string.** `stats: { hp: …, armor: 0, movement: 0 }`
+  names one ruleset's stat block and no other, with no `systemId` in it to match
+  on; three creature-create flows shipped it. Creature stat ids come from
+  `system.creatures.statFields` via `newCreatureStatBlock` /
+  `resolveCreatureStatFields`, and `engineConsumers.test.ts` fails on a `stats:`
+  literal with hand-spelled keys anywhere outside the default block and the
+  frozen v6 upgrade. The general rule the guard encodes: **do not spell ids the
+  ruleset owns** — that is checkable from source, while "these keys happen to be
+  Dragonbane's" is not.
 - Ids and labels are separate. Persisted keys (settings, stored preferences,
   ability types) use stable ids; only display strings come from `terms`/`labels`.
   Deriving a storage key from a label orphans user data the moment it is renamed.

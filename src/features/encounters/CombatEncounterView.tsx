@@ -13,9 +13,11 @@ import { registerFlush } from '../persistence/autosaveFlush';
 import { useSystemEngineFor } from '../systems/engine';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
 import {
+  newCreatureStatBlock,
   readCreatureStat,
   resolveCreatureArmorStatId,
   resolveCreatureHealthStatId,
+  resolveCreatureStatFields,
   creatureStatLabel,
 } from '../bestiary/creatureStats';
 import { useSessionLog } from '../session/useSessionLog';
@@ -233,7 +235,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
     return unregister;
   }, []);
 
-  const handleQuickCreate = async (name: string, stats: { hp?: number; armor?: number; movement?: number }) => {
+  const handleQuickCreate = async (name: string, entered: Record<string, number>) => {
     // Check if a creature template with this name already exists
     const existing = (await creatureTemplateRepository.listByCampaign(encounter.campaignId)).find(
       (t) => t.name.toLowerCase() === name.toLowerCase(),
@@ -244,10 +246,12 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
         campaignId: encounter.campaignId,
         name,
         category: 'monster',
-        // Keyed by the ruleset's own ids. The quick-create flow still collects
-        // three numbers (health/armour/movement) under engine labels; a ruleset
-        // declaring more stats fills the rest in from the bestiary afterwards.
-        stats: { [healthStatId]: stats.hp ?? 0, [armorStatId]: stats.armor ?? 0, movement: stats.movement ?? 0 },
+        // Keyed by the ruleset's own ids: the form now collects one number per
+        // declared stat field, and the default block underneath guarantees the
+        // health stat exists even if a ruleset leaves it out of `statFields`.
+        // It used to write `movement` as a literal beside two computed ids, so
+        // a ruleset without a `movement` stat got one anyway.
+        stats: { ...newCreatureStatBlock(campaignSystem), ...entered },
         attacks: [],
         abilities: [],
         skills: [],
@@ -448,11 +452,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
         <QuickCreateParticipantFlow
           onSubmit={handleQuickCreate}
           onCancel={() => setShowQuickCreate(false)}
-          labels={{
-            health: creatureStatLabel(campaignSystem, healthStatId),
-            armor: creatureStatLabel(campaignSystem, armorStatId),
-            movement: creatureStatLabel(campaignSystem, 'movement'),
-          }}
+          statFields={resolveCreatureStatFields(campaignSystem)}
         />
       )}
     </div>

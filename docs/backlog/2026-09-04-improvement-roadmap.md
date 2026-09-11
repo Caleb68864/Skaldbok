@@ -19,6 +19,37 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > markers below were added as that work landed and were not re-verified in
 > this pass.
 
+> **Reconciled 2026-09-11.** Thirty-one non-merge commits landed between the last
+> update to this file (`3fcb91e`) and now: a second five-pass scan
+> (`vault/scan2-findings.md`), the nine fixes it ranked, the three residual guard
+> gaps found by re-running the scan's own mutations against the fixes, the
+> direct-Dexie guard and the writes it exposed, and the remainder taken here.
+> **Workstream P** records them.
+> Three of `O6`'s four "left open" items are closed and one of its claims was
+> wrong; four counts this file carried are corrected below, each re-measured
+> rather than remembered.
+>
+> Baseline measured at `d5cc397` on this date, not taken from any commit
+> message: `npx vitest run` **134 files / 2051 tests** green ·
+> `npx tsc -b` exit 0 · `npx eslint .` **0 errors / 35 warnings** ·
+> `npx vite build` exit 0.
+>
+> **Counts corrected.** A roadmap carrying the first number of a pair is worse
+> than one carrying none, because the first number is usually the one somebody
+> planned against.
+>
+> | claim, as this file or the code carried it | measured 2026-09-11 | how |
+> |---|---|---|
+> | direct Dexie outside `src/storage/`: "42 calls in 13 files" (`O6`), then 56 in 14 (scan 2 §17) | **5 files**, each entry per-operation with a written reason | the keys of `DIRECT_DEXIE_ACCESS` in `directDexieAccess.test.ts`, with the guard green, so the allowlist *is* the surface |
+> | `preserve-caught-error`: 119 (`eslint.config.js`), 128 (commit body), 129 (`O2`, `errorCause.test.ts`), 130 (scan 2 §18) | **140** `{ cause: … }` sites in non-test `src` — **136** in repositories, **4** outside (two in `mergeEngine`, two in `linkSyncEngine`) | `grep -rn "{ cause:" src \| grep -v "\.test\."` |
+> | one-way trash registrations: "four" (scan 1), corrected to six (`O`) | **7** — `attachments`, `entityLinks`, `campaigns`, `encounters`, `ledgerSplits`, `routePlans`, `parties` | the keys of `RESTORE_WITHOUT_LISTING` in `features/trash/trashRegistry.ts` |
+> | `sheetTemplateSchema.print` is "the only reserved-and-unread surface left in that file" (`O6`) | **false** — `surfaceLayoutSchema.layout` sat beside it, unlabelled and populated in all three shipped `sheet.json` | `P5` |
+>
+> The `preserve-caught-error` row is two corrections, not one: the number moved,
+> and *"all in repositories"* stopped being true when `mergeEngine` and
+> `linkSyncEngine` gained cause-carrying rethrows. Neither is a defect; both make
+> the sentence in `O2`'s title wrong.
+
 Status values: **OPEN** · **DONE** (record the commit) · **BLOCKED** (needs a
 product decision) · **WONTFIX** (record why).
 
@@ -855,6 +886,12 @@ is a hard delete from the user's point of view.
   30 days.
 - **What:** A player who never opens Settings never sees the warning. Nothing
   in the app creates a second copy of the data automatically.
+- **Still OPEN, but its evidence changed (2026-09-11).** `lastBackupAt` now
+  means something: it was stamped from a `.click()` on a detached anchor that
+  had no failure mode until `a3ea4fd`, and the file it certifies was missing
+  every `represents` edge and every reference note until `8969435` / `068c634`
+  (P1). The shell banner and the automatic snapshot are still not built — that
+  is the whole of what remains here.
 - **Fix:** Surface the stale/never state as a dismissible banner in the shell
   (session screen is where people spend time). Then add an automatic local
   snapshot: write the campaign bundle into a `snapshots` table on a schedule
@@ -1676,6 +1713,229 @@ argues should follow `repositoryConventions.test.ts` rather than precede it;
 `sheetTemplateSchema.print`, which is still authored-and-discarded — now the only
 reserved-and-unread surface left in that file.
 
+> **Three of those four are closed — see P4, P6 and P5 — and the fourth line is
+> wrong as written.** The direct-Dexie count was never 42 (see the corrected
+> counts at the top). And `print` was *not* "the only reserved-and-unread
+> surface left in that file": `surfaceLayoutSchema.layout` was declared four
+> lines above it, described as a *"layout identifier"*, populated in all three
+> bundled `sheet.json` files, and read by nothing. It went unnoticed for the
+> reason `print` was noticed — `print` carried a comment admitting it was
+> reserved, and `layout` did not. **An honest label makes a dead field
+> findable; it does not make it harmless.** The repository factory remains open
+> and unchanged.
+
+---
+
+## Workstream P — Closed by the second scan and the passes after it (2026-09-10/11)
+
+Thirty-one non-merge commits between `3fcb91e` and `d5cc397` (`git log
+--no-merges 3fcb91e..d5cc397`). The source is `vault/scan2-findings.md`
+(gitignored) and the passes that worked down it. Every item below was landed with
+a test that fails without the fix.
+
+`vault/scan2-findings.md`'s own Pass 6 re-ran its eighteen recorded mutations
+against the merged fixes at `98a2fa8` and reports all eighteen red. That is the
+scan author's verification, not a re-verification by this file — it is recorded
+here with its source so a reader knows which it is. The mutations named in P5
+through P9 below were run by the author of those commits and are quoted in them.
+
+**What this workstream is about, in one line:** the first scan's signature bug
+was *a rule maintained in two places*; this one's is *a guard whose scope is
+narrower than the rule it guards*, and its worst form is **a failure absorbed by
+a broad catch and reported as success**, which is a test that cannot fail
+wearing production code's clothes.
+
+### P1. The backup promise — four defects on one sentence — DONE
+`StorageSafetyCard.tsx:102` tells the user, in danger red, that *"Exporting a
+campaign is the only copy that survives this device."* Four things were wrong
+with the file behind that sentence, and the fourth made the other three
+invisible.
+- **Every `represents` edge was dropped from every export** (`8969435`).
+  `collectors.ts` collected entity links for note and encounter ids only, and the
+  participant→creature binding has an encounter-*participant* at one end. On
+  restore, every participant came back as a bare name with no stat block. The fix
+  is not a wider enumeration: `collectBundleEntityIds` walks the assembled rows
+  and keeps every edge whose *both* endpoints are in the bundle, so an edge type
+  the app has never written travels too.
+- **`referenceNotes` was excluded from every bundle on a false premise**
+  (`068c634`). The exclusion said its content "is already exported as notes";
+  `ReferenceScreen` writes it to `referenceNotes` and nowhere else. Exemption
+  reasons are now checked against the repository layer's own writes, so the
+  recorded reason has to be *true*, not merely present.
+- **`systems` reached only the campaign collector** (`a8c07f5`, `e47bef8`).
+  A character or session built on a user-authored ruleset restored under
+  classic-fantasy, which brings Dragonbane's formulas with it.
+- **`lastBackupAt` was stamped from a `.click()` that cannot fail**
+  (`a3ea4fd`). `downloadBlob` never appended the anchor and returned `void`, so
+  "the export succeeded" meant "we called `.click()`". The card turned green on
+  it.
+- **The fresh-install rollback was guarded by a test that could not fail**
+  (`0f45579`, then `906ea82`). The test closed the database *before* `mergeBundle`,
+  so "leaves nothing behind" was trivially true. Deleting the entire
+  abort-and-roll-back mechanism kept 1931 tests green. Fixed, and then fixed
+  again one level in: `isFatalMergeError` read `err.name` without walking
+  `err.cause`, so a wrapped quota failure was filed as a per-row error and the
+  rollback never fired.
+
+### P2. Six guards that enforced less than they claimed — DONE
+Each was found green-by-reading and fell to a mutation.
+- **The migration freeze** did not see `.upgrade((tx) => fn(tx))` (`5c7aede`),
+  and then could not place an upgrade body with no name at all (`cf17207`).
+- **The hard-delete check** never left `src/storage/repositories/`, so an inline
+  `db.notes.delete(...)` in a screen passed everything; and it did not match
+  `.clear()` (`c3169db`), nor `db.table('notes')`, the codebase's own idiom
+  (`b0690ec`).
+- **`declaredCapabilities`** could not see the middle member of a three-member
+  inline object — `matchAll` consumed the `;` that introduced the next one — and
+  **`componentReachability`** scanned one file and could not cross a `>` inside a
+  prop (`ae64478`).
+- **`panelKeyReaders`'s third assertion could not fail**: it searched the whole
+  file for the key's literal, and the file opens with an unrelated list
+  containing all eight (`2426906`).
+- **The autosave banner guard** proved the tag was present, not that it was fed
+  the live error (`d795efd`), after the banner was put on all seven character
+  screens rather than two (`5df2223`).
+- **Two exemption lists for one invariant**, each blind exactly where the other
+  had an entry, are one list decided from the writes rather than the names
+  (`3182789`).
+
+### P3. Error paths that could not be entered — DONE
+- **Two repositories swallowed a failed write** and returned `undefined`
+  (`c3adae1`): a quota failure closed the form and lost the creature with no
+  message. A census of ~130 write functions found exactly these two, so it was a
+  divergence from the layer's convention rather than a house style.
+- **A reference import overwrote local sections by id** with no collision,
+  tombstone or `updatedAt` check (`1775f5c`) — the user's own house rules.
+- **A blocked schema upgrade hung the loading screen forever** (`42001d1`).
+  Dexie does not reject for `blocked`; it fires an event and waits, so the one
+  storage failure the code names in a comment was the one it could not detect.
+
+### P4. The direct-Dexie surface, from a number into a guard — DONE
+The largest item `O6` left open, and the one it mis-measured.
+`directDexieAccess.test.ts` (`08e233b`) walks every non-test file outside
+`src/storage/` and fails on any Dexie access not allowlisted **per operation**
+(`<table>:read|write|delete|ref`) with a written reason; an expression it cannot
+classify is reported rather than skipped, and a permission for an access a file
+no longer makes fails too, so the surface can only shrink.
+
+Writing it exposed five data paths nobody had asked for, all now fixed behind
+repository functions: four participant writes that did not check `deletedAt`
+(`44a23c9`), an end-of-fight summary and a note reassignment that could land in a
+deleted encounter (`18466fc`), KB node reads that bypassed their repository
+(`be33e92`), and the KB graph marker (`5b0c8ba`, `P7`).
+
+**Measured, not remembered: the allowlist is 5 files**, listed in the corrected
+counts at the top. It was 14 when the guard landed.
+
+### P5. `sheetTemplateSchema.print` and `surfaceLayoutSchema.layout` — DONE (dropped)
+Decided together, because they are the same shape and leaving one would have
+made the pair inconsistent. Neither is rendered by anything: `/print` goes
+through the hardcoded `PrintableSheet` component, and the real layout is each
+region's own `columns`. Honouring `print` is a feature, not a fix; a schema is
+not the place to keep a plan. Both are dropped, the three bundled `sheet.json`
+files lost their `layout` line and had their versions bumped (7→8, 4→5, 8→9)
+with fingerprints updated.
+
+The guard is the part that generalises: `cards/schema.test.ts` derives the key
+list from the Zod `shape` itself, so a key added and not read fails in the same
+commit. `declaredCapabilities` enforces this for *interfaces*, so a contract
+declared as a Zod schema was outside it entirely — the scope-narrower-than-the-rule
+defect, in the guard written to catch it.
+
+### P6. `declaredCapabilities`' remaining blind spots — DONE
+The second of `O6`'s open items. Four declaration shapes it could not spell
+(`readonly x`, a method signature, a quoted key, `_`/`$` in a name) and three
+shapes that made an unread field look read (a hyphenated name in a string, an
+array literal holding the string, an assignment). All seven were measured against
+the previous code before being changed, and all are pinned by example, so
+reverting any of them fails.
+
+`schemas/system.schema.ts` joins the declaration files: the type and the schema
+agree exactly today, so it costs nothing and closes the mirror of a gap
+`CLAUDE.md` already warns about. `TOO_GENERIC` — the guard's largest remaining
+blind spot, deliberately — now fails on any entry no declaration file declares;
+six such entries were removed, one of which was `layout`, the very field `P5`
+found dead in the card schema.
+
+**Not done, deliberately:** the guard is not widened to `types/character.ts`,
+`types/attachment.ts` or `types/campaign.ts`. That names the twelve
+declared-and-unread fields in scan 2 §14 at once, and each needs a decision that
+belongs to whoever owns the feature. Queued as a gated sweep.
+
+### P7. The KB graph was rebuilt in full on every mount, and reported success — DONE
+The scan filed this as a `metadata` row-duplication bug. **That mechanism is
+impossible** — see *Withdrawn* below. What actually happened: the marker write
+violated a unique index, `bulkRebuildGraph`'s own `catch` swallowed the
+`ConstraintError`, and the marker that answers *"has the graph been built?"* kept
+its old value forever.
+
+The write was fixed first (`5b0c8ba`); this pass fixed the swallow, which is what
+made it invisible. `bulkRebuildGraph` no longer wraps its body in a catch, does
+not record the graph as built when a note failed to sync, and rejects — so the
+screen's `catch` and `useImportActions`' *"the knowledge graph could not be
+rebuilt"* toast, both recorded by the scan as unreachable, are reachable. The
+swallow now lives only in `syncNote`, whose callers are note saves that cannot
+use an answer.
+
+### P8. A `systemId ===` branch with no `systemId` in it — DONE
+Three creature-create flows wrote `stats: { hp, armor: 0, movement: 0 }` — three
+Dragonbane ids applied to every ruleset, in a field that has been
+`z.record(z.string(), z.number())` keyed by `system.creatures.statFields` since
+the bestiary was generalised. An NPC captured under an authored ruleset was
+stored with stats that ruleset does not declare, so the bestiary showed its
+declared block reading 0 and filed the entered numbers under "Other".
+
+`newCreatureStatBlock(system, { health })` is the shared half.
+`QuickCreateParticipantFlow` renders one input per declared stat instead of three
+fixed ones, which also retired its `vocabularyLeaks` exemption (verified by
+mutation, not by assumption).
+
+**Can the guard that forbids `systemId ===` be taught to see a shape branch?**
+For a specific field, yes, and not by listing Dragonbane's ids: the rule
+`engineConsumers.test.ts` now enforces is *do not spell ids the ruleset owns* — a
+`stats:` literal with identifier keys is an offence whatever the keys are. The
+**class** is not decidable: the vocabulary is runtime data a user may author, the
+same token is correct in the default block and wrong four lines away, and the
+openness that lets a Traveller creature exist is what removed the closed type the
+compiler could have checked. Shapes can be taught one at a time, against a field
+whose source of truth is known. The class cannot.
+
+### P9. The last direct-Dexie debt, and the reason that was wrong — DONE
+`useSessionLog`'s two transactions were the last `DEBT` entry. Their recorded
+reason — *"their home is a storage-layer service that does not exist yet, and
+inventing one inside a hook carrying buffered writes and flush semantics is a
+larger change than the remaining risk justifies"* — was specific, honest, and
+**checkable**. The service existed: `features/notes/noteCreationService.ts`
+imported nothing but repositories, types and utils. Storage-layer code filed
+under a feature directory.
+
+It moved to `storage/noteCreationService.ts` unchanged and grew the two
+transactions as `createSessionLogNote` and `captureNpcWithNote`. The hook imports
+no Dexie at all. Nothing about the buffers or the flush was in the way. The move
+is also what made the writes testable without a React tree, which is the second
+half of why they had no tests; the new tests assert the property a call site
+cannot — that a failure part-way leaves *nothing* behind.
+
+An exemption's reason is a claim like any other, and this one survived two passes
+because nobody opened the file it named.
+
+### Withdrawn or corrected by these passes
+Recorded so nobody re-derives them.
+- **The link-sync `metadata` defect's stated mechanism is impossible.** The scan
+  said a prior `set()` leaves "two rows sharing one logical key". `metadata` is
+  declared `'id, &key'` — `key` is unique, so two such rows cannot exist. It was
+  found by writing the scan's probe and watching it *pass*. The real mechanism is
+  `P7`.
+- **`hardDeleteReachability`'s bare-`name(` regex does not produce false
+  positives.** Expected by the scan, and no example could be constructed. The
+  defect in that guard was the opposite one (`P2`).
+- **`componentReachability`'s regex is not defeated by multi-line JSX.**
+  `[^>]` matches newlines. It is defeated by a `>` *inside a prop*, which is a
+  narrower and different claim.
+- **`O6`'s "only reserved-and-unread surface" claim is false** — `P5`.
+- **The `DEBT` reason for the last two transactions is false** — `P9`.
+- **Four counts are corrected** at the top of this file.
+
 ---
 
 ## Suggested order of attack
@@ -1761,6 +2021,29 @@ work. It closed **H2** (the navigation catalogue, and `/more` with it), **H3**
 (nine entity types given a way back, not the twelve this file claimed), and
 **workstream M** (provider memoization), and took **H7** as far as the data
 loss goes. Workstreams G and J are otherwise untouched.
+
+The 2026-09-10/11 passes closed **workstream P** — the second five-pass scan and
+the three passes that worked down it. Nine ranked findings, three residual gaps
+found by re-running the scan's own mutations against its own fixes, and the
+direct-Dexie guard, which was the largest item `O6` left open and which exposed,
+on the way in, six writes that could land in a deleted encounter, a set of KB
+reads that bypassed their repository, and the graph marker of P7 — none of them
+reported by the scan. `O6`'s other two open items
+are closed with it (`declaredCapabilities`' blind spots, `sheetTemplateSchema.print`),
+and one of `O6`'s claims is withdrawn. The repository factory is the only one of
+the four still open.
+
+Two things from that workstream are worth carrying forward more than the ticks:
+
+- **The signature bug has moved again.** Scan 1: a rule maintained in two
+  places. Scan 2: a guard whose *scope* is narrower than the rule it guards —
+  found five times, including in the guard written to catch declared-and-unread
+  fields, which could not see a contract declared as a Zod schema.
+- **Its worst form is a failure absorbed by a broad catch and reported as
+  success** (P3, P7). That is a test that cannot fail, living in production
+  code, and it hides the defect *and* the evidence of it: the KB graph rebuilt
+  itself in full on every mount for as long as the marker existed, and every
+  rebuild reported success.
 
 What step 13 deliberately left:
 

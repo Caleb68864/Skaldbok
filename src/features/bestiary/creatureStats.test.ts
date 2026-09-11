@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   DEFAULT_CREATURE_STAT_FIELDS,
+  newCreatureStatBlock,
   partitionCreatureStats,
   resolveCreatureArmorStatId,
   resolveCreatureHealthStatId,
@@ -100,5 +101,56 @@ describe('summariseCreatureStats', () => {
       { id: 'a', label: 'A' },
       { id: 'b', label: 'B' },
     ])).toBe('A 1 · B 2');
+  });
+});
+
+describe('newCreatureStatBlock', () => {
+  // The block every create flow starts from. Three of them wrote it by hand as
+  // `{ hp, armor: 0, movement: 0 }` — Dragonbane's ids applied to every ruleset,
+  // which is a `systemId ===` branch with no `systemId` in it.
+  const authored = {
+    creatures: {
+      healthStatId: 'wounds',
+      armorStatId: 'soak',
+      statFields: [
+        { id: 'wounds', label: 'Wounds' },
+        { id: 'soak', label: 'Soak' },
+        { id: 'pace', label: 'Pace' },
+      ],
+    },
+  } as unknown as SystemDefinition;
+
+  it('is the default block for a ruleset that declares none', () => {
+    // Dragonbane behaviour is unchanged, which is what the default set is for.
+    expect(newCreatureStatBlock(classicFantasySystem, { health: 7 })).toEqual({
+      hp: 7, armor: 0, movement: 0,
+    });
+    expect(newCreatureStatBlock(null)).toEqual({ hp: 0, armor: 0, movement: 0 });
+  });
+
+  it("uses the ruleset's own ids, and none of Dragonbane's", () => {
+    expect(newCreatureStatBlock(authored, { health: 3 })).toEqual({
+      wounds: 3, soak: 0, pace: 0,
+    });
+    // Asserted separately because this is the live defect: an NPC captured under
+    // an authored ruleset was stored with `hp`/`armor`/`movement`, which that
+    // ruleset does not declare — so the bestiary showed its three declared stats
+    // all reading 0 and filed the numbers actually entered under "Other".
+    expect(Object.keys(newCreatureStatBlock(authored, { health: 3 }))).not.toContain('hp');
+  });
+
+  it('declares every field the ruleset names, not the first three', () => {
+    expect(Object.keys(newCreatureStatBlock(travellerSystem))).toEqual([
+      'hp', 'armor', 'movement', 'str', 'dex', 'end',
+    ]);
+  });
+
+  it('always carries the health stat, even when statFields omits it', () => {
+    // `resolveCreatureHealthStatId` is what a participant's starting health is
+    // read from, so the key it names has to exist on a creature this app made.
+    const odd = {
+      creatures: { healthStatId: 'vitality', statFields: [{ id: 'soak', label: 'Soak' }] },
+    } as unknown as SystemDefinition;
+    expect(newCreatureStatBlock(odd, { health: 5 })).toEqual({ soak: 0, vitality: 5 });
   });
 });

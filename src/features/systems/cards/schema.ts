@@ -52,8 +52,22 @@ export const regionSchema = z.union([
   gridRegionSchema,
 ]);
 
+/**
+ * One surface's layout: an ordered list of regions.
+ *
+ * @remarks
+ * There was a `layout` field here too — `.describe('Optional layout identifier
+ * for this surface')`, populated in all three bundled `sheet.json` files as
+ * `"three-column"` / `"two-column"`, and read by nothing. The layout is already
+ * in each region: a grid row carries its own `columns`. So the identifier was a
+ * second statement of a fact the regions already made, with no reader to keep it
+ * honest — change it and nothing happens, including nothing wrong.
+ *
+ * Dropped rather than labelled. Zod strips unknown keys, so a template that
+ * still carries one parses exactly as before, minus the field.
+ * `schema.test.ts` fails if any key here gains a declaration and no reader.
+ */
 export const surfaceLayoutSchema = z.object({
-  layout: z.string().min(1).optional().describe('Optional layout identifier for this surface'),
   regions: z.array(regionSchema).max(100).describe('Regions: a full-width stack (array) or a grid row ({columns, cells})'),
 });
 
@@ -136,9 +150,17 @@ export const sheetTemplateSchema = z.object({
    */
   components: z.array(componentDefinitionSchema).max(100).optional()
     .describe('Reusable component definitions, referenced by CardEntry.card'),
-  // Reserved / not yet consumed: the print route renders via the hardcoded
-  // PrintableSheet component, not this surface. Authoring a `print` block is a
-  // no-op today.
-  print: surfaceLayoutSchema.optional().describe('Print-surface layout (reserved — not yet rendered)'),
+  // There was a `print` surface here, "reserved — not yet rendered". It was
+  // validated, cached in IndexedDB with the rest of the template, and rendered
+  // by nothing: `/print` goes through the hardcoded `PrintableSheet` component,
+  // which never asks for a template. It was honestly labelled, and the label is
+  // what kept it: an author reading the schema saw a surface, wrote one, and got
+  // silence either way.
+  //
+  // Dropped rather than honoured, because honouring it is a feature — the print
+  // route has its own paginated CSS component and `components` expand only on
+  // the play surface — and a schema is not the place to keep a plan. Adding it
+  // back with a renderer is one commit; `schema.test.ts` will insist on the
+  // renderer.
 });
 

@@ -36,8 +36,6 @@ const SCAN_DIRS = [
 const ALLOWED = [
   // Adapters state their own ruleset's vocabulary — that is their job.
   'engine/',
-  // Fallback defaults live next to the prop that overrides them.
-  'QuickCreateParticipantFlow.tsx',
   // A panel that exists only for the ruleset whose term it is. `bennies` is a
   // SWADE panel key; the fallback shows only if that system stops naming its
   // own resource.
