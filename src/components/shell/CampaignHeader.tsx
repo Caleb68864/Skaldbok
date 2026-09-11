@@ -291,7 +291,7 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
             {activeCampaign && (
               <label className="flex items-center gap-2 px-4 py-2 text-text-muted text-sm">
                 <input type="checkbox" checked={includePrivateExport} onChange={e => setIncludePrivateExport(e.target.checked)} className="w-4 h-4 accent-[var(--color-accent)]" />
-                Include private notes
+                Include private notes in the campaign bundle
               </label>
             )}
           </SheetBody>

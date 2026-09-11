@@ -9,8 +9,6 @@ import { useExportActions } from '../features/export/useExportActions';
 import { useToast } from '../context/ToastContext';
 import { flushAll } from '../features/persistence/autosaveFlush';
 import { useSessionRefresh } from '../features/session/SessionRefreshContext';
-// NotesGrid kept for rollback safety — file not deleted per spec
-// import { NotesGrid } from '../features/notes/NotesGrid';
 import { VaultBrowser } from '../features/kb/VaultBrowser';
 import { useEncounterList } from '../features/encounters/useEncounterList';
 import { EncounterScreen } from '../features/encounters/EncounterScreen';

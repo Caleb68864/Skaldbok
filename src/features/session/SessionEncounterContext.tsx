@@ -40,6 +40,3 @@ export function useSessionEncounterContext(): UseSessionEncounterResult {
  * `SessionEncounterProvider`) or global shell trees (not wrapped), and need
  * to gracefully degrade when the provider is absent.
  */
-export function useSessionEncounterContextSafe(): UseSessionEncounterResult | null {
-  return useContext(SessionEncounterContext);
-}

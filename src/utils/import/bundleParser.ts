@@ -38,7 +38,12 @@ export interface ValidationWarning {
  */
 export type ParsedBundleResult =
   | { success: true; bundle: BundleEnvelope; warnings: ValidationWarning[] }
-  | { success: false; error: string; partialBundle?: Partial<BundleEnvelope> };
+  // There was a `partialBundle?: Partial<BundleEnvelope>` here. It was
+  // populated on every envelope failure and read by nothing: the only
+  // consumer, `useImportActions`, uses `result.error` for its toast. A
+  // half-parsed envelope is not something a user can be shown or a merge can
+  // use, so there was nothing to wire it to.
+  | { success: false; error: string };
 
 /**
  * Parses and validates a `.skaldbok.json` (or legacy `.skaldmark.json`) file.
@@ -102,7 +107,6 @@ export function parseBundle(json: string): ParsedBundleResult {
     return {
       success: false,
       error: `Bundle structure invalid: ${envelopeResult.error.issues[0]?.message ?? 'unknown error'}`,
-      partialBundle: obj as Partial<BundleEnvelope>,
     };
   }
 

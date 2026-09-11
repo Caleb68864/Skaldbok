@@ -180,7 +180,9 @@ For LAN tablet testing: `npm run build && npx vite preview --host --port 4173`.
 
 ### Tests
 
-135 test files, all under `src/`, run by Vitest. The **node** environment and
+141 test files, all under `src/`, run by Vitest. (This number has now been wrong
+twice, which is the argument for deriving it rather than remembering it:
+`find src -name '*.test.ts*' | wc -l`.) The **node** environment and
 `globals: false` are declared in `vite.config.ts`'s `test:` block — they used to
 be the undeclared defaults, which is a different and weaker thing.
 
@@ -194,7 +196,7 @@ a screen.
 
 A DOM environment is available but **opt-in per file** — put
 `// @vitest-environment jsdom` on the first line and use
-`@testing-library/react`; twelve files do today. It is not global so the pure
+`@testing-library/react`; fourteen files do today. It is not global so the pure
 files keep the node environment and their speed. Because Vitest globals are off,
 Testing Library's auto-cleanup does not run: every DOM test file must call
 `cleanup()` in its own `afterEach`. `src/hooks/useAutosave.test.tsx` is the
