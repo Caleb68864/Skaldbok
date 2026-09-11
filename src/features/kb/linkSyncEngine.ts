@@ -172,10 +172,33 @@ async function reapOrphanPlaceholders(campaignId: string): Promise<void> {
  * all outgoing edges based on the current Tiptap JSON body.
  *
  * Stale edges (links removed from note body) are cleaned up automatically.
- * If sync fails internally, the error is caught and logged — never propagated.
+ *
+ * @remarks
+ * **This entry point swallows.** Its callers are note saves, which fire it and
+ * forget it: a failed sync must never take a save down with it, and the note
+ * data is already committed by the time it runs. The swallow belongs here, at
+ * the one call shape that genuinely cannot use the result — not around the whole
+ * engine. {@link bulkRebuildGraph}, whose caller *is* waiting for an answer,
+ * uses {@link syncNoteSerialised} and gets the failure.
  */
 export async function syncNote(noteId: string): Promise<void> {
-  // Serialised per note. Callers fire this and forget it — `noteRepository`
+  try {
+    await syncNoteSerialised(noteId);
+  } catch (err) {
+    console.warn('[linkSyncEngine] syncNote failed', noteId, err);
+  }
+}
+
+/**
+ * {@link syncNote} without the swallow: rejects if the sync fails.
+ *
+ * @remarks
+ * Internal. The serialisation lives here rather than in `syncNote` so both entry
+ * points share one per-note queue — two callers syncing the same note must still
+ * not interleave, whichever door they came in by.
+ */
+async function syncNoteSerialised(noteId: string): Promise<void> {
+  // Serialised per note. Note saves fire this and forget it — `noteRepository`
   // kicks it off with `.then().catch(() => {})` from create, update and
   // append — so two edits landing close together previously ran two syncs
   // concurrently over the same node. Both read the existing edge set before
@@ -373,7 +396,16 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
       );
     }
   } catch (err) {
-    console.warn('[linkSyncEngine] syncNote failed', noteId, err);
+    // Named and rethrown, not absorbed. This `catch` used to end in a
+    // `console.warn` and a normal return, so a note that failed to sync was
+    // indistinguishable from one that synced cleanly — including to
+    // `bulkRebuildGraph`, which then recorded the graph as built. The
+    // fire-and-forget swallow now lives in `syncNote`, the one caller that
+    // cannot use the answer.
+    throw new Error(
+      `linkSyncEngine.syncNote(${noteId}): ${err instanceof Error ? err.message : String(err)}`,
+      { cause: err },
+    );
   }
 }
 
@@ -426,27 +458,56 @@ export async function syncCharacter(
 
 /**
  * Rebuilds the entire KB graph for a campaign from scratch.
- * Reads all notes, calls syncNote for each sequentially, then writes
- * the migration metadata key.
+ *
+ * @remarks
+ * Reads every note, syncs each one, and records {@link KB_GRAPH_BUILT_KEY} only
+ * once all of them are in the graph.
+ *
+ * **Rejects rather than reporting success it did not have.** This function used
+ * to wrap its whole body in a `catch` that logged and returned, which is what
+ * made the original marker bug invisible: the old
+ * `db.table('metadata').put({ id: key, … })` violated `metadata`'s unique `key`
+ * index — declared `'id, &key'` in `client.ts` — the `ConstraintError` went into
+ * the `console.warn`, and the marker whose whole job is to answer "has the KB
+ * graph been built?" kept its old value. `KnowledgeBaseScreen` then rebuilt the
+ * entire graph on every mount, forever, with each rebuild reporting success.
+ *
+ * Both callers already had error paths they could never enter — the screen's
+ * `catch`, and the *"Imported, but the knowledge graph could not be rebuilt"*
+ * toast in `useImportActions`, which the scan recorded as unreachable. They are
+ * reachable now.
+ *
+ * A note that fails to sync leaves the graph incomplete, so the marker is not
+ * written in that case either: a graph missing a note needs rebuilding, and the
+ * marker is the only thing that asks for one.
+ *
+ * @param campaignId - Campaign whose notes are re-synced.
+ * @throws If any note fails to sync, or if the completion marker cannot be
+ * written. The cause chain carries the first underlying failure.
  */
 export async function bulkRebuildGraph(campaignId: string): Promise<void> {
-  try {
-    const notes = await getNotesByCampaign(campaignId);
-    for (const note of notes) {
-      await syncNote(note.id);
+  const notes = await getNotesByCampaign(campaignId);
+  const failures: Array<{ noteId: string; error: unknown }> = [];
+  for (const note of notes) {
+    try {
+      await syncNoteSerialised(note.id);
+    } catch (error) {
+      // Collected rather than thrown at once: one unparseable note should not
+      // stop the other forty reaching the graph. What it must not do is pass
+      // for a complete rebuild.
+      failures.push({ noteId: note.id, error });
     }
-    // Was `db.table('metadata').put({ id: key, key, value })`, which is
-    // self-idempotent and not idempotent against `metadataRepository.set`:
-    // `metadata` is declared `'id, &key'`, so a row already holding this key
-    // under a *generated* id makes the put a unique-index violation. The catch
-    // below then swallowed it, and the marker whose whole job is to answer "has
-    // the KB graph been built?" silently kept its old value — a full rebuild on
-    // every mount, forever, reported as success.
-    await metadataRepository.set(KB_GRAPH_BUILT_KEY, 'true');
-    if (import.meta.env.DEV) {
-      console.debug(`[linkSyncEngine] bulkRebuildGraph: synced ${notes.length} notes for campaign ${campaignId}`);
-    }
-  } catch (err) {
-    console.warn('[linkSyncEngine] bulkRebuildGraph failed', campaignId, err);
+  }
+  if (failures.length > 0) {
+    throw new Error(
+      `linkSyncEngine.bulkRebuildGraph(${campaignId}): ${failures.length} of ${notes.length} ` +
+        `notes failed to sync (first: ${failures[0].noteId}) — the graph is incomplete and ` +
+        `has not been marked as built`,
+      { cause: failures[0].error },
+    );
+  }
+  await metadataRepository.set(KB_GRAPH_BUILT_KEY, 'true');
+  if (import.meta.env.DEV) {
+    console.debug(`[linkSyncEngine] bulkRebuildGraph: synced ${notes.length} notes for campaign ${campaignId}`);
   }
 }

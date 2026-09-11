@@ -30,6 +30,10 @@ export default function KnowledgeBaseScreen() {
   const { activeCampaign } = useCampaignContext();
   const [isBuilding, setIsBuilding] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  // A rebuild that fails leaves the graph incomplete *and* unmarked, so the next
+  // mount tries again. Until `bulkRebuildGraph` stopped swallowing, this state
+  // could never be set: the `catch` below was unreachable.
+  const [buildError, setBuildError] = useState<string | null>(null);
 
   // On mount: check for migration and rebuild if needed
   useEffect(() => {
@@ -43,14 +47,26 @@ export default function KnowledgeBaseScreen() {
         // stayed out of two surveys of direct Dexie access.
         const built = await metadataRepository.get(KB_GRAPH_BUILT_KEY);
         if (!built) {
-          if (mounted) setIsBuilding(true);
+          if (mounted) {
+            setIsBuilding(true);
+            setBuildError(null);
+          }
           await bulkRebuildGraph(activeCampaign.id);
           if (mounted) setIsBuilding(false);
         }
       } catch (err) {
-        if (import.meta.env.DEV)
-          console.warn('[KBScreen] bulkRebuildGraph failed', err);
-        if (mounted) setIsBuilding(false);
+        console.warn('[KBScreen] bulkRebuildGraph failed', err);
+        if (mounted) {
+          setIsBuilding(false);
+          // Said on screen rather than only in the console: the graph below is
+          // incomplete, and nothing else in the app would tell the user that the
+          // note they are looking for is missing from it rather than absent.
+          setBuildError(
+            err instanceof Error && err.message
+              ? `The knowledge graph could not be finished: ${err.message}`
+              : 'The knowledge graph could not be finished.',
+          );
+        }
       }
       if (mounted) setIsReady(true);
     }
@@ -92,6 +108,15 @@ export default function KnowledgeBaseScreen() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1 align-[-2px]"><circle cx="5" cy="6" r="3"/><circle cx="19" cy="6" r="3"/><circle cx="12" cy="18" r="3"/><line x1="7.5" y1="7.5" x2="10.5" y2="16.5"/><line x1="16.5" y1="7.5" x2="13.5" y2="16.5"/></svg>
             Graph
           </button>
+        </div>
+      )}
+      {buildError && (
+        <div
+          role="alert"
+          className="mx-4 mt-3 rounded-lg border border-[var(--color-danger,#b91c1c)] p-3 text-sm text-[var(--color-text)]"
+        >
+          {buildError} Some notes may be missing from the list and the graph. It
+          will be retried the next time this screen opens.
         </div>
       )}
       {isBuilding && (
