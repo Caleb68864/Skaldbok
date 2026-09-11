@@ -2432,7 +2432,8 @@ No guard lost a case. Suite 2089 → 2200 tests, 137 → 141 files; ESLint warni
 These were found and are **not** half-wired surfaces, so they are recorded rather
 than acted on. Two are serious.
 
-- **Ten live character sub-fields are stripped on every import.**
+- ~~**Ten live character sub-fields are stripped on every import.**~~ **Fixed in
+  workstream S below** — eleven, not ten, and both import routes lost them.
   `characterRecordSchema` is `.passthrough()` at the top level only, and
   `bundleParser` is the one branch that replaces the row with parser output. So
   `CharacterSkill.dragonMarked`/`demonMarked`, `Weapon.metal`/`damageType`/
@@ -2442,7 +2443,8 @@ than acted on. Two are serious.
   applied the reasoning to the nested objects. `bundleParser.test.ts:74` claims to
   guard it and asserts only the two fields the two `passthrough()` calls already
   protect.
-- **The privacy filter never touches `kbNodes`/`kbEdges`.** `applyPrivacyFilter`
+- ~~**The privacy filter never touches `kbNodes`/`kbEdges`.**~~ **Fixed in
+  workstream S below.** `applyPrivacyFilter`
   spreads `...contents` and overrides `notes`, `entityLinks` and `attachments`
   only, so a private note's title, id and its whole edge set ship in a campaign
   bundle the user was told excludes it. The Markdown path is defended against
@@ -2463,3 +2465,125 @@ than acted on. Two are serious.
   README's Known gaps and `RESTORE_WITHOUT_LISTING.attachments`.
 - Whether a `CharacterRecord` should carry a `campaignId` — the question `R11`
   leaves open.
+
+---
+
+## Workstream S — the two `R` recorded but did not fix (2026-09-11) — DONE
+
+`R`'s queue named two items it deliberately left because they are not half-wired
+surfaces. They were the two most serious open items in the project, and both are
+**data**: one leaves the device that should not, one is deleted that should not.
+This pass is those two and nothing else.
+
+Both were **reproduced before being touched**, and the reproduction is what the
+test now asserts against. Artefacts of both runs are in the session scratchpad.
+
+### S1 — a private note's title and edge set shipped in a bundle that excluded it
+
+`applyPrivacyFilter` spread `...contents` and replaced exactly three keys —
+`notes`, `entityLinks`, `attachments`. Every table added to the bundle afterwards
+was outside the confidentiality boundary by default, and two of them are a
+*projection of the excluded thing*: `kb_nodes.label` **is** the note's title,
+`sourceId` **is** its id, and `kb_edges` is one row per wiki-link, mention and
+tag the note carries.
+
+Reproduced end to end — seed a private note, export the campaign, read the bytes:
+the title and both edges present in the delivered JSON. Only the body was
+withheld. A title plus a full edge set reconstructs who a character secretly is
+and which faction a location belongs to, so "only the body leaked" was never a
+defence. This was a broken promise to a person, not a data-shape defect.
+
+**The fifth appearance of one shape**: a rule enforced at one of several exits.
+12 of 26 tables, then `represents` edges, then reference notes, then rulesets,
+now privacy. So the fix derives, in two halves that fail independently:
+
+- **Removal is derived.** Seed an excluded-id set with the private note ids and
+  iterate to a fixpoint: a row is excluded when its own `id` is excluded or when
+  any of its own string properties holds an excluded id, and an excluded row's id
+  joins the set. Exclusion follows references outward — note → kb node via
+  `sourceId` → kb edges via `fromId`/`toId` — with **no table named anywhere**.
+  One narrowing preserves the existing anti-over-filtering guarantee: a `<x>Id`
+  whose row also carries `<x>Type` is a typed reference and does not match when
+  that type is not a note.
+- **The promise is asserted over the artefact.** `serializeBundle` scans the
+  serialized text — the exact bytes that become the file — for any surviving
+  private note id and throws rather than returning one. A filter can miss a
+  table; a scan of the finished bundle cannot, because it does not know what a
+  table is. Ids only: a private note's *title* can legitimately sit in a public
+  note's body, and refusing that export would be the over-filtering mistake
+  wearing the shape of the fix.
+
+**Privacy moved to the choke point.** It was applied by each of the three export
+actions — three chances to forget, and no compiler complaint for a fourth path.
+`SerializeOptions.includePrivate` is now **required** on the one function every
+JSON bundle passes through, so an export that does not answer the question does
+not type-check.
+
+Guards, neither restating a table list: `privacyFilter.test.ts` walks
+`BUNDLE_TABLE_ENTRIES`, plants a row referencing a private note in *every* bundle
+table and requires each dropped, with a public-note control in each that must
+survive; `privacyBoundary.test.ts` seeds a real campaign, exports through all
+three scopes and asserts the title, note id, kb node id and attachment filename
+occur nowhere in the serialized bundle — fixture-sanity first, controls included.
+
+Mutations: restricting the filter to the three original keys → **5 red**;
+neutering the residue check → the refusal case red **alone**, so the halves are
+genuinely independent; bypassing the filter inside `serializeBundle` → all three
+scopes red.
+
+### S2 — eleven character sub-fields deleted on every import
+
+`characterRecordSchema` was `.passthrough()` at the top level only. Zod strips
+per object, not per document, and `migrateCharacter` returns Zod's *output*.
+Measured on a real export/re-import: **12 of 13 probed sub-fields lost** —
+`CharacterSkill.dragonMarked`/`demonMarked`, `Weapon.metal`/`damageType`/
+`strRequirement`/`damaged`/`isShield`, `ArmorPiece.weight`/`bodyPart`/
+`movementPenalty`/`metal`. The single survivor was `StoryBeat.body`, enumerated
+when this bug was found *there* and fixed in that one place; the comment beside
+it states the rule in full and the rule was never generalised. Both import routes
+(bundle parser, single-character file) go through `migrateCharacter`, so both
+lost them.
+
+Fixed on both axes, because either alone leaves half: the declared sub-fields are
+**enumerated** so they are validated, and **every** object in the file is
+`.passthrough()` so the next forgotten field survives anyway.
+
+**The guard was the reason this lived.** `bundleParser.test.ts` claimed to cover
+it and asserted `portraitUri` plus two `uiState` members — exactly the keys the
+two existing passthroughs already protected. It could not fail while eleven
+siblings were dropped. It is kept with its scope corrected to the top level, and
+`characterSchemaRoundTrip.test.ts` carries the guarantee in two derived cases:
+
+- **from the schema** — every object reachable from `characterRecordSchema` must
+  be a passthrough, asserted by *path list* rather than a count so an added
+  object and a removed one cannot cancel;
+- **from the types** — parse `types/character.ts`, walk the interface graph
+  reachable from `CharacterRecord` (which excludes `Spell` and `HeroicAbility` on
+  its own — they are views over `Ability`, and a hand-written list would have had
+  to remember), assert the fixture *covers* every declared member, then import it
+  for real and assert every value returns. The fixture-coverage step is what
+  stops this guard going the way of the one it replaces.
+
+Mutations: drop the weapon passthrough → schema case red naming
+`characterRecord.weapons[]`, type case green (fields are enumerated — the halves
+are independent); declare a new `Weapon.runeEtched` and tell nothing else → type
+case red naming it; strip `bodyPart` and its passthrough → 3 red. That last
+mutation run against the **old** guard: **10/10 green** — the original defect
+demonstrated directly.
+
+### Deliberately left
+
+- **`exportNote` / `copyNoteAsMarkdown` still export a note the user selected,
+  private or not.** That is the feature: a per-note action on the note in front
+  of you is an explicit decision, unlike a bundle described as excluding private
+  notes. Their wiki-link resolution corpus *is* now privacy-filtered, matching
+  `exportAllNotes` beside them, which it did not before.
+- **A mention of a private note still renders its stored title as plain text.**
+  `resolveWikiLinks` falls back to `attrs.title` for an unresolvable mention, and
+  that string was typed into the *public* note by the author. Filtering the
+  corpus changes `[[Real Title]]` into plain text but cannot remove text the user
+  wrote in the note being exported.
+- **The residue check covers ids, not titles**, and the reasoning is in
+  `privateResidueIn`: a title is user prose that can legitimately recur, an id is
+  a UUID that cannot.
+- Everything else on `R`'s recorded list is untouched and still open.

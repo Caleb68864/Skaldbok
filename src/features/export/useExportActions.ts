@@ -23,7 +23,7 @@ import { getEngine } from '../systems/engine';
 import { renderLedgerToMarkdown } from '../../utils/export/renderLedger';
 import { renderRouteToMarkdown } from '../../utils/export/renderRoute';
 import { collectCharacterBundle, collectSessionBundle, collectCampaignBundle } from '../../utils/export/collectors';
-import { applyPrivacyFilter, excludePrivateNotes } from '../../utils/export/privacyFilter';
+import { excludePrivateNotes, PrivacyLeakError } from '../../utils/export/privacyFilter';
 import { serializeBundle, deliverBundle } from '../../utils/export/bundleSerializer';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
@@ -81,6 +81,21 @@ async function buildLedgerMarkdown(campaign: Campaign): Promise<string | null> {
   });
 }
 
+/**
+ * The toast for an export the privacy check refused, or `null` for anything else.
+ *
+ * @remarks
+ * `serializeBundle` fails closed when a private note is still referenced by the
+ * bundle it was about to produce. That is not "try again" — retrying produces
+ * the same refusal — and it is the one export failure whose cause the user needs
+ * to know, because the alternative outcome was their private note leaving the
+ * device. So it gets its own message instead of the generic one.
+ */
+function privacyBlockedMessage(err: unknown): string | null {
+  if (!(err instanceof PrivacyLeakError)) return null;
+  return 'Export stopped: a private note could not be fully excluded. Nothing was saved.';
+}
+
 export function useExportActions() {
   const { activeCampaign } = useCampaignContext();
   const { showToast } = useToast();
@@ -108,7 +123,13 @@ export function useExportActions() {
         ...(await getLinksFrom(noteId, 'introduced_in')),
         ...(await getLinksFrom(noteId, 'contains')),
       ] as EntityLink[];
-      const allNotes = await getNotesByCampaign(activeCampaign.id);
+      // The wiki-link resolution corpus, privacy-filtered like every other
+      // shareable render. `exportAllNotes` already filtered it and these two
+      // single-note paths did not, so a mention of a private note resolved to
+      // `[[Its Real Title]]` here and degraded to plain text there — the same
+      // rule at two exits, disagreeing. Unresolved is the correct outcome: the
+      // target is not in the export.
+      const allNotes = excludePrivateNotes(await getNotesByCampaign(activeCampaign.id));
       const attachments = await getAttachmentsByNote(noteId);
       // Must match the ZIP entry names, which are sanitised — see
       // safeAttachmentFilename — or the wiki-links point at files that are not there.
@@ -295,7 +316,8 @@ export function useExportActions() {
         ...(await getLinksFrom(noteId, 'introduced_in')),
         ...(await getLinksFrom(noteId, 'contains')),
       ] as EntityLink[];
-      const allNotes = await getNotesByCampaign(activeCampaign.id);
+      // Privacy-filtered corpus, for the same reason as `exportNote` above.
+      const allNotes = excludePrivateNotes(await getNotesByCampaign(activeCampaign.id));
 
       const markdown = renderNoteToMarkdown(note, links, allNotes);
       await copyToClipboard(markdown);
@@ -386,13 +408,12 @@ export function useExportActions() {
         showToast(`Export failed: ${result.error}`);
         return;
       }
-      const filtered = applyPrivacyFilter(result.contents, includePrivate);
-      const json = await serializeBundle('character', filtered);
+      const json = await serializeBundle('character', result.contents, { includePrivate });
       const slug = `character-${characterId.slice(0, 8)}-${Date.now()}`;
       await deliverBundle(slug, json);
       showToast('Character exported');
     } catch (err) {
-      showToast('Export failed. Please try again.');
+      showToast(privacyBlockedMessage(err) ?? 'Export failed. Please try again.');
       console.error('[useExportActions] exportCharacter error', err);
     }
   }, [showToast]);
@@ -410,13 +431,12 @@ export function useExportActions() {
         showToast(`Export failed: ${result.error}`);
         return;
       }
-      const filtered = applyPrivacyFilter(result.contents, includePrivate);
-      const json = await serializeBundle('session', filtered);
+      const json = await serializeBundle('session', result.contents, { includePrivate });
       const slug = `session-${sessionId.slice(0, 8)}-${Date.now()}`;
       await deliverBundle(slug, json);
       showToast('Session exported');
     } catch (err) {
-      showToast('Export failed. Please try again.');
+      showToast(privacyBlockedMessage(err) ?? 'Export failed. Please try again.');
       console.error('[useExportActions] exportSessionSkaldmark error', err);
     }
   }, [showToast]);
@@ -434,8 +454,7 @@ export function useExportActions() {
         showToast(`Export failed: ${result.error}`);
         return;
       }
-      const filtered = applyPrivacyFilter(result.contents, includePrivate);
-      const json = await serializeBundle('campaign', filtered);
+      const json = await serializeBundle('campaign', result.contents, { includePrivate });
       const slug = `campaign-${campaignId.slice(0, 8)}-${Date.now()}`;
       const outcome = await deliverBundle(slug, json);
       if (outcome === 'cancelled') {
@@ -456,7 +475,7 @@ export function useExportActions() {
       void updateSettings({ lastBackupAt: new Date().toISOString() });
       showToast('Campaign exported');
     } catch (err) {
-      showToast('Export failed. Please try again.');
+      showToast(privacyBlockedMessage(err) ?? 'Export failed. Please try again.');
       console.error('[useExportActions] exportCampaign error', err);
     }
   }, [showToast, updateSettings]);

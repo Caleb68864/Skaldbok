@@ -366,7 +366,7 @@ describe('campaign export completeness', () => {
     expect(collected.success).toBe(true);
     if (!collected.success) return;
 
-    const json = await serializeBundle('campaign', collected.contents);
+    const json = await serializeBundle('campaign', collected.contents, { includePrivate: false });
 
     // Wipe the device, then restore from the file alone.
     await db.delete();

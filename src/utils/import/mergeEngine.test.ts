@@ -73,7 +73,7 @@ describe('mergeBundle', () => {
       blob: new Blob([bytes], { type: 'image/jpeg' }),
       createdAt: '2026-01-02T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z',
     };
-    const json = await serializeBundle('character', { attachments: [attachment] } as unknown as BundleContents);
+    const json = await serializeBundle('character', { attachments: [attachment] } as unknown as BundleContents, { includePrivate: false });
     const parsed = parseBundle(json);
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
