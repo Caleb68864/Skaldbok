@@ -1,26 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { db } from '../../storage/db/client';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
-import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
-import { generateId } from '../../utils/ids';
-import { nowISO } from '../../utils/dates';
 import type { Encounter } from '../../types/encounter';
 
-/** Fields for starting a new encounter within a session. */
-export interface StartEncounterInput {
-  title: string;
-  type: 'combat' | 'social' | 'exploration';
-  description?: unknown; // ProseMirror JSON
-  tags?: string[];
-  location?: string;
-  /**
-   * Parent encounter override for the auto-generated happened_during edge.
-   * - `undefined` (or omitted): auto-link to the currently-active encounter (if any)
-   * - `null`: do NOT create a happened_during edge even if one is active
-   * - specific id: use that id as the parent
-   */
-  parentOverride?: string | null;
-}
+// `StartEncounterInput` moved to `encounterRepository` with the transaction it
+// describes, and is re-exported here so the screens that import it from this
+// hook keep working.
+export type { StartEncounterInput } from '../../storage/repositories/encounterRepository';
+import type { StartEncounterInput } from '../../storage/repositories/encounterRepository';
 
 /** State and actions returned by {@link useSessionEncounter}. */
 export interface UseSessionEncounterResult {
@@ -86,97 +72,27 @@ export function useSessionEncounter(sessionId: string): UseSessionEncounterResul
         throw new Error('useSessionEncounter.startEncounter: sessionId is required');
       }
 
-      // Load the session's campaignId (needed for the new encounter row)
-      const session = await db.sessions.get(sessionId);
-      if (!session) {
-        throw new Error(`useSessionEncounter.startEncounter: session ${sessionId} not found`);
-      }
-
-      let createdEncounter: Encounter | null = null;
-
-      await db.transaction('rw', [db.encounters, db.entityLinks, db.sessions], async () => {
-        // Re-read active encounter INSIDE the transaction to win last-writer races
-        const priorActive = await encounterRepository.getActiveEncounterForSession(sessionId);
-
-        // Auto-end any prior active
-        if (priorActive) {
-          await encounterRepository.endActiveSegment(priorActive.id);
-        }
-
-        // Create the new encounter with one open segment
-        const now = nowISO();
-        const newId = generateId();
-        const newEncounter: Encounter = {
-          id: newId,
-          sessionId,
-          campaignId: session.campaignId,
-          title: input.title.trim(),
-          type: input.type,
-          status: 'active',
-          description: input.description,
-          body: undefined,
-          summary: undefined,
-          tags: input.tags ?? [],
-          location: input.location,
-          segments: [{ startedAt: now }],
-          participants: [],
-          schemaVersion: 1,
-          createdAt: now,
-          updatedAt: now,
-        };
-        await db.encounters.add(newEncounter);
-
-        // Decide parent linkage
-        let parentId: string | null = null;
-        if (input.parentOverride === null) {
-          parentId = null; // explicit opt-out
-        } else if (input.parentOverride !== undefined) {
-          parentId = input.parentOverride;
-        } else if (priorActive) {
-          parentId = priorActive.id; // auto
-        }
-
-        if (parentId) {
-          await entityLinkRepository.createLink({
-            fromEntityId: newId,
-            fromEntityType: 'encounter',
-            toEntityId: parentId,
-            toEntityType: 'encounter',
-            relationshipType: 'happened_during',
-          });
-        }
-
-        createdEncounter = newEncounter;
-      });
-
+      // The session lookup, the three-table transaction, the encounter row
+      // and its `happened_during` edge all moved into
+      // `encounterRepository.startForSession`. The transaction did not go away
+      // and should not: closing the prior active encounter's segment has to
+      // commit with the new one or the one-active-encounter invariant is
+      // briefly false. It moved to the side of the boundary that owns it.
+      const created = await encounterRepository.startForSession(sessionId, input);
       await refresh();
-      if (!createdEncounter) {
-        throw new Error(
-          'useSessionEncounter.startEncounter: transaction completed without setting created encounter',
-        );
-      }
-      return createdEncounter;
+      return created;
     },
     [sessionId, refresh],
   );
 
   const endEncounter = useCallback(
     async (id: string, summary?: unknown): Promise<void> => {
-      const existing = await db.encounters.get(id);
-      if (!existing) {
-        throw new Error(`useSessionEncounter.endEncounter: encounter ${id} not found`);
-      }
-
-      await db.transaction('rw', [db.encounters], async () => {
-        await encounterRepository.endActiveSegment(id);
-        const updates: Partial<Encounter> = {
-          status: 'ended',
-          updatedAt: nowISO(),
-        };
-        if (summary !== undefined) updates.summary = summary;
-        await db.encounters.update(id, updates);
-      });
-
+      // Was a bare `db.encounters.get(id)` that checked existence and not
+      // `deletedAt`, then wrote the user's wrap-up prose into whatever it got
+      // back. Of the four tombstone-blind writes this is the one that loses
+      // text a person typed, so the repository throws rather than returning
+      // undefined — a dialog must not silently swallow what it was given.
+      await encounterRepository.endWithSummary(id, summary);
       await refresh();
     },
     [refresh],

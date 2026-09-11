@@ -5,6 +5,7 @@ import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import * as entityLinkRepository from './entityLinkRepository';
+import * as sessionRepository from './sessionRepository';
 
 /**
  * Creates a new encounter in IndexedDB.
@@ -150,6 +151,156 @@ export async function end(id: string): Promise<Encounter | undefined> {
     await endActiveSegment(id);
   }
   return update(id, { status: 'ended' });
+}
+
+/** Fields for starting a new encounter within a session. */
+export interface StartEncounterInput {
+  title: string;
+  type: Encounter['type'];
+  description?: unknown; // ProseMirror JSON
+  tags?: string[];
+  location?: string;
+  /**
+   * Parent encounter override for the auto-generated `happened_during` edge.
+   * - `undefined` (or omitted): auto-link to the currently-active encounter, if any
+   * - `null`: do NOT create a `happened_during` edge even if one is active
+   * - specific id: use that id as the parent
+   */
+  parentOverride?: string | null;
+}
+
+/**
+ * Opens an encounter in a session, closing any prior active one.
+ *
+ * @remarks
+ * Moved out of `useSessionEncounter.startEncounter`, which held the whole thing
+ * — the session lookup, the transaction over three tables, the row and the
+ * `happened_during` edge — inline in a React hook.
+ *
+ * The transaction spans `encounters`, `entityLinks` and `sessions` and that is
+ * not incidental: the prior active encounter's segment must close in the same
+ * commit that opens the new one, or the "at most one active encounter per
+ * session" invariant is briefly false and a concurrent read sees two. That is
+ * why this is one repository function rather than three calls a caller
+ * sequences, and it is the reason the `db.transaction` stays — it simply stays
+ * on the correct side of the storage boundary.
+ *
+ * The session is resolved through {@link sessionRepository.getSessionById},
+ * which excludes soft-deleted rows, so an encounter can no longer be started in
+ * a deleted session. The old inline `db.sessions.get(sessionId)` checked only
+ * that the row was there.
+ *
+ * @param sessionId - Session to open the encounter in.
+ * @param input - Validated encounter fields.
+ * @returns The created encounter.
+ * @throws If the session does not exist or is soft-deleted.
+ */
+export async function startForSession(
+  sessionId: string,
+  input: StartEncounterInput,
+): Promise<Encounter> {
+  const session = await sessionRepository.getSessionById(sessionId);
+  if (!session) {
+    throw new Error(`encounterRepository.startForSession: session ${sessionId} not found`);
+  }
+
+  let created: Encounter | null = null;
+  await db.transaction('rw', [db.encounters, db.entityLinks, db.sessions], async () => {
+    // Re-read the active encounter *inside* the transaction to win last-writer races.
+    const priorActive = await getActiveEncounterForSession(sessionId);
+    if (priorActive) await endActiveSegment(priorActive.id);
+
+    const now = nowISO();
+    const newId = generateId();
+    const newEncounter: Encounter = {
+      id: newId,
+      sessionId,
+      campaignId: session.campaignId,
+      title: input.title.trim(),
+      type: input.type,
+      status: 'active',
+      description: input.description,
+      body: undefined,
+      summary: undefined,
+      tags: input.tags ?? [],
+      location: input.location,
+      segments: [{ startedAt: now }],
+      participants: [],
+      schemaVersion: 1,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.encounters.add(newEncounter);
+
+    let parentId: string | null = null;
+    if (input.parentOverride === null) parentId = null;
+    else if (input.parentOverride !== undefined) parentId = input.parentOverride;
+    else if (priorActive) parentId = priorActive.id;
+
+    if (parentId) {
+      await entityLinkRepository.createLink({
+        fromEntityId: newId,
+        fromEntityType: 'encounter',
+        toEntityId: parentId,
+        toEntityType: 'encounter',
+        relationshipType: 'happened_during',
+      });
+    }
+    created = newEncounter;
+  });
+
+  if (!created) {
+    throw new Error(
+      'encounterRepository.startForSession: transaction completed without creating an encounter',
+    );
+  }
+  return created;
+}
+
+/**
+ * Closes an encounter's open segment and records the user's wrap-up prose.
+ *
+ * @remarks
+ * This was written out in `useSessionEncounter.endEncounter` as a bare
+ * `db.encounters.get(id)` — existence checked, `deletedAt` not — followed by a
+ * transaction writing `status: 'ended'` and the summary. So the paragraph
+ * someone types at the end of a fight could land in an encounter that had been
+ * deleted in another tab, and be unreachable the moment the dialog closed.
+ *
+ * It is the worst of the four tombstone-blind writes for one specific reason:
+ * the other three write structure the user can re-create — a participant, a
+ * party — and this one writes text they composed by hand. This is local-first;
+ * there is no other copy of it anywhere.
+ *
+ * Distinct from {@link end}, which takes no summary and resolves the encounter
+ * through {@link getById}. Both refuse a tombstone; this one says so by throwing
+ * rather than returning `undefined`, because the caller is a dialog that must
+ * not silently swallow the text it was given.
+ *
+ * @param id - Encounter to end.
+ * @param summary - Wrap-up content. Omit to leave any existing summary alone.
+ * @returns The updated encounter.
+ * @throws If the encounter does not exist or is soft-deleted.
+ */
+export async function endWithSummary(id: string, summary?: unknown): Promise<Encounter | undefined> {
+  return db.transaction('rw', [db.encounters], async () => {
+    const existing = await db.encounters.get(id);
+    if (!existing) {
+      throw new Error(`encounterRepository.endWithSummary: encounter ${id} not found`);
+    }
+    if ((existing as Encounter).deletedAt) {
+      throw new Error(`encounterRepository.endWithSummary: encounter ${id} is deleted`);
+    }
+    const segments = (existing as Encounter).segments ?? [];
+    if (segments.length > 0 && !segments[segments.length - 1]!.endedAt) {
+      await endActiveSegment(id);
+    }
+    const updates: Partial<Encounter> = { status: 'ended', updatedAt: nowISO() };
+    if (summary !== undefined) updates.summary = summary;
+    await db.encounters.update(id, updates);
+    const updated = await db.encounters.get(id);
+    return updated as Encounter | undefined;
+  });
 }
 
 /**

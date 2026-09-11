@@ -504,40 +504,22 @@ export function accessesIn(source: string): Access[] {
  * `if (enc.deletedAt) return;` line, so a participant added to a deleted
  * encounter is written where nobody can see or remove it.
  *
- * The fix is not a guard, it is a repository function all five call; each entry
- * below is deleted by the commit that moves its site.
+ * The fix was not a guard, it was a repository function all five call —
+ * `encounterRepository.addRepresentedParticipants`, plus `endWithSummary` and
+ * `entityLinkRepository.reassignNoteToEncounter` for the two writes that were
+ * not participant adds. Each entry here was deleted by the commit that moved
+ * its site, and is now empty.
+ *
+ * To add one: same shape as {@link DIRECT_DEXIE_ACCESS}, and start the reason
+ * with `DEBT —` so a reader can tell an argument from an IOU at a glance.
  */
-function debt(site: string, operations: Record<string, string>): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(operations).map(([descriptor, detail]) => [
-      descriptor,
-      `DEBT — §12, scheduled to move behind a repository. ${site} ${detail}`,
-    ]),
-  );
-}
-
-const SCOPE = 'Named in that transaction\'s scope array, not operated on here.';
-
 const RECORDED_DEBT: Record<string, Record<string, string>> = {
-  'features/session/useSessionEncounter.ts': debt(
-    'Starting an encounter inside a session, and writing its end-of-fight summary.',
-    {
-      'sessions:read': 'Reads the session an encounter is being started in.',
-      'db:transaction':
-        'Two: starting an encounter (encounters + entityLinks + sessions, because the '
-        + '`happened_during` edge and the session\'s own state move with it), and the summary '
-        + 'write.',
-      'encounters:ref': SCOPE,
-      'entityLinks:ref': SCOPE,
-      'sessions:ref': SCOPE,
-      'encounters:write':
-        'Adds the new encounter row, and separately writes the user\'s end-of-fight summary.',
-      'encounters:read':
-        'Reads the encounter the summary is being written into, with no `deletedAt` check — so '
-        + 'the text the user typed at the end of a fight can land in a deleted encounter and '
-        + 'be unreachable the moment the dialog closes.',
-    },
-  ),
+  // Empty, and the emptying is the point. Every entry that stood here was
+  // deleted by the commit that moved its site, because the honesty check below
+  // fails on a permission for an access the file no longer makes — so the debt
+  // could not be paid down quietly and could not be left to rot. Five sites
+  // went; `useEncounter.ts`, `addPartyCharactersToEncounter.ts` and
+  // `useSessionEncounter.ts` no longer import Dexie at all.
 };
 
 /**
@@ -618,34 +600,23 @@ const DIRECT_DEXIE_ACCESS: Record<string, Record<string, string>> = {
   },
   'features/session/useSessionLog.ts': {
     'db:transaction':
-      'Three transactions spanning notes, entityLinks, encounters and creatureTemplates at '
-      + 'once — a quick-log entry that must land with its `contains` edge, an NPC capture '
-      + 'that writes a creature template and a note together, and a note reassignment that '
-      + 'rewrites edges. A multi-table transaction is the one thing a per-entity repository '
-      + 'cannot express, and splitting them would trade atomicity for layering.',
+      'Two transactions spanning notes, entityLinks, encounters and creatureTemplates at '
+      + 'once: a quick-log entry that must land with its `contains` edge, and an NPC capture '
+      + 'that writes a creature template and the note describing it together. A transaction '
+      + 'spanning tables is the one thing a per-entity repository cannot express, so this is '
+      + 'the shape that genuinely belongs outside the repositories rather than the shape that '
+      + 'was left there. (A third, the note reassignment, moved to '
+      + '`entityLinkRepository.reassignNoteToEncounter` — it looked the same and was not: it '
+      + 'touched one table and its checks were the part that mattered.)',
     'notes:ref': 'Named in a transaction scope array: the quick-log and NPC-capture writes.',
     'entityLinks:ref': 'Named in a transaction scope array: the `contains` edge each one writes.',
     'encounters:ref': 'Named in a transaction scope array: the encounter a logged note belongs to.',
     'creatureTemplates:ref':
       'Named in the NPC-capture transaction\'s scope array — the template and the note that '
       + 'describes it are written in one commit.',
-    'notes:read':
-      'Inside those transactions: reading the note being reassigned, to check it exists and '
-      + 'that its session matches the target encounter\'s.',
     'notes:write':
       'Inside those transactions: the quick-log note and the NPC note, each of which must '
       + 'land with its `contains` edge or not at all.',
-    'entityLinks:write':
-      'Inside those transactions: the new `contains` edge, and the tombstones on the edges it '
-      + 'replaces, sharing one `softDeletedBy` so the move is restorable as a unit. There is '
-      + 'deliberately no `entityLinks:read` beside this: the edges are read through '
-      + '`entityLinkRepository.getLinksTo`, and the honesty check would fail on an entry for '
-      + 'an access this file does not make.',
-    'encounters:read':
-      'Resolving the encounter a note is being reassigned to. Tombstone-blind today: it checks '
-      + 'the encounter exists and that its session matches, not that it is still alive, so a '
-      + 'note can be filed into a deleted encounter and drop out of every encounter-scoped '
-      + 'list while staying live itself.',
     'creatureTemplates:write':
       'Inside the NPC-capture transaction: the template and its note land together. '
       + '**Also a defect** — it hardcodes a classic-fantasy `{hp, armor, movement}` stats '
