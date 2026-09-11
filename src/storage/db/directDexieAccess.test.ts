@@ -523,6 +523,17 @@ const RECORDED_DEBT: Record<string, Record<string, string>> = {
   // could not be paid down quietly and could not be left to rot. Five sites
   // went; `useEncounter.ts`, `addPartyCharactersToEncounter.ts` and
   // `useSessionEncounter.ts` no longer import Dexie at all.
+  //
+  // The last two — `useSessionLog`'s quick-log and NPC-capture transactions —
+  // are gone too, and their stated reason is worth recording because it was
+  // *wrong in a checkable way*. It said their home was "a storage-layer service
+  // that does not exist yet". The service existed:
+  // `features/notes/noteCreationService.ts` imported nothing but repositories,
+  // types and utils — storage-layer code filed under a feature, and the only
+  // thing standing between the hook and the boundary. It moved to
+  // `storage/noteCreationService.ts` and grew the two transactions unchanged.
+  // The hook now imports no Dexie at all. An exemption's reason is a claim like
+  // any other; this one held until somebody opened the file it named.
 };
 
 /**
@@ -572,37 +583,6 @@ const DIRECT_DEXIE_ACCESS: Record<string, Record<string, string>> = {
     'db:tables':
       'The scope of that transaction and the loop that clears it. Same permission, stated '
       + 'separately because the loop is a separate operation from the transaction.',
-  },
-  'features/session/useSessionLog.ts': {
-    'db:transaction':
-      'DEBT, with the honest reason rather than the convenient one. Two transactions over '
-      + 'notes + entityLinks + encounters (+ creatureTemplates for the NPC capture): a '
-      + 'quick-log entry that must land with its `contains` edge, and an NPC capture that '
-      + 'writes a bestiary row and the note describing it together. **"It spans tables" is '
-      + 'not the argument** — `encounterRepository.startForSession` spans three and moved '
-      + 'behind the boundary in the same sweep that wrote this entry, so that reason was '
-      + 'tested and found false. The real reason is narrower: both compose a note, its '
-      + 'canonical links and (for one) a creature template across two feature modules, so '
-      + 'their home is a storage-layer service that does not exist yet, and inventing one '
-      + 'inside a hook carrying buffered writes and end-of-session flush semantics is a '
-      + 'larger change than the remaining risk justifies. Neither is tombstone-blind and '
-      + 'neither overwrites anything — they only add rows — which is why they were the last '
-      + 'thing on the list and why stopping here is a stopping point rather than a gap.',
-    'notes:ref': 'Named in a transaction scope array: the quick-log and NPC-capture writes.',
-    'entityLinks:ref': 'Named in a transaction scope array: the `contains` edge each one writes.',
-    'encounters:ref': 'Named in a transaction scope array: the encounter a logged note belongs to.',
-    'creatureTemplates:ref':
-      'Named in the NPC-capture transaction\'s scope array — the template and the note that '
-      + 'describes it are written in one commit.',
-    'notes:write':
-      'Inside those transactions: the quick-log note and the NPC note, each of which must '
-      + 'land with its `contains` edge or not at all.',
-    'creatureTemplates:write':
-      'Inside the NPC-capture transaction: the template and its note land together. The '
-      + 'hardcoded classic-fantasy `{hp, armor, movement}` stat block this entry used to '
-      + 'name is gone — the block comes from `newCreatureStatBlock(system)` now, and '
-      + '`engineConsumers.test.ts` fails on a `stats:` literal with hand-spelled keys. What '
-      + 'remains here is the transaction, not the defect.',
   },
   'utils/import/mergeEngine.ts': {
     'db:transaction':

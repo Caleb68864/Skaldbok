@@ -9,7 +9,7 @@ import {
   buildNoteRecord,
   persistCanonicalNoteLinks,
   resolveEncounterAttachmentTarget,
-} from './noteCreationService';
+} from '../../storage/noteCreationService';
 
 // Lazy import to avoid a circular dependency and keep note saves resilient if
 // KB sync ever fails. Mirrors the pattern used in useSessionLog.

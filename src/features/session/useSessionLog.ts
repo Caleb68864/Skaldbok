@@ -4,16 +4,11 @@ import { useSystemDefinition } from '../systems/useSystemDefinition';
 import { getEngine } from '../systems/engine';
 import { newCreatureStatBlock } from '../bestiary/creatureStats';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
-import { db } from '../../storage/db/client';
-import * as encounterRepository from '../../storage/repositories/encounterRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
-import { generateId } from '../../utils/ids';
-import { nowISO } from '../../utils/dates';
 import {
-  buildNoteRecord,
-  persistCanonicalNoteLinks,
-  resolveEncounterAttachmentTarget,
-} from '../notes/noteCreationService';
+  captureNpcWithNote,
+  createSessionLogNote,
+} from '../../storage/noteCreationService';
 import { textToDoc } from '../notes/textToDoc';
 
 // Lazy import to avoid circular dependency and keep note saves resilient if
@@ -224,40 +219,24 @@ export function useSessionLog() {
       return undefined;
     }
 
-    let noteId: string | undefined;
-    await db.transaction('rw', [db.notes, db.entityLinks, db.encounters], async () => {
-      const attachTo = await resolveEncounterAttachmentTarget({
-        sessionId: target.id,
-        targetEncounterId: options?.targetEncounterId,
-        resolveActiveEncounterId: async (sessionId) => {
-          const encounter = await encounterRepository.getActiveEncounterForSession(sessionId);
-          return encounter?.id ?? null;
-        },
-      });
-
-      const note = buildNoteRecord({
-        campaignId: target.campaignId,
-        sessionId: target.id,
-        title,
-        // Converted here rather than by the caller: `body` is stored as a
-        // ProseMirror doc and read back through `docToText`, so a raw string
-        // would round-trip to nothing and render as a blank log row.
-        body: options?.body !== undefined ? textToDoc(options.body) : undefined,
-        type,
-        typeData,
-        status: 'active',
-        pinned: false,
-        scope: 'campaign',
-      });
-      await db.notes.add(note);
-      noteId = note.id;
-
-      await persistCanonicalNoteLinks({
-        note,
-        sessionId: target.id,
-        encounterId: attachTo,
-      });
+    // The note, its `session --contains--> note` edge and (when there is one)
+    // its encounter edge land together or not at all. That transaction used to
+    // be written out here, which is what kept this hook reaching into Dexie.
+    const note = await createSessionLogNote({
+      session: target,
+      targetEncounterId: options?.targetEncounterId,
+      title,
+      // Converted here rather than by the caller: `body` is stored as a
+      // ProseMirror doc and read back through `docToText`, so a raw string
+      // would round-trip to nothing and render as a blank log row.
+      body: options?.body !== undefined ? textToDoc(options.body) : undefined,
+      type,
+      typeData,
+      status: 'active',
+      pinned: false,
+      scope: 'campaign',
     });
+    const noteId = note.id;
 
     if (noteId) {
       try {
@@ -569,11 +548,12 @@ export function useSessionLog() {
    * entity links.
    *
    * @remarks
-   * Runs in a single Dexie transaction across `creatureTemplates`, `notes`,
-   * and `entityLinks`. Creates four rows (template + note + introduced_in
-   * edge + optional contains edge) or aborts cleanly on any failure.
+   * Template, note and links land in one commit, in
+   * `noteCreationService.captureNpcWithNote`. The stat block is built here
+   * because the active ruleset is a *hook* concern — `systemRef` follows the
+   * campaign — while the write is a storage concern.
    *
-   * @param input - The NPC's name, category, and optional stats/description.
+   * @param input - The NPC's name, category, and optional health/description.
    * @param options - Optional encounter-attach override.
    * @returns The new note and creature-template ids.
    */
@@ -585,71 +565,21 @@ export function useSessionLog() {
       throw new Error('useSessionLog.logNpcCapture: no active session');
     }
 
-    const creatureId = generateId();
-    let noteId: string | undefined;
-
-    await db.transaction(
-      'rw',
-      [db.creatureTemplates, db.notes, db.entityLinks, db.encounters],
-      async () => {
-        const now = nowISO();
-        // 1. Create the bestiary entry
-        await db.creatureTemplates.add({
-          id: creatureId,
-          campaignId: activeSession.campaignId,
-          name: input.name,
-          description: input.description ?? '',
-          category: input.category,
-          // Under the active ruleset's own stat ids. This was
-          // `{ hp: input.hp ?? 0, armor: 0, movement: 0 }` — three Dragonbane
-          // ids applied to every system, which is a `systemId ===` branch with
-          // no `systemId` in it and therefore invisible to the guard that
-          // forbids them. `engineConsumers.test.ts` now reads the shape instead.
-          stats: newCreatureStatBlock(systemRef.current, { health: input.health }),
-          attacks: [],
-          abilities: [],
-          skills: [],
-          tags: input.tags ?? [],
-          status: 'active',
-          schemaVersion: 1,
-          createdAt: now,
-          updatedAt: now,
-        });
-
-        const attachTo = await resolveEncounterAttachmentTarget({
-          sessionId: activeSession.id,
-          targetEncounterId: options?.targetEncounterId,
-          resolveActiveEncounterId: async (sessionId) => {
-            const encounter = await encounterRepository.getActiveEncounterForSession(sessionId);
-            return encounter?.id ?? null;
-          },
-        });
-
-        // 2. Create the note
-        const npcNote = buildNoteRecord({
-          campaignId: activeSession.campaignId,
-          sessionId: activeSession.id,
-          title: input.name,
-          type: 'npc',
-          typeData: { creatureTemplateId: creatureId, description: input.description },
-          status: 'active',
-          pinned: false,
-          scope: 'campaign',
-        });
-        await db.notes.add(npcNote);
-        noteId = npcNote.id;
-
-        await persistCanonicalNoteLinks({
-          note: npcNote,
-          sessionId: activeSession.id,
-          encounterId: attachTo,
-        });
-      },
-    );
-
-    if (!noteId) {
-      throw new Error('useSessionLog.logNpcCapture: note creation failed');
-    }
+    const { note, creatureId } = await captureNpcWithNote({
+      session: activeSession,
+      name: input.name,
+      category: input.category,
+      // Under the active ruleset's own stat ids. This was
+      // `{ hp: input.hp ?? 0, armor: 0, movement: 0 }` — three Dragonbane ids
+      // applied to every system, which is a `systemId ===` branch with no
+      // `systemId` in it and therefore invisible to the guard that forbids
+      // them. `engineConsumers.test.ts` reads the shape instead.
+      stats: newCreatureStatBlock(systemRef.current, { health: input.health }),
+      description: input.description,
+      tags: input.tags,
+      targetEncounterId: options?.targetEncounterId,
+    });
+    const noteId = note.id;
 
     try {
       const module = await getSyncModule();

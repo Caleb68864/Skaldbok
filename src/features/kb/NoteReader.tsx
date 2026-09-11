@@ -29,7 +29,7 @@ import { getNodeById } from '../../storage/repositories/kbNodeRepository';
 import type { Note } from '../../types/note';
 import type { Attachment } from '../../types/attachment';
 import type { KBNode } from '../../storage/db/client';
-import { buildNoteRecord, persistCanonicalNoteLinks } from '../notes/noteCreationService';
+import { buildNoteRecord, persistCanonicalNoteLinks } from '../../storage/noteCreationService';
 
 /** Props for {@link NoteReader}. */
 export interface NoteReaderProps {
