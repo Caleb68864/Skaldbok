@@ -1,8 +1,9 @@
 import { db } from '../db/client';
 import type { RecurringBill } from '../../types/recurringBill';
-import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
+import { excludeDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
+import { createDeletedListing, createHardDelete, createSoftDeleteOps } from './createRepository';
 
 /**
  * Repository for {@link RecurringBill} rows — the costs that come round again.
@@ -97,18 +98,21 @@ export async function markPosted(
   await db.recurringBills.update(id, { postedThrough, postedCount, updatedAt: nowISO() });
 }
 
-/** Soft-deletes a bill. Charges already posted are untouched. */
-export async function softDelete(id: string, txId?: string): Promise<void> {
-  await db.recurringBills.update(id, {
-    deletedAt: nowISO(),
-    softDeletedBy: txId ?? generateId(),
-  });
-}
+const lifecycle = createSoftDeleteOps({
+  repository: 'recurringBillRepository',
+  table: 'recurringBills',
+});
+
+/**
+ * Soft-deletes a bill. Charges already posted are untouched.
+ *
+ * @param id - Bill to delete.
+ * @param txId - Cascade to join, when a parent is taking this bill down too.
+ */
+export const softDelete = lifecycle.softDelete;
 
 /** Restores a soft-deleted bill. */
-export async function restore(id: string): Promise<void> {
-  await db.recurringBills.update(id, { deletedAt: undefined, softDeletedBy: undefined });
-}
+export const restore = lifecycle.restore;
 
 /**
  * Every soft-deleted RecurringBill in a campaign, newest deletion first.
@@ -117,19 +121,15 @@ export async function restore(id: string): Promise<void> {
  * Feeds the Trash screen, which is the only way a user gets one of these back.
  * A restored bill keeps its schedule and its last-posted marker, so it does
  * not re-post everything it missed.
- *
- * @param campaignId - Campaign whose trash is being listed.
  */
-export async function getDeleted(campaignId: string): Promise<RecurringBill[]> {
-  try {
-    const rows = await db.recurringBills.where('campaignId').equals(campaignId).toArray();
-    return onlyDeleted(rows);
-  } catch (e) {
-    throw new Error(`recurringBillRepository.getDeleted failed: ${e}`, { cause: e });
-  }
-}
+export const getDeleted = createDeletedListing<RecurringBill>({
+  repository: 'recurringBillRepository',
+  table: 'recurringBills',
+  scopeIndex: 'campaignId',
+});
 
 /** Permanently removes a bill. Internal — never call from UI. */
-export async function hardDelete(id: string): Promise<void> {
-  await db.recurringBills.delete(id);
-}
+export const hardDelete = createHardDelete({
+  repository: 'recurringBillRepository',
+  table: 'recurringBills',
+});

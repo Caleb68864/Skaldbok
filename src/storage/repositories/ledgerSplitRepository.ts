@@ -1,8 +1,9 @@
 import { db } from '../db/client';
 import type { PayoutSplit, PayoutSplitRow } from '../../types/payoutSplit';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
+import { createHardDelete, createSoftDeleteOps } from './createRepository';
 
 /**
  * Repository for a campaign's current payout split — one live row per campaign.
@@ -38,7 +39,7 @@ export async function getOrCreateForCampaign(campaignId: string): Promise<Payout
     if (rows.length > 0) {
       const [keep, ...duplicates] = rows;
       if (duplicates.length > 0) {
-        const txId = generateId();
+        const txId = generateSoftDeleteTxId();
         const now = nowISO();
         await db.ledgerSplits.bulkUpdate(
           duplicates.map(d => ({ key: d.id, changes: { deletedAt: now, softDeletedBy: txId } })),
@@ -98,20 +99,34 @@ export async function update(
   await db.ledgerSplits.update(id, { ...patch, updatedAt: nowISO() });
 }
 
-/** Soft-deletes a split. Enlist in a wider cascade via `txId`. */
-export async function softDelete(id: string, txId?: string): Promise<void> {
-  await db.ledgerSplits.update(id, {
-    deletedAt: nowISO(),
-    softDeletedBy: txId ?? generateId(),
-  });
-}
+const lifecycle = createSoftDeleteOps({
+  repository: 'ledgerSplitRepository',
+  table: 'ledgerSplits',
+});
+
+/**
+ * Soft-deletes a split. Enlist in a wider cascade via `txId`.
+ *
+ * @param id - Split to delete.
+ * @param txId - Cascade to join.
+ */
+export const softDelete = lifecycle.softDelete;
 
 /** Restores a soft-deleted split. */
-export async function restore(id: string): Promise<void> {
-  await db.ledgerSplits.update(id, { deletedAt: undefined, softDeletedBy: undefined });
-}
+export const restore = lifecycle.restore;
 
-/** Permanently removes a split. Internal — never call from UI. */
-export async function hardDelete(id: string): Promise<void> {
-  await db.ledgerSplits.delete(id);
-}
+/**
+ * Permanently removes a split. Internal — never call from UI.
+ *
+ * @remarks
+ * No `getDeleted` here, deliberately. A split is a cascade child restored
+ * through the entry that owns it, and a listing would put a row on the Trash
+ * screen with nothing meaningful to restore on its own —
+ * `RESTORE_WITHOUT_LISTING` records that decision. `createDeletedListing` is a
+ * separate opt-in factory precisely so this file can decline it rather than
+ * inherit a listing it does not want.
+ */
+export const hardDelete = createHardDelete({
+  repository: 'ledgerSplitRepository',
+  table: 'ledgerSplits',
+});

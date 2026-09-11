@@ -59,11 +59,88 @@ const RESTORE_WRITE = /deletedAt:\s*(?:undefined|null)\b/;
  */
 const DELETED_LISTING = /\bonlyDeleted\s*\(|\.where\(\s*(['"])deletedAt\1\s*\)\s*\.above\s*\(/;
 
-/** `db.notes` / `db.table('notes')` — the tables a function touches. */
-const TABLE_REFERENCE = /\bdb\.(?:table\(\s*['"]([A-Za-z0-9_]+)['"]\s*\)|([A-Za-z0-9_]+))/g;
+/**
+ * `db.notes` / `db.table('notes')` — the tables a function touches.
+ *
+ * @remarks
+ * The `<…>` is optional because `db.table<Note, string>('notes')` is the same
+ * accessor with its type arguments written out, and a `<` where the pattern
+ * wants a `(` fails the whole match. `hardDeleteReachability.test.ts` carries
+ * the same widening, for the same reason and proven the same way.
+ */
+const TABLE_REFERENCE = /\bdb\.(?:table(?:<[^<>]*>)?\(\s*['"]([A-Za-z0-9_]+)['"]\s*\)|([A-Za-z0-9_]+))/g;
 
 /** Dexie members that are not tables. */
 const NOT_A_TABLE = new Set(['transaction', 'tables', 'open', 'close', 'delete', 'on', 'version', 'name', 'isOpen']);
+
+/**
+ * The repository factory, read through rather than read.
+ *
+ * @remarks
+ * `createRepository.ts` writes tombstones and clears them for *every* table
+ * that adopts it, and names none of them — its table arrives as a parameter.
+ * Scanned like a repository it contributes one phantom table called `table`
+ * (from `db.table<T, string>(table)`, where the pattern above happily reads the
+ * identifier as a table name) and nothing useful.
+ *
+ * Measured, not assumed: with the first five repositories moved onto the factory
+ * and this file unchanged, `ships`, `ledgerEntries`, `ledgerSplits`,
+ * `recurringBills` and `routePlans` lost every tombstone, restore and listing
+ * attribution they had, and `tablesRestorableButUnlistable` fell from seven
+ * tables to five. `trashRegistry.test.ts` then reported two live exemptions as
+ * *stale* — it would have invited the next reader to delete a permission that
+ * was still doing its job.
+ *
+ * So the factory module is skipped and its **call sites** are read instead: a
+ * repository that calls `createSoftDeleteOps({ table: 'ships' })` tombstones and
+ * restores `ships`, as plainly as if it had written the two updates itself.
+ */
+const FACTORY_MODULE = 'createRepository';
+
+/**
+ * What each factory grants the table it is handed.
+ *
+ * @remarks
+ * `createHardDelete` is deliberately absent: a permanent delete is not a
+ * tombstone, a restore or a listing, and `hardDeleteReachability.test.ts` is
+ * what guards it.
+ */
+const FACTORY_GRANTS: Record<string, ReadonlyArray<'tombstone' | 'restore' | 'listing'>> = {
+  createSoftDeleteOps: ['tombstone', 'restore'],
+  createDeletedListing: ['listing'],
+};
+
+/**
+ * Every factory call in a module, with the table it names.
+ *
+ * @remarks
+ * A call whose `table:` cannot be read is returned with `table: null` rather
+ * than dropped — see {@link SoftDeleteCapabilityReport.unreadableFactoryCalls}.
+ * Skipping it would silently narrow this file's domain, which is the failure
+ * mode every guard gap in this codebase has had.
+ */
+function factoryCalls(source: string): { factory: string; table: string | null }[] {
+  const calls: { factory: string; table: string | null }[] = [];
+  const opener = new RegExp(String.raw`\b(${Object.keys(FACTORY_GRANTS).join('|')})\s*(?:<[^<>]*>\s*)?\(`, 'g');
+  for (const match of source.matchAll(opener)) {
+    const open = match.index + match[0].length - 1;
+    let depth = 0;
+    let args = '';
+    for (let i = open; i < source.length; i++) {
+      if (source[i] === '(') depth++;
+      else if (source[i] === ')') {
+        depth--;
+        if (depth === 0) {
+          args = source.slice(open + 1, i);
+          break;
+        }
+      }
+    }
+    const table = /\btable\s*:\s*['"]([A-Za-z0-9_]+)['"]/.exec(args);
+    calls.push({ factory: match[1]!, table: table ? table[1]! : null });
+  }
+  return calls;
+}
 
 /** What the repository layer can do to one table's soft-deleted rows. */
 export interface RepositoryTableCapabilities {
@@ -93,6 +170,18 @@ export interface SoftDeleteCapabilityReport {
    * listing that already exists.
    */
   unrecognisedListings: string[];
+  /**
+   * `<module>.<factory>` for every repository-factory call whose `table:` this
+   * could not read.
+   *
+   * @remarks
+   * The same cross-check as {@link unrecognisedListings}, one level up. A
+   * factory call is a tombstone-and-restore for whichever table it names; if the
+   * name is spelled some way this cannot parse — a constant, a computed key —
+   * the table silently looks untouched by the repository layer, and a live
+   * exemption starts reading as stale. Reported so that fails loudly instead.
+   */
+  unreadableFactoryCalls: string[];
 }
 
 /** Strips line comments so prose about `deletedAt` is not read as code. */
@@ -115,6 +204,7 @@ export function readSoftDeleteCapabilities(repoDir: string): SoftDeleteCapabilit
   const restoredBy = new Map<string, Set<string>>();
   const listedBy = new Map<string, Set<string>>();
   const unrecognisedListings: string[] = [];
+  const unreadableFactoryCalls: string[] = [];
 
   const note = (map: Map<string, Set<string>>, table: string, site: string): void => {
     const sites = map.get(table) ?? new Set<string>();
@@ -129,6 +219,23 @@ export function readSoftDeleteCapabilities(repoDir: string): SoftDeleteCapabilit
   for (const file of files) {
     const source = readFileSync(join(repoDir, file), 'utf8');
     const module = file.replace(/\.ts$/, '');
+    if (module === FACTORY_MODULE) continue;
+
+    // A repository that adopts the factory delegates its tombstone and its
+    // restore to it, so the writes are attributed here, to the module that
+    // named the table.
+    for (const call of factoryCalls(withoutComments(source))) {
+      const site = `${module}.${call.factory}`;
+      if (call.table === null) {
+        unreadableFactoryCalls.push(site);
+        continue;
+      }
+      for (const grant of FACTORY_GRANTS[call.factory]!) {
+        if (grant === 'tombstone') note(tombstonedBy, call.table, site);
+        if (grant === 'restore') note(restoredBy, call.table, site);
+        if (grant === 'listing') note(listedBy, call.table, site);
+      }
+    }
 
     // One block per top-level function, so a `deletedAt` write is attributed to
     // the tables that function touches rather than to every table the file
@@ -169,7 +276,7 @@ export function readSoftDeleteCapabilities(repoDir: string): SoftDeleteCapabilit
     listedBy: [...(listedBy.get(table) ?? [])].sort(),
   }));
 
-  return { tables, unrecognisedListings };
+  return { tables, unrecognisedListings, unreadableFactoryCalls };
 }
 
 /**

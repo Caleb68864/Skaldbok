@@ -1,8 +1,9 @@
 import { db } from '../db/client';
 import type { RoutePlan } from '../../types/routePlan';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
+import { createHardDelete, createSoftDeleteOps } from './createRepository';
 
 /**
  * Repository for a campaign's journey-level route schedule — one live row.
@@ -31,7 +32,7 @@ export async function getOrCreateForCampaign(campaignId: string): Promise<RouteP
     if (rows.length > 0) {
       const [keep, ...duplicates] = rows;
       if (duplicates.length > 0) {
-        const txId = generateId();
+        const txId = generateSoftDeleteTxId();
         const now = nowISO();
         await db.routePlans.bulkUpdate(
           duplicates.map(d => ({ key: d.id, changes: { deletedAt: now, softDeletedBy: txId } })),
@@ -80,17 +81,31 @@ export async function update(
   await db.routePlans.update(id, { ...patch, updatedAt: nowISO() });
 }
 
-/** Soft-deletes a plan. Enlist in a wider cascade via `txId`. */
-export async function softDelete(id: string, txId?: string): Promise<void> {
-  await db.routePlans.update(id, { deletedAt: nowISO(), softDeletedBy: txId ?? generateId() });
-}
+const lifecycle = createSoftDeleteOps({
+  repository: 'routePlanRepository',
+  table: 'routePlans',
+});
+
+/**
+ * Soft-deletes a plan. Enlist in a wider cascade via `txId`.
+ *
+ * @param id - Plan to delete.
+ * @param txId - Cascade to join.
+ */
+export const softDelete = lifecycle.softDelete;
 
 /** Restores a soft-deleted plan. */
-export async function restore(id: string): Promise<void> {
-  await db.routePlans.update(id, { deletedAt: undefined, softDeletedBy: undefined });
-}
+export const restore = lifecycle.restore;
 
-/** Permanently removes a plan. Internal — never call from UI. */
-export async function hardDelete(id: string): Promise<void> {
-  await db.routePlans.delete(id);
-}
+/**
+ * Permanently removes a plan. Internal — never call from UI.
+ *
+ * @remarks
+ * No `getDeleted`, for the same reason as `ledgerSplitRepository`: a campaign
+ * has one live plan created lazily on first read, so a tombstoned one is a
+ * collapsed duplicate rather than something a user chose to delete.
+ */
+export const hardDelete = createHardDelete({
+  repository: 'routePlanRepository',
+  table: 'routePlans',
+});
