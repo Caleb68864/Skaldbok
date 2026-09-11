@@ -4,6 +4,7 @@ import { AppProviders } from './app/AppProviders';
 import { App } from './app/App';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { ensurePersistentStorage } from './storage/persistence';
+import { flushWhenPageHides } from './features/persistence/autosaveFlush';
 import './styles/tailwind.css';
 import './styles/fonts.css';
 
@@ -13,6 +14,12 @@ import './styles/fonts.css';
 // pressure — and IndexedDB is the only place a campaign exists. Idempotent, so
 // an already-granted origin never re-prompts. See storage/persistence.ts.
 void ensurePersistentStorage();
+
+// Autosaves are debounced; write them out the moment the page is hidden, so an
+// edit made in the last second before switching to another app is on disk
+// before the tab can be suspended. See `flushWhenPageHides` for what it does
+// not cover (a hard reload inside the debounce window).
+flushWhenPageHides();
 
 // Screens are code-split (see routes/index.tsx). After a deploy the hashed
 // chunk a still-open page asks for may no longer exist on the server or in the

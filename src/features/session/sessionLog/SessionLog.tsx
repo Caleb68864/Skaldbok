@@ -650,15 +650,13 @@ export function SessionLog() {
   }
 
   return (
-    // `h-full`, not `h-[calc(100%-140px)]`. `<main>` (ShellLayout) is an
-    // overflow-y-auto scroll container with `pb-[140px]`, and under
-    // `box-sizing: border-box` that padding sits *inside* main's height — so
-    // main's content box is already `H - 140` and a `h-full` child measures
-    // exactly that. Scroll height then equals client height and `<main>` never
+    // `h-full`, not `h-[calc(100%-…)]`. `<main>` (ShellLayout) is an
+    // overflow-y-auto scroll container, and a `h-full` child measures exactly
+    // its content box, so scroll height equals client height and `<main>` never
     // scrolls; the entry list's own overflow-y-auto stays the only scroller.
-    // Subtracting the 140px again here would double-count it and waste ~140px
-    // of writing area, which on the capture screen is the thing we are trying
-    // hardest to preserve.
+    // On this route `<main>` carries no bottom padding — its `pb-[140px]` is
+    // clearance for the floating button, which is hidden here (`fabRoutes.ts`)
+    // — so every pixel below the header belongs to the list and the pad.
     <div className="flex h-full flex-col" onPointerDownCapture={e => notePenPointer(e.pointerType)}>
       <div className="flex shrink-0 items-center gap-3 border-b border-[var(--color-border,#ddd)] px-4 py-2">
         <h1 className="text-sm font-semibold">{activeSession.title}</h1>

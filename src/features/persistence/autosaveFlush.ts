@@ -72,6 +72,57 @@ export function flushAll(): Promise<PromiseSettledResult<void>[]> {
 }
 
 /**
+ * Writes every pending debounced save the moment the page is hidden or torn down.
+ *
+ * @remarks
+ * Every autosave here waits out a debounce (a second for characters, 800ms for
+ * notes) before writing, and a debounce is a promise that the page will still be
+ * running when it expires. Nothing kept that promise when the page went away:
+ * an edit followed within the window by a switch to another app — the tablet
+ * case — sat unwritten until the timer ran, and a backgrounded tab can be
+ * suspended or discarded first, losing it with no message. Unmount flushes do
+ * not help; a suspended tab never unmounts anything.
+ *
+ * `visibilitychange` to `hidden` is the event the platform guarantees before a
+ * page can be suspended or discarded, so it is the one that matters: the page is
+ * still running when it fires, and the write completes. Verified in the built
+ * app — an edit is on disk immediately after the page is hidden, where before it
+ * waited for a timer a suspended tab may never run.
+ *
+ * `pagehide` is registered too, and is only an attempt. On a hard reload or a
+ * closed tab the document is torn down straight after the event, and
+ * `characterRepository.save` reads the ruleset from IndexedDB before it writes,
+ * so in Chromium that write still does not land (measured: an edit 300ms before
+ * a reload is lost with or without this). Closing that last gap means a
+ * synchronous-start write path, which is not a change to make here.
+ *
+ * Both call {@link flushAll}, which is safe at any time — it is the same call
+ * `endSession` and the update prompt already make — and which never rejects.
+ *
+ * Installed once, from `main.tsx`. The targets are parameters only so the test
+ * can drive plain `EventTarget`s in the node environment.
+ *
+ * @returns A function that removes both listeners.
+ */
+export function flushWhenPageHides(
+  win: Pick<EventTarget, 'addEventListener' | 'removeEventListener'> = window,
+  doc: Pick<Document, 'addEventListener' | 'removeEventListener' | 'visibilityState'> = document,
+): () => void {
+  const onVisibilityChange = () => {
+    if (doc.visibilityState === 'hidden') void flushAll();
+  };
+  const onPageHide = () => {
+    void flushAll();
+  };
+  doc.addEventListener('visibilitychange', onVisibilityChange);
+  win.addEventListener('pagehide', onPageHide);
+  return () => {
+    doc.removeEventListener('visibilitychange', onVisibilityChange);
+    win.removeEventListener('pagehide', onPageHide);
+  };
+}
+
+/**
  * Registers an already-started write so {@link flushAll} waits for it.
  *
  * @remarks

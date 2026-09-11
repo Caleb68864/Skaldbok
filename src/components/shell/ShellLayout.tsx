@@ -9,6 +9,7 @@ import { BackupReminderBanner } from './BackupReminderBanner';
 import { CampaignCreateModal } from '../../features/campaign/CampaignCreateModal';
 import { ManagePartyDrawer } from '../../features/campaign/ManagePartyDrawer';
 import { SessionRefreshProvider } from '../../features/session/SessionRefreshContext';
+import { isFabHiddenRoute } from './fabRoutes';
 
 /**
  * Root layout component that wraps every authenticated route in Skaldmark.
@@ -74,10 +75,16 @@ export function ShellLayout() {
         >
           Skip to main content
         </a>
+        {/* `pb-[140px]` keeps content clear of the floating session-log
+            button, so it goes wherever that button does. On `/session/log`
+            the button is hidden, and the padding was reserving 140px of the
+            capture screen for nothing — enough, once the backup banner also
+            took its share, to leave the entry list one row tall on a tablet
+            in landscape. See `fabRoutes.ts`. */}
         <main
           id="main-content"
           aria-label="Main content"
-          className="flex-1 overflow-y-auto overflow-x-hidden pb-[140px]"
+          className={`flex-1 overflow-y-auto overflow-x-hidden${isFabHiddenRoute(location.pathname) ? '' : ' pb-[140px]'}`}
         >
           <Outlet />
         </main>
