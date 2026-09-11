@@ -73,7 +73,7 @@ describe('reference notes travel in the backup', () => {
     const collected = await collectCampaignBundle(CAMPAIGN_ID);
     expect(collected.success).toBe(true);
     if (!collected.success) return;
-    const json = await serializeBundle('campaign', collected.contents);
+    const json = await serializeBundle('campaign', collected.contents, { includePrivate: false });
 
     await db.delete();
     await db.open();

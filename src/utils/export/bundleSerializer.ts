@@ -1,8 +1,27 @@
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
 import { shareFile, type DeliveryOutcome } from './delivery';
+import {
+  applyPrivacyFilter,
+  privateNoteIdsIn,
+  privateResidueIn,
+  PrivacyLeakError,
+} from './privacyFilter';
 
-/** Optional metadata stamped onto a serialized bundle envelope. */
+/** Metadata and policy for a serialized bundle envelope. */
 export interface SerializeOptions {
+  /**
+   * Whether notes marked `visibility: 'private'` travel in this bundle.
+   *
+   * @remarks
+   * **Required, and deliberately so.** Privacy used to be applied by the caller:
+   * each of the three export actions called `applyPrivacyFilter` itself and then
+   * called this function. Three call sites is three chances to forget, and a
+   * fourth export path would have defaulted to shipping everything with no
+   * compiler complaint. Making it a required option on the one function every
+   * JSON bundle passes through means a new export path cannot be written that
+   * does not answer the question.
+   */
+  includePrivate: boolean;
   /** Display name recorded in the envelope's `exportedBy` field. */
   exportedBy?: string;
 }
@@ -18,18 +37,35 @@ export interface SerializeOptions {
  * Traveller or Savage Worlds bundle carries its own system id rather than
  * being mislabelled `classic-fantasy`.
  *
+ * **This is where privacy happens, for every scope.** The collectors gather; this
+ * function decides what leaves. Two steps, and the second is the load-bearing
+ * one: {@link applyPrivacyFilter} removes the rows, and then the serialized text
+ * — the exact bytes that become the file — is checked for any surviving private
+ * note id. A filter that misses a table is a silent leak; a check over the
+ * finished artefact cannot miss a table, because it does not know what a table
+ * is. If anything survives, {@link PrivacyLeakError} is thrown and nothing is
+ * written.
+ *
  * @param type - The export scope: character, session, or campaign.
- * @param contents - The collected (and optionally privacy-filtered) bundle contents.
- * @param options - Optional metadata (exportedBy name, etc.).
+ * @param contents - The collected bundle contents, unfiltered.
+ * @param options - Privacy policy (required) plus optional metadata.
  * @returns A pretty-printed JSON string of the complete BundleEnvelope.
+ * @throws PrivacyLeakError if a private note is still referenced after filtering.
  */
 export async function serializeBundle(
   type: 'character' | 'session' | 'campaign',
   contents: BundleContents,
-  options: SerializeOptions = {}
+  options: SerializeOptions
 ): Promise<string> {
+  // Step 0: Apply the confidentiality boundary before anything else touches the
+  // rows, so every later step operates on data that is already allowed to leave.
+  const privateNoteIds = options.includePrivate
+    ? new Set<string>()
+    : privateNoteIdsIn(contents);
+  const permitted = applyPrivacyFilter(contents, options.includePrivate);
+
   // Step 1: Convert attachment Blobs to base64
-  const processedContents = await convertAttachmentsToBase64(contents);
+  const processedContents = await convertAttachmentsToBase64(permitted);
 
   // Step 2: Compute content hash
   const contentsJson = JSON.stringify(processedContents);
@@ -60,7 +96,14 @@ export async function serializeBundle(
     contents: processedContents,
   };
 
-  return JSON.stringify(envelope, null, 2);
+  const json = JSON.stringify(envelope, null, 2);
+
+  // Step 5: The promise, checked over the artefact rather than trusted of the
+  // filter. See `privateResidueIn`.
+  const residue = privateResidueIn(json, privateNoteIds);
+  if (residue.length > 0) throw new PrivacyLeakError(residue);
+
+  return json;
 }
 
 /**

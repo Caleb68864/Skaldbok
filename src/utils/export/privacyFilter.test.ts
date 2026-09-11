@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { applyPrivacyFilter, excludePrivateNotes } from './privacyFilter';
+import {
+  applyPrivacyFilter,
+  excludePrivateNotes,
+  privateNoteIdsIn,
+  privateResidueIn,
+} from './privacyFilter';
+import { BUNDLE_TABLE_ENTRIES } from '../../types/bundleTables';
 import type { BundleContents } from '../../types/bundle';
 
 /**
@@ -10,6 +16,15 @@ import type { BundleContents } from '../../types/bundle';
  * failure mode is silent and one-directional: a leaked note produces a bundle
  * that looks entirely normal, and the user finds out when someone else reads it.
  * That asymmetry is why these tests lean on the *keep nothing by accident* side.
+ *
+ * Every case below that names a table by hand is an *example*. The case that
+ * makes the guarantee is `every bundle table is inside the boundary`, which
+ * walks `BUNDLE_TABLE_ENTRIES` — because the defect this file was rewritten for
+ * was precisely a table nobody remembered to name. The filter spread
+ * `...contents` and overrode three keys, so `kbNodes` and `kbEdges` — added to
+ * the bundle years later, and holding a projection whose `label` *is* the note's
+ * title — shipped a private note's title and its entire edge set in a bundle the
+ * user was told excluded it.
  */
 
 const note = (id: string, visibility?: string) =>
@@ -127,6 +142,129 @@ describe('applyPrivacyFilter', () => {
   it('leaves a bundle with no private notes alone', () => {
     const input = contents({ notes: [note('n1', 'public'), note('n2')] });
     expect(applyPrivacyFilter(input, false).notes).toHaveLength(2);
+  });
+
+  it('drops the knowledge-base projection of a private note, and its edges', () => {
+    // The reproduction. `kb_nodes.label` *is* the note's title and `sourceId`
+    // *is* its id; `kb_edges` are one row per wiki-link, mention and tag the
+    // note carries. Title plus edge set is enough to reconstruct who a character
+    // secretly is or which faction a location belongs to, so "only the body was
+    // withheld" was never a defence.
+    const input = contents({
+      notes: [note('note-secret', 'private'), note('note-open', 'public')],
+      kbNodes: [
+        { id: 'note-note-secret', label: 'Lady Sable is the Hierophant', sourceId: 'note-secret' },
+        { id: 'note-note-open', label: 'The Harbour Inn', sourceId: 'note-open' },
+        { id: 'tag:c:crimson hand', label: 'The Crimson Hand' },
+      ],
+      kbEdges: [
+        { id: 'e-faction', fromId: 'note-note-secret', toId: 'tag:c:crimson hand' },
+        { id: 'e-inn', fromId: 'note-note-secret', toId: 'note-note-open' },
+        { id: 'e-open', fromId: 'note-note-open', toId: 'tag:c:crimson hand' },
+      ],
+    } as unknown as Partial<BundleContents>);
+
+    const result = applyPrivacyFilter(input, false);
+    // The node goes because it names the note; the edges go because they name
+    // the node — two hops, neither of them enumerated anywhere.
+    expect(result.kbNodes?.map(n => n.id)).toEqual(['note-note-open', 'tag:c:crimson hand']);
+    expect(result.kbEdges?.map(e => e.id)).toEqual(['e-open']);
+    expect(JSON.stringify(result)).not.toContain('Lady Sable');
+  });
+
+  it('every bundle table is inside the boundary', () => {
+    // Derived from the registry, not restated. A table added to
+    // `BUNDLE_TABLE_ENTRIES` joins this case with nothing to remember — which is
+    // the property the previous filter lacked, and the reason `kbNodes` and
+    // `kbEdges` were outside the boundary for as long as they were in the bundle.
+    //
+    // `campaign` is the one key that is a single object rather than an array,
+    // and a campaign row cannot be a note nor reference one.
+    const keys = BUNDLE_TABLE_ENTRIES.map(([key]) => key).filter(k => k !== 'campaign');
+    expect(keys.length).toBeGreaterThan(20);
+
+    const seeded: Record<string, unknown[]> = {
+      notes: [note('secret', 'private'), note('open', 'public')],
+    };
+    for (const key of keys) {
+      if (key === 'notes') continue;
+      seeded[key] = [
+        { id: `drop-${key}`, noteId: 'secret' },
+        { id: `keep-${key}`, noteId: 'open' },
+      ];
+    }
+
+    const result = applyPrivacyFilter(seeded as unknown as BundleContents, false) as unknown as
+      Record<string, Array<{ id: string }>>;
+
+    const leaked: string[] = [];
+    const overFiltered: string[] = [];
+    for (const key of keys) {
+      if (key === 'notes') continue;
+      const ids = result[key].map(r => r.id);
+      if (ids.includes(`drop-${key}`)) leaked.push(key);
+      // The control. A rule that deletes everything keeps no promise either, and
+      // over-filtering is invisible in its own way — the user gets a backup that
+      // silently restores less than it should.
+      if (!ids.includes(`keep-${key}`)) overFiltered.push(key);
+    }
+    expect(leaked).toEqual([]);
+    expect(overFiltered).toEqual([]);
+    expect(result.notes.map(n => n.id)).toEqual(['open']);
+  });
+
+  it('follows a reference chain of any length', () => {
+    // Not two hops because two is what `kbNodes`/`kbEdges` happened to need.
+    // Exclusion follows references outward until it stops finding any, so a
+    // future table that references a table that references a note is covered.
+    const input = {
+      notes: [note('n-secret', 'private')],
+      kbNodes: [{ id: 'k1', sourceId: 'n-secret' }],
+      kbEdges: [{ id: 'k2', fromId: 'k1' }],
+      attachments: [{ id: 'k3', noteId: 'k2' }],
+      entityLinks: [{ id: 'k4', fromEntityId: 'k3' }],
+    } as unknown as BundleContents;
+    const result = applyPrivacyFilter(input, false) as unknown as Record<string, unknown[]>;
+    for (const key of ['notes', 'kbNodes', 'kbEdges', 'attachments', 'entityLinks']) {
+      expect([key, result[key].length]).toEqual([key, 0]);
+    }
+  });
+});
+
+describe('privateNoteIdsIn', () => {
+  it('names only explicitly private notes', () => {
+    const input = contents({ notes: [note('a', 'private'), note('b', 'public'), note('c')] });
+    expect([...privateNoteIdsIn(input)]).toEqual(['a']);
+  });
+
+  it('is empty for a bundle with no notes at all', () => {
+    expect([...privateNoteIdsIn({} as BundleContents)]).toEqual([]);
+  });
+});
+
+describe('privateResidueIn', () => {
+  /**
+   * The assertion half of the boundary: stated over the finished text rather
+   * than over the filter's own bookkeeping.
+   *
+   * @remarks
+   * A filter that misses a table leaks silently. A scan of the serialized
+   * bundle cannot miss a table, because it does not know what a table is — so
+   * this is what makes the guarantee hold for the next table, the next nested
+   * id, and the shape nobody anticipated.
+   */
+  it('names a private id that survived anywhere in the text', () => {
+    const json = JSON.stringify({ contents: { somethingNew: [{ ref: 'note-secret' }] } });
+    expect(privateResidueIn(json, new Set(['note-secret', 'note-other']))).toEqual(['note-secret']);
+  });
+
+  it('reports nothing for a clean bundle', () => {
+    const json = JSON.stringify({ contents: { notes: [{ id: 'note-open' }] } });
+    expect(privateResidueIn(json, new Set(['note-secret']))).toEqual([]);
+  });
+
+  it('says nothing when no note was private', () => {
+    expect(privateResidueIn('{"anything":"at all"}', new Set())).toEqual([]);
   });
 });
 

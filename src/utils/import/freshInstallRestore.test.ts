@@ -101,7 +101,7 @@ async function exportThenWipe(): Promise<string> {
   const collected = await collectCampaignBundle(CAMPAIGN_ID);
   expect(collected.success).toBe(true);
   if (!collected.success) throw new Error(collected.error);
-  const json = await serializeBundle('campaign', collected.contents);
+  const json = await serializeBundle('campaign', collected.contents, { includePrivate: false });
   await db.delete();
   await db.open();
   return json;
@@ -448,7 +448,7 @@ describe('restoring a character onto a device with no campaigns', () => {
     const collected = await collectCharacterBundle('char-solo');
     expect(collected.success).toBe(true);
     if (!collected.success) return;
-    const json = await serializeBundle('character', collected.contents);
+    const json = await serializeBundle('character', collected.contents, { includePrivate: false });
 
     await db.delete();
     await db.open();
@@ -482,7 +482,7 @@ describe('restoring a character onto a device with no campaigns', () => {
     const collected = await collectCharacterBundle('char-1');
     expect(collected.success).toBe(true);
     if (!collected.success) return;
-    const json = await serializeBundle('character', collected.contents);
+    const json = await serializeBundle('character', collected.contents, { includePrivate: false });
 
     await db.delete();
     await db.open();
