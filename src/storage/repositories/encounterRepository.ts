@@ -214,6 +214,155 @@ export async function addParticipant(
 }
 
 /**
+ * One participant to add, and the bestiary creature or PC it stands for.
+ *
+ * @remarks
+ * `represents` is not optional, because a participant with no `represents` edge
+ * is a bare name with no stat block, no HP source and no identity — every reader
+ * (`CombatEncounterView`, `ParticipantDrawer`, `useEncounter`) resolves the
+ * participant through that edge. The binding has no foreign-key column by
+ * design; `encounterParticipantSchema` says so in its own doc comment.
+ */
+export interface ParticipantToAdd {
+  name: string;
+  type: EncounterParticipant['type'];
+  instanceState?: EncounterParticipant['instanceState'];
+  represents: { id: string; type: 'creature' | 'character' };
+}
+
+/**
+ * Adds participants to an encounter with their `represents` edges, in one
+ * transaction, refusing a soft-deleted encounter.
+ *
+ * @remarks
+ * **The one implementation of a rule that used to have four.** Four callers
+ * opened `db.transaction('rw', [db.encounters, db.entityLinks], …)` by hand and
+ * wrote a participant into whatever they read back — the bestiary's "Add to
+ * Encounter", the combat view's quick-create, the add-the-whole-party helper,
+ * and `useEncounter`'s own two paths. Only `useEncounter` checked `deletedAt`,
+ * and it carried the comment explaining why all of them had to:
+ *
+ * > "A tombstoned encounter is invisible in the UI, so writing to one adds a
+ * > participant nobody can see or remove. The repository's `update` refuses
+ * > this; the participant paths need their own transaction (they touch
+ * > entityLinks too), so they have to make the same check."
+ *
+ * That is the whole argument for this function existing. The participant paths
+ * do need their own transaction — `update` cannot carry the edge — so the
+ * transaction moves here rather than the check being copied a fourth time.
+ * `BestiaryScreen` was byte-for-byte the same transaction minus one line.
+ *
+ * Two behaviours that were not uniform across the four and now are:
+ *
+ * - **`sortOrder` is `max(existing) + 1`, not `length + 1`.** After a mid-list
+ *   removal, `length + 1` reuses a live key — add P1/P2/P3, remove P2, and the
+ *   next add collides with P3. Two callers had the fix and the bestiary did not.
+ * - **A PC cannot appear twice; a creature template deliberately can.** The GM
+ *   adds three goblins from one template on purpose, but "Astrid" twice is
+ *   always a mis-click. Deduplication is by the existing `represents` edges of
+ *   the participants already in the encounter, read inside the transaction.
+ *
+ * @param encounterId - Encounter to append to.
+ * @param additions - Participants to add, in order.
+ * @returns The ids of the participants actually added; `[]` if the encounter is
+ * soft-deleted or every addition was a duplicate PC.
+ * @throws If the encounter does not exist, or the write fails.
+ */
+export async function addRepresentedParticipants(
+  encounterId: string,
+  additions: ParticipantToAdd[],
+): Promise<string[]> {
+  if (additions.length === 0) return [];
+  const now = nowISO();
+  return db.transaction('rw', [db.encounters, db.entityLinks], async () => {
+    const enc = await db.encounters.get(encounterId);
+    if (!enc) {
+      throw new Error(
+        `encounterRepository.addRepresentedParticipants: encounter ${encounterId} not found`,
+      );
+    }
+    // The line the other three were missing.
+    if ((enc as Encounter).deletedAt) return [];
+
+    const existing = [...((enc as Encounter).participants ?? [])];
+    const existingIds = existing.map((p) => p.id);
+    const alreadyRepresented = new Set(
+      existingIds.length === 0
+        ? []
+        : (await entityLinkRepository.getLinksFromMany(existingIds, 'represents'))
+            .filter((link) => link.toEntityType === 'character')
+            .map((link) => link.toEntityId),
+    );
+
+    const addedIds: string[] = [];
+    for (const addition of additions) {
+      if (
+        addition.represents.type === 'character'
+        && alreadyRepresented.has(addition.represents.id)
+      ) {
+        continue;
+      }
+      const participantId = generateId();
+      existing.push({
+        id: participantId,
+        name: addition.name,
+        type: addition.type,
+        instanceState: addition.instanceState ?? {},
+        sortOrder: Math.max(0, ...existing.map((p) => p.sortOrder)) + 1,
+      });
+      await entityLinkRepository.createLink({
+        fromEntityId: participantId,
+        fromEntityType: 'encounterParticipant',
+        toEntityId: addition.represents.id,
+        toEntityType: addition.represents.type,
+        relationshipType: 'represents',
+      });
+      if (addition.represents.type === 'character') {
+        alreadyRepresented.add(addition.represents.id);
+      }
+      addedIds.push(participantId);
+    }
+
+    if (addedIds.length > 0) {
+      await db.encounters.update(encounterId, { participants: existing, updatedAt: now });
+    }
+    return addedIds;
+  });
+}
+
+/**
+ * Removes a participant and soft-deletes its outgoing edges under one cascade id.
+ *
+ * @remarks
+ * The mirror of {@link addRepresentedParticipants}, and here for the same
+ * reason: the removal has to tombstone the participant's `represents` edges in
+ * the same transaction that drops it from the list, or a restore brings back a
+ * participant with no identity. The shared `softDeletedBy` is what makes the
+ * removal restorable as a unit.
+ *
+ * @returns `true` if a participant was removed.
+ */
+export async function removeRepresentedParticipant(
+  encounterId: string,
+  participantId: string,
+): Promise<boolean> {
+  const txId = generateSoftDeleteTxId();
+  const now = nowISO();
+  return db.transaction('rw', [db.encounters, db.entityLinks], async () => {
+    const enc = await db.encounters.get(encounterId);
+    if (!enc || (enc as Encounter).deletedAt || !(enc as Encounter).participants) return false;
+    const participants = (enc as Encounter).participants;
+    if (!participants.some((p) => p.id === participantId)) return false;
+    await db.encounters.update(encounterId, {
+      participants: participants.filter((p) => p.id !== participantId),
+      updatedAt: now,
+    });
+    await entityLinkRepository.softDeleteLinksFromEntity(participantId, 'represents', txId, now);
+    return true;
+  });
+}
+
+/**
  * Returns the single active encounter for a session, or null.
  *
  * @remarks
