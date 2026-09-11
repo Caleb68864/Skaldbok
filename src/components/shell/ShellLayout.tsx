@@ -5,6 +5,7 @@ import { CharacterSubNav } from './CharacterSubNav';
 import { SessionSubNav, SESSION_SECTION_PREFIXES } from './SessionSubNav';
 import { BottomNav } from './BottomNav';
 import { GlobalFAB } from './GlobalFAB';
+import { BackupReminderBanner } from './BackupReminderBanner';
 import { CampaignCreateModal } from '../../features/campaign/CampaignCreateModal';
 import { ManagePartyDrawer } from '../../features/campaign/ManagePartyDrawer';
 import { SessionRefreshProvider } from '../../features/session/SessionRefreshContext';
@@ -60,7 +61,24 @@ export function ShellLayout() {
         />
         {isCharacterTab && <CharacterSubNav />}
         {isSessionTab && <SessionSubNav />}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden pb-[140px]">
+        <BackupReminderBanner />
+        {/* The shell puts a header, up to two tab rows and sometimes a banner
+            ahead of the content on every route, so a keyboard or switch user
+            tabbed through all of it on each navigation. There was no skip link
+            anywhere in the app and `<main>` had neither a name nor an id to
+            skip to. It is visually hidden until focused, which is the point:
+            the first Tab on any screen now offers it. */}
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-[400] focus:m-[var(--space-sm)] focus:rounded-[var(--radius-md)] focus:bg-[var(--color-surface-raised)] focus:px-[var(--space-md)] focus:py-[var(--space-sm)] focus:text-[var(--color-text)]"
+        >
+          Skip to main content
+        </a>
+        <main
+          id="main-content"
+          aria-label="Main content"
+          className="flex-1 overflow-y-auto overflow-x-hidden pb-[140px]"
+        >
           <Outlet />
         </main>
         <BottomNav />
