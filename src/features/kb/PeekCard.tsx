@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { db } from '../../storage/db/client';
+import { getNodeById } from '../../storage/repositories/kbNodeRepository';
 import { getNoteById } from '../../storage/repositories/noteRepository';
 import type { KBNode } from '../../storage/db/client';
 
@@ -53,7 +53,7 @@ export function PeekCard({ nodeId, onClose, onOpen }: PeekCardProps) {
 
     async function load() {
       try {
-        const kbNode = await db.kb_nodes.get(nodeId);
+        const kbNode = await getNodeById(nodeId);
         if (!mounted) return;
         if (!kbNode) {
           onClose();

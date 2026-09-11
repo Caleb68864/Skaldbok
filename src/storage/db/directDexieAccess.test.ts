@@ -550,23 +550,6 @@ const DIRECT_DEXIE_ACCESS: Record<string, Record<string, string>> = {
       + 'shape of a generic question. Deliberately tombstone-blind: a soft-deleted local row '
       + 'still collides on primary key, so hiding it would under-report the conflict.',
   },
-  'features/kb/BacklinksPanel.tsx': {
-    'kb_nodes:read':
-      'The KB graph is a derived projection rebuilt from notes by `linkSyncEngine`, and one '
-      + 'of the six tables deliberately outside the soft-delete model — there is no user '
-      + 'content in it to tombstone, so `excludeDeleted` has nothing to exclude and a '
-      + 'repository would add a layer with no rule to enforce.',
-  },
-  'features/kb/NoteReader.tsx': {
-    'kb_nodes:read':
-      'Same projection, same reason: `kb_nodes` carries no `deletedAt` by design, so a '
-      + 'repository read here would forward the call and enforce nothing. Reads only — this '
-      + 'screen never writes the graph; `linkSyncEngine` owns every write to it.',
-  },
-  'features/kb/PeekCard.tsx': {
-    'kb_nodes:read':
-      'Same projection, same reason. A hover card resolving one node id to its title.',
-  },
   'features/kb/linkSyncEngine.ts': {
     'kb_nodes:read':
       'This file *is* the KB projection\'s storage layer. It owns `kb_nodes`/`kb_edges` '
@@ -771,8 +754,17 @@ describe('direct Dexie access outside the storage layer', () => {
     // Without this the assertions below are vacuous on any refactor that moves,
     // renames or reorganises the client — the failure mode that produced a
     // confident "no direct access anywhere" from a scanner reading nothing.
-    expect(survey.size).toBeGreaterThanOrEqual(8);
+    //
+    // Named files rather than only a count, because the count is *supposed* to
+    // fall and a floor that tracks it is a floor that gets lowered without
+    // thought. These three are the accesses argued to be permanent: a merge
+    // that is generic over tables by construction, a wipe defined as "every
+    // table", and the KB projection's own storage layer. If the scanner stops
+    // seeing one of those it has stopped working, whatever the total says.
     expect([...survey.keys()]).toContain('utils/import/mergeEngine.ts');
+    expect([...survey.keys()]).toContain('screens/SettingsScreen.tsx');
+    expect([...survey.keys()]).toContain('features/kb/linkSyncEngine.ts');
+    expect(survey.size).toBeGreaterThanOrEqual(4);
   });
 
   it('recognises every spelling a direct access can take', () => {
