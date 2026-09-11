@@ -180,8 +180,9 @@ For LAN tablet testing: `npm run build && npx vite preview --host --port 4173`.
 
 ### Tests
 
-99 test files, all under `src/`, run by Vitest with no config file — so the
-default **node** environment and `globals: false`.
+135 test files, all under `src/`, run by Vitest. The **node** environment and
+`globals: false` are declared in `vite.config.ts`'s `test:` block — they used to
+be the undeclared defaults, which is a different and weaker thing.
 
 The suite is mostly pure logic (schema migrations, derived stats, ledger and
 route maths, import parsers) plus repository tests against `fake-indexeddb`.
@@ -193,7 +194,7 @@ a screen.
 
 A DOM environment is available but **opt-in per file** — put
 `// @vitest-environment jsdom` on the first line and use
-`@testing-library/react`; five files do today. It is not global so the pure
+`@testing-library/react`; twelve files do today. It is not global so the pure
 files keep the node environment and their speed. Because Vitest globals are off,
 Testing Library's auto-cleanup does not run: every DOM test file must call
 `cleanup()` in its own `afterEach`. `src/hooks/useAutosave.test.tsx` is the
@@ -207,13 +208,26 @@ both have drifted from the current UI.
 
 Recorded here rather than discovered later:
 
-- `/more` is a dead route — `MoreScreen` is reachable only by typing the URL,
-  and it is the only place some actions are linked from.
-- The Settings "Bottom Navigation" toggles write a setting that nothing reads;
-  the navigation bars are hardcoded.
-- Import is hidden until a campaign exists (see Backup, above).
+- **Attachments can be read but not created.** Every path around them is built —
+  they are stored, soft-deleted with their note, carried in bundles, rendered by
+  the note reader and written into the session ZIP — but
+  `attachmentRepository.createAttachment` has no caller, so nothing in the app
+  puts a file into one. The feature list above says "attachments" because the
+  reading half is real; the writing half is not wired.
 - The printed sheet is fixed to one letter page. It now marks content it had to
   cut rather than dropping it silently, but it does not paginate.
+- A campaign export is the only backup, and only the Settings screen says so.
+  Nothing reminds you anywhere else, and nothing makes a second copy on its own.
+- A migration that throws leaves the app on the storage-unavailable screen,
+  whose only action is a reload — which runs the same migration again.
+
+Three gaps that stood here have been closed, and are named because a reader may
+remember them: `/more` and `MoreScreen` were deleted with the navigation
+catalogue; the Settings "Bottom Navigation" toggles are gone (the setting they
+wrote had no reader); and **Import is no longer gated on having a campaign** —
+that entry also contradicted the Backup section above, which describes restoring
+onto an empty device as the supported path. `importReachability.test.ts` is what
+keeps the second of those true.
 
 `docs/backlog/2026-09-04-improvement-roadmap.md` is the full list, with evidence
 and status per item.

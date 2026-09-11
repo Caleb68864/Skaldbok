@@ -186,9 +186,16 @@ export function useImportActions() {
       // and worse surprise.
       //
       // Read back through the repository rather than trusting the merge report:
-      // a rolled-back transaction reports zero inserts but so does a bundle
-      // whose campaign row was skipped as an id collision, and activating a
+      // a rolled-back transaction reports zero inserts, and activating a
       // campaign that is not in the database would strand the shell.
+      //
+      // This used to add "…but so does a bundle whose campaign row was skipped
+      // as an id collision", which has the case backwards. On an id collision
+      // the row is skipped precisely *because* a local campaign already owns
+      // that id, so `getCampaignById` returns one — and it is the right one to
+      // open, because `applyReparenting` has just merged the bundle's sessions
+      // and notes onto it. The read-back is a guard against absence, not
+      // against collision.
       if (campaignTarget.kind === 'bundled' && !activeCampaign) {
         try {
           const restored = await getCampaignById(campaignTarget.campaignId);

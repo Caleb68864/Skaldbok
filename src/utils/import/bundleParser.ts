@@ -119,8 +119,16 @@ export function parseBundle(json: string): ParsedBundleResult {
 
   // Cross-check the envelope's declared scope against what it actually holds.
   // Nothing verified this, so a hand-edited or community bundle labelled
-  // `character` while carrying a whole campaign merged as the wrong kind — the
-  // importer branches on `type` to decide what to offer and what to link.
+  // `character` while carrying a whole campaign merged as the wrong kind.
+  //
+  // The justification here used to be "the importer branches on `type` to decide
+  // what to offer and what to link". It no longer does — `f3142e7` deleted that
+  // branch, and the importer decides from the rows it actually holds. The
+  // warning is still worth having for a different and smaller reason: the label
+  // is what the user is shown before they confirm, so a bundle that says
+  // "character" and restores a campaign is a surprise even when the merge is
+  // correct.
+  //
   // A warning rather than a rejection: the contents are still individually
   // valid, and the user is better served by an accurate prompt than a refusal.
   const declaredScope = bundle.type;

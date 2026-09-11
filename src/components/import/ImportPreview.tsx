@@ -136,7 +136,7 @@ export function ImportPreview({
       >
         {/* Content hash mismatch warning */}
         {contentHashMismatch && (
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-lg px-3 py-2 mb-3 text-xs text-amber-800 dark:text-amber-200">
+          <div className="bg-[var(--color-surface-raised)] border border-[var(--color-warning)] rounded-lg px-3 py-2 mb-3 text-xs text-[var(--color-warning)]">
             File integrity check failed. The file may have been modified after export. Import is still allowed.
           </div>
         )}
@@ -194,7 +194,7 @@ export function ImportPreview({
             </h4>
             <div className="max-h-32 overflow-y-auto">
               {warnings.map((w, i) => (
-                <div key={i} className="text-xs text-amber-700 dark:text-amber-300 mb-0.5">
+                <div key={i} className="text-xs text-[var(--color-warning)] mb-0.5">
                   {w.entityType}[{w.entityIndex}].{w.path}: {w.message}
                 </div>
               ))}
@@ -246,7 +246,7 @@ export function ImportPreview({
               Import into campaign
             </label>
             {campaigns.length === 0 ? (
-              <p data-testid="import-no-campaigns" className="text-xs text-amber-700 dark:text-amber-300">
+              <p data-testid="import-no-campaigns" className="text-xs text-[var(--color-warning)]">
                 {campaignTarget.groupLabels.join(', ')} belong to a campaign, and this device has
                 none yet. Untick {campaignTarget.groupLabels.length > 1 ? 'those groups' : 'that group'} to
                 import the rest now, or create a campaign first from the campaign menu.

@@ -171,9 +171,15 @@ export default function ShipsScreen() {
       )}
 
       {/* List */}
+      {/* The empty state has to know whether the control it points at is
+          rendered. It said "Add your first above" unconditionally while the
+          create row is `isEditMode &&` — so in Play mode, which is the default,
+          it directed the user to a control that is not on the screen. */}
       {model && ships.length === 0 && (
         <p className="text-[var(--color-text-muted)]">
-          No {title.toLowerCase()} yet. Add your first above.
+          {isEditMode
+            ? `No ${title.toLowerCase()} yet. Add your first above.`
+            : `No ${title.toLowerCase()} yet. Switch to Edit mode — in the top menu — to add one.`}
         </p>
       )}
       <div className="flex flex-col gap-[var(--space-sm)]">
