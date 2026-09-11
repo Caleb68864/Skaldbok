@@ -258,6 +258,11 @@ describe('engine consumer rules', () => {
     // the bestiary then showed it under Traveller's declared fields, all reading
     // 0, with the three numbers actually stored filed under "Other".
     //
+    // That function has since been removed — it had no caller and was never
+    // reachable in a shipped build — so do not grep for it. The example is kept
+    // because it is the clearest one: the guard is general, and the other two
+    // flows that shipped the same literal are still here.
+    //
     // The rule it breaks is the one `creatureStats.ts` already states: the stat
     // ids come from `system.creatures.statFields`, or from the default block
     // when a ruleset declares none. Spelling them in source is asserting which
