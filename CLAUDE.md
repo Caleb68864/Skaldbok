@@ -110,6 +110,15 @@ dead-end screen. `terms` and `labels` can be overridden per-system from
 ### Rules of thumb
 
 - **Never** reintroduce a `systemId ===` branch. Add an engine field instead.
+- **A branch does not need the string.** `stats: { hp: …, armor: 0, movement: 0 }`
+  names one ruleset's stat block and no other, with no `systemId` in it to match
+  on; three creature-create flows shipped it. Creature stat ids come from
+  `system.creatures.statFields` via `newCreatureStatBlock` /
+  `resolveCreatureStatFields`, and `engineConsumers.test.ts` fails on a `stats:`
+  literal with hand-spelled keys anywhere outside the default block and the
+  frozen v6 upgrade. The general rule the guard encodes: **do not spell ids the
+  ruleset owns** — that is checkable from source, while "these keys happen to be
+  Dragonbane's" is not.
 - Ids and labels are separate. Persisted keys (settings, stored preferences,
   ability types) use stable ids; only display strings come from `terms`/`labels`.
   Deriving a storage key from a label orphans user data the moment it is renamed.

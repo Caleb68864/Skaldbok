@@ -1,26 +1,31 @@
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { useModalBehaviour } from '../../hooks/useModalBehaviour';
+import { statAbbr } from '../bestiary/creatureStats';
+import type { CreatureStatField } from '../../types/system';
 
 export interface QuickCreateParticipantFlowProps {
-  onSubmit: (name: string, stats: { hp?: number; armor?: number; movement?: number }) => Promise<void>;
+  /** Receives the name and one number per declared stat, keyed by stat id. */
+  onSubmit: (name: string, stats: Record<string, number>) => Promise<void>;
   onCancel: () => void;
   /**
-   * Field headings for the three creature stats, from the active system's
-   * engine labels.
+   * The active ruleset's declared creature stats — one numeric input each.
    *
    * @remarks
-   * Passed in rather than read here: this file is a presentational form, and
-   * the engine belongs to the feature that owns the encounter. Defaults keep
-   * the Dragonbane wording for any caller that has no engine to hand.
+   * Passed in rather than read here: this file is a presentational form, and the
+   * system definition belongs to the feature that owns the encounter. It is the
+   * same prop `CreatureTemplateForm` and `CreatureTemplateCard` take, for the
+   * same reason.
    *
-   * The stat *keys* stay `hp`/`armor`/`movement` — `creatureTemplate.stats` is
-   * a fixed shape. Only the words the user reads are system-driven.
+   * This used to be three fixed inputs over `hp`/`armor`/`movement` with a
+   * `labels` prop renaming them, on the stated grounds that
+   * "`creatureTemplate.stats` is a fixed shape". It is not — it is
+   * `z.record(z.string(), z.number())` keyed by whatever the ruleset declares —
+   * so relabelling Traveller's three columns wrote Dragonbane's ids underneath
+   * and dropped the other three stats Traveller declares.
    */
-  labels?: { health: string; armor: string; movement: string };
+  statFields: CreatureStatField[];
 }
-
-const DEFAULT_LABELS = { health: 'HP', armor: 'Armor', movement: 'Movement' };
 
 const inputClass = 'w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm box-border';
 
@@ -31,12 +36,11 @@ const inputClass = 'w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] b
 export function QuickCreateParticipantFlow({
   onSubmit,
   onCancel,
-  labels = DEFAULT_LABELS,
+  statFields,
 }: QuickCreateParticipantFlowProps) {
   const [name, setName] = useState('');
-  const [hp, setHp] = useState('');
-  const [armor, setArmor] = useState('');
-  const [movement, setMovement] = useState('');
+  // Kept as strings so an empty input stays empty rather than showing 0.
+  const [entered, setEntered] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -44,11 +48,13 @@ export function QuickCreateParticipantFlow({
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await onSubmit(name.trim(), {
-        hp: hp ? Number(hp) : undefined,
-        armor: armor ? Number(armor) : undefined,
-        movement: movement ? Number(movement) : undefined,
-      });
+      const stats: Record<string, number> = {};
+      for (const field of statFields) {
+        const raw = entered[field.id];
+        const value = raw ? Number(raw) : 0;
+        stats[field.id] = Number.isFinite(value) ? value : 0;
+      }
+      await onSubmit(name.trim(), stats);
     } finally {
       setSaving(false);
     }
@@ -88,39 +94,24 @@ export function QuickCreateParticipantFlow({
             />
           </label>
           <div className="grid grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-              {labels.health}
-              <input
-                type="number"
-                placeholder={labels.health}
-                value={hp}
-                onChange={(e) => setHp(e.target.value)}
-                className={inputClass}
-                min={0}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-              {labels.armor}
-              <input
-                type="number"
-                placeholder={labels.armor}
-                value={armor}
-                onChange={(e) => setArmor(e.target.value)}
-                className={inputClass}
-                min={0}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]">
-              {labels.movement}
-              <input
-                type="number"
-                placeholder={labels.movement}
-                value={movement}
-                onChange={(e) => setMovement(e.target.value)}
-                className={inputClass}
-                min={0}
-              />
-            </label>
+            {statFields.map((field) => (
+              <label
+                key={field.id}
+                className="flex flex-col gap-1 text-xs text-[var(--color-text-muted)]"
+              >
+                {field.label}
+                <input
+                  type="number"
+                  placeholder={statAbbr(field)}
+                  value={entered[field.id] ?? ''}
+                  onChange={(e) =>
+                    setEntered((prev) => ({ ...prev, [field.id]: e.target.value }))
+                  }
+                  className={inputClass}
+                  min={0}
+                />
+              </label>
+            ))}
           </div>
           <div className="flex gap-3">
             <button

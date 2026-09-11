@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
 import { getEngine } from '../systems/engine';
+import { newCreatureStatBlock } from '../bestiary/creatureStats';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { db } from '../../storage/db/client';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
@@ -72,8 +73,14 @@ export interface LogNpcCaptureInput {
   name: string;
   /** Bestiary category discriminator. */
   category: 'monster' | 'npc' | 'animal';
-  /** Optional HP; defaults to 0 when omitted. */
-  hp?: number;
+  /**
+   * Optional starting value for the ruleset's health stat; 0 when omitted.
+   *
+   * @remarks
+   * Named `health`, not `hp`: `hp` is Dragonbane's id for this, and which id it
+   * is stored under is decided by `system.creatures.healthStatId`, not here.
+   */
+  health?: number;
   /** Optional description (plain string stored on the template + note). */
   description?: string;
   /** Optional tag strings applied to the creature template. */
@@ -593,11 +600,12 @@ export function useSessionLog() {
           name: input.name,
           description: input.description ?? '',
           category: input.category,
-          stats: {
-            hp: input.hp ?? 0,
-            armor: 0,
-            movement: 0,
-          },
+          // Under the active ruleset's own stat ids. This was
+          // `{ hp: input.hp ?? 0, armor: 0, movement: 0 }` — three Dragonbane
+          // ids applied to every system, which is a `systemId ===` branch with
+          // no `systemId` in it and therefore invisible to the guard that
+          // forbids them. `engineConsumers.test.ts` now reads the shape instead.
+          stats: newCreatureStatBlock(systemRef.current, { health: input.health }),
           attacks: [],
           abilities: [],
           skills: [],

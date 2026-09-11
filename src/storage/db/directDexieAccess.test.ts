@@ -598,10 +598,11 @@ const DIRECT_DEXIE_ACCESS: Record<string, Record<string, string>> = {
       'Inside those transactions: the quick-log note and the NPC note, each of which must '
       + 'land with its `contains` edge or not at all.',
     'creatureTemplates:write':
-      'Inside the NPC-capture transaction: the template and its note land together. '
-      + '**Also a defect** — it hardcodes a classic-fantasy `{hp, armor, movement}` stats '
-      + 'shape, which is a `systemId ===` branch without the string, in the one place '
-      + '`engineContract.test.ts` cannot see it.',
+      'Inside the NPC-capture transaction: the template and its note land together. The '
+      + 'hardcoded classic-fantasy `{hp, armor, movement}` stat block this entry used to '
+      + 'name is gone — the block comes from `newCreatureStatBlock(system)` now, and '
+      + '`engineConsumers.test.ts` fails on a `stats:` literal with hand-spelled keys. What '
+      + 'remains here is the transaction, not the defect.',
   },
   'utils/import/mergeEngine.ts': {
     'db:transaction':

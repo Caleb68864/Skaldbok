@@ -67,6 +67,72 @@ const FILES = sourceFiles().map(path => ({
   text: stripComments(readFileSync(path, 'utf8')),
 }));
 
+/**
+ * Files entitled to spell a creature stat id, and why.
+ *
+ * @remarks
+ * Two, and the reasons are different in kind. `creatureStats.ts` *is* the
+ * declaration — `DEFAULT_CREATURE_STAT_FIELDS` is the stat block a ruleset gets
+ * when it declares none, so it has to name the three ids somewhere and this is
+ * that somewhere.
+ *
+ * `client.ts` is a released Dexie upgrade body writing the shape that existed at
+ * that version. Editing it is forbidden twice over: by the house rule that a
+ * `version(n)` block is never edited retroactively, and by
+ * `releasedSchemaVersions.test.ts`, which fingerprints the block and would fail
+ * on the change. An exemption whose reason is "and the repo will stop you" is
+ * the only kind worth having.
+ */
+const SPELLS_STAT_IDS_BY_RIGHT: Record<string, string> = {
+  'src/features/bestiary/creatureStats.ts':
+    'the default stat block itself — the ids have to be written down once, and this is once',
+  'src/storage/db/client.ts':
+    'a released upgrade body, frozen by the migration rule and fingerprinted by releasedSchemaVersions.test.ts',
+};
+
+/**
+ * Stat ids spelled as literal keys of a `stats: { … }` block.
+ *
+ * @remarks
+ * Walks to the balanced closing brace rather than matching `[^{}]*`, so a nested
+ * call in a value does not truncate the block — and an *unbalanced* block is
+ * reported as `UNRESOLVED` rather than silently producing no offence. Computed
+ * keys (`[healthStatId]:`) are the sanctioned form and yield nothing.
+ *
+ * Returns one entry per stat block, listing the literal ids in it.
+ */
+function spelledStatIds(text: string): string[] {
+  const found: string[] = [];
+  for (const match of text.matchAll(/\bstats\s*:\s*\{/g)) {
+    const open = match.index + match[0].length - 1;
+    let depth = 0;
+    let close = -1;
+    for (let i = open; i < text.length; i++) {
+      if (text[i] === '{') depth++;
+      else if (text[i] === '}') {
+        depth--;
+        if (depth === 0) { close = i; break; }
+      }
+    }
+    if (close === -1) {
+      found.push('UNRESOLVED — the stat block has no balanced closing brace');
+      continue;
+    }
+    // Collapse nested groups before reading keys, or a key belonging to a value
+    // counts as a stat id: `stats: { hp: fn({ a: 1 }) }` reported `hp, a` until
+    // the pinned example above caught it.
+    let inner = text.slice(open + 1, close);
+    for (;;) {
+      const next = inner.replace(/\{[^{}]*\}/g, '{}');
+      if (next === inner) break;
+      inner = next;
+    }
+    const keys = [...inner.matchAll(/(?:^|[,;])\s*([A-Za-z_$][\w$]*)\s*\??\s*:/g)].map(m => m[1]);
+    if (keys.length > 0) found.push(keys.join(', '));
+  }
+  return found;
+}
+
 describe('engine consumer rules', () => {
   it('finds source files to scan', () => {
     // Guards the guards: a broken walk would make every test below vacuous.
@@ -181,6 +247,52 @@ describe('engine consumer rules', () => {
       }
     }
     expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+
+  it('never writes a creature stat block with hand-spelled stat ids', () => {
+    // A `systemId ===` branch with no `systemId` in it.
+    //
+    // `useSessionLog.logNpcCapture` wrote `stats: { hp: input.hp ?? 0, armor: 0,
+    // movement: 0 }` — three Dragonbane ids, chosen by nothing, applied to every
+    // ruleset. A Traveller NPC captured mid-session got a Dragonbane stat block;
+    // the bestiary then showed it under Traveller's declared fields, all reading
+    // 0, with the three numbers actually stored filed under "Other".
+    //
+    // The rule it breaks is the one `creatureStats.ts` already states: the stat
+    // ids come from `system.creatures.statFields`, or from the default block
+    // when a ruleset declares none. Spelling them in source is asserting which
+    // ruleset is active — and the assertion is invisible to every other guard
+    // here, because there is no discriminator in it to match on.
+    const offenders: string[] = [];
+    for (const { path, text } of FILES) {
+      if (SPELLS_STAT_IDS_BY_RIGHT[path]) continue;
+      for (const spelled of spelledStatIds(text)) {
+        offenders.push(`${path}: stats: { ${spelled} }`);
+      }
+    }
+    expect(offenders, offenders.join('\n')).toEqual([]);
+  });
+
+  it('reads a stat block the way the guard above claims to', () => {
+    // The detector pinned by example, because it is invisible from the code it
+    // guards and because two of its three answers are the interesting ones.
+    expect(spelledStatIds('stats: { hp: n ?? 0, armor: 0, movement: 0 },')).toEqual([
+      'hp, armor, movement',
+    ]);
+    // Accepted: keys computed from the ruleset's own ids are the fix, not the
+    // defect. A guard with no accepted case is a guard nothing can satisfy.
+    expect(spelledStatIds('stats: { [healthStatId]: 0, [armorStatId]: 0 },')).toEqual([]);
+    expect(spelledStatIds('stats: newCreatureStatBlock(system, { health }),')).toEqual([]);
+    // A type annotation pinning one ruleset's ids is the same assertion in the
+    // same file, one level up, and was live in two of the three sites.
+    expect(spelledStatIds('stats: { hp?: number; armor?: number },')).toEqual(['hp, armor']);
+    // Unanalysable rather than absent: an unbalanced block is reported, not
+    // skipped. A guard that passes when it cannot resolve what it is looking at
+    // is the failure mode every gap in vault/scan2-findings.md has had.
+    expect(spelledStatIds('stats: { hp: fn({ a: 1 }) ')).toEqual([
+      'UNRESOLVED — the stat block has no balanced closing brace',
+    ]);
+    expect(spelledStatIds('stats: { hp: fn({ a: 1 }) },')).toEqual(['hp']);
   });
 
   it('branches on systemId only in the engine resolver', () => {

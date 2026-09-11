@@ -33,6 +33,37 @@ export function resolveCreatureStatFields(
 }
 
 /**
+ * The stat block a newly-created creature starts with, under the active
+ * ruleset's own ids.
+ *
+ * @remarks
+ * Every flow that stands up a creature needs this and three of them wrote it by
+ * hand as `{ hp: …, armor: 0, movement: 0 }` — the mid-session NPC capture, the
+ * encounter participant picker and the combat quick-create. Three Dragonbane ids
+ * chosen by nothing, applied to every ruleset: a `systemId ===` branch with no
+ * `systemId` in it, which is why no guard saw it. A Traveller NPC captured
+ * during play was stored with a Dragonbane stat block, so the bestiary showed
+ * its declared fields all reading 0 and filed the numbers that were actually
+ * entered under "Other".
+ *
+ * Every declared field starts at 0, and the health stat is set explicitly even
+ * if the ruleset leaves it out of `statFields` — `resolveCreatureHealthStatId`
+ * is what every participant's starting HP is read from, so it must exist.
+ *
+ * @param system - The active definition, or `null`/`undefined` for the default block.
+ * @param seed - Starting values; `health` lands on the ruleset's health stat.
+ */
+export function newCreatureStatBlock(
+  system: SystemDefinition | null | undefined,
+  seed?: { health?: number },
+): Record<string, number> {
+  const stats: Record<string, number> = {};
+  for (const field of resolveCreatureStatFields(system)) stats[field.id] = 0;
+  stats[resolveCreatureHealthStatId(system)] = seed?.health ?? 0;
+  return stats;
+}
+
+/**
  * The heading for one creature stat, from the fields the system declares.
  *
  * @remarks
