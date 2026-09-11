@@ -36,12 +36,15 @@ import { db } from './client';
  *    unit here is `<table>:<operation>`, and a file allowed to *read* `kb_nodes`
  *    is not thereby allowed to write them.
  * 2. **The patterns survive a chain broken across lines and a table reached
- *    through a local binding.** `screens/KnowledgeBaseScreen.tsx` already writes
+ *    through a local binding.** `screens/KnowledgeBaseScreen.tsx` used to write
  *    `await db\n  .table('metadata')\n  .where('key')`, which a same-line regex
  *    cannot see — that single wrapped chain hid the whole file from the first
- *    scan's count. Chains are consumed by a balanced-paren scanner rather than a
- *    regex, so line breaks are irrelevant, and `const t = db.notes` /
- *    `const { notes } = db` are resolved to the tables they name.
+ *    scan's count, and the file it hid turned out to contain a real defect. It
+ *    is gone now, which is why the shape is pinned in {@link ACCESS_FORMS}
+ *    rather than left to be re-learned. Chains are consumed by a balanced-paren
+ *    scanner rather than a regex, so line breaks are irrelevant, and
+ *    `const t = db.notes` / `const { notes } = db` resolve to the tables they
+ *    name.
  * 3. **An unanalysable case fails loudly.** Every guard gap this repository has
  *    found was a check that passed when it could not resolve what it was looking
  *    at. There is no "could not classify, assume fine" branch here: an unknown
@@ -572,20 +575,9 @@ const DIRECT_DEXIE_ACCESS: Record<string, Record<string, string>> = {
       + 'repositories it is the only caller of would relocate the code without adding a rule. '
       + 'Reads only: every *write* to the graph here already goes through `kbNodeRepository` '
       + 'and `kbEdgeRepository`, which is why there is no `kb_nodes:write` entry beside this '
-      + 'one, and why adding one would have to be argued rather than assumed.',
-    'metadata:write':
-      'The `migration_kb_graph_v1` completion marker. **This one is a defect, not a design** '
-      + '— it writes `put({id: key, …})` instead of `metadataRepository.set`\'s '
-      + 'find-then-`generateId`, so a prior `set()` of the same key leaves two rows sharing '
-      + 'one logical key while `get` reads `.first()`. Left here only because it is a '
-      + 'different bug from this file\'s subject; it is recorded so it stays visible.',
-  },
-  'screens/KnowledgeBaseScreen.tsx': {
-    'metadata:read':
-      'Reads the `migration_kb_graph_v1` marker to decide whether to rebuild the graph on '
-      + 'mount. `metadata` is one of the six tables outside the soft-delete model. It is '
-      + 'written by `linkSyncEngine` through the same raw path; the pair should move to '
-      + '`metadataRepository` together, which is the fix for that file\'s entry above.',
+      + 'one, and why adding one would have to be argued rather than assumed. The '
+      + '`metadata` write that used to sit beside it went the same way, to '
+      + '`metadataRepository.set`.',
   },
   'screens/SettingsScreen.tsx': {
     'db:transaction':
