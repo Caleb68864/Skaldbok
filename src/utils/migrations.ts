@@ -1,7 +1,5 @@
 import { characterRecordSchema } from '../../schemas/character.schema';
-import { systemDefinitionSchema } from '../../schemas/system.schema';
 import type { CharacterRecord, CharacterSkill } from '../types/character';
-import type { SystemDefinition } from '../types/system';
 import { isNamespaced, attrKey, armorKey, derivedKey } from './statKeys';
 
 /**
@@ -324,11 +322,22 @@ export function migrateCharacter(data: unknown): CharacterRecord {
  * but this lives alongside {@link migrateCharacter} so the import flow has one
  * place to go for both. Throws with the offending field paths on failure.
  */
-export function migrateSystem(data: unknown): SystemDefinition {
-  const result = systemDefinitionSchema.safeParse(data);
-  if (!result.success) {
-    const messages = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
-    throw new Error(`Invalid system data: ${messages}`);
-  }
-  return result.data as SystemDefinition;
-}
+/*
+ * The function this comment replaces was `migrateSystem`, and it had no caller
+ * anywhere — a repo-wide search for the name returned its own definition and
+ * nothing else.
+ *
+ * What made it worth removing rather than leaving is its own doc, quoted above
+ * before it went: it said system validation "lives alongside `migrateCharacter`
+ * so the import flow has one place to go for both". The import flow has no such
+ * place. `bundleParser` imports `systemDefinitionSchema` directly and validates
+ * there. So the statement a reader would trust was describing an architecture
+ * that did not exist, and the function was the evidence for it.
+ *
+ * Removed rather than wired on a difference that matters: `migrateSystem`
+ * returned `result.data`, while `bundleParser`'s `validateArray` deliberately
+ * keeps the *original* row so Zod does not strip keys a bundled system declares
+ * and the schema does not enumerate. Routing the import through this would have
+ * been a silent narrowing of every imported system, which is the opposite of a
+ * cleanup.
+ */

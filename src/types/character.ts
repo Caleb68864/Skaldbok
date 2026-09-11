@@ -11,25 +11,6 @@ import type { Debt } from '../features/characters/debts';
 export type CharacterMetadata = Record<string, string>;
 
 /**
- * Identity field ids the bundled systems use.
- *
- * @remarks
- * `metadata` is an open string map so each ruleset can declare its own identity
- * fields via `SystemDefinition.identityFields` — Dragonbane wants Kin and
- * Weakness, a sci-fi setting wants Species and Homeworld. These constants exist
- * only so code that genuinely depends on a specific field (Dragonbane's
- * weakness advancement track) can refer to it without a bare string literal.
- */
-export const METADATA_KEYS = {
-  kin: 'kin',
-  profession: 'profession',
-  age: 'age',
-  weakness: 'weakness',
-  appearance: 'appearance',
-  notes: 'notes',
-} as const;
-
-/**
  * A single skill entry on the character sheet.
  *
  * @remarks
@@ -282,6 +263,21 @@ export interface TempModifierEffect {
 }
 
 /** A temporary stat modifier overlaid on the character's base values. */
+/**
+ * A temporary adjustment to one or more stats.
+ *
+ * @remarks
+ * There was a `sourceSpellId` here, written by `MagicScreen` for every spell
+ * cast with `effects` and read by nothing. It was a second statement of a fact
+ * `label` already makes — `label` *is* the spell's name, set on the same lines —
+ * with no reader to keep it honest, so nothing could tell whether it was right.
+ * Dropped rather than labelled, on the same grounds as
+ * `surfaceLayoutSchema.layout`.
+ *
+ * The things an id would buy that a name does not — expiring a modifier with
+ * the spell that made it, surviving a rename — are the reasons to add it back,
+ * *with* the code that does them, on the day one of them is wanted.
+ */
 export interface TempModifier {
   id: string;
   label: string;
@@ -301,7 +297,6 @@ export interface TempModifier {
    * asserting nothing. `engineContract.test.ts` now asserts the round trip.
    */
   duration: string;
-  sourceSpellId?: string;
   createdAt: string;
 }
 
@@ -327,52 +322,33 @@ export interface SpellEffect {
 export type DerivedOverrides = Record<string, number | null>;
 
 /**
- * A user-created custom card displayed on the sheet.
- */
-export interface CustomCard {
-  /** Unique identifier for this card. */
-  id: string;
-  /** Heading text shown at the top of the card. */
-  title: string;
-  /** Body text / markdown content of the card. */
-  body: string;
-}
-
-/**
  * Persisted UI preferences scoped to a single character.
  *
  * @remarks
- * These values are stored alongside the character record so that each
- * character can independently control panel ordering, visibility, and
- * section collapse state.
+ * This interface used to promise that "each character can independently control
+ * panel ordering, visibility, and section collapse state". It did none of those
+ * things. Seven members were declared here, five validated by
+ * `schemas/character.schema.ts`, one written on every single save — and not one
+ * had a reader:
+ *
+ * | member | why it went |
+ * |---|---|
+ * | `expandedSections` | **required**, written as `[]` by `characterNormalization` on every save, read by nothing. The sheet has no collapsible sections; it has draggable panels. |
+ * | `sheetCardOrder` | superseded. Panel order is persisted in *app settings* as `settings.sheetPanelOrder` (`SheetScreen.handleOrderChange`), globally rather than per character. |
+ * | `sheetPanelVisibility` | superseded. Visibility is computed each render from panel availability and play/edit mode, and is never persisted. |
+ * | `sheetCustomCards` | never written by anything, along with the whole `CustomCard` interface that existed only to type it. |
+ * | `combatCardOrder`, `combatPanelVisibility` | already `@deprecated` here: there is no combat screen, and the Settings section that wrote them was deleted *because toggling it changed nothing*. |
+ *
+ * Removing them loses no stored data. `characterRecordSchema`'s `uiState` is
+ * `.passthrough()`, so a record that still carries any of these keeps them, and
+ * no migration drops them — they simply stop being a promise the type makes.
+ *
+ * What remains is what is actually read: `pinnedSkills` by `SkillModule`, and
+ * `restsUsed` by `RestModule`.
  */
 export interface CharacterUiState {
-  /** IDs of sections currently expanded on the sheet. */
-  expandedSections: string[];
   /** Skill IDs pinned to the top of the skills list. */
   pinnedSkills?: string[];
-  /** Display order of draggable cards on the sheet view. */
-  sheetCardOrder?: string[];
-  /** User-created custom cards for the sheet view. */
-  sheetCustomCards?: CustomCard[];
-  /** Visibility flags for individual panels on the sheet view; keyed by panel ID. */
-  sheetPanelVisibility?: Record<string, boolean>;
-  /**
-   * Display order of draggable cards on the combat view.
-   *
-   * @deprecated Orphaned — there is no combat screen; `/combat` redirects to the
-   * sheet and combat lives in the play dashboard. Kept so existing records keep
-   * validating; wire it up or drop it in a future migration.
-   */
-  combatCardOrder?: string[];
-  /**
-   * Visibility flags for individual panels on the combat view, keyed by panel ID.
-   *
-   * @deprecated Orphaned for the same reason as {@link combatCardOrder}. The
-   * Settings section that wrote this was removed because toggling it changed
-   * nothing.
-   */
-  combatPanelVisibility?: Record<string, boolean>;
   /**
    * Per-rest-type usage marks for the play dashboard rest module.
    * `true` means the rest has been used since the last reset; the

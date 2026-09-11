@@ -197,15 +197,24 @@ function lastSegmentEnd(enc: Encounter): string | null {
 }
 
 /**
- * Queries the database for the party belonging to `campaignId` and joins its members.
+ * Loads the campaign's party and joins its members.
  *
- * @param campaignId - Campaign whose party should be loaded.
+ * @param campaign - Campaign whose party should be loaded.
  * @returns The party with members, or `null` if no party exists for this campaign.
+ *
+ * @remarks
+ * Takes the whole campaign rather than its id so it can honour
+ * `campaign.activePartyId`. Three UI flows write that field and, until this
+ * read, none of them was ever consulted: the party came back as whichever row
+ * the `campaignId` index yielded first, which is only harmless while a campaign
+ * has exactly one live party.
  */
-async function resolvePartyWithMembers(campaignId: string): Promise<ActivePartyWithMembers | null> {
+async function resolvePartyWithMembers(campaign: Campaign): Promise<ActivePartyWithMembers | null> {
   // Through the repository, which drops soft-deleted parties and seats — a
   // raw Dexie read here put a deleted character's seat back in the drawer.
-  const party = await partyRepository.getPartyByCampaign(campaignId);
+  const party = await partyRepository.getPartyByCampaign(campaign.id, {
+    preferPartyId: campaign.activePartyId,
+  });
   if (!party) return null;
   const members = await partyRepository.getPartyMembers(party.id);
   return { ...party, members };
@@ -329,7 +338,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
         setActiveSession_(session ?? null);
 
-        const party = await resolvePartyWithMembers(campaign.id);
+        const party = await resolvePartyWithMembers(campaign);
         if (!mounted) return;
         setActiveParty_(party);
         // Point the global active character at this campaign's character on load,
@@ -602,7 +611,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       const session = await sessionRepository.getActiveSession(campaignId);
       setActiveSession_(session ?? null);
 
-      const party = await resolvePartyWithMembers(campaignId);
+      const party = await resolvePartyWithMembers(campaign);
       setActiveParty_(party);
       // Switch the global active character to the newly-active campaign's character.
       await reconcileActiveCharacter(campaign, party);
@@ -622,7 +631,7 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
   const refreshParty = useCallback(async () => {
     if (!activeCampaign) return;
     try {
-      const party = await resolvePartyWithMembers(activeCampaign.id);
+      const party = await resolvePartyWithMembers(activeCampaign);
       setActiveParty_(party);
 
       if (activeCampaign.activeCharacterMemberId && party) {

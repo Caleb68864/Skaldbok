@@ -29,7 +29,6 @@ async function seedPartyMember(characterId: string) {
     id: `member-${characterId}`,
     partyId: party.id,
     linkedCharacterId: characterId,
-    isActivePlayer: true,
     schemaVersion: 1,
     createdAt: now,
     updatedAt: now,

@@ -73,39 +73,29 @@ export async function getAttachmentsByNote(
   }
 }
 
-/** Every attachment in a campaign, validated and sorted oldest-first. */
-export async function getAttachmentsByCampaign(
-  campaignId: string,
-  options?: { includeDeleted?: boolean },
-): Promise<Attachment[]> {
-  try {
-    const rows = await db.attachments.where('campaignId').equals(campaignId).toArray();
-    const records = options?.includeDeleted ? rows : excludeDeleted(rows);
-    return records
-      .map(record => {
-        const parsed = attachmentSchema.safeParse(record);
-        if (!parsed.success) {
-          console.warn('attachmentRepository.getAttachmentsByCampaign: validation failed', parsed.error);
-          return undefined;
-        }
-        return parsed.data;
-      })
-      .filter((a): a is Attachment => a !== undefined)
-      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  } catch (e) {
-    throw new Error(`attachmentRepository.getAttachmentsByCampaign failed: ${e}`, { cause: e });
-  }
-}
-
 /**
- * Removes one attachment row.
+ * Removes one attachment row, permanently.
  *
  * @remarks
- * Deliberately still a hard delete: this is the per-photo remove control, an
- * explicit "get rid of this image" aimed at one Blob the user is looking at.
- * Freeing the space is the point of the action.
+ * **Internal only, and with no caller — the same standing as every other
+ * repository's `hardDelete`,** which is why `hardDeleteReachability.test.ts`
+ * lists it among the domain hard deletes that `src/storage` may reach and
+ * nothing else may.
  *
- * The *cascade* is a different act and is soft — see
+ * This comment used to describe it as *"the per-photo remove control, an
+ * explicit 'get rid of this image'"*. No such control existed, and under two of
+ * this project's own rules none could: a permanent delete on user content may
+ * not be called from outside `src/storage`, and
+ * `trashRegistry.RESTORE_WITHOUT_LISTING` exempts the `attachments` table from
+ * having a Trash listing precisely on the grounds that an attachment is *"a
+ * cascade child, never deleted on its own"*. So the doc authorised a caller
+ * that the registry's exemption depends on not existing — two records of one
+ * decision, disagreeing.
+ *
+ * A per-photo remove is a real thing to want. It needs the Trash listing first,
+ * and then it is a soft delete, not this.
+ *
+ * The *cascade* is the reachable act and is soft — see
  * {@link softDeleteAttachmentsByNote}. Deleting a note is reversible from
  * Trash, so what goes down with it has to come back.
  */

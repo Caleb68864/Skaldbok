@@ -193,6 +193,6 @@ export function normalizeCharacter(
         }
       : {}),
     derivedOverrides: character.derivedOverrides ?? {},
-    uiState: character.uiState ?? { expandedSections: [] },
+    uiState: character.uiState ?? {},
   };
 }

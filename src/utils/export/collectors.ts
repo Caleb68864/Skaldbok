@@ -33,7 +33,10 @@ import { getById as getSystemById } from '../../storage/repositories/systemRepos
  */
 export type CollectorResult =
   | { success: true; contents: BundleContents }
-  | { success: false; error: string; partialContents?: Partial<BundleContents> };
+  // There was a `partialContents?: Partial<BundleContents>` here — the mirror
+  // of `bundleParser`'s `partialBundle` and worse: a receiver with no sender
+  // *and* no reader. None of this file's failure returns ever set it.
+  | { success: false; error: string };
 
 /**
  * Collects all entity links for a given entity ID (both directions, all relationship types).

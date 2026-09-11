@@ -24,6 +24,7 @@ import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepos
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
 import { useForwardLinks } from './KnowledgeBaseContext';
 import { BacklinksPanel } from './BacklinksPanel';
+import { NoteAttachments } from './NoteAttachments';
 import { PeekCard } from './PeekCard';
 import { getNodeById } from '../../storage/repositories/kbNodeRepository';
 import type { Note } from '../../types/note';
@@ -54,6 +55,22 @@ export function NoteReader({ noteId }: NoteReaderProps) {
   const [peekNodeId, setPeekNodeId] = useState<string | null>(null);
   const { deleteNote } = useNoteActions();
   const { showToast } = useToast();
+
+  /**
+   * Re-reads the note's attachments after the gallery adds one or edits a caption.
+   *
+   * @remarks
+   * Reads by the *note's* id, not by `noteId`: this component resolves either a
+   * `kb_nodes` id or a raw note id, so `noteId` is frequently neither.
+   */
+  const refreshAttachments = useCallback(async () => {
+    if (!note) return;
+    try {
+      setAttachments(await getAttachmentsByNote(note.id));
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Could not reload attachments', 'error');
+    }
+  }, [note, showToast]);
 
   /**
    * Soft-deletes the note and navigates back, offering an Undo.
@@ -330,24 +347,15 @@ export function NoteReader({ noteId }: NoteReaderProps) {
         />
       </div>
 
-      {/* Attachment gallery */}
-      {attachments.length > 0 && (
-        <div className="border-t border-[var(--color-border)] pt-3">
-          <h3 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">
-            Attachments
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {attachments.map((att) => (
-              <div
-                key={att.id}
-                className="px-3 py-2 bg-[var(--color-surface-raised)] rounded text-xs text-[var(--color-text)]"
-              >
-                {att.caption || att.id}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Attachment gallery. Rendered unconditionally: the "Add photo" control
+          lives inside it, and hiding the whole block when there are none is
+          what left the app with no way to create a first attachment. */}
+      <NoteAttachments
+        noteId={note.id}
+        campaignId={note.campaignId}
+        attachments={attachments}
+        onChanged={refreshAttachments}
+      />
 
       {/* Forward links summary */}
       {forwardLinks.length > 0 && (

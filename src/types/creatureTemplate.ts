@@ -75,8 +75,24 @@ export const creatureTemplateSchema = z.object({
   skills: z.array(creatureSkillSchema),
   /** User-applied tag strings for filtering. */
   tags: z.array(z.string()),
-  /** Optional image URL for the creature portrait. */
-  imageUrl: z.string().optional(),
+  // There was an `imageUrl` here, with a real text input behind it
+  // (`CreatureTemplateForm`, placeholder "https://…"). Nothing rendered it:
+  // there is no `<img>` anywhere in `features/bestiary/`, `renderCreatureExport`
+  // omits it, and its only reader was the form reading back what the form had
+  // just written — verbatim the `bottomNavTabs` shape that
+  // `settingsHaveReaders.test.ts` exists to name.
+  //
+  // Removed rather than wired, and that is the unusual direction here. Wiring it
+  // means fetching user content from a third-party host on every card render, in
+  // an offline-first app whose own pattern for images is a data URI
+  // (`portraitUri`, `utils/import/portraitUri.ts`). "Expose it" is not
+  // automatically the answer: a control that changes nothing is the defect, and
+  // making this one work would have added the one thing the app deliberately
+  // avoids. A creature portrait belongs on the `portraitUri` path when it comes.
+  //
+  // `db/client.ts`'s v6 upgrade still writes `imageUrl: undefined` — it is a
+  // released migration body and is fingerprinted, so it is not edited. Writing
+  // `undefined` stores nothing.
   /** Lifecycle status. */
   status: z.enum(['active', 'archived']),
   /** ISO datetime when this record was first created. */

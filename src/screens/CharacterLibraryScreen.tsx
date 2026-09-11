@@ -123,7 +123,7 @@ export default function CharacterLibraryScreen() {
         await updateCampaign(activeCampaign.id, { activePartyId: party.id });
         partyId = party.id;
       }
-      await addPartyMember({ partyId, linkedCharacterId: characterId, name, isActivePlayer: false });
+      await addPartyMember({ partyId, linkedCharacterId: characterId, name });
       await refreshParty();
     } catch (e) {
       console.error('CharacterLibraryScreen: could not add character to party', e);

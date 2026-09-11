@@ -131,7 +131,7 @@ export interface AppSettings extends Versioned {
   /**
    * If `true` (default), the floating session-log button is shown in the app
    * shell. Set to `false` to hide it for a cleaner character-sheet-only
-   * experience; the log stays reachable from More → Session Log, so turning
+   * experience; the log stays reachable from the Session tab, so turning
    * this off never strands the user.
    */
   showGlobalFAB?: boolean;

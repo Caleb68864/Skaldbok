@@ -2210,8 +2210,9 @@ and one of `O6`'s claims is withdrawn.
 factory (`S22`, the fourth and last of `O6`'s items), the second scan's tail, the
 `logNpcCapture` decision, and `H4`'s banner — with `H4`'s snapshot declined
 rather than left open, because the version written down would not have been a
-backup. What remains is the gated sweep for unwired and half-wired surfaces,
-which `Q` added two entries to rather than acting on.
+backup. What remained was the gated sweep for unwired and half-wired surfaces,
+which `Q` added two entries to rather than acting on. **Workstream R is that
+sweep, and it is done — see below.**
 
 Two things from that workstream are worth carrying forward more than the ticks:
 
@@ -2281,3 +2282,184 @@ Seven things a future reader should know before picking up the rest:
   range there is now no cap, exactly as `normalizeAttribute` already treated an
   undeclared attribute. The option is `skillRange` rather than `skillMax`, and
   still nothing passes it.
+
+---
+
+## Workstream R — the gated half-wired sweep (2026-09-11) — DONE
+
+Five passes for unwired and half-wired surfaces: reachability both ways, the
+boundary walk, the declaration-versus-consumer audit, the unreachable caller, and
+the promise audit. Ranked by `Impact × 4 − Blast × 3 − Effort`. Every finding
+names **wire** or **remove** with its reason, because there is no third state.
+
+### The findings, ranked
+
+| # | Finding | Decision | Score |
+|---|---|---|---|
+| R1 | `createAttachment` had zero callers, so the app could not make an attachment at all, while the README listed "attachments" as shipped | **Wire** | 5×4 − 2×3 − 3 = **11** |
+| R2 | `useSystemDefinition.error` computed and dropped at all 18 call sites, so a ruleset that failed to load was served as one still loading — with another system's maths | **Wire** | 4×4 − 2×3 − 3 = **7** |
+| R3 | `campaignSchema.activePartyId` written by three UI flows and read by none; the party came back as whichever row the index yielded first | **Wire** | 3×4 − 1×3 − 2 = **7** |
+| R4 | Nine `CharacterUiState` / schema fields declared, validated, some persisted on every save, none read | **Remove** | 2×4 − 1×3 − 2 = **3** |
+| R5 | Two Reference delete dialogs said "This cannot be undone" over a soft delete with a working Trash listing | **Remove the claim** | 3×4 − 1×3 − 1 = **8** |
+| R6 | "Clear All Data" warned about "characters and notes" and clears every table | **Correct the copy** | 3×4 − 1×3 − 1 = **8** |
+| R7 | Nine exports with no caller anywhere, including a whole screen component pair kept "for rollback safety" | **Remove** | 2×4 − 2×3 − 2 = **0** |
+| R8 | Settings sent the user to "More → Session Log"; `/more` was deleted | **Correct the copy** | 2×4 − 1×3 − 1 = **4** |
+| R9 | `encounterRepository.addParticipant` — a callerless duplicate that could write a participant with **no `represents` edge** | **Remove** | 2×4 − 1×3 − 1 = **4** |
+| R10 | `creatureTemplateSchema.imageUrl` — a live text input whose only reader was itself | **Remove, control and all** | 2×4 − 2×3 − 1 = **1** |
+| R11 | `linkSyncEngine.syncCharacter` — finished, hardened, unreachable | **Remove** | 1×4 − 2×3 − 2 = **−4** |
+
+### The decisions worth re-reading
+
+**R1 — attachments.** The promise-audit finding of the set, and the only one that
+is a false statement to a user rather than dead code. Wired on the
+`resolveComponent` precedent: downscale-and-re-encode, a `QuotaExceededError`
+re-label, a soft-delete cascade with restore-by-txId, a `RESTORE_WITHOUT_LISTING`
+exemption, ZIP sidecar rendering, base64 round-tripping and a mime/size/base64
+restore guard were all already built around the missing entry point. No design doc
+deprecates it; the ink design doc assumes it. (The "AttachTo" controls the notes
+overhaul deleted are a different concept — attaching a *log entry* to a note.)
+
+The read half was half-wired too: the gallery showed `att.caption || att.id`, a
+raw UUID, since nothing could set a caption either, and no `<img>` existed
+anywhere in the app.
+
+Three more dead exports in that file got three different answers.
+`getAttachmentsByCampaign` **removed** — its only caller was one assertion in its
+own test. `sizeBytes` **wired** — into the gallery and into
+`renderAttachmentSidecar`, the one file whose job is to preserve attachment
+metadata and which omitted the number saying how much of the device the photo
+costs. `deleteAttachment` **kept internal, and its doc corrected**: it called
+itself "the per-photo remove control", a control that did not exist and could
+not, because `hardDeleteReachability.test.ts` forbids a permanent delete on user
+content outside `src/storage` *and* `RESTORE_WITHOUT_LISTING` exempts the
+`attachments` table from a Trash listing on the grounds that an attachment is
+never deleted on its own. The doc authorised a caller the exemption depends on
+not existing.
+
+**R2 — the two nulls.** `error` was the only thing separating "failed to load"
+from "not finished loading", and both reach a consumer as `system === null`. So
+`fallbackRulesFor` and its on-screen notice — which exist for exactly this — could
+never fire for a missing ruleset, and `fallbackAdapter.test.ts` asserted that
+absence in two lines. A test defending the gap, and for a sound reason:
+`getEngine` alone genuinely cannot tell. It is told now, via
+`getEngine(system, unresolvedSystemId?)`, and both original assertions still hold.
+`isLoading` got the opposite answer and was removed: no consumer ever showed a
+spinner.
+
+The guard is structural rather than a list of screens. Sixteen other files call
+the hook for labels and terms; a notice in each would be sixteen chances to
+render one fed a constant — the defect wearing the shape of the fix.
+
+**R10 — the one case where "expose it" was the wrong answer.** `imageUrl` is
+verbatim the `bottomNavTabs` shape: a real text input, placeholder `https://…`,
+read only by the form reading back what it wrote. Wiring it means fetching user
+content from a third party on every card render, in an offline-first app whose own
+pattern for images is a data URI. The control went with the field. This is the
+`PrinterProfile` calibration precedent in the same direction.
+
+**R11 — the one that looked most like `resolveComponent` and was not.**
+`syncCharacter` needs a `campaignId` and `CharacterRecord` does not have one — a
+character belongs to a campaign only through a party seat. The obvious wiring,
+mirroring `noteRepository`'s fire-and-forget `syncNote`, means a party lookup on
+every autosave across seven screens. Not a fifteen-line wire: a change to what a
+character is. And nothing downstream is orphaned — the `'character'` node type is
+already populated, because `nodeTypeForNote` maps an `npc` note to it.
+
+### What the guards learned
+
+`declaredCapabilities` is finally widened to `types/character.ts`,
+`types/attachment.ts` and `types/campaign.ts`, which `P6` deliberately deferred.
+Widening it found two blind spots **in the guard**, both unreachable while it
+covered only files containing nothing but declarations:
+
+- **A value object read as a set of declarations.** `METADATA_KEYS = { kin:
+  'kin', … }` is a population, and its keys were extracted and reported unread.
+  The file's own comment already stated the rule that separates the two and never
+  applied it. Narrow enough that `kindField: 'die-ladder'` — a literal *type* — is
+  still seen; both halves pinned.
+- **A JS built-in reporting a reader.** `Math.round(` matched `\.round`, so
+  `restsUsed.round` looked read. Had that field been the bug, the guard would
+  have excused it.
+
+`round` is *still* read after that fix, and the new allowlist's self-check said
+so rather than letting the entry stand: `CombatEncounterView` reads
+`event.round`, a different field of the same name. That is `TOO_GENERIC`'s
+limitation and it is recorded in place instead of papered over.
+
+Two new guards: `systemLoadErrorReaders.test.ts` (the engine hooks must bind the
+hook's error and pass it on) and `irreversibilityClaims.test.ts` (only a screen
+that really destroys something may say so — `SettingsScreen` is the sole entry).
+
+### On counts, because this project has been bitten by them
+
+Every guard's case count was **derived before and after**, per guard, and the
+per-case *names* diffed as well as the totals — including after deleting source
+files, which is precisely what shrinks a source-scanning guard's corpus:
+
+| guard | before | after |
+|---|---|---|
+| `declaredCapabilities` | 169 | 247 |
+| `settingsHaveReaders` | 16 | 16 |
+| `repositoryConventions` | 88 | 88 |
+| `trashRegistry` | 16 | 16 |
+| `panelKeyReaders` | 5 | 5 |
+| `componentReachability` | 9 | 9 |
+| `cards/schema` | 19 | 19 |
+| `importReachability` | 4 | 4 |
+
+No guard lost a case. Suite 2089 → 2200 tests, 137 → 141 files; ESLint warnings
+36 → 31.
+
+### Three things this sweep got wrong first, and caught
+
+- **A test that could not fail, written this session.** The `activePartyId` test
+  seeded `party-old` then `party-chosen` and preferred `party-chosen` — but Dexie
+  returns an index scan in *primary-key* order, so the unpreferred scan already
+  gave the expected answer. Deleting the entire preference branch left it green.
+  The ids are adversarial now.
+- **A guard hole in a guard written an hour earlier.**
+  `toContain('role="status"')` passes on `data-role="status"` — a substring match
+  with no left boundary, the same shape as the `\b`-before-a-hyphen false positive
+  `declaredCapabilities` was rewritten to stop making.
+- **A false "dead" verdict from excluding same-file callers.** A first pass
+  reported `pushSegment` and `endActiveSegment` unreachable; both are called by a
+  sibling four lines away, and `Encounter.segments` — which four production
+  readers depend on — is written inline by `startForSession` and `endWithSummary`.
+  Filed and withdrawn before it became a finding.
+
+### Recorded, not fixed
+
+These were found and are **not** half-wired surfaces, so they are recorded rather
+than acted on. Two are serious.
+
+- **Ten live character sub-fields are stripped on every import.**
+  `characterRecordSchema` is `.passthrough()` at the top level only, and
+  `bundleParser` is the one branch that replaces the row with parser output. So
+  `CharacterSkill.dragonMarked`/`demonMarked`, `Weapon.metal`/`damageType`/
+  `strRequirement`/`damaged`/`isShield` and `ArmorPiece.weight`/`bodyPart`/
+  `movementPenalty`/`metal` vanish on import. All are read by live code. The repo
+  already fixed exactly one instance of this shape (`StoryBeat.body`) and never
+  applied the reasoning to the nested objects. `bundleParser.test.ts:74` claims to
+  guard it and asserts only the two fields the two `passthrough()` calls already
+  protect.
+- **The privacy filter never touches `kbNodes`/`kbEdges`.** `applyPrivacyFilter`
+  spreads `...contents` and overrides `notes`, `entityLinks` and `attachments`
+  only, so a private note's title, id and its whole edge set ship in a campaign
+  bundle the user was told excludes it. The Markdown path is defended against
+  this; the JSON path — the one that leaves the device as a shareable file — is
+  not.
+- `attachments` and `kbEdges` carry no `updatedAt`, so re-importing the same
+  backup reports one error per row and neither can ever be updated by a bundle.
+- `envelope.system` is derived on export and read by nothing on import.
+- `note.typeData` — where ink strokes live — survives the JSON bundle and is
+  dropped by every Markdown/ZIP renderer.
+- Five test-only pure helpers (`entriesForAccount`, `countEarnedMarks`,
+  `hasBlankTemplate`, `removeDebtPayment`, `raiseChance`) and the unreachable
+  `notesToTimeline` adapter module. The adapter is left because three doc comments
+  name it as the timeline component library's canonical extension point, so
+  removing it is a decision about that library's documented architecture rather
+  than a wiring fix.
+- A per-photo delete for attachments needs the Trash listing first — see the
+  README's Known gaps and `RESTORE_WITHOUT_LISTING.attachments`.
+- Whether a `CharacterRecord` should carry a `campaignId` — the question `R11`
+  leaves open.

@@ -725,7 +725,7 @@ export default function ReferenceScreen() {
           <Button variant="secondary" onClick={() => setDeleteSectionTarget(null)}>Cancel</Button>
           <Button variant="danger" onClick={handleSectionDeleteConfirm}>Delete</Button>
         </>}>
-        <p className="text-[var(--color-text)]">Delete <strong>{deleteSectionTarget?.title}</strong>? This cannot be undone.</p>
+        <p className="text-[var(--color-text)]">Delete <strong>{deleteSectionTarget?.title}</strong>? It moves to the Trash, where it can be restored.</p>
       </Modal>
 
       <Modal open={deleteGroupTarget !== null} onClose={() => setDeleteGroupTarget(null)} title="Delete Card"
@@ -741,7 +741,7 @@ export default function ReferenceScreen() {
           <Button variant="secondary" onClick={() => setDeleteNoteTarget(null)}>Cancel</Button>
           <Button variant="danger" onClick={handleNoteDeleteConfirm}>Delete</Button>
         </>}>
-        <p className="text-[var(--color-text)]">Delete <strong>{deleteNoteTarget?.title}</strong>? This cannot be undone.</p>
+        <p className="text-[var(--color-text)]">Delete <strong>{deleteNoteTarget?.title}</strong>? It moves to the Trash, where it can be restored.</p>
       </Modal>
 
       <Modal open={error !== null} onClose={() => setError(null)} title="Reference">

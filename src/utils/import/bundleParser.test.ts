@@ -72,8 +72,14 @@ describe('parseBundle — character validation', () => {
   });
 
   it('preserves fields the schema does not enumerate (no silent strip on import)', () => {
-    // portraitUri and uiState sheet-layout keys aren't in characterRecordSchema;
-    // validation must NOT drop them (that would reset a portrait / card layout).
+    // `portraitUri` is not in `characterRecordSchema`, and `uiState` now
+    // enumerates *nothing* — it is a bare `z.object({}).passthrough()`, because
+    // the five members it used to declare were all read by nobody and are gone.
+    // That makes this case stronger rather than weaker: `sheetCardOrder` is now a
+    // genuinely unenumerated key, which is exactly what the test claims to be
+    // about, and `pinnedSkills` (which is read, by `SkillModule`) survives on the
+    // passthrough alone. Removing the passthrough resets a portrait and drops a
+    // live preference, so this is what makes those removals free.
     const rich = {
       ...validChar,
       portraitUri: 'data:image/png;base64,AAAA',

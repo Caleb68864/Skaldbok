@@ -339,30 +339,24 @@ export async function updateParticipant(
   });
 }
 
-/**
- * Adds a new participant to an encounter.
+/*
+ * `addParticipant` stood here. It had no production caller — participants are
+ * added by `addRepresentedParticipants`, used from four places — and its only
+ * callers were two lines in its own test, which is a test passing over code
+ * nothing calls.
  *
- * @param encounterId - The ID of the encounter to add a participant to.
- * @param participant - Participant data (without id — auto-generated).
- * @returns The updated encounter, or `undefined` if the encounter was not found.
+ * Removed rather than wired, and not merely because it was a duplicate: it was
+ * a duplicate that could not produce a *valid* row. It took an
+ * `Omit<EncounterParticipant, 'id'>` and wrote it, with no `represents` edge.
+ * The doc on `addRepresentedParticipants` below says why that is not optional —
+ * "a participant with no `represents` edge is a bare name with no stat block, no
+ * HP source and no identity — every reader resolves the participant through that
+ * edge". So this was a bypass of the invariant, sitting one screen away from the
+ * function that keeps it, with a green test vouching for it.
+ *
+ * Its test coverage moved to `addRepresentedParticipants`, which is the path the
+ * app takes.
  */
-export async function addParticipant(
-  encounterId: string,
-  participant: Omit<EncounterParticipant, 'id'>
-): Promise<Encounter | undefined> {
-  const existing = await getById(encounterId);
-  if (!existing) {
-    console.warn('encounterRepository.addParticipant: encounter not found', encounterId);
-    return undefined;
-  }
-  const newParticipant: EncounterParticipant = {
-    ...participant,
-    id: generateId(),
-  };
-  return update(encounterId, {
-    participants: [...existing.participants, newParticipant],
-  });
-}
 
 /**
  * One participant to add, and the bestiary creature or PC it stands for.

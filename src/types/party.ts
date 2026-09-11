@@ -38,7 +38,18 @@ export const partySchema = z.object({
  * @remarks
  * A party member links a seat in the party to either a {@link types/character!CharacterRecord | CharacterRecord}
  * (via `linkedCharacterId`) or a named NPC/placeholder (via `name`).
- * `isActivePlayer` distinguishes PC slots from guest or inactive seats.
+ *
+ * There was a **required** `isActivePlayer: z.boolean()` here, documented as
+ * distinguishing "PC slots from guest or inactive seats". It was hardcoded
+ * `false` at both places that create a seat and read nowhere, so it could never
+ * be `true` for a record this app made, and the distinction it named did not
+ * exist anywhere in the interface.
+ *
+ * Removed rather than wired, because wiring it means inventing the feature it
+ * describes — a per-seat toggle, plus something that acts on the answer — and a
+ * sweep for half-wired surfaces is not the place to decide the party screen
+ * wants one. Nothing is lost: Zod drops the key from an older bundle on import,
+ * and it never carried information to begin with.
  *
  * @example
  * ```ts
@@ -55,8 +66,6 @@ export const partyMemberSchema = z.object({
   linkedCharacterId: z.string().optional(),
   /** Display name override for the member (used when no character is linked). */
   name: z.string().optional(),
-  /** If `true`, this slot represents an active player character at the table. */
-  isActivePlayer: z.boolean(),
   /** Schema version for forward-compatibility migrations. */
   schemaVersion: z.number(),
   /** ISO datetime when this record was first created. */

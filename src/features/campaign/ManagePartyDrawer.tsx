@@ -104,7 +104,6 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
         partyId: party.id,
         linkedCharacterId: characterId,
         name: char?.name,
-        isActivePlayer: false,
       });
       await refreshParty();
     } catch (e) {

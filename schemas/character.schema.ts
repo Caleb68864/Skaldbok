@@ -106,12 +106,21 @@ export const characterRecordSchema = z.object({
     .describe('Money held, keyed by currency denomination id'),
   abilities: z.array(abilitySchema).default([]),
   derivedOverrides: z.record(z.string(), z.number().nullable()).default({}).describe('Override map for derived values'),
-  // passthrough: uiState carries more keys than expandedSections (sheetCardOrder,
-  // sheetPanelVisibility, pinnedSkills, restsUsed, ...). Keep them on import rather
-  // than stripping — the card-template sheet layout lives here.
-  uiState: z.object({
-    expandedSections: z.array(z.string()).default([]),
-  }).passthrough().default({ expandedSections: [] }),
+  // passthrough, and now with nothing enumerated at all.
+  //
+  // This comment used to justify the passthrough by naming "sheetCardOrder,
+  // sheetPanelVisibility, pinnedSkills, restsUsed" and adding "the card-template
+  // sheet layout lives here". Two of those four had readers and two did not, and
+  // the sheet layout does not live here — it lives in app settings, as
+  // `settings.sheetPanelOrder`. The three unread ones are gone from
+  // `CharacterUiState`; `expandedSections` went with them, which is why nothing
+  // is listed above any more.
+  //
+  // The passthrough itself is still right, and is the reason removing those
+  // members costs a user nothing: a record that carries them keeps them, and no
+  // migration strips them. It is also what lets `pinnedSkills` and `restsUsed`
+  // survive an import without being restated here.
+  uiState: z.object({}).passthrough().default({}),
   deletedAt: z.string().optional().describe('ISO timestamp when soft-deleted; absent when live'),
   softDeletedBy: z.string().optional().describe('Transaction UUID identifying the cascade that soft-deleted this character'),
   systemData: z

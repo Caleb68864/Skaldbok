@@ -278,7 +278,6 @@ export default function MagicScreen() {
         label: spell.name,
         effects: effs.map(e => ({ stat: e.stat, delta: e.delta })),
         duration: dur as TempModifier['duration'],
-        sourceSpellId: spell.id,
         createdAt: nowISO(),
       }));
       updates.tempModifiers = [...(character.tempModifiers ?? []), ...newModifiers];

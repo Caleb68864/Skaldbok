@@ -77,7 +77,6 @@ async function seedAuthoredSystemCampaign(): Promise<void> {
     id: 'member-1',
     partyId: 'party-1',
     linkedCharacterId: 'char-1',
-    isActivePlayer: false,
     ...stamp,
   } as never);
 }
@@ -179,7 +178,6 @@ describe('a user-authored ruleset travels with every scope that names it', () =>
       id: 'member-2',
       partyId: 'party-1',
       linkedCharacterId: 'char-2',
-      isActivePlayer: false,
       schemaVersion: 1,
       createdAt: NOW,
       updatedAt: NOW,

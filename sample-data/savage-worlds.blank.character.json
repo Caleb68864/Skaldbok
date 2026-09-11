@@ -46,9 +46,7 @@
   "memento": "",
   "abilities": [],
   "derivedOverrides": {},
-  "uiState": {
-    "expandedSections": []
-  },
+  "uiState": {},
   "systemData": {
     "edges": "",
     "hindrances": "",

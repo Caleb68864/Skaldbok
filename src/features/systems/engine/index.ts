@@ -107,10 +107,30 @@ const engineCache = new Map<string, SystemEngine>();
  * defaults, so a user-authored ruleset can rename user-facing vocabulary (for
  * example the abilities/magic tab) without touching code. Setting
  * `labels.abilitiesScreen` to `null` hides that tab entirely.
+ *
+ * @param system - The resolved definition, or `null`/`undefined` when there is none.
+ * @param unresolvedSystemId - The id that was asked for and **failed to load**.
+ *
+ * @remarks
+ * `unresolvedSystemId` is how `useSystemDefinition`'s `error` reaches a screen.
+ * That error was computed at one place and dropped at all eighteen call sites —
+ * every one destructured `{ system }` and nothing else — so a campaign whose
+ * ruleset had gone missing silently got classic-fantasy's maths, which is the
+ * one thing `fallbackRulesFor` exists to prevent. The flag could not be set
+ * from here because `getEngine` alone cannot tell a failed load from a load
+ * that has not finished: both arrive as `system === null`. Only the hook knows,
+ * so the hook says.
+ *
+ * A missing `unresolvedSystemId` therefore still means "still loading" or
+ * "legacy record" and still sets no flag — otherwise the notice would appear on
+ * every cold start.
  */
-export function getEngine(system: SystemDefinition | undefined | null): SystemEngine {
+export function getEngine(
+  system: SystemDefinition | undefined | null,
+  unresolvedSystemId?: string,
+): SystemEngine {
   const base = baseEngineFor(system);
-  if (!system) return base;
+  if (!system) return unresolvedSystemId ? { ...base, fallbackRulesFor: unresolvedSystemId } : base;
 
   const key = `${system.id}@${system.version}`;
   const cached = engineCache.get(key);
@@ -147,11 +167,21 @@ export function getEngine(system: SystemDefinition | undefined | null): SystemEn
   return merged;
 }
 
-/** Resolves the SystemEngine for the currently active character's system. */
+/**
+ * Resolves the SystemEngine for the currently active character's system.
+ *
+ * @remarks
+ * `error` is destructured and passed on deliberately: it is the only thing that
+ * distinguishes "this ruleset failed to load" from "this ruleset has not
+ * finished loading", and dropping it — which every consumer of
+ * `useSystemDefinition` did — is what let the second case be served as the
+ * first, silently, with another system's maths.
+ */
 export function useSystemEngine(): SystemEngine {
   const { character } = useActiveCharacter();
-  const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
-  return getEngine(system);
+  const systemId = character?.systemId ?? DEFAULT_SYSTEM_ID;
+  const { system, error } = useSystemDefinition(systemId);
+  return getEngine(system, error ? systemId : undefined);
 }
 
 /**
@@ -164,6 +194,7 @@ export function useSystemEngine(): SystemEngine {
  * campaign's system id here rather than using {@link useSystemEngine}.
  */
 export function useSystemEngineFor(systemId: string | undefined | null): SystemEngine {
-  const { system } = useSystemDefinition(systemId ?? DEFAULT_SYSTEM_ID);
-  return getEngine(system);
+  const resolvedId = systemId ?? DEFAULT_SYSTEM_ID;
+  const { system, error } = useSystemDefinition(resolvedId);
+  return getEngine(system, error ? resolvedId : undefined);
 }

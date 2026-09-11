@@ -180,7 +180,9 @@ For LAN tablet testing: `npm run build && npx vite preview --host --port 4173`.
 
 ### Tests
 
-135 test files, all under `src/`, run by Vitest. The **node** environment and
+141 test files, all under `src/`, run by Vitest. (This number has now been wrong
+twice, which is the argument for deriving it rather than remembering it:
+`find src -name '*.test.ts*' | wc -l`.) The **node** environment and
 `globals: false` are declared in `vite.config.ts`'s `test:` block — they used to
 be the undeclared defaults, which is a different and weaker thing.
 
@@ -194,7 +196,7 @@ a screen.
 
 A DOM environment is available but **opt-in per file** — put
 `// @vitest-environment jsdom` on the first line and use
-`@testing-library/react`; twelve files do today. It is not global so the pure
+`@testing-library/react`; fourteen files do today. It is not global so the pure
 files keep the node environment and their speed. Because Vitest globals are off,
 Testing Library's auto-cleanup does not run: every DOM test file must call
 `cleanup()` in its own `afterEach`. `src/hooks/useAutosave.test.tsx` is the
@@ -208,12 +210,11 @@ both have drifted from the current UI.
 
 Recorded here rather than discovered later:
 
-- **Attachments can be read but not created.** Every path around them is built —
-  they are stored, soft-deleted with their note, carried in bundles, rendered by
-  the note reader and written into the session ZIP — but
-  `attachmentRepository.createAttachment` has no caller, so nothing in the app
-  puts a file into one. The feature list above says "attachments" because the
-  reading half is real; the writing half is not wired.
+- **A photo can be added to a note but not removed on its own.** It goes when
+  the note goes, and comes back when the note is restored.
+  `trashRegistry.RESTORE_WITHOUT_LISTING` records why there is no per-photo
+  delete: attachments have no Trash listing, so a standalone delete would be
+  either permanent or invisible. The listing comes first, then the button.
 - The printed sheet is fixed to one letter page. It now marks content it had to
   cut rather than dropping it silently, but it does not paginate.
 - A campaign export is the only backup, and only the Settings screen says so.
@@ -227,7 +228,14 @@ catalogue; the Settings "Bottom Navigation" toggles are gone (the setting they
 wrote had no reader); and **Import is no longer gated on having a campaign** —
 that entry also contradicted the Backup section above, which describes restoring
 onto an empty device as the supported path. `importReachability.test.ts` is what
-keeps the second of those true.
+keeps the *third* of those true — it is the guard over Import's campaign gate.
+The second is kept true by `settingsHaveReaders.test.ts`.
+
+A fourth is closed with this sweep: **attachments could be read and not
+created.** `createAttachment` had no caller, so the feature list's "attachments"
+was a false statement rather than an incomplete one. The note reader now offers
+"Add photo", renders the image rather than its UUID, and lets you caption it;
+`NoteAttachments.test.tsx` fails if any of the three is unwired again.
 
 `docs/backlog/2026-09-04-improvement-roadmap.md` is the full list, with evidence
 and status per item.

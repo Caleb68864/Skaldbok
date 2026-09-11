@@ -7,6 +7,7 @@ import { useCampaignContext } from '../../features/campaign/CampaignContext';
 import { useSystemDefinition } from '../../features/systems/useSystemDefinition';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { destinationsFor } from './navigationCatalogue';
+import { SystemRulesNotice } from '../systems/SystemRulesNotice';
 
 /** A single entry in the session sub-navigation row. */
 interface SessionTab {
@@ -97,7 +98,12 @@ export function SessionSubNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const { activeCampaign } = useCampaignContext();
-  const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
+  const campaignSystemId = activeCampaign?.system ?? DEFAULT_SYSTEM_ID;
+  // `error` reaches a screen here for the same reason it does through
+  // `useSystemEngineFor`: the session, ledger and route screens run on the
+  // campaign's ruleset, and a GM with no character open had no surface that
+  // could say the ruleset had failed to load.
+  const { system, error } = useSystemDefinition(campaignSystemId);
 
   const planner = system?.routePlanner;
 
@@ -121,11 +127,13 @@ export function SessionSubNav() {
     tabs[0].to;
 
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={value => navigate(value)}
-      className="bg-surface border-b border-border"
-    >
+    <>
+      <SystemRulesNotice fallbackRulesFor={error ? campaignSystemId : undefined} />
+      <Tabs
+        value={activeTab}
+        onValueChange={value => navigate(value)}
+        className="bg-surface border-b border-border"
+      >
       <TabsList className="w-full justify-start">
         {tabs.map(({ id, to, label, Icon }) => (
           <TabsTrigger
@@ -138,6 +146,7 @@ export function SessionSubNav() {
           </TabsTrigger>
         ))}
       </TabsList>
-    </Tabs>
+      </Tabs>
+    </>
   );
 }

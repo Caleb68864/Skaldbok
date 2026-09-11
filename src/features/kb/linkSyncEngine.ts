@@ -426,35 +426,33 @@ export async function deleteNoteNode(noteId: string): Promise<void> {
   }
 }
 
-/**
- * Syncs a character entity into the KB graph as a character-type node.
+/*
+ * A `syncCharacter(characterId, name, campaignId)` stood here — an upsert of a
+ * `CharacterRecord` into the graph as a `'character'` node, with placeholder
+ * absorption so an earlier `[[Name]]` link would resolve to it. It had no caller
+ * anywhere.
+ *
+ * This one was close to the `resolveComponent` case — finished, hardened,
+ * unreachable — and three things decided it the other way:
+ *
+ * 1. **Its contract cannot be satisfied from any save path.** It needs a
+ *    `campaignId`, and `CharacterRecord` does not have one: a character belongs
+ *    to a campaign only through a party seat's `linkedCharacterId`. The obvious
+ *    wiring, mirroring `noteRepository`'s fire-and-forget `syncNote` after every
+ *    write, would mean a party lookup on every autosave — seven screens at a
+ *    500–1000 ms debounce. That is not a fifteen-line wire, it is a change to
+ *    what a character *is*.
+ * 2. **Nothing downstream is left orphaned.** The `'character'` node type is
+ *    live and populated: `nodeTypeForNote` maps an `npc` note to it, so the
+ *    GraphView filter for it is a control over nodes that exist.
+ * 3. Removing it discards no unique capability. `upsertNode` and
+ *    `absorbPlaceholder` — the parts worth keeping — stay, and are used by the
+ *    note path.
+ *
+ * Deciding this belongs with whoever gives a character a campaign, and the
+ * roadmap records that as the open question rather than leaving the function
+ * here as an answer to it.
  */
-export async function syncCharacter(
-  characterId: string,
-  name: string,
-  campaignId: string
-): Promise<void> {
-  try {
-    const now = nowISO();
-    const nodeId = `character-${characterId}`;
-    const existing = await db.kb_nodes.get(nodeId).catch(() => null);
-    await upsertNode({
-      id: nodeId,
-      type: 'character',
-      label: name,
-      scope: 'campaign',
-      campaignId,
-      sourceId: characterId,
-      createdAt: existing?.createdAt ?? now,
-      updatedAt: now,
-    });
-    // A character can be what earlier `[[Name]]` links were waiting for just as
-    // a note can, so it absorbs a matching placeholder too.
-    await absorbPlaceholder(nodeId, name, campaignId);
-  } catch (err) {
-    console.warn('[linkSyncEngine] syncCharacter failed', characterId, err);
-  }
-}
 
 /**
  * Rebuilds the entire KB graph for a campaign from scratch.

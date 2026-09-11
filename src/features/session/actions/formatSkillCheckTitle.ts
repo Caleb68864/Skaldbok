@@ -128,20 +128,13 @@ export function formatOutcomeTitle(
   return `${who}: ${data.subject}${modTag} — ${labelFor(data.result, vocabulary?.outcomes)}`;
 }
 
-/** Back-compat alias. */
-export function formatSkillCheckTitle(data: {
-  character: string;
-  skill: string;
-  result: OutcomeResult;
-  mods?: OutcomeMods;
-}): string {
-  return formatOutcomeTitle({
-    actor: data.character,
-    subject: data.skill,
-    result: data.result,
-    mods: data.mods,
-  });
-}
+/*
+ * A `formatSkillCheckTitle` stood here, labelled "Back-compat alias" for the
+ * rename to `formatOutcomeTitle`. It had no caller anywhere — this module's
+ * only importer takes the four live names, and so does its test. It was also
+ * the one dead export a name search could not see, because `'./formatSkillCheckTitle'`
+ * in every import path matched it.
+ */
 
 /**
  * Parses modifier flags out of a title for rows logged before `mods` was

@@ -9,7 +9,7 @@
  * as stable references in the context value.
  */
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { KBNode, KBEdge } from '../../storage/db/client';
 import {
@@ -49,13 +49,6 @@ const KnowledgeBaseContext = createContext<KnowledgeBaseContextValue | null>(nul
  *
  * @throws {Error} When called outside a `<KnowledgeBaseProvider>`.
  */
-export function useKnowledgeBase(): KnowledgeBaseContextValue {
-  const ctx = useContext(KnowledgeBaseContext);
-  if (!ctx) {
-    throw new Error('useKnowledgeBase must be used within KnowledgeBaseProvider');
-  }
-  return ctx;
-}
 
 /** Props for the Knowledge Base graph provider. */
 export interface KnowledgeBaseProviderProps {
@@ -197,18 +190,3 @@ export function useForwardLinks(nodeId: string): KBEdge[] {
   return edges;
 }
 
-/**
- * React hook for using graph neighbors data reactively.
- */
-export function useGraphNeighbors(nodeId: string, depth: number = 1): KBNode[] {
-  const [nodes, setNodes] = useState<KBNode[]>([]);
-  const kb = useKnowledgeBase();
-  useEffect(() => {
-    let mounted = true;
-    kb.getGraphNeighbors(nodeId, depth)
-      .then((result) => { if (mounted) setNodes(result); })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, [nodeId, depth, kb]);
-  return nodes;
-}

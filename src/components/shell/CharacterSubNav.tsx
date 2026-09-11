@@ -4,6 +4,7 @@ import { GameIcon } from '../primitives/GameIcon';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSystemEngine } from '../../features/systems/engine';
 import { destinationsFor } from './navigationCatalogue';
+import { SystemRulesNotice } from '../systems/SystemRulesNotice';
 
 /** A single entry in the character sub-navigation row. */
 interface CharacterTab {
@@ -99,16 +100,7 @@ export function CharacterSubNav() {
         build a user-authored system ran Dragonbane's maths with nothing to say
         so.
       */}
-      {engine.fallbackRulesFor && (
-        <div
-          role="status"
-          className="px-3 py-2 text-[length:var(--font-size-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] border-b border-[var(--color-border)]"
-        >
-          <strong>No rules for “{engine.fallbackRulesFor}”.</strong>{' '}
-          Derived stats, rest, death and encumbrance below are computed with the
-          bundled classic-fantasy rules, not this system's.
-        </div>
-      )}
+      <SystemRulesNotice fallbackRulesFor={engine.fallbackRulesFor} />
       <Tabs
         value={activeTab}
         onValueChange={(value) => navigate(value)}
