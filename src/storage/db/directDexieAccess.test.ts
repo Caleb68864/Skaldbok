@@ -575,14 +575,19 @@ const DIRECT_DEXIE_ACCESS: Record<string, Record<string, string>> = {
   },
   'features/session/useSessionLog.ts': {
     'db:transaction':
-      'Two transactions spanning notes, entityLinks, encounters and creatureTemplates at '
-      + 'once: a quick-log entry that must land with its `contains` edge, and an NPC capture '
-      + 'that writes a creature template and the note describing it together. A transaction '
-      + 'spanning tables is the one thing a per-entity repository cannot express, so this is '
-      + 'the shape that genuinely belongs outside the repositories rather than the shape that '
-      + 'was left there. (A third, the note reassignment, moved to '
-      + '`entityLinkRepository.reassignNoteToEncounter` — it looked the same and was not: it '
-      + 'touched one table and its checks were the part that mattered.)',
+      'DEBT, with the honest reason rather than the convenient one. Two transactions over '
+      + 'notes + entityLinks + encounters (+ creatureTemplates for the NPC capture): a '
+      + 'quick-log entry that must land with its `contains` edge, and an NPC capture that '
+      + 'writes a bestiary row and the note describing it together. **"It spans tables" is '
+      + 'not the argument** — `encounterRepository.startForSession` spans three and moved '
+      + 'behind the boundary in the same sweep that wrote this entry, so that reason was '
+      + 'tested and found false. The real reason is narrower: both compose a note, its '
+      + 'canonical links and (for one) a creature template across two feature modules, so '
+      + 'their home is a storage-layer service that does not exist yet, and inventing one '
+      + 'inside a hook carrying buffered writes and end-of-session flush semantics is a '
+      + 'larger change than the remaining risk justifies. Neither is tombstone-blind and '
+      + 'neither overwrites anything — they only add rows — which is why they were the last '
+      + 'thing on the list and why stopping here is a stopping point rather than a gap.',
     'notes:ref': 'Named in a transaction scope array: the quick-log and NPC-capture writes.',
     'entityLinks:ref': 'Named in a transaction scope array: the `contains` edge each one writes.',
     'encounters:ref': 'Named in a transaction scope array: the encounter a logged note belongs to.',
