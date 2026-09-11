@@ -69,7 +69,6 @@ async function seedCampaign(): Promise<void> {
     id: 'member-1',
     partyId: 'party-1',
     linkedCharacterId: 'char-1',
-    isActivePlayer: true,
     ...stamp,
   } as never);
 

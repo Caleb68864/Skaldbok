@@ -52,9 +52,7 @@
   "memento": "",
   "abilities": [],
   "derivedOverrides": {},
-  "uiState": {
-    "expandedSections": []
-  },
+  "uiState": {},
   "wealth": {
     "gold": 0,
     "silver": 0,

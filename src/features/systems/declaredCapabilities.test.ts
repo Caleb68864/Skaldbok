@@ -39,16 +39,75 @@ import { join } from 'node:path';
  * the schema surfaces no new name, which is what makes it a free closure of a
  * gap rather than a pile of work.
  *
- * Not widened to `types/character.ts`, `types/attachment.ts` or
- * `types/campaign.ts`. Those hold the twelve declared-and-unread fields
- * `vault/scan2-findings.md` §14 lists, and each needs a decision — wire it or
- * write down why not — that belongs to whoever owns the feature.
+ * **Now widened to the three persisted-record files** it deliberately stopped
+ * short of — `types/character.ts`, `types/attachment.ts`, `types/campaign.ts`.
+ * That was held back because naming the declared-and-unread fields in them meant
+ * a decision per field, and those decisions are now made and recorded in each
+ * file: `activePartyId` wired, `sizeBytes` wired, and `expandedSections`,
+ * `sheetCardOrder`, `sheetCustomCards`, `sheetPanelVisibility`,
+ * `combatCardOrder`, `combatPanelVisibility`, `sourceSpellId`,
+ * `activeSessionId` and `METADATA_KEYS` removed.
+ *
+ * Widening it revealed a shape the extractor had never met, because the previous
+ * three files contain nothing but declarations: **a value object**.
+ * `METADATA_KEYS = { kin: 'kin', … } as const` is a *population*, and the guard
+ * counted its keys as declared fields, reporting four that are not fields at
+ * all. The file's own comment already stated the rule that separates them — "a
+ * declaration reads `field: Type` and a population reads `field: value`" — it
+ * simply was not applied. It is now: see {@link isPopulatedValue}.
+ *
+ * Widened no further than these three on purpose. The next files out are screens
+ * and hooks, where a corpus-wide bare-name search stops meaning anything.
  */
 const DECLARATION_FILES = [
   'src/types/system.ts',
   'src/features/systems/engine/types.ts',
   'schemas/system.schema.ts',
+  'src/types/character.ts',
+  'src/types/attachment.ts',
+  'src/types/campaign.ts',
 ];
+
+/**
+ * Names that reach a reader by a route no bare-name search can see.
+ *
+ * @remarks
+ * Distinct from {@link KNOWN_UNIMPLEMENTED}: an entry here **is** read, and the
+ * guard cannot prove it. Recording that separately keeps the allowlist of
+ * *promises* from filling up with fields that are simply working.
+ *
+ * `restsUsed`'s three members are read as `restsUsed[def.id]`, where `def.id`
+ * comes from `engine.restTypes` — a dynamic key, which is precisely the reach a
+ * grep misses. `RestModule.tsx` says so in its own comment. Had these been
+ * allowlisted as unimplemented instead, the entry would have been a false
+ * statement that nobody could have disproved from the guard.
+ */
+const READ_DYNAMICALLY: Record<string, string> = {
+  stretch: 'a member of CharacterUiState.restsUsed, read as `restsUsed[def.id]` in RestModule where `def.id` comes from engine.restTypes — a key from engine data, never spelled in source',
+  shift: 'the same',
+};
+
+/*
+ * `round` is the third member of `restsUsed` and is **not** listed above,
+ * because the self-check below disproved the entry rather than accepting it:
+ * `isRead('round')` is true. Two separate reasons were found, and only the first
+ * was fixable.
+ *
+ * 1. `Math.round(` matched `\.round` across the whole corpus — a JS built-in
+ *    reporting a reader for a field of this codebase's contract. That was a live
+ *    false pass: had `restsUsed.round` ever been the bug, this guard would have
+ *    excused it. `isRead` now checks the receiver, and it is pinned by example.
+ *
+ * 2. `CombatEncounterView` reads `event.round` — a *genuinely different field
+ *    with the same name*, on `CombatEvent`. Nothing distinguishes the two in a
+ *    bare-name search, which is the limitation `TOO_GENERIC` exists to manage
+ *    and this is one more instance of it.
+ *
+ * So `round` passes for a reason that has nothing to do with `round`, and
+ * recording that here is worth more than an allowlist entry the self-check would
+ * reject. The way out, when it matters, is the one `cards/schema.test.ts` takes:
+ * ask the reader question of a *specific* declaration instead of the corpus.
+ */
 
 /**
  * A declared member's name: optionally quoted, and allowing `_`, `$` and `-`.
@@ -111,6 +170,30 @@ function walk(dir: string): string[] {
  * against it: this file exists because five fields were declared and inert, and
  * every one of them looked like working configuration until someone checked.
  */
+/**
+ * Whether a matched member is a *populated value* rather than a *declaration*.
+ *
+ * @remarks
+ * The distinction this file has always claimed and never enforced: a
+ * declaration reads `field: Type`, a population reads `field: value`. It cost
+ * nothing while every declaration file held only interfaces and Zod schemas.
+ * The moment `types/character.ts` joined, `METADATA_KEYS`'s six entries —
+ * `kin: 'kin'`, `profession: 'profession'`, … — were extracted as declared
+ * fields and reported unread, which is true of the *object* and meaningless of
+ * its keys.
+ *
+ * The test is the right-hand side. A string or numeric **literal** is a value;
+ * a type is not. Deliberately narrow: `kind: 'die-ladder'` is a literal *type*
+ * and would be misread as a value, so this only fires when the literal is
+ * followed by a comma or a closing brace — object-literal punctuation — and not
+ * by the `;` an interface member ends with.
+ *
+ * @param tail - The source following the member's colon.
+ */
+function isPopulatedValue(tail: string): boolean {
+  return /^\s*(?:'[^']*'|"[^"]*"|-?\d+(?:\.\d+)?|true|false)\s*(?:,|\}|$)/.test(tail);
+}
+
 function declaredProperties(source: string): string[] {
   // Comments first, or `in \`{ denominationId: amount }\`` — prose in a
   // `@remarks` — reads as a declaration.
@@ -131,7 +214,10 @@ function declaredProperties(source: string): string[] {
     ...unparenthesised.matchAll(
       new RegExp(`^\\s+(?:readonly\\s+)?${DECLARED_NAME}\\s*\\??\\s*(?:\\(\\))?\\s*:`, 'gm'),
     ),
-  ].map(m => m[2]);
+  ]
+    // A key of a value object is not a declared field. See `isPopulatedValue`.
+    .filter(m => !isPopulatedValue(unparenthesised.slice(m.index + m[0].length)))
+    .map(m => m[2]);
   // The closing separator is a *lookahead*, not a consumed character.
   // `matchAll` is non-overlapping, so consuming it swallowed the `;` that
   // introduces the next member: in
@@ -276,6 +362,14 @@ function isRead(name: string, corpus: string = consumerSource): boolean {
     // same distinction the `}` + `)` rule below already makes for a constructed
     // key. One genuine read anywhere else still counts.
     if (/^\s*=(?!=)/.test(corpus.slice(match.index + match[0].length))) continue;
+    // A member of a JS built-in is not a member of this codebase's contract.
+    // `Math.round(` reported a reader for `restsUsed.round` — a live false pass,
+    // found the moment `round` was checked deliberately rather than incidentally:
+    // had that field ever been the bug, this guard would have excused it. The
+    // receiver is checked, not just the name, which is the same correction the
+    // `.print` / `.print-col` false positive forced on the sibling guard.
+    if (/(?:^|[^\w$])(?:Math|JSON|Object|Array|Number|String|Date|Promise|Intl|Reflect)$/
+      .test(corpus.slice(0, match.index))) continue;
     return true;
   }
   // Indexed access needs something to index. `surfaces: ['print']` is an array
@@ -364,6 +458,15 @@ describe('declared capabilities have readers', () => {
     // Indexed access, both quote styles. The double-quoted form used to be a
     // false *negative* — safe, because it fails loudly, but still wrong.
     expect(isRead('refresh', 'const mode = resource["refresh"];')).toBe(true);
+    // 4. A member of a JS built-in is not a member of this contract. `round` is
+    //    declared by `CharacterUiState.restsUsed` and read only as
+    //    `restsUsed[def.id]`; `Math.round(` across the corpus was reporting a
+    //    reader for it, so the guard was excusing a field it could not see.
+    expect(isRead('round', 'const n = Math.round(value);')).toBe(false);
+    expect(isRead('parse', 'const o = JSON.parse(raw);')).toBe(false);
+    // The receiver is what disqualifies it, not the name — a real read of a
+    // field called `round` still counts.
+    expect(isRead('round', 'if (character.uiState.round) return true;')).toBe(true);
     // A call IS the read for a function-typed capability, and this contract has
     // many (`derivedStats()`, `chance()`, `describe()`). So `.name(` stays a
     // read here, deliberately — the sibling guard excludes it only because every
@@ -392,6 +495,61 @@ describe('declared capabilities have readers', () => {
     }
   });
 
+  it('does not mistake a value object for a set of declarations', () => {
+    // The blind spot that only appeared when `types/character.ts` joined
+    // DECLARATION_FILES: the three files before it held nothing but interfaces
+    // and Zod schemas, so a *populated* object had never been scanned. This one
+    // was real — `METADATA_KEYS`'s six keys were extracted and reported unread,
+    // which is true of the object and meaningless of its keys.
+    const valueObject = [
+      'export const METADATA_KEYS = {',
+      "  kin: 'kin',",
+      '  weight: 12,',
+      '  enabled: true,',
+      '} as const;',
+    ].join('\n');
+    for (const name of ['kin', 'weight', 'enabled']) {
+      expect(declaredProperties(valueObject), `${name} is a value, not a declaration`)
+        .not.toContain(name);
+    }
+
+    // …and the half that matters more: narrowing it must not blind the guard to
+    // a member whose *type* is a literal. `kind: 'die-ladder'` is a declaration
+    // and the extractor still has to see it. This is why `isPopulatedValue`
+    // requires object-literal punctuation after the literal rather than just a
+    // literal.
+    const literalTypes = [
+      'interface Probe {',
+      "  kindField: 'die-ladder';",
+      '  countField: 3;',
+      '  flagField: true;',
+      '}',
+    ].join('\n');
+    for (const name of ['kindField', 'countField', 'flagField']) {
+      expect(declaredProperties(literalTypes), `${name} is a declaration with a literal type`)
+        .toContain(name);
+    }
+  });
+
+  it('every READ_DYNAMICALLY entry is a real declaration this guard cannot follow', () => {
+    // The mirror of the KNOWN_UNIMPLEMENTED self-check, and it has to exist for
+    // the same reason: an entry for a name no declaration file declares excludes
+    // nothing, and an entry for a name the guard *can* now see is an exemption
+    // that has stopped meaning anything.
+    for (const [name, reason] of Object.entries(READ_DYNAMICALLY)) {
+      expect(
+        declaredIncludingGeneric,
+        `READ_DYNAMICALLY lists "${name}" ("${reason}"), which no declaration file declares`,
+      ).toContain(name);
+      expect(
+        isRead(name),
+        `"${name}" is listed as read only dynamically ("${reason}") but this guard `
+          + 'can now see a reader for it — remove the entry rather than leaving an '
+          + 'exemption that excuses nothing.',
+      ).toBe(false);
+    }
+  });
+
   it('does not mistake a parameter or a doc comment for a declaration', () => {
     // `context?: SkillDisplayContext,` is a wrapped parameter; `denominationId`
     // appears only inside a `@remarks`. Both were counted the moment the indent
@@ -407,6 +565,10 @@ describe('declared capabilities have readers', () => {
 
     if (!read && KNOWN_UNIMPLEMENTED[name]) {
       // Documented promise, not a bug. Still surfaced, so the list stays honest.
+      return;
+    }
+    if (!read && READ_DYNAMICALLY[name]) {
+      // Read by a route no name search can follow — a key from engine data.
       return;
     }
 

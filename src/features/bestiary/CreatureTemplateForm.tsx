@@ -82,7 +82,6 @@ export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, 
   const [abilities, setAbilities] = useState<Record<string, string>[]>(() => abilityRows(initial?.abilities ?? []));
   const [skills, setSkills] = useState<Record<string, string>[]>(() => skillRows(initial?.skills ?? []));
   const [tagsText, setTagsText] = useState(initial?.tags.join(', ') ?? '');
-  const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? '');
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -106,7 +105,6 @@ export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, 
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
-        imageUrl: imageUrl.trim() || undefined,
         status: initial?.status ?? 'active',
         description: initial?.description,
       });
@@ -225,10 +223,6 @@ export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, 
           <div>
             <label className={labelClass}>Tags (comma separated)</label>
             <input type="text" value={tagsText} onChange={(e) => setTagsText(e.target.value)} className={inputClass} placeholder="e.g. undead, boss" />
-          </div>
-          <div>
-            <label className={labelClass}>Image URL</label>
-            <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} className={inputClass} placeholder="https://..." />
           </div>
           <div className="flex gap-3 mt-2">
             <button type="submit" disabled={!name.trim() || saving} className={cn(primaryBtnClass, (!name.trim() || saving) && 'opacity-60')}>

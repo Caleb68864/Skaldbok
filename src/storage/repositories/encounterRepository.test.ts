@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { describe, expect, it, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { db } from '../db/client';
-import { create, getById, update, updateParticipant, addParticipant } from './encounterRepository';
+import { create, getById, update, updateParticipant, addRepresentedParticipants } from './encounterRepository';
 
 /**
  * `update` and `updateParticipant` used to read the encounter, build a new
@@ -28,8 +28,10 @@ async function seedEncounter() {
     participants: [],
     segments: [],
   }))!;
-  await addParticipant(encounter.id, { name: 'Goblin', type: 'monster', instanceState: {}, sortOrder: 0 });
-  await addParticipant(encounter.id, { name: 'Ogre', type: 'monster', instanceState: {}, sortOrder: 1 });
+  await addRepresentedParticipants(encounter.id, [
+    { name: 'Goblin', type: 'monster', instanceState: {}, represents: { id: 'creature-goblin', type: 'creature' } },
+    { name: 'Ogre', type: 'monster', instanceState: {}, represents: { id: 'creature-ogre', type: 'creature' } },
+  ]);
   return (await getById(encounter.id))!;
 }
 

@@ -235,7 +235,7 @@ describe('delete → trash → restore, per entity type', () => {
     const party = await partyRepository.createParty({ campaignId: CAMPAIGN, name: 'The Company' });
     await expectRoundTrip(
       'partyMembers',
-      async () => (await partyRepository.addPartyMember({ partyId: party.id, name: 'Hilda', isActivePlayer: false })).id,
+      async () => (await partyRepository.addPartyMember({ partyId: party.id, name: 'Hilda' })).id,
       partyRepository.softDeletePartyMember,
       async (id) => (await partyRepository.getPartyMembers(party.id)).some((m) => m.id === id),
     );

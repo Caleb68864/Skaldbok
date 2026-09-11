@@ -8,7 +8,23 @@ export const campaignSchema = z.object({
   description: z.string().optional(),
   system: z.string().default('classic-fantasy'),
   status: z.enum(['active', 'archived']),
-  activeSessionId: z.string().optional(),
+  /**
+   * The party this campaign is playing, when it has more than one live party to
+   * choose between.
+   *
+   * @remarks
+   * Read by `partyRepository.getPartyByCampaign`'s `preferPartyId`. Three UI
+   * flows have written it since it was added and none of them was ever
+   * consulted — the party came back as whichever row the `campaignId` index
+   * yielded first.
+   *
+   * There was an `activeSessionId` beside it with **no writer and no reader**.
+   * It survived the capability guard on a name collision: `NotesGrid` declares
+   * an unrelated prop called `activeSessionId` and reads it, which is enough for
+   * a corpus-wide name search — and `NotesGrid` is itself unmounted. The running
+   * session is found by querying `sessionRepository.getActiveSession`, which is
+   * where the answer actually lives.
+   */
   activePartyId: z.string().optional(),
   activeCharacterMemberId: z.string().optional(),
   /**
