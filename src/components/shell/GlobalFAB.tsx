@@ -2,6 +2,7 @@ import { Plus, Sparkles } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCampaignContext } from '../../features/campaign/CampaignContext';
 import { useAppState } from '../../context/AppStateContext';
+import { isFabHiddenRoute } from './fabRoutes';
 
 /**
  * Global Floating Action Button (FAB), mounted once in
@@ -36,7 +37,7 @@ export function GlobalFAB() {
   const location = useLocation();
 
   if (settings.showGlobalFAB === false) return null;
-  if (location.pathname === '/session/log') return null;
+  if (isFabHiddenRoute(location.pathname)) return null;
 
   const handleFABPress = () => {
     navigate('/session/log');
