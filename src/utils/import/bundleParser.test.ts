@@ -71,7 +71,21 @@ describe('parseBundle — character validation', () => {
     expect(result.warnings.filter(w => w.entityType === 'characters')).toHaveLength(0);
   });
 
-  it('preserves fields the schema does not enumerate (no silent strip on import)', () => {
+  it('preserves top-level fields the schema does not enumerate', () => {
+    // NOTE — this case is about the **top-level** passthrough only, and it used
+    // to claim more than that. Titled "preserves fields the schema does not
+    // enumerate (no silent strip on import)", it asserted `portraitUri` and two
+    // `uiState` members: exactly the keys the two `.passthrough()` calls that
+    // existed at the time already protected. So it could not fail, and did not,
+    // while eleven *nested* sub-fields — weapon `metal`/`damageType`, armour
+    // `bodyPart`/`movementPenalty`, skill `dragonMarked`/`demonMarked` and five
+    // more — were deleted from every imported character, because Zod strips per
+    // object and only the outermost one was a passthrough.
+    //
+    // Kept, with its scope stated honestly. The guarantee for every object below
+    // the top level is `characterSchemaRoundTrip.test.ts`, which derives its
+    // field list from the type declarations instead of restating one.
+    //
     // `portraitUri` is not in `characterRecordSchema`, and `uiState` now
     // enumerates *nothing* — it is a bare `z.object({}).passthrough()`, because
     // the five members it used to declare were all read by nobody and are gone.

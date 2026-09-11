@@ -11,10 +11,41 @@ const characterMetadataSchema = z
   .default({})
   .describe('System-declared identity fields, keyed by field id');
 
+/**
+ * Why every object in this file is `.passthrough()`.
+ *
+ * @remarks
+ * `characterRecordSchema` has been a passthrough at the top level since early on,
+ * and its comment explains why: `migrateCharacter` — the import path — returns
+ * Zod's *output*, so any key the schema does not enumerate is **deleted from the
+ * user's record** on the way in.
+ *
+ * That reasoning was never applied one level down, and Zod strips per object, not
+ * per document. So eleven fields the TypeScript types declare, the UI writes and
+ * live code reads — `CharacterSkill.dragonMarked`/`demonMarked`,
+ * `Weapon.metal`/`damageType`/`strRequirement`/`damaged`/`isShield`,
+ * `ArmorPiece.weight`/`bodyPart`/`movementPenalty`/`metal` — vanished on every
+ * single import. Measured before the fix: 12 of 13 probed sub-fields lost, the
+ * survivor being the one (`StoryBeat.body`) that had been enumerated here after
+ * the same bug was found and fixed in that one place without generalising.
+ *
+ * This is data loss, not a schema nicety. The user's browser holds the only copy,
+ * and a bundle re-imported onto a new device comes back with every shield
+ * demoted to a weapon and every set of chainmail weightless.
+ *
+ * Two changes, both needed. The declared sub-fields below are now **enumerated**,
+ * so they are validated rather than merely tolerated. And every object is
+ * `.passthrough()`, so the *next* field added to a type and forgotten here
+ * survives anyway. `characterSchemaRoundTrip.test.ts` asserts both: that no
+ * object reachable from the record strips, and that every member the types
+ * declare survives a real import.
+ */
 const characterSkillSchema = z.object({
   value: z.number().describe('Skill value (percentage)'),
   trained: z.boolean().describe('Whether the skill has been trained'),
-});
+  dragonMarked: z.boolean().optional().describe('Dragon-marked after a successful roll this session'),
+  demonMarked: z.boolean().optional().describe('Demon-marked (corruption/advancement variant)'),
+}).passthrough();
 
 const weaponSchema = z.object({
   id: z.string().min(1).describe('Unique weapon id'),
@@ -25,8 +56,17 @@ const weaponSchema = z.object({
   durability: z.number().describe('Durability rating'),
   features: z.string().describe('Special features'),
   equipped: z.boolean().describe('Whether weapon is currently equipped'),
+  metal: z.boolean().optional().describe('Made of metal (relevant to some magic interactions)'),
+  damageType: z
+    .enum(['bludgeoning', 'slashing', 'piercing'])
+    .nullable()
+    .optional()
+    .describe('Damage type used for armour penetration or special condition rules'),
+  strRequirement: z.number().nullable().optional().describe('Minimum STR to wield without penalty'),
+  damaged: z.boolean().optional().describe('Damaged; must be repaired before use'),
+  isShield: z.boolean().optional().describe('This entry is a shield rather than an offensive weapon'),
   systemFields: z.record(z.string(), z.unknown()).optional().describe('System-declared extra fields'),
-});
+}).passthrough();
 
 const armorPieceSchema = z.object({
   id: z.string().min(1).describe('Unique armor id'),
@@ -34,8 +74,12 @@ const armorPieceSchema = z.object({
   rating: z.number().describe('Armor rating'),
   features: z.string().describe('Special features'),
   equipped: z.boolean().describe('Whether armor is equipped'),
+  weight: z.number().optional().describe('Weight contributing toward the encumbrance limit'),
+  bodyPart: z.string().optional().describe('Body area covered'),
+  movementPenalty: z.number().optional().describe('Movement reduction while worn'),
+  metal: z.boolean().optional().describe('Made of metal'),
   systemFields: z.record(z.string(), z.unknown()).optional().describe('System-declared extra fields'),
-});
+}).passthrough();
 
 const inventoryItemSchema = z.object({
   id: z.string().min(1).describe('Unique item id'),
@@ -46,7 +90,7 @@ const inventoryItemSchema = z.object({
   tiny: z.boolean().optional().describe('Free-carry tiny item (no weight counted)'),
   consumable: z.boolean().optional().describe('Show inline +/- in play mode'),
   capacityBonus: z.number().optional().describe('Bonus weight units added to encumbrance limit while carried'),
-});
+}).passthrough();
 
 /**
  * One unified collection for spells, heroic abilities, talents and anything
@@ -63,12 +107,12 @@ const abilitySchema = z.object({
   pinnedAsStamp: z.boolean().optional(),
   effects: z.array(z.unknown()).optional(),
   systemFields: z.record(z.string(), z.unknown()).optional(),
-});
+}).passthrough();
 
 const characterResourceSchema = z.object({
   current: z.number().min(0).describe('Current resource value'),
   max: z.number().describe('Maximum resource value'),
-});
+}).passthrough();
 
 export const characterRecordSchema = z.object({
   id: z.string().min(1).describe('Unique character id'),
@@ -98,8 +142,13 @@ export const characterRecordSchema = z.object({
     // Optional, and listed here as well as on the type: Zod strips unknown keys,
     // so a field added to `StoryBeat` alone would survive for locally-created
     // beats and silently vanish for imported ones.
+    //
+    // This was the one place that reasoning had been applied. It is why `body`
+    // was the sole survivor of the thirteen sub-fields probed before this change,
+    // and why the instance was fixed here while eleven siblings kept vanishing:
+    // the comment states the rule and the rule was never generalised.
     body: z.string().optional(),
-  })).optional().describe('Roleplay prompts / story-bank beats'),
+  }).passthrough()).optional().describe('Roleplay prompts / story-bank beats'),
   wealth: z
     .record(z.string(), z.number().nonnegative())
     .default({})
@@ -137,7 +186,7 @@ export const characterRecordSchema = z.object({
       categoryId: z.string().min(1),
       linkedAttributeId: z.string().optional(),
       groupId: z.string().optional(),
-    }))
+    }).passthrough())
     .optional()
     .describe('Player-authored skills not declared by the system definition'),
 })
