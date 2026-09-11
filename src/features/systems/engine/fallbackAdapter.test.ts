@@ -74,10 +74,33 @@ describe('getEngine fallback', () => {
   });
 
   it('leaves the flag unset when there is no system at all', () => {
-    // No system means "still loading" or "legacy record", not "unsupported
-    // ruleset" — a notice here would show on every cold start.
+    // No system and nothing else said means "still loading" or "legacy record",
+    // not "unsupported ruleset" — a notice here would show on every cold start.
     expect(getEngine(null).fallbackRulesFor).toBeUndefined();
     expect(getEngine(undefined).fallbackRulesFor).toBeUndefined();
+  });
+
+  it('names the system when the caller says the load FAILED', () => {
+    // These two assertions used to be the whole story, and between them they
+    // defended a gap: `useSystemDefinition` knew the difference between a load
+    // that failed and one that had not finished, computed it as `error`, and
+    // every one of its eighteen consumers dropped it. So a campaign whose
+    // ruleset had gone missing was served classic-fantasy's maths in silence —
+    // the exact case this flag exists to announce — and the suite agreed that
+    // was correct, because `getEngine(null)` is genuinely unable to tell.
+    //
+    // It cannot tell, so it is told.
+    expect(getEngine(null, 'vanished-ruleset').fallbackRulesFor).toBe('vanished-ruleset');
+    expect(getEngine(undefined, 'vanished-ruleset').fallbackRulesFor).toBe('vanished-ruleset');
+  });
+
+  it('does not let a failed load override a system that did resolve', () => {
+    // Belt and braces: if a consumer ever passes a stale error alongside a
+    // freshly-resolved system, the system wins. An adapter-backed ruleset is not
+    // running anyone else's rules whatever the error says.
+    for (const system of BUNDLED_SYSTEMS) {
+      expect(getEngine(system, 'stale-error').fallbackRulesFor).toBeUndefined();
+    }
   });
 
   it('warns in a production build, not only in dev', () => {
