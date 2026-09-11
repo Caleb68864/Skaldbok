@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { registerFlush, flushAll, trackPendingWrite } from './autosaveFlush';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { registerFlush, flushAll, trackPendingWrite, flushWhenPageHides } from './autosaveFlush';
 
 /**
  * The flush registry is the mechanism every lifecycle operation relies on to
@@ -177,5 +179,91 @@ describe('in-flight writes', () => {
     await flushing;
     expect(order.sort()).toEqual(['flush', 'write']);
     handle.unregister();
+  });
+});
+
+/**
+ * The debounce window was the one place an edit could still vanish without a
+ * word. `useAutosave` waits a second after the last change before writing, and
+ * nothing wrote early when the page went away: reproduced in the built app, a
+ * page sent to the background had written nothing. On a tablet that is the
+ * common case, not the edge one — a player marks damage and switches to a dice
+ * app, and a backgrounded tab can be suspended or evicted before its timer ever
+ * fires. (A hard reload inside the window is still lost; see the helper's doc.)
+ *
+ * Plain `EventTarget`s stand in for `window` and `document`, so this stays in
+ * the node environment like the rest of the file.
+ */
+describe('flushWhenPageHides', () => {
+  function fakePage() {
+    const win = new EventTarget();
+    const doc = Object.assign(new EventTarget(), { visibilityState: 'visible' as DocumentVisibilityState });
+    return { win, doc };
+  }
+
+  it('flushes pending saves when the page is hidden', async () => {
+    const { win, doc } = fakePage();
+    const flush = vi.fn(async () => {});
+    const handle = registerFlush(flush);
+    const uninstall = flushWhenPageHides(win, doc);
+
+    doc.visibilityState = 'hidden';
+    doc.dispatchEvent(new Event('visibilitychange'));
+    await Promise.resolve();
+
+    expect(flush).toHaveBeenCalledTimes(1);
+    uninstall();
+    handle.unregister();
+  });
+
+  it('does not flush when the page becomes visible again', async () => {
+    const { win, doc } = fakePage();
+    const flush = vi.fn(async () => {});
+    const handle = registerFlush(flush);
+    const uninstall = flushWhenPageHides(win, doc);
+
+    doc.visibilityState = 'visible';
+    doc.dispatchEvent(new Event('visibilitychange'));
+    await Promise.resolve();
+
+    expect(flush).not.toHaveBeenCalled();
+    uninstall();
+    handle.unregister();
+  });
+
+  it('flushes pending saves on pagehide (reload, close, navigate away)', async () => {
+    const { win, doc } = fakePage();
+    const flush = vi.fn(async () => {});
+    const handle = registerFlush(flush);
+    const uninstall = flushWhenPageHides(win, doc);
+
+    win.dispatchEvent(new Event('pagehide'));
+    await Promise.resolve();
+
+    expect(flush).toHaveBeenCalledTimes(1);
+    uninstall();
+    handle.unregister();
+  });
+
+  it('stops listening once uninstalled', async () => {
+    const { win, doc } = fakePage();
+    const flush = vi.fn(async () => {});
+    const handle = registerFlush(flush);
+    flushWhenPageHides(win, doc)();
+
+    doc.visibilityState = 'hidden';
+    doc.dispatchEvent(new Event('visibilitychange'));
+    win.dispatchEvent(new Event('pagehide'));
+    await Promise.resolve();
+
+    expect(flush).not.toHaveBeenCalled();
+    handle.unregister();
+  });
+
+  it('is installed by the app entry point', () => {
+    // Behaviour in isolation cannot prove the listener is ever attached; a
+    // helper nothing calls is the original bug in this family.
+    const main = readFileSync(join(process.cwd(), 'src', 'main.tsx'), 'utf8');
+    expect(main).toMatch(/^\s*flushWhenPageHides\(\);/m);
   });
 });
