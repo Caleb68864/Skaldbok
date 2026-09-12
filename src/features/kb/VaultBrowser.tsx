@@ -16,7 +16,7 @@ import {
   getSharedNodes,
 } from '../../storage/repositories/kbNodeRepository';
 import { getEdgesFromNode, getEdgesToNode } from '../../storage/repositories/kbEdgeRepository';
-import { getNotesBySession } from '../../storage/repositories/noteRepository';
+import { getNotesBySession, getPrivateNoteIds } from '../../storage/repositories/noteRepository';
 import { useKBSearch } from './useKBSearch';
 import { VaultCard } from './VaultCard';
 import { useKBCategoryTabs } from '../../hooks/useConfigurableDefaults';
@@ -84,6 +84,10 @@ export function VaultBrowser({
   const [internalSearchQuery, setInternalSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [nodes, setNodes] = useState<KBNode[]>([]);
+  // Which of the listed nodes project a note the export will leave out. A
+  // `kb_nodes` row has no `visibility` of its own, so this is resolved once per
+  // load instead of per card.
+  const [privateNoteIds, setPrivateNoteIds] = useState<Set<string>>(new Set());
   const [linkCounts, setLinkCounts] = useState<Record<string, number>>({});
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set());
   const [allTags, setAllTags] = useState<string[]>([]);
@@ -116,6 +120,16 @@ export function VaultBrowser({
 
     async function load() {
       try {
+        // Read before the nodes so the badges land in the same paint as the
+        // rows: a list that shows "Private" a beat late is a list someone can
+        // photograph, or export from, in the interval.
+        try {
+          const priv = await getPrivateNoteIds();
+          if (mounted) setPrivateNoteIds(priv);
+        } catch (err) {
+          if (import.meta.env.DEV)
+            console.warn('[VaultBrowser] Failed to read private note ids', err);
+        }
         if (sessionId) {
           // Compact mode: load session notes and match them to KB nodes
           const sessionNotes = await getNotesBySession(sessionId);
@@ -372,6 +386,7 @@ export function VaultBrowser({
               key={node.id}
               node={node}
               linkCount={linkCounts[node.id] ?? 0}
+              isPrivate={!!node.sourceId && privateNoteIds.has(node.sourceId)}
               onClick={() => navigate(`/kb/${node.id}`)}
             />
           ))

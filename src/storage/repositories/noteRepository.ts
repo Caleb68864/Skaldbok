@@ -89,6 +89,46 @@ export async function getNotesByCampaign(campaignId: string, options?: { include
 }
 
 /**
+ * The ids of every live note marked `visibility: 'private'`.
+ *
+ * @remarks
+ * Exists so a list can say which of its rows an export will leave out without
+ * loading every note body to find out. `visibility` is an index on the `notes`
+ * table (see `db/client.ts`, added in `version(6)`), so this reads only the
+ * private rows — a Dexie index skips records whose key is `undefined`, which is
+ * exactly the right behaviour here: a note written before the field existed is
+ * legacy, not confidential. That is the same rule `privateNoteIdsIn` applies on
+ * the export side, and the two must not disagree.
+ *
+ * Returned as a `Set` because every caller is asking "is this one of them?" per
+ * row. Unfiltered by campaign by default: ids are UUIDs, so membership cannot
+ * collide across campaigns, and a `scope: 'shared'` note belongs to no single
+ * campaign yet still needs the badge.
+ *
+ * @param options - `campaignId` narrows to one campaign, for a count rather than a lookup.
+ * @returns The ids of live private notes.
+ * @throws {Error} If the Dexie query throws an unexpected error.
+ *
+ * @example
+ * ```ts
+ * const priv = await getPrivateNoteIds();
+ * const willBeExcluded = priv.has(node.sourceId ?? '');
+ * ```
+ */
+export async function getPrivateNoteIds(options?: { campaignId?: string }): Promise<Set<string>> {
+  try {
+    const records = await db.notes.where('visibility').equals('private').toArray();
+    const live = excludeDeleted(records as Note[]);
+    const scoped = options?.campaignId
+      ? live.filter(note => note.campaignId === options.campaignId)
+      : live;
+    return new Set(scoped.map(note => note.id));
+  } catch (e) {
+    throw new Error(`noteRepository.getPrivateNoteIds failed: ${e}`, { cause: e });
+  }
+}
+
+/**
  * Retrieves all {@link Note} records associated with a given session.
  *
  * @remarks
