@@ -13,6 +13,13 @@
  * from the editor, from the Knowledge Base reader and from two list views, and a
  * note that is private in one of them and not another is worse than no control
  * at all. One component, one write, one vocabulary.
+ *
+ * **Known consequence, not fixed here.** Marking a note private when another
+ * note's body `[[wikilinks]]` it makes the JSON export *refuse* — the chip
+ * stores the target's id, `privateResidueIn` finds it in the serialized text and
+ * `serializeBundle` fails closed — while the Markdown path ships that note's
+ * title regardless. Both are pinned in `privacyBacklinks.test.ts`, which also
+ * explains why choosing between them is a policy decision rather than a fix.
  */
 
 import { useCallback, useState } from 'react';
