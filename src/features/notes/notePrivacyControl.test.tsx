@@ -115,6 +115,23 @@ async function privacySwitch(): Promise<HTMLElement> {
   return await screen.findByRole('switch', { name: /private/i });
 }
 
+/**
+ * Clicks the control and waits for the write to land.
+ *
+ * @remarks
+ * The switch ignores a tap arriving while the previous write is in flight, so a
+ * test that clicks twice in a row can have the second one swallowed — which is
+ * correct behaviour and an intermittent test. `aria-busy` is the component's own
+ * report of that window, so wait for it to close rather than for a timer.
+ */
+async function clickPrivacySwitch(): Promise<void> {
+  const control = await privacySwitch();
+  control.click();
+  await waitFor(() => {
+    expect(control.getAttribute('aria-busy')).toBe('false');
+  });
+}
+
 /** The campaign export the app really performs, as the string that becomes the file. */
 async function exportedCampaignJson(): Promise<string> {
   const result = await collectCampaignBundle(CAMPAIGN_ID);
@@ -138,7 +155,7 @@ describe('marking a note private from the note editor', () => {
     const toggle = await privacySwitch();
     expect(toggle.getAttribute('aria-checked')).toBe('false');
 
-    toggle.click();
+    await clickPrivacySwitch();
 
     await waitFor(async () => {
       expect((await getNoteById(SECRET_ID))?.visibility).toBe('private');
@@ -154,11 +171,11 @@ describe('marking a note private from the note editor', () => {
 
   it('un-marking clears it back to public, and that survives a reload too', async () => {
     const view = openEditor(SECRET_ID);
-    (await privacySwitch()).click();
+    await clickPrivacySwitch();
     await waitFor(async () => {
       expect((await getNoteById(SECRET_ID))?.visibility).toBe('private');
     });
-    (await privacySwitch()).click();
+    await clickPrivacySwitch();
     await waitFor(async () => {
       expect((await getNoteById(SECRET_ID))?.visibility).toBe('public');
     });
@@ -181,7 +198,7 @@ describe('a note made private through the UI is absent from a real export', () =
 
   it('leaves no trace of the note in the serialized bundle once marked private', async () => {
     openEditor(SECRET_ID);
-    (await privacySwitch()).click();
+    await clickPrivacySwitch();
     await waitFor(async () => {
       expect((await getNoteById(SECRET_ID))?.visibility).toBe('private');
     });
@@ -196,7 +213,7 @@ describe('a note made private through the UI is absent from a real export', () =
     // The ACCEPT control, asserted on the *same* export as the exclusion above
     // so a filter that dropped everything cannot satisfy both.
     openEditor(SECRET_ID);
-    (await privacySwitch()).click();
+    await clickPrivacySwitch();
     await waitFor(async () => {
       expect((await getNoteById(SECRET_ID))?.visibility).toBe('private');
     });
@@ -209,13 +226,13 @@ describe('a note made private through the UI is absent from a real export', () =
 
   it('restores the note to the export when the control is switched back off', async () => {
     openEditor(SECRET_ID);
-    (await privacySwitch()).click();
+    await clickPrivacySwitch();
     await waitFor(async () => {
       expect((await getNoteById(SECRET_ID))?.visibility).toBe('private');
     });
     expect(await exportedCampaignJson()).not.toContain(SECRET_TITLE);
 
-    (await privacySwitch()).click();
+    await clickPrivacySwitch();
     await waitFor(async () => {
       expect((await getNoteById(SECRET_ID))?.visibility).toBe('public');
     });

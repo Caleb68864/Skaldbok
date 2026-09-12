@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { getNodeById } from '../../storage/repositories/kbNodeRepository';
 import { getNoteById } from '../../storage/repositories/noteRepository';
 import type { KBNode } from '../../storage/db/client';
+import { PrivateBadge } from '../notes/NotePrivacy';
 
 /** Props for {@link PeekCard}. */
 export interface PeekCardProps {
@@ -47,6 +48,10 @@ function extractTextSnippet(body: unknown, maxLen: number = 100): string {
 export function PeekCard({ nodeId, onClose, onOpen }: PeekCardProps) {
   const [node, setNode] = useState<KBNode | null>(null);
   const [snippet, setSnippet] = useState('');
+  // The peek already reads the note for its snippet, so saying whether that
+  // note is private costs nothing and closes the last surface where a private
+  // note looked like every other one.
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -64,12 +69,15 @@ export function PeekCard({ nodeId, onClose, onOpen }: PeekCardProps) {
         // If it's a note type, load the actual note for a snippet
         if (kbNode.sourceId) {
           const note = await getNoteById(kbNode.sourceId);
-          if (mounted && note?.body) {
-            const body =
-              typeof note.body === 'string'
-                ? JSON.parse(note.body)
-                : note.body;
-            setSnippet(extractTextSnippet(body));
+          if (mounted && note) {
+            setIsPrivate(note.visibility === 'private');
+            if (note.body) {
+              const body =
+                typeof note.body === 'string'
+                  ? JSON.parse(note.body)
+                  : note.body;
+              setSnippet(extractTextSnippet(body));
+            }
           }
         }
       } catch {
@@ -103,9 +111,12 @@ export function PeekCard({ nodeId, onClose, onOpen }: PeekCardProps) {
             <h3 className="text-base font-semibold text-[var(--color-text)]">
               {node.label}
             </h3>
-            <span className="inline-block px-1.5 py-0.5 mt-1 rounded text-xs font-medium bg-blue-500/10 text-blue-500">
-              {node.type}
-            </span>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="inline-block px-1.5 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500">
+                {node.type}
+              </span>
+              {isPrivate && <PrivateBadge />}
+            </div>
           </div>
           <button
             onClick={onClose}

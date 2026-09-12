@@ -133,6 +133,12 @@ export function NotePrivacyToggle({ noteId, visibility, onChange, className }: N
         type="button"
         role="switch"
         aria-checked={isPrivate}
+        // Not `disabled`: the switch keeps its value and its focus while the
+        // write lands, and a second tap arriving inside that window is ignored
+        // rather than queued (see `toggle`). `aria-busy` is what makes that
+        // window observable — to a screen reader, and to the tests, which would
+        // otherwise have to guess when the swallowed tap stops being swallowed.
+        aria-busy={saving}
         aria-label="Private"
         onClick={() => { void toggle(); }}
         className={cn(

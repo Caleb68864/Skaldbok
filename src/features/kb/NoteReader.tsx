@@ -19,6 +19,7 @@ import Mention from '@tiptap/extension-mention';
 import { getNoteById, createNote } from '../../storage/repositories/noteRepository';
 import * as noteRepository from '../../storage/repositories/noteRepository';
 import { useNoteActions } from '../notes/useNoteActions';
+import { NotePrivacyToggle, PrivateBadge } from '../notes/NotePrivacy';
 import { useToast } from '../../context/ToastContext';
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
 import * as entityLinkRepository from '../../storage/repositories/entityLinkRepository';
@@ -320,10 +321,11 @@ export function NoteReader({ noteId }: NoteReaderProps) {
 
       {/* Type badge */}
       {kbNode && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500">
             {kbNode.type}
           </span>
+          {note.visibility === 'private' && <PrivateBadge />}
           {note.tags && note.tags.length > 0 && (
             <div className="flex gap-1">
               {note.tags.map((tag) => (
@@ -338,6 +340,18 @@ export function NoteReader({ noteId }: NoteReaderProps) {
           )}
         </div>
       )}
+
+      {/* Privacy. The same component the editor renders, writing the same
+          field: this screen and `/note/:id/edit` are two doors onto one note,
+          and a control on only one of them is how a note ends up private in the
+          place you last looked and public in the place the export reads. */}
+      <NotePrivacyToggle
+        key={note.id}
+        noteId={note.id}
+        visibility={note.visibility}
+        onChange={(visibility) => setNote((current) => (current ? { ...current, visibility } : current))}
+        className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
+      />
 
       {/* Read-only Tiptap content */}
       <div className="prose max-w-none">
