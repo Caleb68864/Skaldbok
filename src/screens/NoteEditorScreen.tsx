@@ -5,6 +5,7 @@ import { TagPicker } from '../components/notes/TagPicker';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { getNoteById, updateNote } from '../storage/repositories/noteRepository';
 import { useNoteActions } from '../features/notes/useNoteActions';
+import { NotePrivacyToggle } from '../features/notes/NotePrivacy';
 import { NOTE_TYPES } from '../types/note';
 import type { Note, NoteType } from '../types/note';
 import { generateId } from '../utils/ids';
@@ -37,6 +38,9 @@ import { registerFlush } from '../features/persistence/autosaveFlush';
  * - **Body** — rich-text editor powered by {@link TiptapNoteEditor}.
  * - **Tags** — tag picker using campaign-scoped custom tags via
  *   {@link TagPicker}; new tags are persisted to {@link types/settings!AppSettings.customTags | AppSettings.customTags}.
+ * - **Private** — {@link features/notes/NotePrivacy!NotePrivacyToggle | NotePrivacyToggle},
+ *   which writes `visibility` straight through rather than joining the debounce
+ *   above. See that component for why.
  *
  * **Error handling:**
  * - If the note ID is not found, a toast is shown and the user is navigated
@@ -67,6 +71,7 @@ export default function NoteEditorScreen() {
   const [body, setBody] = useState<unknown>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [noteType, setNoteType] = useState<NoteType>('generic');
+  const [visibility, setVisibility] = useState<Note['visibility']>(undefined);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,6 +142,7 @@ export default function NoteEditorScreen() {
       setBody(loaded.body);
       setTags(loaded.tags ?? []);
       setNoteType((loaded.type as NoteType) ?? 'generic');
+      setVisibility(loaded.visibility);
       setLoading(false);
     }).catch(() => {
       if (mounted) {
@@ -277,6 +283,20 @@ export default function NoteEditorScreen() {
           </button>
         ))}
       </div>
+
+      {/* Privacy. Above the body rather than beside the tags: it is a decision
+          about the note as a whole, and it is the one field here whose value
+          decides what leaves the device. */}
+      {note && (
+        <div className="mb-3 p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)]">
+          <NotePrivacyToggle
+            key={note.id}
+            noteId={note.id}
+            visibility={visibility}
+            onChange={setVisibility}
+          />
+        </div>
+      )}
 
       {/* Editor */}
       <TiptapNoteEditor
