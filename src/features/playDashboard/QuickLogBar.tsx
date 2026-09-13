@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { cn } from '../../lib/utils';
+import { ShellDock } from '../../components/shell/ShellDock';
 import { useSessionLog } from '../session/useSessionLog';
 import { useCampaignContext } from '../campaign/CampaignContext';
 
@@ -18,6 +19,13 @@ import { useCampaignContext } from '../campaign/CampaignContext';
  *
  * Deliberately not a dashboard card: a card scrolls away with the rest of the
  * layout, and the one thing this must never do is require scrolling to find.
+ *
+ * It docks through {@link components/shell/ShellDock!ShellDock | ShellDock}
+ * rather than `position: sticky`. Sticky kept it at the bottom of the *scroll
+ * container* until the end of a scroll and then let it ride up — see the note
+ * on `ShellDock` — and it overlapped the content it was pinned over, which is
+ * what made it feel in the way. Docked, it is a sibling of the scroll area:
+ * always on screen, never scrolling, and the page ends above it.
  *
  * Renders nothing without an active session — there is nowhere for the note to
  * go, and an input that silently discards is worse than no input.
@@ -60,57 +68,61 @@ export function QuickLogBar() {
   }
 
   return (
-    <div className="sticky bottom-0 z-20 -mx-[var(--space-xs)] md:-mx-[var(--space-sm)] mt-[var(--space-sm)] border-t border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-sm)] py-[var(--space-xs)] shadow-[var(--shadow-medium)]">
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => { setOpen(true); window.setTimeout(() => inputRef.current?.focus(), 0); }}
-          className="flex w-full items-center gap-[var(--space-sm)] min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-transparent px-[var(--space-sm)] text-left text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] cursor-pointer"
-        >
-          <span aria-hidden="true">✎</span>
-          <span>Log a note…</span>
-          {justSaved && <span className="ml-auto text-[var(--color-success)] font-semibold">Saved</span>}
-        </button>
-      ) : (
-        <div className="flex items-center gap-[var(--space-sm)]">
-          <input
-            ref={inputRef}
-            type="text"
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') { e.preventDefault(); void commit(); }
-              // Escape closes without discarding silently: the text survives in
-              // state, so reopening restores what was half-typed.
-              if (e.key === 'Escape') setOpen(false);
-            }}
-            placeholder="What happened?"
-            aria-label="Log a session note"
-            className="flex-1 min-w-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
-          />
+    <ShellDock>
+      {/* Full width: the session-log button floats above the dock rather than
+          on it, so nothing has to be left clear of it here. */}
+      <div className="z-20 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-sm)] py-[var(--space-xs)] shadow-[var(--shadow-medium)]">
+        {!open ? (
           <button
             type="button"
-            onClick={() => void commit()}
-            disabled={text.trim() === '' || saving}
-            className={cn(
-              'shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-md)] rounded-[var(--radius-sm)] border-none font-semibold',
-              text.trim() === '' || saving
-                ? 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] opacity-50 cursor-default'
-                : 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] cursor-pointer',
-            )}
+            onClick={() => { setOpen(true); window.setTimeout(() => inputRef.current?.focus(), 0); }}
+            className="flex w-full items-center gap-[var(--space-sm)] min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] bg-transparent px-[var(--space-sm)] text-left text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] cursor-pointer"
           >
-            {saving ? '…' : 'Log'}
+            <span aria-hidden="true">✎</span>
+            <span>Log a note…</span>
+            {justSaved && <span className="ml-auto text-[var(--color-success)] font-semibold">Saved</span>}
           </button>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Close the note composer"
-            className="shrink-0 min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] rounded border-none bg-transparent text-[var(--color-text-muted)] cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="flex items-center gap-[var(--space-sm)]">
+            <input
+              ref={inputRef}
+              type="text"
+              value={text}
+              onChange={e => setText(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); void commit(); }
+                // Escape closes without discarding silently: the text survives in
+                // state, so reopening restores what was half-typed.
+                if (e.key === 'Escape') setOpen(false);
+              }}
+              placeholder="What happened?"
+              aria-label="Log a session note"
+              className="flex-1 min-w-0 min-h-[var(--touch-target-min)] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]"
+            />
+            <button
+              type="button"
+              onClick={() => void commit()}
+              disabled={text.trim() === '' || saving}
+              className={cn(
+                'shrink-0 min-h-[var(--touch-target-min)] px-[var(--space-md)] rounded-[var(--radius-sm)] border-none font-semibold',
+                text.trim() === '' || saving
+                  ? 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)] opacity-50 cursor-default'
+                  : 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] cursor-pointer',
+              )}
+            >
+              {saving ? '…' : 'Log'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              aria-label="Close the note composer"
+              className="shrink-0 min-w-[var(--touch-target-min)] min-h-[var(--touch-target-min)] rounded border-none bg-transparent text-[var(--color-text-muted)] cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
+    </ShellDock>
   );
 }

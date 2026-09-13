@@ -156,9 +156,10 @@ export default function PlayDashboardScreen() {
         {!playTemplate && <StoryBankModule {...moduleProps} />}
         {!playTemplate && <QuickReferenceModule {...moduleProps} />}
       </div>
-      {/* Docked composer, outside the card flow on purpose: a card scrolls away
-          with the layout, and the one thing this must never do is need
-          scrolling to find mid-session. */}
+      {/* Docked composer. It portals into the shell's dock slot, so where it
+          sits in this tree does not decide where it lands on screen — see
+          `ShellDock`. A card would scroll away with the layout, and the one
+          thing this must never do is need scrolling to find mid-session. */}
       <QuickLogBar />
     </div>
   );

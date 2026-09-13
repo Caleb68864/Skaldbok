@@ -5,6 +5,7 @@
  */
 
 import type { KBNode } from '../../storage/db/client';
+import { PrivateBadge } from '../notes/NotePrivacy';
 
 /** Color map for type badges. */
 const TYPE_COLORS: Record<string, string> = {
@@ -21,6 +22,15 @@ export interface VaultCardProps {
   node: KBNode;
   linkCount: number;
   tags?: string[];
+  /**
+   * Whether the note behind this node is marked private.
+   *
+   * @remarks
+   * A `kb_nodes` row carries no `visibility` — it is a projection of the note,
+   * not the note — so the browser resolves this once for the whole list and
+   * passes it down rather than every card issuing its own lookup.
+   */
+  isPrivate?: boolean;
   onClick: () => void;
 }
 
@@ -52,7 +62,7 @@ function formatRelativeTime(iso: string): string {
  * queried here, so a long list issues one batch of edge lookups instead of one
  * per row.
  */
-export function VaultCard({ node, linkCount, tags, onClick }: VaultCardProps) {
+export function VaultCard({ node, linkCount, tags, isPrivate, onClick }: VaultCardProps) {
   const typeColor = TYPE_COLORS[node.type] ?? TYPE_COLORS.note;
 
   return (
@@ -71,6 +81,9 @@ export function VaultCard({ node, linkCount, tags, onClick }: VaultCardProps) {
             >
               {node.type}
             </span>
+            {/* Beside the type, not tucked after the timestamp: the whole point
+                is that it survives a scan down the list. */}
+            {isPrivate && <PrivateBadge />}
             {linkCount > 0 && (
               <span className="text-xs text-[var(--color-text-muted)]">
                 {linkCount} link{linkCount !== 1 ? 's' : ''}

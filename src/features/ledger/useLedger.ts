@@ -124,7 +124,7 @@ export function useLedger() {
       title: string,
       /** Empty for a line that summarises a run rather than reporting one entry. */
       ledgerEntryId: string,
-      kind: 'entry' | 'distribution' | 'removal' | 'bills',
+      kind: 'entry' | 'edit' | 'distribution' | 'removal' | 'bills',
     ) => {
       if (!hasActiveSession) return;
       try {
@@ -418,6 +418,85 @@ export function useLedger() {
     [campaignId, setActiveCampaign],
   );
 
+  /**
+   * Corrects an entry already in the book.
+   *
+   * @remarks
+   * An entry written at the table is written in a hurry, and until this existed
+   * the only correction available was delete-and-retype — which loses the row's
+   * place in the book and writes a removal line into the session log for what
+   * was really a typo.
+   *
+   * The amount of a **distribution** is not editable here, and the form hides
+   * the field: its legs and its frozen split were computed from that amount, so
+   * changing one without the others would leave an entry whose shares do not
+   * add up to it. Correcting a payout means deleting it and distributing again,
+   * which is the honest record of what happened anyway.
+   *
+   * A no-op edit writes nothing and logs nothing — opening the form, looking and
+   * closing it is not an event.
+   */
+  const updateEntry = useCallback(
+    async (
+      id: string,
+      input: {
+        date: string;
+        memo: string;
+        amount: number;
+        direction: 'in' | 'out';
+        accountId?: string;
+        counterAccountId?: string;
+      },
+    ) => {
+      const before = await ledgerRepository.getById(id);
+      if (!before) return;
+
+      const isDistribution = before.gross !== undefined;
+      const magnitude = Math.abs(Math.trunc(input.amount));
+      if (!isDistribution && magnitude === 0) return;
+      const amount = isDistribution
+        ? before.amount
+        : input.direction === 'out'
+          ? -magnitude
+          : magnitude;
+      const accountId = input.accountId || undefined;
+      // Same rule as `addEntry`: naming one account on both sides is not a
+      // transfer, and storing it as one would net the entry to nothing.
+      const counterAccountId =
+        input.counterAccountId && input.counterAccountId !== accountId
+          ? input.counterAccountId
+          : undefined;
+      const memo = input.memo.trim();
+
+      const changed =
+        before.date !== input.date ||
+        before.memo !== memo ||
+        before.amount !== amount ||
+        before.accountId !== accountId ||
+        before.counterAccountId !== counterAccountId;
+      if (!changed) return;
+
+      await ledgerRepository.update(id, {
+        date: input.date,
+        memo,
+        amount,
+        accountId,
+        counterAccountId,
+      });
+
+      const money = (n: number) => engine?.currency.formatAmount(n) ?? String(n);
+      const label = (text: string) => text || 'unlabelled';
+      await mirrorToLog(
+        `Ledger: corrected an entry — was ${money(before.amount)} ${label(before.memo)}` +
+          ` (${before.date}), now ${money(amount)} ${label(memo)} (${input.date})`,
+        id,
+        'edit',
+      );
+      await reload();
+    },
+    [reload, engine, mirrorToLog],
+  );
+
   const removeEntry = useCallback(
     async (id: string) => {
       const entry = await ledgerRepository.getById(id);
@@ -596,6 +675,7 @@ export function useLedger() {
     reservePotLabel: engine?.terms.reservePot ?? 'Reserve',
     addEntry,
     addDistribution,
+    updateEntry,
     removeEntry,
     reload,
   };

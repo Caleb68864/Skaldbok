@@ -4,6 +4,7 @@ import {
   validateSplit,
   evenSplit,
   computeDistribution,
+  computeLineTotal,
 } from './ledgerMath';
 import type { LedgerEntry, SplitSnapshot } from '../types/ledger';
 
@@ -281,5 +282,45 @@ describe('computeDistribution', () => {
 
   it('refuses a nonsensical off-the-top share', () => {
     expect(() => computeDistribution(1_000, split(150, [100]))).toThrow(/between 0% and 100%/);
+  });
+});
+
+describe('computeLineTotal', () => {
+  it('multiplies a count by a unit price', () => {
+    // The session that prompted this: six passengers at Cr1,400 a berth.
+    expect(computeLineTotal(6, 1_400)).toBe(8_400);
+  });
+
+  it('takes a fractional quantity — cargo is booked in tons', () => {
+    expect(computeLineTotal(2.5, 800)).toBe(2_000);
+  });
+
+  it('rounds a fractional result to whole base units', () => {
+    expect(computeLineTotal(3, 33.34)).toBe(100);
+    expect(computeLineTotal(0.1, 3)).toBe(0);
+  });
+
+  it('rounds a half away from zero, and never returns -0', () => {
+    expect(computeLineTotal(1, 0.5)).toBe(1);
+    expect(computeLineTotal(-1, 0.5)).toBe(-1);
+    expect(Object.is(computeLineTotal(-1, 0.2), 0)).toBe(true);
+  });
+
+  it('survives float noise rather than storing a fraction of a credit', () => {
+    // 0.1 * 3 is 0.30000000000000004; 1.005 * 100 is 100.49999999999999.
+    expect(Number.isInteger(computeLineTotal(0.1, 30))).toBe(true);
+    expect(computeLineTotal(0.1, 30)).toBe(3);
+  });
+
+  it('is zero for anything that is not a usable figure', () => {
+    // A blank field parses to NaN, and the caller reads 0 as "nothing to record".
+    expect(computeLineTotal(Number.NaN, 1_400)).toBe(0);
+    expect(computeLineTotal(6, Number.NaN)).toBe(0);
+    expect(computeLineTotal(Number.POSITIVE_INFINITY, 1)).toBe(0);
+    expect(computeLineTotal(0, 1_400)).toBe(0);
+  });
+
+  it('refuses a product too large to be exact', () => {
+    expect(computeLineTotal(1e9, 1e9)).toBe(0);
   });
 });

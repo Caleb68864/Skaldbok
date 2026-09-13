@@ -95,10 +95,28 @@ export async function create(data: {
   return entry;
 }
 
-/** Patches an entry's editable fields. */
+/**
+ * Patches an entry's editable fields.
+ *
+ * @remarks
+ * The account fields are editable because filing a payment against the wrong
+ * account is the correction most often needed, and the alternative — delete and
+ * retype — loses the entry's place in the book.
+ *
+ * Passing `undefined` for one of them **clears** it, which is Dexie's rule for
+ * `update` and is the behaviour this needs: "no account" and "the primary
+ * account" are the same thing to the reader, and a transfer that turns out not
+ * to be one has to be able to stop being one. `ledgerRepository.test.ts` pins
+ * it, because it is a library behaviour rather than one this file states.
+ *
+ * `gross`, `legs` and `splitSnapshot` are deliberately absent: a distribution's
+ * legs are computed from an amount and a frozen split, so letting the amount be
+ * edited here while they stayed put would leave the two disagreeing. The UI
+ * withholds the amount field on a distribution for the same reason.
+ */
 export async function update(
   id: string,
-  patch: Partial<Pick<LedgerEntry, 'date' | 'memo' | 'amount'>>,
+  patch: Partial<Pick<LedgerEntry, 'date' | 'memo' | 'amount' | 'accountId' | 'counterAccountId'>>,
 ): Promise<void> {
   await db.ledgerEntries.update(id, { ...patch, updatedAt: nowISO() });
 }

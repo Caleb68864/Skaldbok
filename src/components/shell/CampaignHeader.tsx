@@ -10,6 +10,7 @@ import { useSystemDefinition } from '../../features/systems/useSystemDefinition'
 import { useFullscreen } from '../../hooks/useFullscreen';
 import { useWakeLock } from '../../hooks/useWakeLock';
 import { getAllCampaigns } from '../../storage/repositories/campaignRepository';
+import { getPrivateNoteIds } from '../../storage/repositories/noteRepository';
 import { destinationsFor } from './navigationCatalogue';
 import {
   DropdownMenu,
@@ -66,6 +67,10 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // How many notes this checkbox is actually deciding about. The checkbox has
+  // always been here; until now nothing could put a note into the set it
+  // governs, so it read as a setting with no subject.
+  const [privateNoteCount, setPrivateNoteCount] = useState<number | null>(null);
   // Resolved from the *campaign*, not the active character: the overflow sheet
   // is campaign-scoped and is most often opened with no character loaded.
   const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
@@ -82,6 +87,21 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
     }).catch(console.error);
     return () => { mounted = false; };
   }, [selectorOpen]);
+
+  // Counted when the sheet opens rather than held in state: the answer must be
+  // current at the moment someone is deciding whether to export, and a note can
+  // be marked private from two other screens between openings.
+  useEffect(() => {
+    if (!sheetOpen || !activeCampaign) {
+      setPrivateNoteCount(null);
+      return;
+    }
+    let mounted = true;
+    getPrivateNoteIds({ campaignId: activeCampaign.id })
+      .then(ids => { if (mounted) setPrivateNoteCount(ids.size); })
+      .catch(console.error);
+    return () => { mounted = false; };
+  }, [sheetOpen, activeCampaign]);
 
   return (
     <div className="flex items-center w-full min-h-[44px] bg-surface-alt border-b border-border">
@@ -289,10 +309,25 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
               </p>
             )}
             {activeCampaign && (
-              <label className="flex items-center gap-2 px-4 py-2 text-text-muted text-sm">
-                <input type="checkbox" checked={includePrivateExport} onChange={e => setIncludePrivateExport(e.target.checked)} className="w-4 h-4 accent-[var(--color-accent)]" />
-                Include private notes in the campaign bundle
-              </label>
+              <>
+                <label className="flex items-center gap-2 px-4 pt-2 text-text-muted text-sm">
+                  <input type="checkbox" checked={includePrivateExport} onChange={e => setIncludePrivateExport(e.target.checked)} className="w-4 h-4 accent-[var(--color-accent)]" />
+                  Include private notes in the campaign bundle
+                </label>
+                {/* The count, not just the switch. Deciding whether to hand
+                    someone a backup means knowing whether anything is being
+                    withheld from it; the Knowledge Base badges say which notes,
+                    and this says how many, at the moment of the decision. */}
+                {privateNoteCount !== null && (
+                  <p className="px-4 pb-2 pt-1 text-text-muted text-xs">
+                    {privateNoteCount === 0
+                      ? 'No notes in this campaign are marked private.'
+                      : includePrivateExport
+                        ? `${privateNoteCount} note${privateNoteCount === 1 ? '' : 's'} marked private will be included.`
+                        : `${privateNoteCount} note${privateNoteCount === 1 ? '' : 's'} marked private will be left out.`}
+                  </p>
+                )}
+              </>
             )}
           </SheetBody>
         </SheetContent>
