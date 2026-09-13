@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { SectionPanel } from '../components/primitives/SectionPanel';
@@ -10,6 +10,9 @@ import { DistributeModal } from '../features/ledger/DistributeModal';
 import { AccountsPanel } from '../features/ledger/AccountsPanel';
 import { BillsPanel } from '../features/ledger/BillsPanel';
 import { LedgerImportModal } from '../features/ledger/LedgerImportModal';
+import { EntryRow } from '../features/ledger/EntryRow';
+import { AmountFields, AmountPreview } from '../features/ledger/AmountFields';
+import { useAmountEntry } from '../features/ledger/useAmountEntry';
 import { useExportActions } from '../features/export/useExportActions';
 import { useToast } from '../context/ToastContext';
 
@@ -42,7 +45,7 @@ export default function LedgerScreen() {
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [memo, setMemo] = useState('');
-  const [amountText, setAmountText] = useState('');
+  const amount = useAmountEntry();
   const [isDistributing, setIsDistributing] = useState(false);
   const formatMoneyRef = useRef(ledger.formatMoney);
   formatMoneyRef.current = ledger.formatMoney;
@@ -91,15 +94,17 @@ export default function LedgerScreen() {
   const { rows, balance, formatMoney, baseDenomination, currencyLabel, accounts, summary, reservePotLabel } =
     ledger;
   const abbr = baseDenomination?.abbr ?? '';
-  const amount = Math.trunc(Number(amountText));
-  const amountIsUsable = amountText.trim() !== '' && Number.isFinite(amount) && amount !== 0;
 
   async function record(direction: 'in' | 'out') {
-    if (!amountIsUsable) return;
+    if (!amount.isUsable) return;
     await ledger.addEntry({
       date,
-      memo: memo.trim(),
-      amount,
+      // The working — "6 × 1,400" — rides along in the description. The book is
+      // read months later, and `Cr 8,400` alone cannot answer "six berths or
+      // seven?". Nothing about it is stored as structure; it is text, so the
+      // export and the session-log mirror carry it for free.
+      memo: amount.workings === '' ? memo.trim() : `${memo.trim()} (${amount.workings})`.trim(),
+      amount: amount.total,
       direction,
       accountId: accountId || undefined,
       // A transfer only makes sense between two different accounts; naming the
@@ -108,7 +113,7 @@ export default function LedgerScreen() {
         ? counterAccountId
         : undefined,
     });
-    setAmountText('');
+    amount.reset();
     setMemo('');
   }
 
@@ -147,23 +152,20 @@ export default function LedgerScreen() {
             />
           </div>
           <div className="flex gap-[var(--space-sm)] flex-wrap items-center">
-            <input
-              className={`${inputClass} max-w-[10rem]`}
-              inputMode="numeric"
-              value={amountText}
-              placeholder={abbr ? `Amount (${abbr})` : 'Amount'}
-              onChange={e => setAmountText(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === 'Enter') void record('in');
-              }}
+            <AmountFields
+              entry={amount}
+              abbr={abbr}
+              formatMoney={formatMoney}
+              onSubmit={() => void record('in')}
             />
-            <Button onClick={() => void record('in')} disabled={!amountIsUsable}>
+            <Button onClick={() => void record('in')} disabled={!amount.isUsable}>
               Money in
             </Button>
-            <Button variant="secondary" onClick={() => void record('out')} disabled={!amountIsUsable}>
+            <Button variant="secondary" onClick={() => void record('out')} disabled={!amount.isUsable}>
               Money out
             </Button>
           </div>
+          <AmountPreview entry={amount} abbr={abbr} formatMoney={formatMoney} />
           {accounts.length > 1 && (
             <div className="flex gap-[var(--space-sm)] flex-wrap items-center">
               <label className="flex items-center gap-1 text-sm text-[var(--color-text-muted)]">
@@ -282,61 +284,24 @@ export default function LedgerScreen() {
                 </tr>
               </thead>
               <tbody>
-                {[...rows].reverse().map(row => {
-                  const isIn = row.amount >= 0;
-                  return (
-                    // An entry renders as its own row plus one per leg, so the
-                    // key belongs on the fragment, not the first <tr>.
-                    <Fragment key={row.id}>
-                      <tr className="border-t border-[var(--color-border)]">
-                        <td className="py-2 pr-2 whitespace-nowrap">{row.date}</td>
-                        <td className="py-2 pr-2">{row.memo || '—'}</td>
-                        <td className="py-2 pr-2 text-right whitespace-nowrap">
-                          {isIn ? formatMoney(row.amount) : ''}
-                        </td>
-                        <td className="py-2 pr-2 text-right whitespace-nowrap">
-                          {isIn ? '' : formatMoney(Math.abs(row.amount))}
-                        </td>
-                        <td className="py-2 pr-2 text-right whitespace-nowrap">
-                          {formatMoney(row.balance)}
-                        </td>
-                        <td className="py-2 text-right">
-                          <button
-                            className="min-h-[44px] min-w-[44px] bg-transparent border-none cursor-pointer text-[var(--color-text-muted)]"
-                            aria-label={`Delete entry ${row.memo || row.date}`}
-                            onClick={() => {
-                              void ledger.removeEntry(row.id);
-                              showToast('Entry removed', 'success');
-                            }}
-                          >
-                            ✕
-                          </button>
-                        </td>
-                      </tr>
-                      {(row.legs ?? []).map((leg, i) => (
-                        <tr key={`${row.id}-leg-${i}`} className="text-sm text-[var(--color-text-muted)]">
-                          <td />
-                          <td className="py-1 pr-2 pl-4">
-                            ⤷{' '}
-                            {leg.kind === 'shipFund'
-                              ? reservePotLabel
-                              : leg.kind === 'unallocated'
-                                ? 'Unallocated'
-                                : leg.payeeName || 'Unnamed'}
-                            {leg.pct !== undefined && ` (${leg.pct}%)`}
-                            {leg.kind === 'shipFund' && ' — retained'}
-                          </td>
-                          <td />
-                          <td className="py-1 pr-2 text-right whitespace-nowrap">
-                            {formatMoney(leg.amount)}
-                          </td>
-                          <td />
-                          <td />
-                        </tr>
-                      ))}
-                    </Fragment>
-                  );
-                })}
+                {[...rows].reverse().map(row => (
+                  <EntryRow
+                    key={row.id}
+                    row={row}
+                    accounts={accounts}
+                    formatMoney={formatMoney}
+                    abbr={abbr}
+                    reservePotLabel={reservePotLabel}
+                    onSave={async (id, edit) => {
+                      await ledger.updateEntry(id, edit);
+                      showToast('Entry updated', 'success');
+                    }}
+                    onRemove={id => {
+                      void ledger.removeEntry(id);
+                      showToast('Entry removed', 'success');
+                    }}
+                  />
+                ))}
               </tbody>
             </table>
           </div>

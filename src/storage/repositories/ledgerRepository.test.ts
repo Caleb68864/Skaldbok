@@ -272,6 +272,37 @@ describe('ledgerRepository', () => {
       expect(stored?.date).toBe('2026-08-09');
     });
 
+    it('refiles an entry against a different account', async () => {
+      const entry = await create({
+        campaignId: 'c1',
+        date: '2026-08-08',
+        memo: 'fuel',
+        amount: -5_000,
+        accountId: 'cash',
+      });
+      await update(entry.id, { accountId: 'savings', counterAccountId: 'loan' });
+      const stored = await getById(entry.id);
+      expect(stored?.accountId).toBe('savings');
+      expect(stored?.counterAccountId).toBe('loan');
+    });
+
+    it('clears an account when the field is patched to undefined', async () => {
+      // Dexie's rule, not this repository's, and the edit form depends on it:
+      // a transfer that turns out not to be one has to stop being one.
+      const entry = await create({
+        campaignId: 'c1',
+        date: '2026-08-08',
+        amount: -5_000,
+        accountId: 'cash',
+        counterAccountId: 'loan',
+      });
+      await update(entry.id, { counterAccountId: undefined });
+      const stored = await getById(entry.id);
+      expect(stored?.counterAccountId).toBeUndefined();
+      expect('counterAccountId' in (stored ?? {})).toBe(false);
+      expect(stored?.accountId).toBe('cash');
+    });
+
     it('leaves the snapshot of a distribution untouched', async () => {
       const entry = await create({
         campaignId: 'c1',

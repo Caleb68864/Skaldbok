@@ -81,6 +81,41 @@ export function computeRunningBalance(
 }
 
 /**
+ * Multiplies a count by a unit price into whole base-currency units.
+ *
+ * @remarks
+ * Six passengers at 1,400 credits is the shape of most money that arrives at a
+ * table, and until this existed it was worked out on paper and typed in as a
+ * total — which is fine right up to the evening somebody fat-fingers the
+ * total and the crew's books are quietly wrong from then on.
+ *
+ * `quantity` is deliberately allowed to be fractional: cargo is booked in
+ * tons, and 2.5 tons at 800 is as ordinary a line as six passengers. The
+ * *result* is not — it is rounded to whole base units, because a fraction of a
+ * credit is not a thing the ledger can hold. Rounding is half away from zero
+ * so that 0.5 does not quietly become 0 the way `Math.round` does for negative
+ * halves.
+ *
+ * Anything that cannot produce a usable figure — a blank field, a typo, an
+ * overflow — returns 0, which the caller already treats as "nothing to
+ * record". That is the one safe answer: a guessed number here is money.
+ *
+ * @param quantity - How many. May be fractional.
+ * @param unitAmount - Price of one, in base units. May be fractional.
+ */
+export function computeLineTotal(quantity: number, unitAmount: number): number {
+  if (!Number.isFinite(quantity) || !Number.isFinite(unitAmount)) return 0;
+  const product = quantity * unitAmount;
+  if (!Number.isFinite(product)) return 0;
+  const rounded = Math.sign(product) * Math.round(Math.abs(product));
+  // Past 2^53 the arithmetic stops being exact, and a ledger that is
+  // approximately right is worse than one that refused the line.
+  if (!Number.isSafeInteger(rounded)) return 0;
+  // `+ 0` normalises the -0 that `Math.sign(-0.2) * Math.round(0.2)` yields.
+  return rounded + 0;
+}
+
+/**
  * Totals a split's payee percentages and says whether they add up.
  *
  * @remarks
