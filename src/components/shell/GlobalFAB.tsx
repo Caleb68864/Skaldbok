@@ -26,6 +26,12 @@ import { isFabHiddenRoute } from './fabRoutes';
  * The FAB hides itself while already on `/session/log` so it never overlaps
  * the docked `WritePad` or the entry list.
  *
+ * It is positioned **against the shell's dock wrapper**, not the viewport:
+ * `bottom-full` puts it above whatever the dock holds. With an empty dock that
+ * is the bottom nav, which is where its former `fixed bottom-[68px]` put it —
+ * except that constant only held while the nav was 56px tall and knew nothing
+ * about a docked bar, so the play screen's note composer sat underneath it.
+ *
  * @example
  * // Rendered automatically by ShellLayout — no props required.
  * <GlobalFAB />
@@ -47,7 +53,7 @@ export function GlobalFAB() {
     <button
       onClick={handleFABPress}
       aria-label="Open session log"
-      className="fixed bottom-[68px] right-4 z-40 w-14 h-14 rounded-full bg-accent text-[var(--color-on-accent,#fff)] border-none shadow-[0_4px_16px_rgba(0,0,0,0.3)] cursor-pointer flex items-center justify-center"
+      className="absolute bottom-full right-4 mb-3 z-40 w-14 h-14 rounded-full bg-accent text-[var(--color-on-accent,#fff)] border-none shadow-[0_4px_16px_rgba(0,0,0,0.3)] cursor-pointer flex items-center justify-center"
     >
       {activeSession ? <Sparkles className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
     </button>
