@@ -656,6 +656,8 @@ export interface DerivedFieldDef {
 }
 
 export interface SystemEngine {
+  /** Landing briefing tool offered by rulesets that support TravellerMap worlds. */
+  landingBriefing?: { label: string };
   /**
    * The system id whose rules are *not* being applied, when no adapter matched.
    *

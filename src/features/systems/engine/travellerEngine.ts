@@ -297,6 +297,7 @@ function travellerRollContext(
  * is how those panels get hidden.
  */
 export const travellerEngine: SystemEngine = {
+  landingBriefing: { label: 'Weather Report' },
   attributeBadge: (attributeId, character) => {
     const score = character.attributes?.[attributeId];
     if (score === undefined || score === null) return null;

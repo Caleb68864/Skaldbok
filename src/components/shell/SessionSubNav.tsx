@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Flame, NotebookPen, Coins, Route as RouteIcon } from 'lucide-react';
+import { Flame, NotebookPen, Coins, Route as RouteIcon, CloudSun } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCampaignContext } from '../../features/campaign/CampaignContext';
@@ -8,6 +8,7 @@ import { useSystemDefinition } from '../../features/systems/useSystemDefinition'
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
 import { destinationsFor } from './navigationCatalogue';
 import { SystemRulesNotice } from '../systems/SystemRulesNotice';
+import { getEngine } from '../../features/systems/engine';
 
 /** A single entry in the session sub-navigation row. */
 interface SessionTab {
@@ -36,6 +37,7 @@ const SESSION_TAB_ICONS: Record<string, LucideIcon> = {
   '/session/log': NotebookPen,
   '/ledger': Coins,
   '/route': RouteIcon,
+  '/weather-report': CloudSun,
 };
 
 const SESSION_TAB_IDS: Record<string, string> = {
@@ -43,6 +45,7 @@ const SESSION_TAB_IDS: Record<string, string> = {
   '/session/log': 'log',
   '/ledger': 'ledger',
   '/route': 'route',
+  '/weather-report': 'weather-report',
 };
 
 const STATIC_SESSION_TABS: SessionTab[] = destinationsFor('session')
@@ -68,7 +71,7 @@ const STATIC_SESSION_TABS: SessionTab[] = destinationsFor('session')
  * `/route` is listed unconditionally. A ruleset that declares no planner never
  * routes here (the screen redirects), so there is nothing to gate.
  */
-export const SESSION_SECTION_PREFIXES = ['/session', '/ledger', '/route'] as const;
+export const SESSION_SECTION_PREFIXES = ['/session', '/ledger', '/route', '/weather-report'] as const;
 
 /**
  * Horizontal sub-navigation for the campaign section — the Session-side
@@ -106,16 +109,16 @@ export function SessionSubNav() {
   const { system, error } = useSystemDefinition(campaignSystemId);
 
   const planner = system?.routePlanner;
+  const briefing = system ? getEngine(system).landingBriefing : undefined;
 
   const tabs = useMemo<SessionTab[]>(
     () =>
-      planner
-        ? [
-            ...STATIC_SESSION_TABS,
-            { id: 'route', to: '/route', label: planner.label, Icon: RouteIcon },
-          ]
-        : STATIC_SESSION_TABS,
-    [planner],
+      [
+        ...STATIC_SESSION_TABS,
+        ...(planner ? [{ id: 'route', to: '/route', label: planner.label, Icon: RouteIcon }] : []),
+        ...(briefing ? [{ id: 'weather-report', to: '/weather-report', label: briefing.label, Icon: CloudSun }] : []),
+      ],
+    [planner, briefing],
   );
 
   // Longest match wins: `/session/log` must not be beaten by `/session`, which

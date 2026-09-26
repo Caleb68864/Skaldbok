@@ -5,6 +5,7 @@ import type { KBCategoryTab } from '../config/defaults/kbCategories';
 import type { Versioned } from './common';
 import type { ID } from './common';
 import type { ThemeName } from '../theme/themes';
+import type { WorldHit } from '../features/travellerBriefing/worldData';
 
 /**
  * The application interaction mode.
@@ -76,6 +77,12 @@ export interface SessionState {
  * in records created by older app versions.
  */
 export interface AppSettings extends Versioned {
+  /** TravellerMap sectors downloaded for the landing briefing search. */
+  travellerBriefingSectors?: string[];
+  /** Recently selected worlds, keyed by sector and hex rather than name. */
+  recentBriefingWorlds?: WorldHit[];
+  /** Per-world GM corrections; the generated briefing uses these ahead of canon. */
+  briefingWorldOverrides?: Record<string, Partial<Pick<WorldHit, 'uwp' | 'zone' | 'bases' | 'remarks' | 'pbg' | 'stellar' | 'allegianceName'>> & { note?: string }>;
   /** Settings record ID; always `"app"`. */
   id: string;
   /** ID of the currently active character, or `null` if none is selected. */

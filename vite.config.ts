@@ -10,11 +10,10 @@ import { fileURLToPath, URL } from 'node:url';
  * The policy the built app runs under.
  *
  * @remarks
- * Defence in depth for a local-first app that makes no network requests of its
- * own: `connect-src 'self'` means an imported character or note cannot phone
- * home, and `img-src` without a scheme wildcard blocks a tracking pixel smuggled
- * in as a portrait URL — the same hole `importablePortraitUri` closes on the
- * import path, closed again at the browser.
+ * Defence in depth for a local-first app. The two explicit remote origins
+ * supply Traveller world data and the Wiki; imported content cannot connect
+ * to arbitrary hosts. `img-src` allows TravellerMap jump maps without opening
+ * a scheme wildcard for tracking pixels smuggled in as portraits.
  *
  * `'unsafe-inline'` is present for styles only: Tailwind and Tiptap both write
  * inline style attributes. Scripts are bundled files, so `script-src 'self'`
@@ -23,13 +22,13 @@ import { fileURLToPath, URL } from 'node:url';
  */
 const CONTENT_SECURITY_POLICY = [
   "default-src 'self'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://travellermap.com",
   "media-src 'self' blob:",
   "font-src 'self' data:",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self'",
   "worker-src 'self'",
-  "connect-src 'self'",
+  "connect-src 'self' https://travellermap.com https://wiki.travellerrpg.com",
   "manifest-src 'self'",
   "object-src 'none'",
   "base-uri 'none'",

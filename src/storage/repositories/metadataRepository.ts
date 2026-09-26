@@ -37,3 +37,16 @@ export async function set(key: string, value: string): Promise<void> {
     throw new Error(`Failed to set metadata: ${String(err)}`, { cause: err });
   }
 }
+
+/** Atomically reserve one future request slot across browser tabs and reloads. */
+export async function reserveRateLimitSlot(key: string, intervalMs: number, now = Date.now()): Promise<number> {
+  return db.transaction('rw', db.metadata, async () => {
+    const existing = await db.metadata.where('key').equals(key).first();
+    const previous = Number(existing?.value);
+    const slot = Math.max(now, Number.isFinite(previous) ? previous : now);
+    const next = String(slot + intervalMs);
+    if (existing) await db.metadata.update(existing.id, { value: next });
+    else await db.metadata.add({ id: generateId(), key, value: next });
+    return slot;
+  });
+}

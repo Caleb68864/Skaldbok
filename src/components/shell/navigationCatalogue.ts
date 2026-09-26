@@ -85,6 +85,13 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     dynamicLabel: true,
     note: 'Each ruleset names its own travel concept; this file names none of them.',
   },
+  {
+    path: '/weather-report',
+    label: 'Weather Report',
+    surfaces: ['session'],
+    conditional: 'engine.landingBriefing',
+    dynamicLabel: true,
+  },
 
   // --- Library and tools --------------------------------------------------
   { path: '/reference', label: 'Reference', surfaces: ['bottom', 'menu'] },

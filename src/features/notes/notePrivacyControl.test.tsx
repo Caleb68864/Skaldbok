@@ -3,7 +3,7 @@
 // in-memory fake IndexedDB.
 import 'fake-indexeddb/auto';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { db } from '../../storage/db/client';
 import { getNoteById } from '../../storage/repositories/noteRepository';
@@ -126,7 +126,11 @@ async function privacySwitch(): Promise<HTMLElement> {
  */
 async function clickPrivacySwitch(): Promise<void> {
   const control = await privacySwitch();
-  control.click();
+  const nextChecked = control.getAttribute('aria-checked') === 'true' ? 'false' : 'true';
+  fireEvent.click(control);
+  await waitFor(() => {
+    expect(control.getAttribute('aria-checked')).toBe(nextChecked);
+  });
   await waitFor(() => {
     expect(control.getAttribute('aria-busy')).toBe('false');
   });

@@ -14,6 +14,7 @@ import * as characterRepository from '../storage/repositories/characterRepositor
 import { type ThemeName, THEME_LIST, THEME_DISPLAY_NAMES } from '../theme/themes';
 import { usePwaInstall } from '../hooks/usePwaInstall';
 import { cn } from '../lib/utils';
+import { useBriefingPreferences } from '../features/travellerBriefing/useBriefingPreferences';
 
 // A "Bottom Navigation" card stood here, offering seven ON/OFF toggles over
 // `settings.bottomNavTabs` and telling the user "hidden tabs remain accessible
@@ -69,6 +70,8 @@ export default function SettingsScreen() {
   const { canInstall, install: installPwa } = usePwaInstall();
   const [clearStep, setClearStep] = useState<0 | 1 | 2>(0);
   const [confirmText, setConfirmText] = useState('');
+  const briefingPreferences = useBriefingPreferences();
+  const [sectorInput, setSectorInput] = useState('');
 
   const { error: saveError } = useAutosave(character, characterRepository.save, 1000);
 
@@ -118,6 +121,20 @@ export default function SettingsScreen() {
       </Card>
 
       {/* Theme */}
+      <Card>
+        <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">Traveller world sectors</h2>
+        <p className="text-[var(--color-text-muted)] text-sm">Weather Report caches these sectors for offline world search.</p>
+        <div className="flex flex-wrap gap-2 my-3">
+          {briefingPreferences.sectors.map(sector => <span key={sector} className="px-2 py-1 rounded border border-[var(--color-border)]">
+            {sector} <button aria-label={`Remove ${sector}`} onClick={() => void briefingPreferences.updateSettings({ travellerBriefingSectors: briefingPreferences.sectors.filter(s => s !== sector) })}>×</button>
+          </span>)}
+        </div>
+        <div className="flex gap-2">
+          <input aria-label="Add Traveller sector" value={sectorInput} onChange={e => setSectorInput(e.target.value)} className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]" />
+          <Button onClick={() => { const name = sectorInput.trim(); if (!name || briefingPreferences.sectors.some(s => s.toLowerCase() === name.toLowerCase())) return; void briefingPreferences.updateSettings({ travellerBriefingSectors: [...briefingPreferences.sectors, name] }); setSectorInput(''); }}>Add sector</Button>
+        </div>
+      </Card>
+
       <Card>
         <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-md)]">Theme</h2>
         <div className="flex gap-[var(--space-md)] flex-wrap">
