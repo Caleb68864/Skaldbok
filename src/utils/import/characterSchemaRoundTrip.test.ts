@@ -165,20 +165,20 @@ function richCharacter(): Record<string, unknown> {
     resources: { hp: { current: 8, max: 12 } },
     skills: { axes: { value: 12, trained: true, dragonMarked: true, demonMarked: true } },
     weapons: [{
-      id: 'w1', name: 'Broadaxe', grip: 'two-handed', range: "Arm's Reach", damage: '2D8',
+      id: 'w1', name: 'Broadaxe', restrictionClass: 'otherWeapon', grip: 'two-handed', range: "Arm's Reach", damage: '2D8',
       durability: 12, features: 'Edged', equipped: true, metal: true, damageType: 'slashing',
       strRequirement: 13, damaged: false, isShield: false, systemFields: { reach: 1 },
     }],
     armor: {
-      id: 'a1', name: 'Chainmail', rating: 4, features: 'Noisy', equipped: true,
+      id: 'a1', name: 'Chainmail', restrictionClass: 'otherArmour', rating: 4, features: 'Noisy', equipped: true,
       weight: 2, bodyPart: 'Torso', movementPenalty: 2, metal: true, systemFields: { fit: 'snug' },
     },
     helmet: {
-      id: 'h1', name: 'Great Helm', rating: 2, features: '', equipped: true,
+      id: 'h1', name: 'Great Helm', restrictionClass: 'visibleArmour', rating: 2, features: '', equipped: true,
       weight: 1, bodyPart: 'Head', movementPenalty: 0, metal: true, systemFields: {},
     },
     inventory: [{
-      id: 'i1', name: 'Backpack', weight: 1, quantity: 2, description: 'Roomy',
+      id: 'i1', name: 'Backpack', restrictionClass: 'technology', weight: 1, quantity: 2, description: 'Roomy',
       tiny: false, consumable: false, capacityBonus: 5,
     }],
     tinyItems: ['Flint'],

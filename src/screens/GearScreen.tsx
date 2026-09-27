@@ -9,6 +9,7 @@ import { CurrencyAdjuster } from '../components/fields/CurrencyAdjuster';
 import { WeaponEditor } from '../components/fields/WeaponEditor';
 import { InventoryList } from '../components/fields/InventoryList';
 import { InventoryItemEditor } from '../components/fields/InventoryItemEditor';
+import { GearRestrictionSelect } from '../components/fields/GearRestrictionSelect';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { DerivedFieldDisplay } from '../components/fields/DerivedFieldDisplay';
 import { Button } from '../components/primitives/Button';
@@ -143,6 +144,7 @@ export default function GearScreen() {
   // Armor drawer state
   const [armorDrawerOpen, setArmorDrawerOpen] = useState(false);
   const [armorName, setArmorName] = useState('');
+  const [armorRestrictionClass, setArmorRestrictionClass] = useState<string | undefined>();
   const [armorRating, setArmorRating] = useState(0);
   const [armorBodyPart, setArmorBodyPart] = useState('');
   const [armorWeight, setArmorWeight] = useState(0);
@@ -153,6 +155,7 @@ export default function GearScreen() {
   // Helmet drawer state
   const [helmetDrawerOpen, setHelmetDrawerOpen] = useState(false);
   const [helmetName, setHelmetName] = useState('');
+  const [helmetRestrictionClass, setHelmetRestrictionClass] = useState<string | undefined>();
   const [helmetRating, setHelmetRating] = useState(0);
   const [helmetWeight, setHelmetWeight] = useState(0);
   const [helmetEquipped, setHelmetEquipped] = useState(false);
@@ -163,6 +166,7 @@ export default function GearScreen() {
   useEffect(() => {
     if (armorDrawerOpen && character?.armor) {
       setArmorName(character.armor.name);
+      setArmorRestrictionClass(character.armor.restrictionClass);
       setArmorRating(character.armor.rating);
       setArmorBodyPart(character.armor.bodyPart ?? '');
       setArmorWeight(character.armor.weight ?? 0);
@@ -171,6 +175,7 @@ export default function GearScreen() {
       setArmorSystemFields(character.armor.systemFields ?? {});
     } else if (armorDrawerOpen && !character?.armor) {
       setArmorName('');
+      setArmorRestrictionClass(undefined);
       setArmorRating(0);
       setArmorBodyPart('');
       setArmorWeight(0);
@@ -184,12 +189,14 @@ export default function GearScreen() {
   useEffect(() => {
     if (helmetDrawerOpen && character?.helmet) {
       setHelmetName(character.helmet.name);
+      setHelmetRestrictionClass(character.helmet.restrictionClass);
       setHelmetRating(character.helmet.rating);
       setHelmetWeight(character.helmet.weight ?? 0);
       setHelmetEquipped(character.helmet.equipped);
       setHelmetSystemFields(character.helmet.systemFields ?? {});
     } else if (helmetDrawerOpen && !character?.helmet) {
       setHelmetName('');
+      setHelmetRestrictionClass(undefined);
       setHelmetRating(0);
       setHelmetWeight(0);
       setHelmetEquipped(false);
@@ -321,6 +328,7 @@ export default function GearScreen() {
     const armor: ArmorPiece = {
       id: existingId,
       name: armorName,
+      restrictionClass: armorRestrictionClass,
       rating: clamp(armorRating, 0, 99),
       features: character.armor?.features ?? '',
       equipped: armorEquipped,
@@ -339,6 +347,7 @@ export default function GearScreen() {
     const helmet: ArmorPiece = {
       id: existingId,
       name: helmetName,
+      restrictionClass: helmetRestrictionClass,
       rating: clamp(helmetRating, 0, 99),
       features: character.helmet?.features ?? '',
       equipped: helmetEquipped,
@@ -608,6 +617,7 @@ export default function GearScreen() {
         weapon={editingWeapon}
         onSave={handleWeaponSave}
         hiddenBuiltIns={hiddenWeaponBuiltIns}
+        gearRestrictions={engine.gearRestrictions}
         // System-declared fields render inside the same drawer as the built-in
         // ones, so there is a single save for the whole weapon.
         extraFields={
@@ -625,6 +635,7 @@ export default function GearScreen() {
         item={editingItem}
         onSave={handleInventorySave}
         tinyItemLabel={engine.labels.tinyItems}
+        gearRestrictions={engine.gearRestrictions}
       />
 
       {/* Armor Edit Drawer */}
@@ -634,6 +645,7 @@ export default function GearScreen() {
             <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Name</label>
             <input className={inputClasses} value={armorName} onChange={e => setArmorName(e.target.value)} placeholder="Armor name" />
           </div>
+          <GearRestrictionSelect name={armorName} kind="armour" value={armorRestrictionClass} onChange={setArmorRestrictionClass} restrictions={engine.gearRestrictions} />
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Rating / Protection</label>
@@ -682,6 +694,7 @@ export default function GearScreen() {
             <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Name</label>
             <input className={inputClasses} value={helmetName} onChange={e => setHelmetName(e.target.value)} placeholder="Helmet name" />
           </div>
+          <GearRestrictionSelect name={helmetName} kind="armour" value={helmetRestrictionClass} onChange={setHelmetRestrictionClass} restrictions={engine.gearRestrictions} />
           <div className="flex gap-3">
             <div className="flex-1">
               <label className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Rating / Protection</label>

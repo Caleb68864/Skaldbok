@@ -4,6 +4,8 @@ import { useId } from 'react';
 import { Drawer } from '../primitives/Drawer';
 import { Button } from '../primitives/Button';
 import { generateId } from '../../utils/ids';
+import { GearRestrictionSelect } from './GearRestrictionSelect';
+import type { SystemEngine } from '../../features/systems/engine/types';
 
 /** Props for {@link InventoryItemEditor}. A `null` `item` means "create new"; a non-null one pre-fills the form for editing. */
 export interface InventoryItemEditorProps {
@@ -23,6 +25,7 @@ export interface InventoryItemEditorProps {
    * that made an item weightless.
    */
   tinyItemLabel?: string | null;
+  gearRestrictions?: SystemEngine['gearRestrictions'];
 }
 
 const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)] text-[length:var(--font-size-md)] font-[family-name:inherit]";
@@ -35,8 +38,9 @@ const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-bord
  * {@link generateId} on save. The same component covers both create and edit so the
  * two paths can't drift apart.
  */
-export function InventoryItemEditor({ open, onClose, item, onSave, tinyItemLabel }: InventoryItemEditorProps) {
+export function InventoryItemEditor({ open, onClose, item, onSave, tinyItemLabel, gearRestrictions }: InventoryItemEditorProps) {
   const [name, setName] = useState('');
+  const [restrictionClass, setRestrictionClass] = useState<string | undefined>();
   const [weight, setWeight] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [description, setDescription] = useState('');
@@ -47,6 +51,7 @@ export function InventoryItemEditor({ open, onClose, item, onSave, tinyItemLabel
   useEffect(() => {
     if (open) {
       setName(item?.name ?? '');
+      setRestrictionClass(item?.restrictionClass);
       setWeight(item?.weight ?? 0);
       setQuantity(item?.quantity ?? 1);
       setDescription(item?.description ?? '');
@@ -60,6 +65,7 @@ export function InventoryItemEditor({ open, onClose, item, onSave, tinyItemLabel
     onSave({
       id: item?.id ?? generateId(),
       name,
+      restrictionClass,
       weight: tiny ? 0 : weight,
       quantity,
       description,
@@ -78,6 +84,7 @@ export function InventoryItemEditor({ open, onClose, item, onSave, tinyItemLabel
           <label htmlFor={`${ids}-name`} className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Name</label>
           <input id={`${ids}-name`} className={inputClasses} value={name} onChange={e => setName(e.target.value)} />
         </div>
+        <GearRestrictionSelect name={name} kind="item" value={restrictionClass} onChange={setRestrictionClass} restrictions={gearRestrictions} />
         <div className="flex gap-3">
           <div className="flex-1">
             <label htmlFor={`${ids}-weight`} className="block text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] mb-[var(--space-xs)]">Weight</label>

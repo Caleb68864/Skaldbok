@@ -3,6 +3,8 @@ import type { SystemDefinition } from '../../../types/system';
 import type { DerivedValues } from '../../../utils/derivedValues';
 import type { RouteStop } from '../../../types/routeStop';
 import type { WorldHit } from '../../travellerBriefing/worldData';
+import type { InventoryContainer } from '../../../types/inventoryContainer';
+import type { GearCategory, GearFinding } from '../../travellerBriefing/gearRestrictions';
 
 // `PanelKey` and its backing list live in types/system so the schema can
 // validate a JSON-declared `panels` array against exactly the keys the app
@@ -192,6 +194,8 @@ export interface SkillEngineConfig {
    * engines that need no character state (classic-fantasy) can ignore it.
    */
   display: (value: number, context?: SkillDisplayContext) => string;
+  /** Signed modifier added to the dice for a skill roll, when the ruleset has one. */
+  rollModifier?: (value: number, context?: SkillDisplayContext) => number;
   /**
    * A skill row split into the parts a screen lays out, so the screen never has
    * to know which resolution mechanic is in play.
@@ -658,6 +662,12 @@ export interface DerivedFieldDef {
 }
 
 export interface SystemEngine {
+  /** Ruleset-owned categories and world-law review for party equipment. */
+  gearRestrictions?: {
+    categories: GearCategory[];
+    infer: (name: string, kind: 'weapon' | 'armour' | 'item') => string | null;
+    review: (characters: CharacterRecord[], containers: InventoryContainer[], law: number, government: number) => GearFinding[];
+  };
   /** Landing briefing tool offered by rulesets that support TravellerMap worlds. */
   landingBriefing?: { label: string };
   /** Optional map integration for turning worlds into route stops and suggesting a path. */

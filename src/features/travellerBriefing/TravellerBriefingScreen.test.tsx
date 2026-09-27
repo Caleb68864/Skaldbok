@@ -10,6 +10,11 @@ const mocks = vi.hoisted(() => ({
   updateSettings: vi.fn(),
   loadWikiArticle: vi.fn(),
   createRouteStop: vi.fn(),
+  getCharacter: vi.fn(),
+  listContainers: vi.fn(),
+  gearRules: { review: vi.fn() },
+  party: null as { members: Array<{ linkedCharacterId: string }> } | null,
+  gearEnabled: false,
   sectors: [] as string[],
   filters: { starports: [] as string[], gasGiantOnly: false, zone: 'all' as 'all' | 'noRed' | 'greenOnly' },
   world: {
@@ -21,13 +26,14 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../campaign/CampaignContext', () => ({
-  useCampaignContext: () => ({ activeCampaign: { id: 'campaign-1', system: 'traveller' }, activeSession: mocks.session }),
+  useCampaignContext: () => ({ activeCampaign: { id: 'campaign-1', system: 'traveller' }, activeSession: mocks.session, activeParty: mocks.party }),
 }));
 vi.mock('../session/useSessionLog', () => ({ useSessionLog: () => ({ logToSession: mocks.logToSession }) }));
 vi.mock('../systems/useSystemDefinition', () => ({ useSystemDefinition: () => ({ system: {} }) }));
 vi.mock('../systems/engine', () => ({ getEngine: () => ({
   landingBriefing: { label: 'Worlds' },
   routeMap: { worldToStop: (world: typeof mocks.world) => ({ name: world.name, values: { sector: world.sector, hex: world.hex, uwp: world.uwp } }) },
+  gearRestrictions: mocks.gearEnabled ? mocks.gearRules : undefined,
 }) }));
 vi.mock('./useBriefingPreferences', () => ({
   useBriefingPreferences: () => ({ sectors: mocks.sectors, jumpRange: 2, filters: mocks.filters, starportCodes: ['A', 'B', 'C', 'D', 'E', 'X'], recent: [mocks.world], overrides: {}, updateSettings: mocks.updateSettings }),
@@ -40,6 +46,8 @@ vi.mock('./worldData', async importOriginal => ({
 }));
 vi.mock('./wikiData', () => ({ loadWikiArticle: mocks.loadWikiArticle }));
 vi.mock('../../storage/repositories/routeRepository', () => ({ create: mocks.createRouteStop }));
+vi.mock('../../storage/repositories/characterRepository', () => ({ getById: mocks.getCharacter }));
+vi.mock('../../storage/repositories/inventoryContainerRepository', () => ({ list: mocks.listContainers }));
 
 function renderWorlds() { return render(<MemoryRouter><TravellerBriefingScreen /></MemoryRouter>); }
 
@@ -64,6 +72,11 @@ describe('Traveller briefing session log action', () => {
     mocks.updateSettings.mockReset().mockResolvedValue(undefined);
     mocks.loadWikiArticle.mockReset().mockResolvedValue(null);
     mocks.createRouteStop.mockReset().mockResolvedValue({ id: 'route-stop-1' });
+    mocks.getCharacter.mockReset().mockResolvedValue({ name: 'Milo', weapons: [], inventory: [] });
+    mocks.listContainers.mockReset().mockResolvedValue([]);
+    mocks.gearRules.review.mockReset().mockReturnValue([]);
+    mocks.party = null;
+    mocks.gearEnabled = false;
   });
 
   it('browses a world and nearby destinations before requesting Wiki data', async () => {
@@ -134,5 +147,20 @@ describe('Traveller briefing session log action', () => {
       campaignId: 'campaign-1', name: 'Zila', values: { sector: 'Spinward Marches', hex: '2908', uwp: 'E556727-7' },
     });
     expect(mocks.loadWikiArticle).not.toHaveBeenCalled();
+  });
+
+  it('includes the linked party gear review in the visible and saved report', async () => {
+    mocks.gearEnabled = true;
+    mocks.party = { members: [{ linkedCharacterId: 'milo-1' }] };
+    mocks.gearRules.review.mockReturnValue([{ owner: 'Milo', item: 'Laser pistol', category: 'Laser or energy weapon', action: 'leave aboard', reason: 'Law 7 restricts laser or energy weapon' }]);
+    renderWorlds();
+    await selectZila();
+    await buildReport();
+    expect(mocks.getCharacter).toHaveBeenCalledWith('milo-1');
+    expect(await screen.findByText(/Milo: Laser pistol/)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Save to session log' }));
+    await waitFor(() => expect(mocks.logToSession).toHaveBeenCalledTimes(1));
+    expect(mocks.logToSession.mock.calls[0][3].body).toContain('## Party gear before going ashore');
+    expect(mocks.logToSession.mock.calls[0][3].body).toContain('**Leave aboard:** Milo — Laser pistol');
   });
 });

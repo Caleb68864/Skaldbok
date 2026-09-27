@@ -40,6 +40,23 @@ function printedSkillValue(
   return engine.skill.computeValue(definition, character, trained);
 }
 
+/** Keeps the authored level visible while naming the actual dice modifier. */
+function printedSkillRollValue(
+  character: CharacterRecord,
+  skill: SkillDefinition,
+  engine: SystemEngine,
+): string | number {
+  const value = printedSkillValue(character, skill.id, engine, skill);
+  if (typeof value !== 'number' || !engine.skill.rollModifier) return value;
+  const roll = engine.skill.rollModifier(value, {
+    character,
+    skillId: skill.id,
+    linkedAttributeId: skill.linkedAttributeId,
+    trained: character.skills?.[skill.id]?.trained ?? false,
+  });
+  return `${value} (roll ${roll >= 0 ? '+' : ''}${roll})`;
+}
+
 
 // ──────────────────────────────────────────────
 // Exported types (consumed by SS-02 screen)
@@ -523,7 +540,7 @@ function SkillsSection({
               <SkillRow
                 key={skill.id}
                 name={skill.name}
-                value={printedSkillValue(character, skill.id, engine, skill)}
+                value={printedSkillRollValue(character, skill, engine)}
                 trained={charSkill?.trained ?? false}
               />
             );
@@ -538,7 +555,7 @@ function SkillsSection({
           <SkillRow
             key={skill.id}
             name={skill.name}
-            value={printedSkillValue(character, skill.id, engine, skill)}
+            value={printedSkillRollValue(character, skill, engine)}
             trained={charSkill?.trained ?? false}
           />
         );
@@ -551,7 +568,7 @@ function SkillsSection({
           <SkillRow
             key={skill.id}
             name={skill.name}
-            value={printedSkillValue(character, skill.id, engine, skill)}
+            value={printedSkillRollValue(character, skill, engine)}
             trained={charSkill?.trained ?? false}
           />
         );

@@ -786,6 +786,7 @@ export function PartyInventoryTab() {
         item={itemEditorState?.item ?? null}
         onSave={handleItemEditorSave}
         tinyItemLabel={engine.labels.tinyItems}
+        gearRestrictions={engine.gearRestrictions}
       />
     </div>
   );

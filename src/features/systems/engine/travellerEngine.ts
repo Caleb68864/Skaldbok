@@ -9,6 +9,7 @@ import { attrKey, resKey, skillKey } from '../../../utils/statKeys';
 import type { SystemEngine, SkillDisplayContext } from './types';
 import { DEFAULT_TRAVELLER_JUMP_RANGE, DEFAULT_TRAVELLER_MILIEU } from '../../../config/defaults/travellerBriefing';
 import { planTravellerMapRoute } from '../../route/travellerMapRoute';
+import { TRAVELLER_GEAR_CATEGORIES, inferTravellerGearCategory, reviewTravellerGear } from '../../travellerBriefing/gearRestrictions';
 
 export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'];
 
@@ -235,6 +236,7 @@ export function formatSkillDisplay(
   unskilled = false,
   unskilledDM = UNSKILLED_DM,
   target = TRAVELLER_DEFAULT_TARGET,
+  characteristicLabel?: string,
 ): string {
   // Attempting a skill the character doesn't have is at DM −3 (Traveller's
   // unskilled penalty), reduced by Jack of All Trades — see
@@ -248,7 +250,9 @@ export function formatSkillDisplay(
       : boonBane === 'bane'
         ? threeD6KeepTwoProbability(target, effectiveModifier, 'worst')
         : twoD6SuccessProbability(target, effectiveModifier);
-  const dmLabel = characteristicDM !== 0 ? ` · DM ${formatDM(characteristicDM)}` : '';
+  const dmLabel = characteristicDM !== 0
+    ? ` · ${characteristicLabel ?? 'characteristic'} DM ${formatDM(characteristicDM)}`
+    : '';
   // Names the penalty actually applied rather than the book's -3, so a Jack of
   // All Trades character can see their training doing something.
   const unskilledLabel = unskilled
@@ -258,7 +262,7 @@ export function formatSkillDisplay(
     : '';
   const levelLabel = unskilled ? 'Unskilled' : `Level ${value}`;
   const stateLabel = boonBane === 'boon' ? ' (boon)' : boonBane === 'bane' ? ' (bane)' : '';
-  return `${levelLabel}${dmLabel}${unskilledLabel} · ${Math.round(prob * 100)}% vs ${target}+${stateLabel}`;
+  return `${levelLabel}${dmLabel}${unskilledLabel} · roll ${formatDM(effectiveModifier)} · ${Math.round(prob * 100)}% vs ${target}+${stateLabel}`;
 }
 
 /**
@@ -299,6 +303,7 @@ function travellerRollContext(
  * is how those panels get hidden.
  */
 export const travellerEngine: SystemEngine = {
+  gearRestrictions: { categories: TRAVELLER_GEAR_CATEGORIES, infer: inferTravellerGearCategory, review: reviewTravellerGear },
   landingBriefing: { label: 'Worlds' },
   routeMap: {
     sourceLabel: 'TravellerMap',
@@ -336,11 +341,17 @@ export const travellerEngine: SystemEngine = {
     valueLabel: 'Level',
     range: { min: 0, max: 6 },
     defaultValue: 0,
+    rollModifier: (value, context) => {
+      const { dm, unskilled, unskilledDM } = travellerRollContext(value, context);
+      return value + dm + (unskilled ? unskilledDM : 0);
+    },
     display: (value, context) => {
       const { dm, unskilled, unskilledDM } = travellerRollContext(value, context);
       return formatSkillDisplay(
         value, dm, context?.boonBane ?? 'none', unskilled, unskilledDM,
         context?.target ?? TRAVELLER_DEFAULT_TARGET,
+        context?.system?.attributes.find(attribute => attribute.id === context.linkedAttributeId)?.abbreviation
+          ?? context?.linkedAttributeId?.toUpperCase(),
       );
     },
     // A bare level is not a target number — "1" means nothing without the DM and

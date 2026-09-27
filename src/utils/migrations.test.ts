@@ -5,6 +5,7 @@ import {
   migrateCharacterV2ToV3,
   migrateCharacterV3ToV4,
   migrateCharacterV4ToV5,
+  migrateCharacterV5ToV6,
   upgradeCharacter,
   CURRENT_SCHEMA_VERSION,
 } from './migrations';
@@ -385,6 +386,24 @@ describe('migrateCharacterV4ToV5', () => {
   it('stamps schemaVersion 5 even when it changes nothing', () => {
     const out = migrateCharacterV4ToV5(v4Traveller({})) as Record<string, unknown>;
     expect(out.schemaVersion).toBe(5);
+  });
+});
+
+describe('migrateCharacterV5ToV6', () => {
+  it('preserves authored gear classes, unrelated fields and its result on a second pass', () => {
+    const old = { ...v1Traveller(), schemaVersion: 5, name: 'Kestrel',
+      weapons: [{ id: 'w1', name: 'Odd sidearm', restrictionClass: 'energyWeapon' }],
+      armor: { id: 'a1', name: 'Coat', restrictionClass: 'clothArmour' },
+      inventory: [{ id: 'i1', name: 'Unusual pill', restrictionClass: 'drugs' }],
+      customData: { preserved: true },
+    };
+    const once = migrateCharacterV5ToV6(old) as Record<string, unknown>;
+    expect(once.schemaVersion).toBe(6);
+    expect(once.weapons).toEqual(old.weapons);
+    expect(once.armor).toEqual(old.armor);
+    expect(once.inventory).toEqual(old.inventory);
+    expect(once.customData).toEqual({ preserved: true });
+    expect(migrateCharacterV5ToV6(once)).toBe(once);
   });
 });
 

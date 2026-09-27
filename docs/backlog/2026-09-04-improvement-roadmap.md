@@ -2587,3 +2587,29 @@ demonstrated directly.
   `privateResidueIn`: a title is user prose that can legitimately recur, an id is
   a UUID that cannot.
 - Everything else on `R`'s recorded list is untouched and still open.
+
+## Workstream T — Skill training
+
+### T1. Track training progress and completion — OPEN (V)
+
+- **Where:** Traveller's `system.json` declares a manual `training` row with
+  Skill, Completed Weeks, and Study Periods; `SheetScreen.tsx` stores those rows
+  in `character.systemData`. `travellerEngine.ts` has `advancement: null`, so
+  no training workflow consumes or updates them.
+- **What:** Let a player start a training plan for a specific skill and target
+  level, record dated study sessions and elapsed weeks, and see progress toward
+  the system's required study periods. Preserve a completed/cancelled history.
+  Show the plan on the character sheet and in play so progress is easy to log
+  during a session.
+- **Rules and data:** Put training duration, eligibility, and completion rules
+  in the `SystemEngine` (or system configuration read by it); keep screens
+  system-neutral. Use stable skill ids, including custom skills and Traveller
+  specialities, rather than skill names as keys. Completion should update the
+  stored skill only once, through the character save path; editing or deleting a
+  log entry should recalculate progress without silently changing the skill.
+  Migrate existing manual training rows where possible and retain ambiguous
+  rows for review rather than discarding them.
+- **Acceptance:** A Traveller character can start, pause, resume, complete, and
+  review a training plan; a partial plan never raises the skill; completion
+  raises the intended speciality once; export/import preserves the plan and
+  its history; systems without training rules do not show the workflow.

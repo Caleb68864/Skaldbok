@@ -50,6 +50,7 @@ const characterSkillSchema = z.object({
 const weaponSchema = z.object({
   id: z.string().min(1).describe('Unique weapon id'),
   name: z.string().min(1).describe('Weapon name'),
+  restrictionClass: z.string().optional().describe('Ruleset-specific legal category'),
   grip: z.enum(['one-handed', 'two-handed']).describe('Grip type'),
   range: z.string().describe('Weapon range'),
   damage: z.string().describe('Damage expression'),
@@ -71,6 +72,7 @@ const weaponSchema = z.object({
 const armorPieceSchema = z.object({
   id: z.string().min(1).describe('Unique armor id'),
   name: z.string().min(1).describe('Armor name'),
+  restrictionClass: z.string().optional().describe('Ruleset-specific legal category'),
   rating: z.number().describe('Armor rating'),
   features: z.string().describe('Special features'),
   equipped: z.boolean().describe('Whether armor is equipped'),
@@ -84,6 +86,7 @@ const armorPieceSchema = z.object({
 const inventoryItemSchema = z.object({
   id: z.string().min(1).describe('Unique item id'),
   name: z.string().min(1).describe('Item name'),
+  restrictionClass: z.string().optional().describe('Ruleset-specific legal category'),
   weight: z.number().describe('Item weight'),
   quantity: z.number().int().nonnegative().describe('Item quantity'),
   description: z.string().describe('Item description'),

@@ -4,6 +4,8 @@ import type { Weapon } from '../../types/character';
 import { Drawer } from '../primitives/Drawer';
 import { Button } from '../primitives/Button';
 import { generateId } from '../../utils/ids';
+import { GearRestrictionSelect } from './GearRestrictionSelect';
+import type { SystemEngine } from '../../features/systems/engine/types';
 
 /** Props for {@link WeaponEditor}. A `null` `weapon` means "create new". */
 export interface WeaponEditorProps {
@@ -23,6 +25,7 @@ export interface WeaponEditorProps {
    * system that declares nothing is unaffected.
    */
   hiddenBuiltIns?: string[];
+  gearRestrictions?: SystemEngine['gearRestrictions'];
 }
 
 const empty: Omit<Weapon, 'id'> = {
@@ -50,7 +53,7 @@ const inputClasses = "w-full p-[var(--space-sm)] border border-[var(--color-bord
  * saved together. Built-ins listed in `hiddenBuiltIns` are omitted, letting a ruleset
  * suppress concepts it doesn't use without a code change.
  */
-export function WeaponEditor({ open, onClose, weapon, onSave, extraFields, hiddenBuiltIns }: WeaponEditorProps) {
+export function WeaponEditor({ open, onClose, weapon, onSave, extraFields, hiddenBuiltIns, gearRestrictions }: WeaponEditorProps) {
   /** A built-in field renders unless the system declared it unused. */
   const shows = (fieldId: string) => !(hiddenBuiltIns ?? []).includes(fieldId);
   const [form, setForm] = useState<Omit<Weapon, 'id'>>(weapon ? { ...empty, ...weapon } : { ...empty });
@@ -59,6 +62,7 @@ export function WeaponEditor({ open, onClose, weapon, onSave, extraFields, hidde
     if (open && weapon) {
       setForm({
         name: weapon.name,
+        restrictionClass: weapon.restrictionClass,
         grip: weapon.grip,
         range: weapon.range,
         damage: weapon.damage,
@@ -179,6 +183,7 @@ export function WeaponEditor({ open, onClose, weapon, onSave, extraFields, hidde
           </div>
         )}
         {extraFields}
+        <GearRestrictionSelect name={form.name} kind="weapon" value={form.restrictionClass} onChange={value => setForm(f => ({ ...f, restrictionClass: value }))} restrictions={gearRestrictions} />
         <div className="flex gap-3 justify-end mt-[var(--space-md)]">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={handleSave}>Save</Button>

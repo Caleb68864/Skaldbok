@@ -1,6 +1,7 @@
 import * as T from './rules';
 import { hexDistance, type WorldHit } from './worldData';
 import type { WikiArticle } from './wikiData';
+import type { GearFinding } from './gearRestrictions';
 
 export interface BriefingOptions {
   milieu: string;
@@ -11,6 +12,8 @@ export interface BriefingOptions {
   note?: string;
   homeDistance?: number | null;
   overrides?: Partial<Pick<WorldHit, 'uwp' | 'zone' | 'bases' | 'remarks' | 'pbg' | 'stellar' | 'allegianceName'>> & { note?: string };
+  gearReview?: GearFinding[];
+  gearReviewSources?: number;
 }
 export interface BriefingPoints {
   law: string;
@@ -174,6 +177,18 @@ export function buildBriefing(canon: WorldHit, wiki: WikiArticle | null, options
   let lawText = `**Law ${d.law}:** ${weapons}${armour ? `; armour: ${armour}` : ''}. Chance of a **Check** on first approach or each day on the streets: **${chance(d.law)}** (2D ≤ ${d.law}); acting suspiciously **${chance(d.law + 1)}**; breaking and entering → Investigate **${chance(d.law + 2)}**.`;
   if (d.law >= 2) lawText += ` A laser weapon found here is **DM+${d.law - 2}** on sentencing (LL − 2).`;
   lines.push(lawText, '');
+  if (options.gearReview) {
+    const plain = (value: string) => value.replace(/\s+/g, ' ').replace(/[\\*_`[\]]/g, '\\$&').trim();
+    lines.push('## Party gear before going ashore', '', '*Based on recorded gear and the survey law. The GM decides local exceptions and permits.*', '');
+    if (options.gearReview.length) {
+      for (const finding of options.gearReview) {
+        lines.push(`- **${finding.action === 'leave aboard' ? 'Leave aboard' : 'Ask GM'}:** ${plain(finding.owner)} — ${plain(finding.item)} (${plain(finding.category)}). ${plain(finding.reason)}.`);
+      }
+    } else lines.push(options.gearReviewSources === 0
+      ? 'No linked party gear is available to check.'
+      : 'No recorded gear is flagged by the general law table. Check local rules with the GM.');
+    lines.push('');
+  }
   if (contraband.length) lines.push(`**Gov ${d.gov} — ${govType}.** ${govDesc}. Typical contraband: **${contraband.join(', ')}**.${contraband.includes('Travellers') ? ' **Travellers themselves are restricted** — expect to be confined to the port or watched.' : ''}\n`);
   else lines.push(`**Gov ${d.gov} — ${govType}.** ${govDesc}. No typical contraband listed.\n`);
   lines.push('**Inside the port fence:** Imperial law — roughly **LL1**, and **all psionics forbidden**. Locally illegal kit is fine as long as it never leaves the starport.\n');

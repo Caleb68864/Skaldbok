@@ -8,11 +8,15 @@ import { useSessionLog } from '../features/session/useSessionLog';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { getEngine } from '../features/systems/engine';
 import { useBriefingPreferences } from '../features/travellerBriefing/useBriefingPreferences';
-import { buildBriefing } from '../features/travellerBriefing/briefing';
+import { buildBriefing, decodeWorld } from '../features/travellerBriefing/briefing';
 import { loadSectorBasic, enrichSector, loadWorld, loadNearbyWorlds, nearbyFromCatalog, rankWorlds, remoteSearch, jumpDistance, orderWorldCandidates, worldKey, type NearbyWorld, type WorldHit } from '../features/travellerBriefing/worldData';
 import { loadWikiArticle, type WikiArticle } from '../features/travellerBriefing/wikiData';
 import { DEFAULT_SYSTEM_ID } from '../systems/registry';
 import * as routeRepository from '../storage/repositories/routeRepository';
+import * as characterRepository from '../storage/repositories/characterRepository';
+import * as inventoryContainerRepository from '../storage/repositories/inventoryContainerRepository';
+import type { CharacterRecord } from '../types/character';
+import type { InventoryContainer } from '../types/inventoryContainer';
 import { DEFAULT_TRAVELLER_MILIEU } from '../config/defaults/travellerBriefing';
 
 const inputClass = 'w-full min-h-11 p-2 rounded border border-[var(--color-border)] bg-[var(--color-surface-alt)] text-[var(--color-text)]';
@@ -33,7 +37,8 @@ function Highlight({ value, query }: { value: string; query: string }) {
 }
 
 export default function TravellerBriefingScreen() {
-  const { activeCampaign, activeSession } = useCampaignContext();
+  const { activeCampaign, activeSession, activeParty } = useCampaignContext();
+  const campaignId = activeCampaign?.id;
   const { logToSession } = useSessionLog();
   const { system, error: systemError } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const engine = system ? getEngine(system) : undefined;
@@ -68,6 +73,8 @@ export default function TravellerBriefingScreen() {
   const [addingRoute, setAddingRoute] = useState(false);
   const [routeAddError, setRouteAddError] = useState('');
   const [routeAddedFor, setRouteAddedFor] = useState('');
+  const [partyGear, setPartyGear] = useState<{ characters: CharacterRecord[]; containers: InventoryContainer[] }>({ characters: [], containers: [] });
+  const [gearLoading, setGearLoading] = useState(false);
   const saveInFlight = useRef(false);
   const routeAddInFlight = useRef(false);
   const selectionToken = useRef(0);
@@ -76,6 +83,22 @@ export default function TravellerBriefingScreen() {
     setDate(activeSession?.date ?? '');
     setSession(activeSession?.title ?? '');
   }, [activeSession?.id, activeSession?.date, activeSession?.title]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!campaignId || !engine?.gearRestrictions) { setPartyGear({ characters: [], containers: [] }); return; }
+    setGearLoading(true);
+    const memberIds = activeParty?.members.filter(member => !member.deletedAt && member.linkedCharacterId).map(member => member.linkedCharacterId!) ?? [];
+    Promise.all([
+      Promise.all(memberIds.map(id => characterRepository.getById(id))),
+      inventoryContainerRepository.list(campaignId),
+    ]).then(([characters, containers]) => {
+      if (!cancelled) setPartyGear({ characters: characters.filter((value): value is CharacterRecord => Boolean(value)), containers });
+    }).catch(() => {
+      if (!cancelled) setPartyGear({ characters: [], containers: [] });
+    }).finally(() => { if (!cancelled) setGearLoading(false); });
+    return () => { cancelled = true; };
+  }, [campaignId, activeParty, engine?.gearRestrictions]);
 
   const sectors = preferences.sectors;
   useEffect(() => {
@@ -141,12 +164,19 @@ export default function TravellerBriefingScreen() {
   const selectedKey = selected ? `${milieu}/${worldKey(selected)}` : null;
   const reportVisible = selectedKey !== null && reportFor === selectedKey;
   const overrides = selected ? preferences.overrides[worldKey(selected)] : undefined;
+  const gearFindings = useMemo(() => {
+    if (!selected || !engine?.gearRestrictions || gearLoading) return null;
+    try {
+      const world = decodeWorld({ ...selected, ...overrides });
+      return engine.gearRestrictions.review(partyGear.characters, partyGear.containers, world.law, world.gov);
+    } catch { return null; }
+  }, [selected, overrides, engine?.gearRestrictions, gearLoading, partyGear]);
   const briefing = useMemo(() => {
     if (!selected || !reportVisible) return null;
-    try { return buildBriefing(selected, wiki, { milieu, date, session, homeDistance: jumpDistance(selected), alternatives, overrides }); }
+    try { return buildBriefing(selected, wiki, { milieu, date, session, homeDistance: jumpDistance(selected), alternatives, overrides, gearReview: gearFindings ?? undefined, gearReviewSources: partyGear.characters.length + partyGear.containers.length }); }
     catch { return null; }
   },
-    [selected, reportVisible, wiki, milieu, date, session, alternatives, overrides]);
+    [selected, reportVisible, wiki, milieu, date, session, alternatives, overrides, gearFindings, partyGear]);
   const reportSaved = Boolean(activeSession && briefing && savedReport?.sessionId === activeSession.id && savedReport.markdown === briefing.markdown);
 
   async function choose(hit: WorldHit, other: WorldHit[] = []) {
@@ -355,15 +385,25 @@ export default function TravellerBriefingScreen() {
           <li>{briefing.points.starport}</li><li>{briefing.points.atmosphere}</li><li>{briefing.points.gravity}</li><li>{briefing.points.government}</li>
         </ul>
         <div className="flex gap-2 mt-4 flex-wrap">
-          <Button disabled={wikiBusy} onClick={() => void navigator.clipboard.writeText(briefing.markdown).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })}>{copied ? 'Copied' : 'Copy Markdown'}</Button>
-          <Button variant="secondary" disabled={wikiBusy} onClick={download}>Download .md</Button>
-          <Button disabled={!activeSession || wikiBusy || savingReport || reportSaved} onClick={() => void saveToSessionLog()}>
+          <Button disabled={wikiBusy || gearLoading} onClick={() => void navigator.clipboard.writeText(briefing.markdown).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })}>{copied ? 'Copied' : 'Copy Markdown'}</Button>
+          <Button variant="secondary" disabled={wikiBusy || gearLoading} onClick={download}>Download .md</Button>
+          <Button disabled={!activeSession || wikiBusy || gearLoading || savingReport || reportSaved} onClick={() => void saveToSessionLog()}>
             {savingReport ? 'Saving…' : reportSaved ? 'Saved to session log' : 'Save to session log'}
           </Button>
         </div>
         {!activeSession && <p className="mt-2 text-sm text-[var(--color-text-muted)]">Start a session to save this report in its log.</p>}
         {saveError && <p role="alert" className="mt-2 text-sm text-red-500">{saveError}</p>}
       </SectionPanel>
+      {engine?.gearRestrictions && <SectionPanel title="Party gear before going ashore" subtitle="Based on recorded gear and the world's survey law; the GM decides local exceptions and permits.">
+        {gearLoading ? <p>Checking party gear…</p> : gearFindings?.length ? <ul className="space-y-2">
+          {gearFindings.map((finding, index) => <li key={`${finding.owner}/${finding.item}/${index}`} className="border-b border-[var(--color-border)] pb-2">
+            <strong>{finding.action === 'leave aboard' ? 'Leave aboard' : 'Ask GM'}</strong> · {finding.owner}: {finding.item} ({finding.category})<br />
+            <span className="text-sm text-[var(--color-text-muted)]">{finding.reason}</span>
+          </li>)}
+        </ul> : <p>{partyGear.characters.length + partyGear.containers.length === 0
+          ? 'No linked party gear is available to check.'
+          : 'No recorded gear is flagged by the general law table. Check local rules with the GM.'}</p>}
+      </SectionPanel>}
       <SectionPanel title="The weather report">
         <p>{briefing.points.zone}</p>
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3">

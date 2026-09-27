@@ -10,7 +10,7 @@ import { isNamespaced, attrKey, armorKey, derivedKey } from './statKeys';
  * and add tests in `migrations.test.ts`. A record's own `schemaVersion` is
  * compared against this to decide which migrations still need to run.
  */
-export const CURRENT_SCHEMA_VERSION = 5;
+export const CURRENT_SCHEMA_VERSION = 6;
 
 type MigrationFn = (data: unknown) => unknown;
 
@@ -263,11 +263,22 @@ export function migrateCharacterV4ToV5(data: unknown): unknown {
   return { ...rec, skills: bag, schemaVersion: 5 };
 }
 
+/**
+ * v5 → v6: optional gear restriction classes are now part of weapons, armour,
+ * helmets and inventory items. Existing gear keeps its exact shape: the ruleset
+ * can infer a class from a clear name, while an authored class remains explicit.
+ */
+export function migrateCharacterV5ToV6(data: unknown): unknown {
+  const rec = data as Record<string, unknown>;
+  return rec.schemaVersion === 6 ? data : { ...rec, schemaVersion: 6 };
+}
+
 const characterMigrations: Record<number, MigrationFn> = {
   1: migrateCharacterV1ToV2,
   2: migrateCharacterV2ToV3,
   3: migrateCharacterV3ToV4,
   4: migrateCharacterV4ToV5,
+  5: migrateCharacterV5ToV6,
 };
 
 /**

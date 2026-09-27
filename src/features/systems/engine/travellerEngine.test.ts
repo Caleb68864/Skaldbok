@@ -141,6 +141,19 @@ describe('attributeBadge', () => {
 });
 
 describe('damage feeds through to DMs', () => {
+  it('shows the complete Recon roll modifier from skill level and INT DM', () => {
+    const c = character({
+      attributes: { str: 7, dex: 7, end: 7, int: 9, edu: 7, soc: 7 },
+      skills: { recon: { value: 2, trained: true } },
+    });
+    const context = { character: c, skillId: 'recon', linkedAttributeId: 'int', trained: true };
+    const detail = travellerEngine.skill.describe(2, context).detail;
+    expect(detail).toContain('Level 2');
+    expect(detail).toContain('INT DM +1');
+    expect(detail).toContain('roll +3');
+    expect(travellerEngine.skill.rollModifier?.(2, context)).toBe(3);
+  });
+
   it('drops the attribute badge as damage accumulates', () => {
     const healthy = character();
     expect(travellerEngine.attributeBadge('end', healthy)).toBe('+0');

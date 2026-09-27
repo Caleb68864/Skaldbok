@@ -12,6 +12,7 @@ const bundleInventoryItemSchema = z
   .object({
     id: z.string().min(1),
     name: z.string(),
+    restrictionClass: z.string().optional(),
     weight: z.number(),
     quantity: z.number(),
     description: z.string(),

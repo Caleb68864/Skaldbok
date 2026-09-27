@@ -37,6 +37,8 @@ export interface Weapon {
   id: ID;
   /** Display name of the weapon. */
   name: string;
+  /** Optional ruleset-specific restriction category; a name match is used when absent. */
+  restrictionClass?: string;
   /** Whether the weapon requires one or two hands to wield. */
   grip: 'one-handed' | 'two-handed';
   /** Effective range string, e.g. "Arm's Reach", "Short", "Long". */
@@ -77,6 +79,8 @@ export interface ArmorPiece {
   id: ID;
   /** Display name of the armour piece. */
   name: string;
+  /** Optional ruleset-specific restriction category; a name match is used when absent. */
+  restrictionClass?: string;
   /** Protection / armour rating; subtracted from incoming damage. */
   rating: number;
   /** Special features or traits text. */
@@ -109,6 +113,8 @@ export interface InventoryItem {
   id: ID;
   /** Display name of the item. */
   name: string;
+  /** Optional ruleset-specific restriction category; a name match is used when absent. */
+  restrictionClass?: string;
   /** Weight units that count toward encumbrance. */
   weight: number;
   /** Number of this item carried. */
