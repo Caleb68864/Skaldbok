@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '../components/primitives/Button';
 import { SectionPanel } from '../components/primitives/SectionPanel';
@@ -19,6 +19,7 @@ interface ReportRouteState {
   wikiError?: string;
   gearFindings: GearFinding[];
   gearReviewSources: number;
+  gearError?: string;
 }
 
 interface WeatherReportTypeData {
@@ -26,6 +27,9 @@ interface WeatherReportTypeData {
   report?: Briefing;
   gearFindings?: GearFinding[];
   gearReviewSources?: number;
+  gearError?: string;
+  wikiError?: string;
+  wiki?: WikiArticle | null;
   sector?: string;
   hex?: string;
 }
@@ -40,12 +44,13 @@ function getSavedReport(note: Note): Briefing | undefined {
 }
 
 function ReportContent({
-  report, wiki, wikiError, gearFindings, gearReviewSources, markdown,
+  report, wiki, wikiError, gearFindings, gearReviewSources, gearError, markdown,
   canSave, saving, saved, saveError, onSave,
 }: {
   report?: Briefing;
   wiki?: WikiArticle | null;
   wikiError?: string;
+  gearError?: string;
   gearFindings: GearFinding[];
   gearReviewSources: number;
   markdown: string;
@@ -56,6 +61,12 @@ function ReportContent({
   onSave: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState('');
+  async function copyMarkdown() {
+    setCopyError('');
+    try { await navigator.clipboard.writeText(markdown); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { setCopyError('Clipboard access is unavailable. Use Download .md to save the report.'); }
+  }
 
   function download() {
     const filename = report?.filename ?? 'Traveller weather report.md';
@@ -76,14 +87,15 @@ function ReportContent({
           <li>{report.points.starport}</li><li>{report.points.atmosphere}</li><li>{report.points.gravity}</li><li>{report.points.government}</li>
         </ul>
         <div className="flex gap-2 mt-4 flex-wrap">
-          <Button onClick={() => void navigator.clipboard.writeText(markdown).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })}>{copied ? 'Copied' : 'Copy Markdown'}</Button>
+          <Button onClick={() => void copyMarkdown()}>{copied ? 'Copied' : 'Copy Markdown'}</Button>
           <Button variant="secondary" onClick={download}>Download .md</Button>
           <Button disabled={!canSave || saving || saved} onClick={onSave}>{saving ? 'Saving…' : saved ? 'Saved to session log' : 'Save to session log'}</Button>
         </div>
         {!canSave && <p className="mt-2 text-sm text-[var(--color-text-muted)]">Start a session to save this report in its log.</p>}
         {saveError && <p role="alert" className="mt-2 text-sm text-red-500">{saveError}</p>}
+        {copyError && <p role="alert" className="mt-2 text-sm text-red-500">{copyError}</p>}
       </SectionPanel>
-      {gearFindings.length > 0 || gearReviewSources > 0 ? <SectionPanel title="Party gear before going ashore" subtitle="Based on recorded gear and the world's survey law; the GM decides local exceptions and permits." collapsible defaultOpen>
+      {gearError ? <SectionPanel title="Party gear check incomplete" collapsible defaultOpen><p role="alert">{gearError} The report does not confirm that the party's gear is clear.</p></SectionPanel> : gearFindings.length > 0 || gearReviewSources > 0 ? <SectionPanel title="Party gear before going ashore" subtitle="Based on recorded gear and the world's survey law; the GM decides local exceptions and permits." collapsible defaultOpen>
         {gearFindings.length ? <ul className="space-y-2">
           {gearFindings.map((finding, index) => <li key={`${finding.owner}/${finding.item}/${index}`} className="border-b border-[var(--color-border)] pb-2">
             <strong>{finding.action === 'leave aboard' ? 'Leave aboard' : 'Ask GM'}</strong> · {finding.owner}: {finding.item} ({finding.category})<br />
@@ -118,6 +130,7 @@ function ReportContent({
 
 export default function TravellerWeatherReportsScreen() {
   const { activeCampaign, activeSession } = useCampaignContext();
+  const activeCampaignId = activeCampaign?.id;
   const { logToSession } = useSessionLog();
   const { noteId } = useParams();
   const location = useLocation();
@@ -131,64 +144,69 @@ export default function TravellerWeatherReportsScreen() {
   const [loadError, setLoadError] = useState('');
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
-  const savedState = useMemo(() => savedNote ? (savedNote.typeData as WeatherReportTypeData | undefined) : undefined, [savedNote]);
+  const saveInFlight = useRef(false);
+  const currentSavedNote = savedNote && savedNote.id === noteId && savedNote.campaignId === activeCampaignId ? savedNote : null;
+  const savedState = useMemo(() => currentSavedNote ? (currentSavedNote.typeData as WeatherReportTypeData | undefined) : undefined, [currentSavedNote]);
   const draftIsCurrent = Boolean(state && activeCampaign && state.campaignId === activeCampaign.id);
-  const report = isDraftRoute && draftIsCurrent ? state?.report : savedNote ? getSavedReport(savedNote) : undefined;
-  const markdown = isDraftRoute && draftIsCurrent ? state?.report.markdown : savedNote ? docToText(savedNote.body) : '';
+  const report = isDraftRoute && draftIsCurrent ? state?.report : currentSavedNote ? getSavedReport(currentSavedNote) : undefined;
+  const markdown = isDraftRoute && draftIsCurrent ? state?.report.markdown : currentSavedNote ? docToText(currentSavedNote.body) : '';
   const gearFindings = isDraftRoute && draftIsCurrent ? state?.gearFindings ?? [] : savedState?.gearFindings ?? [];
   const gearReviewSources = isDraftRoute && draftIsCurrent ? state?.gearReviewSources ?? 0 : savedState?.gearReviewSources ?? 0;
+  const gearError = isDraftRoute ? state?.gearError : savedState?.gearError;
 
   useEffect(() => {
     let cancelled = false;
-    if (!activeCampaign || !isHistoryRoute) return;
-    setLoading(true); setLoadError('');
-    noteRepository.getNotesByCampaign(activeCampaign.id).then(notes => {
+    if (!activeCampaignId || !isHistoryRoute) return;
+    setLoading(true); setLoadError(''); setReports([]);
+    noteRepository.getNotesByCampaign(activeCampaignId).then(notes => {
       if (!cancelled) setReports(notes.filter(isWeatherReport).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     }).catch(error => { if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error)); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [activeCampaign?.id, isHistoryRoute]);
+  }, [activeCampaignId, isHistoryRoute]);
 
   useEffect(() => {
     let cancelled = false;
-    if (!activeCampaign || !noteId || isDraftRoute || isHistoryRoute) return;
-    setLoading(true); setLoadError('');
+    if (!activeCampaignId || !noteId || isDraftRoute || isHistoryRoute) return;
+    setLoading(true); setLoadError(''); setSavedNote(null);
     noteRepository.getNoteById(noteId).then(note => {
       if (cancelled) return;
-      if (!note || note.campaignId !== activeCampaign.id || !isWeatherReport(note)) {
+      if (!note || note.campaignId !== activeCampaignId || !isWeatherReport(note)) {
         setLoadError('This saved weather report is unavailable in the active campaign.'); setSavedNote(null);
       } else setSavedNote(note);
     }).catch(error => { if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error)); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [activeCampaign?.id, noteId, isDraftRoute, isHistoryRoute]);
+  }, [activeCampaignId, noteId, isDraftRoute, isHistoryRoute]);
 
   if (!activeCampaign) return <NoCampaignPrompt />;
   if (isDraftRoute && !draftIsCurrent) return <Navigate to="/weather-reports" replace />;
-  if (loading && !isHistoryRoute && !isDraftRoute) return <div role="status" className="p-[var(--space-md)]">Loading weather report…</div>;
-  if (!isHistoryRoute && !savedNote && !draftIsCurrent && !loadError) return <Navigate to="/weather-reports" replace />;
+  if (!isHistoryRoute && !isDraftRoute && !noteId) return <Navigate to="/weather-reports" replace />;
+  if (!isHistoryRoute && !isDraftRoute && !currentSavedNote && !loadError) return <div role="status" className="p-[var(--space-md)]">Loading weather report…</div>;
+    if (!isHistoryRoute && !currentSavedNote && !draftIsCurrent && !loadError) return <Navigate to="/weather-reports" replace />;
 
   async function saveReport() {
-    if (!report || !activeCampaign || !activeSession || saving || !isDraftRoute) return;
+    if (!report || !activeCampaign || !activeSession || saveInFlight.current || !isDraftRoute) return;
+    saveInFlight.current = true;
     setSaving(true); setSaveError('');
     try {
       const noteId = await logToSession(
         `${report.world.name} weather report · ${report.world.sector} ${report.world.hex}`,
         'log',
-        { kind: 'traveller-weather-report', sector: report.world.sector, hex: report.world.hex, report, gearFindings, gearReviewSources },
+        { kind: 'traveller-weather-report', sector: report.world.sector, hex: report.world.hex, report, wiki, wikiError, gearFindings, gearReviewSources, gearError },
         { body: report.markdown, session: { id: activeSession.id, campaignId: activeCampaign.id }, targetEncounterId: null },
       );
       if (!noteId) throw new Error('No active session is available.');
       navigate(`/weather-reports/${noteId}`, { replace: true });
     } catch (error) { setSaveError(error instanceof Error ? error.message : 'Could not save the report.'); }
-    finally { setSaving(false); }
+    finally { saveInFlight.current = false; setSaving(false); }
   }
 
-  const wiki = isDraftRoute ? state?.wiki : null;
-  const wikiError = isDraftRoute ? state?.wikiError : undefined;
-  const isSaved = !isDraftRoute && Boolean(savedNote);
+  const wiki = isDraftRoute ? state?.wiki : savedState?.wiki;
+  const wikiError = isDraftRoute ? state?.wikiError : savedState?.wikiError;
+  const isSaved = !isDraftRoute && Boolean(currentSavedNote);
 
-  return <main className="w-full min-h-full max-w-none p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
+  return <div className="w-full min-h-full max-w-none p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
     <header className="flex items-center justify-between gap-3 flex-wrap">
       <div><h1 className="text-2xl font-bold">{isHistoryRoute ? 'Previous weather reports' : report ? `${report.world.name} weather report` : 'Weather report'}</h1>
         <p className="text-sm text-[var(--color-text-muted)]">{isHistoryRoute ? `${activeCampaign.name} · saved reports only` : 'Traveller world briefing'}</p></div>
@@ -202,9 +220,9 @@ export default function TravellerWeatherReportsScreen() {
             <p className="text-sm text-[var(--color-text-muted)]">{data?.sector} {data?.hex} · saved {new Date(note.createdAt).toLocaleString()}</p></li>;
         })}</ul>}
     </SectionPanel> : loadError ? <p role="alert">{loadError}</p> : report && markdown ? <ReportContent
-      report={report} wiki={wiki} wikiError={wikiError} gearFindings={gearFindings} gearReviewSources={gearReviewSources}
+      report={report} wiki={wiki} wikiError={wikiError} gearFindings={gearFindings} gearReviewSources={gearReviewSources} gearError={gearError}
       markdown={markdown} canSave={isDraftRoute && Boolean(activeSession)} saving={saving} saved={isSaved}
       saveError={saveError} onSave={() => void saveReport()}
     /> : null}
-  </main>;
+  </div>;
 }

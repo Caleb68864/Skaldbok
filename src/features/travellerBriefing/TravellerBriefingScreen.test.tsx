@@ -158,6 +158,18 @@ describe('Traveller briefing session log action', () => {
     expect(await screen.findByRole('link', { name: /Zila weather report/ })).toBeTruthy();
   });
 
+  it('keeps Library data when reopening a saved report', async () => {
+    const wiki = { title: 'Zila (world)', url: 'https://wiki.travellerrpg.com/Zila', sections: [['History', 'A saved history detail.']] as [string, string][] };
+    const note = { ...mocks.savedWeatherNote!, typeData: { ...(mocks.savedWeatherNote!.typeData as object), wiki } };
+    mocks.getNoteById.mockResolvedValue(note);
+    render(<MemoryRouter initialEntries={['/weather-reports/note-1']}><Routes>
+      <Route path="/weather-reports/:noteId" element={<TravellerWeatherReportsScreen />} />
+    </Routes></MemoryRouter>);
+    await screen.findByRole('heading', { name: 'Zila weather report' });
+    fireEvent.click(screen.getByRole('button', { name: 'Library data' }));
+    expect(await screen.findByText('A saved history detail.')).toBeTruthy();
+  });
+
   it('explains why saving is unavailable without an active session', async () => {
     mocks.session = null;
     renderWorlds();
@@ -181,6 +193,19 @@ describe('Traveller briefing session log action', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save to session log' }));
     await waitFor(() => expect(mocks.logToSession).toHaveBeenCalledTimes(2));
+  });
+
+  it('ignores rapid duplicate saves while the first write is pending', async () => {
+    let finishSave!: (id: string) => void;
+    mocks.logToSession.mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve; }));
+    renderWorlds();
+    await selectZila();
+    await buildReport();
+    const save = screen.getByRole('button', { name: 'Save to session log' });
+    fireEvent.click(save);
+    fireEvent.click(save);
+    expect(mocks.logToSession).toHaveBeenCalledTimes(1);
+    finishSave('note-1');
   });
 
   it('adds the selected world with sector, hex, and UWP to the route', async () => {
@@ -210,5 +235,16 @@ describe('Traveller briefing session log action', () => {
     expect(mocks.logToSession.mock.calls[0][3].body).toContain('## Party gear before going ashore');
     expect(mocks.logToSession.mock.calls[0][3].body).toContain('**Leave aboard:** Milo — Laser pistol');
     expect(mocks.logToSession.mock.calls[0][2].gearFindings).toEqual(expect.arrayContaining([expect.objectContaining({ owner: 'Milo', item: 'Laser pistol', action: 'leave aboard' })]));
+  });
+
+  it('warns when party inventory cannot be loaded for the gear review', async () => {
+    mocks.gearEnabled = true;
+    mocks.party = { members: [{ linkedCharacterId: 'milo-1' }] };
+    mocks.getCharacter.mockRejectedValue(new Error('IndexedDB read failed'));
+    renderWorlds();
+    await selectZila();
+    await buildReport();
+    expect(await screen.findByText(/Could not load all party inventory data/)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'Party gear check incomplete' })).toBeTruthy();
   });
 });

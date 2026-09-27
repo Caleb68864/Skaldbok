@@ -70,6 +70,7 @@ export default function TravellerBriefingScreen() {
   const [routeAddedFor, setRouteAddedFor] = useState('');
   const [partyGear, setPartyGear] = useState<{ characters: CharacterRecord[]; containers: InventoryContainer[] }>({ characters: [], containers: [] });
   const [gearLoading, setGearLoading] = useState(false);
+  const [gearLoadError, setGearLoadError] = useState('');
   const routeAddInFlight = useRef(false);
   const selectionToken = useRef(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -81,8 +82,9 @@ export default function TravellerBriefingScreen() {
 
   useEffect(() => {
     let cancelled = false;
-    if (!campaignId || !engine?.gearRestrictions) { setPartyGear({ characters: [], containers: [] }); return; }
+    if (!campaignId || !engine?.gearRestrictions) { setPartyGear({ characters: [], containers: [] }); setGearLoadError(''); return; }
     setGearLoading(true);
+    setGearLoadError('');
     const memberIds = activeParty?.members.filter(member => !member.deletedAt && member.linkedCharacterId).map(member => member.linkedCharacterId!) ?? [];
     Promise.all([
       Promise.all(memberIds.map(id => characterRepository.getById(id))),
@@ -90,7 +92,7 @@ export default function TravellerBriefingScreen() {
     ]).then(([characters, containers]) => {
       if (!cancelled) setPartyGear({ characters: characters.filter((value): value is CharacterRecord => Boolean(value)), containers });
     }).catch(() => {
-      if (!cancelled) setPartyGear({ characters: [], containers: [] });
+      if (!cancelled) { setPartyGear({ characters: [], containers: [] }); setGearLoadError('Could not load all party inventory data.'); }
     }).finally(() => { if (!cancelled) setGearLoading(false); });
     return () => { cancelled = true; };
   }, [campaignId, activeParty, engine?.gearRestrictions]);
@@ -220,6 +222,7 @@ export default function TravellerBriefingScreen() {
           navigate('/weather-report', { state: {
             campaignId: activeCampaign.id, report, wiki: article, wikiError,
             gearFindings: gearFindings ?? [], gearReviewSources: partyGear.characters.length + partyGear.containers.length,
+            gearError: gearLoadError,
           } });
         } catch (error) {
           setCatalogError(error instanceof Error ? error.message : 'Could not build this weather report.');
