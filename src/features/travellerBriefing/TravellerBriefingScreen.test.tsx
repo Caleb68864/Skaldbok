@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import TravellerBriefingScreen from '../../screens/TravellerBriefingScreen';
+import TravellerWeatherReportsScreen from '../../screens/TravellerWeatherReportsScreen';
+import { reviewTravellerGear } from './gearRestrictions';
+import { buildBriefing } from './briefing';
 
 const mocks = vi.hoisted(() => ({
   session: { id: 'session-1', campaignId: 'campaign-1', title: 'Arrival at Zila', date: '2026-09-26' } as { id: string; campaignId: string; title: string; date: string } | null,
@@ -13,6 +16,9 @@ const mocks = vi.hoisted(() => ({
   getCharacter: vi.fn(),
   listContainers: vi.fn(),
   gearRules: { review: vi.fn() },
+  getNotesByCampaign: vi.fn(),
+  getNoteById: vi.fn(),
+  savedWeatherNote: null as Record<string, unknown> | null,
   party: null as { members: Array<{ linkedCharacterId: string }> } | null,
   gearEnabled: false,
   sectors: [] as string[],
@@ -49,8 +55,14 @@ vi.mock('./wikiData', () => ({ loadWikiArticle: mocks.loadWikiArticle }));
 vi.mock('../../storage/repositories/routeRepository', () => ({ create: mocks.createRouteStop }));
 vi.mock('../../storage/repositories/characterRepository', () => ({ getById: mocks.getCharacter }));
 vi.mock('../../storage/repositories/inventoryContainerRepository', () => ({ list: mocks.listContainers }));
+vi.mock('../../storage/repositories/noteRepository', () => ({ getNotesByCampaign: mocks.getNotesByCampaign, getNoteById: mocks.getNoteById }));
 
-function renderWorlds() { return render(<MemoryRouter><TravellerBriefingScreen /></MemoryRouter>); }
+function renderWorlds() { return render(<MemoryRouter initialEntries={['/worlds']}><Routes>
+  <Route path="/worlds" element={<TravellerBriefingScreen />} />
+  <Route path="/weather-report" element={<TravellerWeatherReportsScreen />} />
+  <Route path="/weather-reports" element={<TravellerWeatherReportsScreen />} />
+  <Route path="/weather-reports/:noteId" element={<TravellerWeatherReportsScreen />} />
+</Routes></MemoryRouter>); }
 
 async function selectZila() {
   fireEvent.change(screen.getByRole('combobox', { name: 'World' }), { target: { value: 'Zila' } });
@@ -76,6 +88,15 @@ describe('Traveller briefing session log action', () => {
     mocks.getCharacter.mockReset().mockResolvedValue({ name: 'Milo', weapons: [], inventory: [] });
     mocks.listContainers.mockReset().mockResolvedValue([]);
     mocks.gearRules.review.mockReset().mockReturnValue([]);
+    mocks.getNotesByCampaign.mockReset().mockResolvedValue([]);
+    mocks.getNoteById.mockReset().mockResolvedValue(null);
+    const savedReport = buildBriefing(mocks.world, null, { milieu: 'M1105' });
+    mocks.savedWeatherNote = {
+      id: 'note-1', campaignId: 'campaign-1', sessionId: 'session-1', title: 'Zila weather report · Spinward Marches 2908',
+      body: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: savedReport.markdown }] }] },
+      type: 'log', typeData: { kind: 'traveller-weather-report', sector: 'Spinward Marches', hex: '2908', report: savedReport },
+      status: 'active', pinned: false, schemaVersion: 1, createdAt: '2026-09-26T12:00:00Z', updatedAt: '2026-09-26T12:00:00Z',
+    };
     mocks.party = null;
     mocks.gearEnabled = false;
   });
@@ -93,6 +114,9 @@ describe('Traveller briefing session log action', () => {
     await screen.findByRole('button', { name: /Pysadi/ });
     await buildReport();
     expect(mocks.loadWikiArticle).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('heading', { name: 'Zila weather report' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous reports' }));
+    expect(await screen.findByText('No weather reports have been saved to a session in this campaign.')).toBeTruthy();
   });
 
   it('keeps recent worlds in autocomplete until a new query is entered', async () => {
@@ -107,6 +131,7 @@ describe('Traveller briefing session log action', () => {
   });
 
   it('saves the complete report as a session-level log entry', async () => {
+    mocks.getNoteById.mockResolvedValue(mocks.savedWeatherNote);
     renderWorlds();
     await selectZila();
     await buildReport();
@@ -126,6 +151,11 @@ describe('Traveller briefing session log action', () => {
     expect(options.body).toContain('# 2026-09-26 Zila');
     expect(options.body).toContain('## The weather report');
     expect(options.body).toContain('## Ask the GM');
+    expect(typeData.report).toMatchObject({ world: { name: 'Zila' }, law: 7 });
+    mocks.getNoteById.mockResolvedValue(mocks.savedWeatherNote);
+    mocks.getNotesByCampaign.mockResolvedValue([mocks.savedWeatherNote]);
+    fireEvent.click(screen.getByRole('button', { name: 'Previous reports' }));
+    expect(await screen.findByRole('link', { name: /Zila weather report/ })).toBeTruthy();
   });
 
   it('explains why saving is unavailable without an active session', async () => {
@@ -167,15 +197,18 @@ describe('Traveller briefing session log action', () => {
   it('includes the linked party gear review in the visible and saved report', async () => {
     mocks.gearEnabled = true;
     mocks.party = { members: [{ linkedCharacterId: 'milo-1' }] };
-    mocks.gearRules.review.mockReturnValue([{ owner: 'Milo', item: 'Laser pistol', category: 'Laser or energy weapon', action: 'leave aboard', reason: 'Law 7 restricts laser or energy weapon' }]);
+    mocks.getCharacter.mockResolvedValue({ name: 'Milo', weapons: [{ name: 'Laser pistol' }], inventory: [] });
+    mocks.gearRules.review.mockImplementation(reviewTravellerGear);
     renderWorlds();
     await selectZila();
     await buildReport();
     expect(mocks.getCharacter).toHaveBeenCalledWith('milo-1');
     expect(await screen.findByText(/Milo: Laser pistol/)).toBeTruthy();
+    expect(screen.getAllByText(/Laser or energy weapon/).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'Save to session log' }));
     await waitFor(() => expect(mocks.logToSession).toHaveBeenCalledTimes(1));
     expect(mocks.logToSession.mock.calls[0][3].body).toContain('## Party gear before going ashore');
     expect(mocks.logToSession.mock.calls[0][3].body).toContain('**Leave aboard:** Milo — Laser pistol');
+    expect(mocks.logToSession.mock.calls[0][2].gearFindings).toEqual(expect.arrayContaining([expect.objectContaining({ owner: 'Milo', item: 'Laser pistol', action: 'leave aboard' })]));
   });
 });

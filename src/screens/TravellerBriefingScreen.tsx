@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '../components/primitives/Button';
 import { SectionPanel } from '../components/primitives/SectionPanel';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
-import { useSessionLog } from '../features/session/useSessionLog';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
 import { getEngine } from '../features/systems/engine';
 import { useBriefingPreferences } from '../features/travellerBriefing/useBriefingPreferences';
@@ -41,7 +40,7 @@ function Highlight({ value, query }: { value: string; query: string }) {
 export default function TravellerBriefingScreen() {
   const { activeCampaign, activeSession, activeParty } = useCampaignContext();
   const campaignId = activeCampaign?.id;
-  const { logToSession } = useSessionLog();
+  const navigate = useNavigate();
   const { system, error: systemError } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const engine = system ? getEngine(system) : undefined;
   const capability = engine?.landingBriefing;
@@ -60,25 +59,17 @@ export default function TravellerBriefingScreen() {
   const [nearbyRemote, setNearbyRemote] = useState<NearbyWorld[] | null>(null);
   const [nearbyBusy, setNearbyBusy] = useState(false);
   const [nearbyError, setNearbyError] = useState('');
-  const [reportFor, setReportFor] = useState<string | null>(null);
-  const [wiki, setWiki] = useState<WikiArticle | null>(null);
-  const [wikiError, setWikiError] = useState('');
   const [wikiBusy, setWikiBusy] = useState(false);
   const [busy, setBusy] = useState(false);
   const [date, setDate] = useState('');
   const [session, setSession] = useState('');
   const [milieu, setMilieu] = useState(DEFAULT_TRAVELLER_MILIEU);
   const [alternatives, setAlternatives] = useState<WorldHit[]>([]);
-  const [copied, setCopied] = useState(false);
-  const [savingReport, setSavingReport] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const [savedReport, setSavedReport] = useState<{ sessionId: string; markdown: string } | null>(null);
   const [addingRoute, setAddingRoute] = useState(false);
   const [routeAddError, setRouteAddError] = useState('');
   const [routeAddedFor, setRouteAddedFor] = useState('');
   const [partyGear, setPartyGear] = useState<{ characters: CharacterRecord[]; containers: InventoryContainer[] }>({ characters: [], containers: [] });
   const [gearLoading, setGearLoading] = useState(false);
-  const saveInFlight = useRef(false);
   const routeAddInFlight = useRef(false);
   const selectionToken = useRef(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -185,8 +176,6 @@ export default function TravellerBriefingScreen() {
     }).finally(() => { if (!cancelled) setNearbyBusy(false); });
     return () => { cancelled = true; };
   }, [selected, jumpRange, milieu]);
-  const selectedKey = selected ? `${milieu}/${worldKey(selected)}` : null;
-  const reportVisible = selectedKey !== null && reportFor === selectedKey;
   const overrides = selected ? preferences.overrides[worldKey(selected)] : undefined;
   const gearFindings = useMemo(() => {
     if (!selected || !engine?.gearRestrictions || gearLoading) return null;
@@ -195,17 +184,9 @@ export default function TravellerBriefingScreen() {
       return engine.gearRestrictions.review(partyGear.characters, partyGear.containers, world.law, world.gov);
     } catch { return null; }
   }, [selected, overrides, engine?.gearRestrictions, gearLoading, partyGear]);
-  const briefing = useMemo(() => {
-    if (!selected || !reportVisible) return null;
-    try { return buildBriefing(selected, wiki, { milieu, date, session, homeDistance: jumpDistance(selected), alternatives, overrides, gearReview: gearFindings ?? undefined, gearReviewSources: partyGear.characters.length + partyGear.containers.length }); }
-    catch { return null; }
-  },
-    [selected, reportVisible, wiki, milieu, date, session, alternatives, overrides, gearFindings, partyGear]);
-  const reportSaved = Boolean(activeSession && briefing && savedReport?.sessionId === activeSession.id && savedReport.markdown === briefing.markdown);
-
   async function choose(hit: WorldHit, other: WorldHit[] = []) {
     const token = ++selectionToken.current;
-    setOpen(false); setBusy(true); setSelected(null); setReportFor(null); setWiki(null); setWikiBusy(false); setWikiError(''); setCatalogError('');
+    setOpen(false); setBusy(true); setSelected(null); setWikiBusy(false); setCatalogError('');
     setAlternatives(other); setQuery(hit.name);
     try {
       const world = await loadWorld(hit, milieu);
@@ -217,19 +198,33 @@ export default function TravellerBriefingScreen() {
     finally { if (token === selectionToken.current) setBusy(false); }
   }
   async function requestReport() {
-    if (!selected || !selectedKey || wikiBusy) return;
+    if (!selected || !activeCampaign || wikiBusy || gearLoading) return;
     const token = selectionToken.current;
-    setReportFor(selectedKey);
-    setWiki(null);
-    setWikiError('');
+    setCatalogError('');
     setWikiBusy(true);
+    let article: WikiArticle | null = null;
+    let wikiError = '';
     try {
-      const article = await loadWikiArticle(selected);
-      if (token === selectionToken.current) setWiki(article);
+      article = await loadWikiArticle(selected);
     } catch (error) {
-      if (token === selectionToken.current) setWikiError(error instanceof Error ? error.message : String(error));
+      wikiError = error instanceof Error ? error.message : String(error);
     } finally {
-      if (token === selectionToken.current) setWikiBusy(false);
+      if (token === selectionToken.current) {
+        setWikiBusy(false);
+        try {
+          const report = buildBriefing(selected, article, {
+            milieu, date, session, homeDistance: jumpDistance(selected), alternatives, overrides,
+            gearReview: gearFindings ?? undefined,
+            gearReviewSources: partyGear.characters.length + partyGear.containers.length,
+          });
+          navigate('/weather-report', { state: {
+            campaignId: activeCampaign.id, report, wiki: article, wikiError,
+            gearFindings: gearFindings ?? [], gearReviewSources: partyGear.characters.length + partyGear.containers.length,
+          } });
+        } catch (error) {
+          setCatalogError(error instanceof Error ? error.message : 'Could not build this weather report.');
+        }
+      }
     }
   }
   async function addWorldToRoute() {
@@ -266,40 +261,12 @@ export default function TravellerBriefingScreen() {
     const key = worldKey(selected);
     void preferences.updateSettings({ briefingWorldOverrides: { ...preferences.overrides, [key]: { ...preferences.overrides[key], [field]: value } } });
   }
-  function download() {
-    if (!briefing) return;
-    const url = URL.createObjectURL(new Blob([briefing.markdown], { type: 'text/markdown;charset=utf-8' }));
-    const a = document.createElement('a'); a.href = url; a.download = briefing.filename; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  async function saveToSessionLog() {
-    if (!briefing || !activeSession || saveInFlight.current) return;
-    const report = briefing;
-    const session = { id: activeSession.id, campaignId: activeSession.campaignId };
-    saveInFlight.current = true;
-    setSavingReport(true);
-    setSaveError('');
-    try {
-      const noteId = await logToSession(
-        `${report.world.name} weather report · ${report.world.sector} ${report.world.hex}`,
-        'log',
-        { kind: 'traveller-weather-report', sector: report.world.sector, hex: report.world.hex },
-        { body: report.markdown, session, targetEncounterId: null },
-      );
-      if (!noteId) throw new Error('No active session is available.');
-      setSavedReport({ sessionId: session.id, markdown: report.markdown });
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Could not save the report.');
-    } finally {
-      saveInFlight.current = false;
-      setSavingReport(false);
-    }
-  }
   if (!activeCampaign) return <NoCampaignPrompt />;
   if (!system && !systemError) return <div role="status">Loading rules…</div>;
   if (systemError) return <div role="alert">{systemError}</div>;
   if (!capability) return <Navigate to="/session" replace />;
   return <div className="w-full min-h-full max-w-none p-[var(--space-md)] flex flex-col gap-[var(--space-md)]">
+    <div className="flex items-center justify-between gap-3"><h1 className="text-2xl font-bold">{capability.label}</h1><Button variant="secondary" onClick={() => navigate('/weather-reports')}>Previous weather reports</Button></div>
     <SectionPanel title={capability.label} subtitle="Search worlds, compare destinations, then build a report" collapsible defaultOpen>
       <div className="relative">
         <label htmlFor="world-search" className="block mb-1">World</label>
@@ -316,7 +283,7 @@ export default function TravellerBriefingScreen() {
       </div>
       {loadingCatalog && <p role="status">Loading sector catalog…</p>}
       {catalogError && <p role="alert" className="text-red-500">{catalogError}</p>}
-      <label className="block mt-3 max-w-xs">Milieu <input className={inputClass} value={milieu} onChange={e => { selectionToken.current++; setSelected(null); setReportFor(null); setMilieu(e.target.value); }} /></label>
+      <label className="block mt-3 max-w-xs">Milieu <input className={inputClass} value={milieu} onChange={e => { selectionToken.current++; setSelected(null); setMilieu(e.target.value); }} /></label>
     </SectionPanel>
     {open && suggestions.length > 0 && suggestionPosition && createPortal(
       <ul id="world-suggestions" role="listbox" className="fixed z-[1000] overflow-y-auto rounded border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl"
@@ -370,14 +337,14 @@ export default function TravellerBriefingScreen() {
           <label>Session <input className={inputClass} value={session} disabled={!activeSession} onChange={e => setSession(e.target.value)} /></label>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <Button disabled={wikiBusy} onClick={() => void requestReport()}>{wikiBusy ? 'Adding Wiki details…' : reportVisible ? 'Rebuild weather report' : 'Build weather report'}</Button>
+          <Button disabled={wikiBusy || gearLoading} onClick={() => void requestReport()}>{wikiBusy ? 'Building weather report…' : 'Build weather report'}</Button>
           {routeMap && <Button variant="secondary" disabled={addingRoute || routeAddedFor === `${activeCampaign.id}/${worldKey(selected)}`} onClick={() => void addWorldToRoute()}>
             {addingRoute ? 'Adding…' : routeAddedFor === `${activeCampaign.id}/${worldKey(selected)}` ? 'Added to Jump Route' : 'Add to Jump Route'}
           </Button>}
           {routeAddedFor === `${activeCampaign.id}/${worldKey(selected)}` && <Link to="/route" className="underline">Plan route</Link>}
         </div>
         {routeAddError && <p role="alert" className="mt-2 text-red-500">{routeAddError}</p>}
-        {wikiBusy && <p role="status" className="mt-2">The report is shown below while Traveller Wiki details load. Exports become available when that finishes.</p>}
+        {wikiBusy && <p role="status" className="mt-2">Building the weather report…</p>}
       </SectionPanel>
       <SectionPanel title={`Nearby worlds · Jump-${jumpRange}`} subtitle="Choose a destination to inspect it" collapsible defaultOpen>
         <label className="block max-w-xs mb-3">Jump range
@@ -424,55 +391,6 @@ export default function TravellerBriefingScreen() {
       </SectionPanel>
       {alternatives.length > 0 && <SectionPanel title="Other worlds with this name" collapsible defaultOpen><div className="flex flex-wrap gap-2">{alternatives.map(w => <Button key={worldKey(w)} variant="secondary" onClick={() => void choose(w, [selected, ...alternatives.filter(a => worldKey(a) !== worldKey(w))])}>{w.name} · {w.sector} {w.hex}</Button>)}</div></SectionPanel>}
     </>}
-    {selected && reportVisible && !briefing && <p role="alert">The current UWP cannot be decoded. Check the GM correction before exporting.</p>}
-    {briefing && <>
-      <SectionPanel title={`Weather report · ${briefing.world.name}`} subtitle={`${briefing.world.sector} ${briefing.world.hex} · ${briefing.world.uwp}`} collapsible defaultOpen>
-        {briefing.world.zone && <p className={`font-bold text-lg ${briefing.world.zone === 'R' ? 'text-red-500' : 'text-amber-500'}`}>{zoneLabel(briefing.world.zone)} Zone</p>}
-        <div className="p-4 my-3 rounded border-2 border-[var(--color-primary)]">
-          <h2 className="font-bold text-xl">Law {briefing.law} · weapons ashore</h2>
-          <p>{briefing.points.law}</p>
-        </div>
-        <ul className="list-disc pl-6 space-y-1">
-          <li>{briefing.points.starport}</li><li>{briefing.points.atmosphere}</li><li>{briefing.points.gravity}</li><li>{briefing.points.government}</li>
-        </ul>
-        <div className="flex gap-2 mt-4 flex-wrap">
-          <Button disabled={wikiBusy || gearLoading} onClick={() => void navigator.clipboard.writeText(briefing.markdown).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); })}>{copied ? 'Copied' : 'Copy Markdown'}</Button>
-          <Button variant="secondary" disabled={wikiBusy || gearLoading} onClick={download}>Download .md</Button>
-          <Button disabled={!activeSession || wikiBusy || gearLoading || savingReport || reportSaved} onClick={() => void saveToSessionLog()}>
-            {savingReport ? 'Saving…' : reportSaved ? 'Saved to session log' : 'Save to session log'}
-          </Button>
-        </div>
-        {!activeSession && <p className="mt-2 text-sm text-[var(--color-text-muted)]">Start a session to save this report in its log.</p>}
-        {saveError && <p role="alert" className="mt-2 text-sm text-red-500">{saveError}</p>}
-      </SectionPanel>
-      {engine?.gearRestrictions && <SectionPanel title="Party gear before going ashore" subtitle="Based on recorded gear and the world's survey law; the GM decides local exceptions and permits." collapsible defaultOpen>
-        {gearLoading ? <p>Checking party gear…</p> : gearFindings?.length ? <ul className="space-y-2">
-          {gearFindings.map((finding, index) => <li key={`${finding.owner}/${finding.item}/${index}`} className="border-b border-[var(--color-border)] pb-2">
-            <strong>{finding.action === 'leave aboard' ? 'Leave aboard' : 'Ask GM'}</strong> · {finding.owner}: {finding.item} ({finding.category})<br />
-            <span className="text-sm text-[var(--color-text-muted)]">{finding.reason}</span>
-          </li>)}
-        </ul> : <p>{partyGear.characters.length + partyGear.containers.length === 0
-          ? 'No linked party gear is available to check.'
-          : 'No recorded gear is flagged by the general law table. Check local rules with the GM.'}</p>}
-      </SectionPanel>}
-      <SectionPanel title="The weather report" collapsible defaultOpen>
-        <p>{briefing.points.zone}</p>
-        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-3">
-          {([['Starport', briefing.points.starport], ['Atmosphere and gear', briefing.points.atmosphere], ['Gravity', briefing.points.gravity], ['Water', briefing.points.hydro], ['Population and tech', briefing.points.population], ['Fuel', briefing.points.fuel], ['Trade codes', briefing.points.trade], ['Bases', briefing.points.bases]] as const).map(([label, value]) => <div key={label}><dt className="font-semibold">{label}</dt><dd>{value}</dd></div>)}
-        </dl>
-        <img src={briefing.jumpMapUrl} alt={`Jump-2 map around ${briefing.world.name}`} className="w-full max-w-xl border border-[var(--color-border)]" />
-        <h3 className="font-semibold mt-3">Ask the GM</h3>
-        <ul className="list-disc pl-6">{briefing.points.questions.map(question => <li key={question}>{question}</li>)}</ul>
-      </SectionPanel>
-      <SectionPanel title="Library data" collapsible defaultOpen={false}>
-        {wikiError && <p role="alert">Wiki unavailable: {wikiError}</p>}
-        {wiki?.warning && <p role="alert">{wiki.warning}</p>}
-        {wiki?.sections.map(([heading, text]) => <div key={heading} className="mb-3"><h3 className="font-semibold">{heading}</h3><p className="whitespace-pre-line">{text}</p></div>)}
-        {wiki && <a href={wiki.url} target="_blank" rel="noreferrer">{wiki.title} · Traveller Wiki (c. 1116)</a>}
-        {(wiki?.wtn || wiki?.gwp) && <p>Economy (wiki): WTN {wiki.wtn || '—'} · GWP {wiki.gwp || '—'}</p>}
-      </SectionPanel>
-      <SectionPanel title="Markdown note" collapsible defaultOpen={false}><pre className="text-xs whitespace-pre-wrap break-words max-h-[35rem] overflow-y-auto">{briefing.markdown}</pre></SectionPanel>
-    </>}
-    <p className="text-xs text-[var(--color-text-muted)]">World data © TravellerMap.com / Traveller Wiki contributors (wiki text CC BY-NC 3.0). Traveller is a trademark of Far Future Enterprises. Personal, non-commercial use.</p>
+    {selected && <div className="text-sm text-[var(--color-text-muted)]">Build the report to open its own screen. Unsaved reports do not appear in campaign history.</div>}
   </div>;
 }

@@ -55,6 +55,7 @@ const ShipsScreen = lazyScreen(() => import('../screens/ShipsScreen'), (m) => m.
 const LedgerScreen = lazyScreen(() => import('../screens/LedgerScreen'), (m) => m.default);
 const RouteScreen = lazyScreen(() => import('../screens/RouteScreen'), (m) => m.default);
 const TravellerBriefingScreen = lazyScreen(() => import('../screens/TravellerBriefingScreen'), (m) => m.default);
+const TravellerWeatherReportsScreen = lazyScreen(() => import('../screens/TravellerWeatherReportsScreen'), (m) => m.default);
 const PrintableSheetScreen = lazyScreen(() => import('../screens/PrintableSheetScreen'), (m) => m.default);
 const BestiaryScreenRoute = lazyScreen(() => import('../features/bestiary/BestiaryScreenRoute'), (m) => m.BestiaryScreenRoute);
 const TrashScreen = lazyScreen(() => import('../screens/TrashScreen'), (m) => m.default);
@@ -131,6 +132,9 @@ export const routes: RouteObject[] = [
       { path: '/ledger', element: screen(LedgerScreen) },
       { path: '/route', element: screen(RouteScreen) },
       { path: '/worlds', element: screen(TravellerBriefingScreen) },
+      { path: '/weather-reports', element: screen(TravellerWeatherReportsScreen) },
+      { path: '/weather-reports/:noteId', element: screen(TravellerWeatherReportsScreen) },
+      { path: '/weather-report', element: screen(TravellerWeatherReportsScreen) },
       { path: '/weather-report', element: <Navigate to="/worlds" replace /> },
       { path: '*', element: <Navigate to="/character/sheet" replace /> },
     ],

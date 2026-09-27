@@ -71,7 +71,7 @@ const STATIC_SESSION_TABS: SessionTab[] = destinationsFor('session')
  * `/route` is listed unconditionally. A ruleset that declares no planner never
  * routes here (the screen redirects), so there is nothing to gate.
  */
-export const SESSION_SECTION_PREFIXES = ['/session', '/ledger', '/route', '/worlds'] as const;
+export const SESSION_SECTION_PREFIXES = ['/session', '/ledger', '/route', '/worlds', '/weather-report', '/weather-reports'] as const;
 
 /**
  * Horizontal sub-navigation for the campaign section — the Session-side
@@ -123,10 +123,11 @@ export function SessionSubNav() {
 
   // Longest match wins: `/session/log` must not be beaten by `/session`, which
   // is a prefix of it.
+  const activePath = location.pathname.startsWith('/weather-report') ? '/worlds' : location.pathname;
   const activeTab =
     [...tabs]
       .sort((a, b) => b.to.length - a.to.length)
-      .find(t => location.pathname === t.to || location.pathname.startsWith(t.to + '/'))?.to ??
+      .find(t => activePath === t.to || activePath.startsWith(t.to + '/'))?.to ??
     tabs[0].to;
 
   return (
