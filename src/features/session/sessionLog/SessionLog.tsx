@@ -726,6 +726,16 @@ export function SessionLog() {
                     row is blank and reads as lost data. */}
                 {hasInkPayload(entry) ? (
                   <InkEntryPreview note={entry} />
+                ) : entry.typeData && typeof entry.typeData === 'object' && 'kind' in entry.typeData && entry.typeData.kind === 'traveller-weather-report' ? (
+                  <div>
+                    <div className="font-semibold text-sm">{entry.title}</div>
+                    <div className="text-xs text-[var(--color-text-muted,#666)]">Full weather report saved · Tap to open</div>
+                  </div>
+                ) : entry.typeData && typeof entry.typeData === 'object' && 'kind' in entry.typeData && entry.typeData.kind === 'route-snapshot' ? (
+                  <div>
+                    <div className="font-semibold text-sm">{entry.title}</div>
+                    <div className="text-xs text-[var(--color-text-muted,#666)]">Route snapshot saved · Tap to open</div>
+                  </div>
                 ) : (
                   <div className="whitespace-pre-wrap text-sm">{docToText(entry.body)}</div>
                 )}

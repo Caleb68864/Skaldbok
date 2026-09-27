@@ -123,8 +123,8 @@ describe('systemDefinitionSchema', () => {
     if (result.success) {
       const planner = result.data.routePlanner;
       expect(planner).toBeDefined();
-      expect(planner?.fields).toHaveLength(5);
-      expect(planner?.fields.map(f => f.id)).toEqual(['name', 'uwp', 'hex', 'jump', 'notes']);
+      expect(planner?.fields).toHaveLength(6);
+      expect(planner?.fields.map(f => f.id)).toEqual(['name', 'sector', 'uwp', 'hex', 'jump', 'notes']);
       // The labels are the point: they are the system's vocabulary, and the
       // screen renders whatever it is handed.
       expect(planner?.fields.every(f => f.label.length > 0)).toBe(true);

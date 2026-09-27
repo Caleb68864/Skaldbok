@@ -69,6 +69,37 @@ export async function create(data: {
   });
 }
 
+/** Inserts mapped worlds into one leg without replacing existing stops or their notes. */
+export async function insertBetween(
+  campaignId: string,
+  beforeId: string,
+  afterId: string,
+  stops: Array<{ name: string; values: Record<string, string> }>,
+  afterValuesPatch: Record<string, string> = {},
+): Promise<void> {
+  await db.transaction('rw', db.routeStops, async () => {
+    const current = excludeDeleted(await db.routeStops.where('campaignId').equals(campaignId).toArray())
+      .sort((a, b) => a.order - b.order);
+    const beforeIndex = current.findIndex(stop => stop.id === beforeId);
+    if (beforeIndex < 0 || current[beforeIndex + 1]?.id !== afterId)
+      throw new Error('The route changed. Choose the leg again before applying the path.');
+    const after = current[beforeIndex + 1];
+    const now = nowISO();
+    if (stops.length) {
+      await db.routeStops.bulkUpdate(current.slice(beforeIndex + 1).map(stop => ({
+        key: stop.id, changes: { order: stop.order + stops.length, updatedAt: now },
+      })));
+      await db.routeStops.bulkAdd(stops.map((stop, index) => ({
+        id: generateId(), campaignId, name: stop.name, order: after.order + index,
+        values: stop.values, schemaVersion: CURRENT_ROUTE_STOP_SCHEMA_VERSION,
+        createdAt: now, updatedAt: now,
+      })));
+    }
+    if (Object.keys(afterValuesPatch).length)
+      await db.routeStops.update(after.id, { values: { ...after.values, ...afterValuesPatch }, updatedAt: now });
+  });
+}
+
 /** Patches a stop's name and/or declared field values. */
 export async function update(
   id: string,

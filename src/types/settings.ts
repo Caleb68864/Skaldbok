@@ -79,6 +79,10 @@ export interface SessionState {
 export interface AppSettings extends Versioned {
   /** TravellerMap sectors downloaded for the landing briefing search. */
   travellerBriefingSectors?: string[];
+  /** Jump radius shown in the Traveller world explorer (1–12). */
+  travellerExploreJumpRange?: number;
+  /** Nearby-world filters saved on this device. */
+  travellerWorldFilters?: { starports: string[]; gasGiantOnly: boolean; zone: 'all' | 'noRed' | 'greenOnly' };
   /** Recently selected worlds, keyed by sector and hex rather than name. */
   recentBriefingWorlds?: WorldHit[];
   /** Per-world GM corrections; the generated briefing uses these ahead of canon. */

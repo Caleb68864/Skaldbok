@@ -133,16 +133,19 @@ export async function loadSector(sector: string, milieu = 'M1105'): Promise<Worl
   return enrichSector(await loadSectorBasic(sector, milieu), sector, milieu);
 }
 
-function fromSearch(w: Record<string, unknown>): WorldHit {
+export function worldFromApi(w: Record<string, unknown>): WorldHit {
   const hex = str(w.Hex || `${String(w.HexX ?? '').padStart(2, '0')}${String(w.HexY ?? '').padStart(2, '0')}`);
   return {
-    name: str(w.Name), sector: str(w.Sector), hex, subsector: str(w.SubsectorName),
+    name: str(w.Name), sector: str(w.Sector), hex, subsector: str(w.SubsectorName ?? w.Subsector),
     uwp: str(w.Uwp ?? w.UWP), zone: str(w.Zone), bases: str(w.Bases), remarks: str(w.Remarks),
     pbg: str(w.PBG), allegiance: str(w.Allegiance), stellar: str(w.Stellar),
     ix: str(w.Ix), ex: str(w.Ex), cx: str(w.Cx), nobility: str(w.Nobility), worlds: str(w.Worlds),
     sectorX: Number.isFinite(Number(w.SectorX)) ? Number(w.SectorX) : undefined,
     sectorY: Number.isFinite(Number(w.SectorY)) ? Number(w.SectorY) : undefined,
     sectorTags: str(w.SectorTags),
+    worldX: w.WorldX != null && Number.isFinite(Number(w.WorldX)) ? Number(w.WorldX) : undefined,
+    worldY: w.WorldY != null && Number.isFinite(Number(w.WorldY)) ? Number(w.WorldY) : undefined,
+    allegianceName: str(w.AllegianceName),
   };
 }
 
@@ -150,7 +153,7 @@ export async function remoteSearch(query: string, milieu = 'M1105', exact = fals
   const q = exact ? `exact:${query}` : `${query}*`;
   const url = `${TM}/api/search?${new URLSearchParams({ q, milieu })}`;
   const json = JSON.parse(await cachedText(url, 1)) as { Results?: { Items?: { World?: Record<string, unknown> }[] } };
-  return (json.Results?.Items ?? []).flatMap(item => item.World ? [fromSearch(item.World)] : []);
+  return (json.Results?.Items ?? []).flatMap(item => item.World ? [worldFromApi(item.World)] : []);
 }
 
 export async function loadWorld(hit: WorldHit, milieu = 'M1105'): Promise<WorldHit> {
@@ -167,6 +170,47 @@ export async function loadWorld(hit: WorldHit, milieu = 'M1105'): Promise<WorldH
     ix: str(w.Ix), ex: str(w.Ex), cx: str(w.Cx), nobility: str(w.Nobility),
     worlds: str(w.Worlds), worldX: Number(w.WorldX), worldY: Number(w.WorldY),
   };
+}
+
+export interface NearbyWorld { world: WorldHit; distance: number | null; }
+
+/** Distance between two selected worlds, including worlds in adjacent sectors. */
+export function distanceBetweenWorlds(a: WorldHit, b: WorldHit): number | null {
+  if (a.worldX !== undefined && a.worldY !== undefined && b.worldX !== undefined && b.worldY !== undefined)
+    return hexDistance([a.worldX, a.worldY], [b.worldX, b.worldY]);
+  if (!/^\d{4}$/.test(a.hex) || !/^\d{4}$/.test(b.hex)) return null;
+  const x = (w: WorldHit) => Number(w.hex.slice(0, 2));
+  const y = (w: WorldHit) => Number(w.hex.slice(2));
+  if (a.sector.toLowerCase() === b.sector.toLowerCase()) return hexDistance([x(a), y(a)], [x(b), y(b)]);
+  if (a.sectorX !== undefined && a.sectorY !== undefined && b.sectorX !== undefined && b.sectorY !== undefined)
+    return hexDistance([a.sectorX * 32 + x(a), a.sectorY * 40 + y(a)], [b.sectorX * 32 + x(b), b.sectorY * 40 + y(b)]);
+  return null;
+}
+
+/** Fast offline suggestions from sectors already loaded on this device. */
+export function nearbyFromCatalog(origin: WorldHit, catalog: WorldHit[], jump: number): NearbyWorld[] {
+  return catalog.flatMap(world => {
+    if (worldKey(world) === worldKey(origin)) return [];
+    const distance = distanceBetweenWorlds(origin, world);
+    return distance !== null && distance <= jump ? [{ world, distance }] : [];
+  }).sort(compareNearby);
+}
+
+function compareNearby(a: NearbyWorld, b: NearbyWorld): number {
+  return (a.distance ?? Infinity) - (b.distance ?? Infinity)
+    || a.world.name.localeCompare(b.world.name)
+    || worldKey(a.world).localeCompare(worldKey(b.world));
+}
+
+/** Canonical nearby worlds, including neighbors over sector borders. */
+export async function loadNearbyWorlds(origin: WorldHit, jump: number, milieu = 'M1105'): Promise<NearbyWorld[]> {
+  if (!Number.isInteger(jump) || jump < 1 || jump > 12) throw new Error('Jump range must be between 1 and 12');
+  const url = `${TM}/api/jumpworlds?${new URLSearchParams({ sector: origin.sector, hex: origin.hex, jump: String(jump), milieu })}`;
+  const json = JSON.parse(await cachedText(url, 30)) as { Worlds?: Record<string, unknown>[] };
+  if (!Array.isArray(json.Worlds)) throw new Error('TravellerMap nearby-world data is unavailable');
+  return json.Worlds.map(worldFromApi).filter(world => world.name && /^\d{4}$/.test(world.hex) && worldKey(world) !== worldKey(origin))
+    .map(world => ({ world, distance: distanceBetweenWorlds(origin, world) }))
+    .sort(compareNearby);
 }
 
 export function hexDistance(a: readonly [number, number], b: readonly [number, number]): number {

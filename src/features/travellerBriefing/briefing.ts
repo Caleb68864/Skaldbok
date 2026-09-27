@@ -116,7 +116,7 @@ export function buildBriefing(canon: WorldHit, wiki: WikiArticle | null, options
   const lines: string[] = [];
   const fm: Record<string, string | number | boolean | string[]> = {
     title, aliases: [`${name} Landing Brief`], type: 'landing-brief', world: name, sector,
-    subsector: w.subsector, hex, milieu: options.milieu, imperial_date: date, session: options.session || '',
+    subsector: w.subsector, hex, milieu: options.milieu, imperial_date: dateMatch ? date : '', session: options.session || '',
     uwp: w.uwp, starport: d.port, law_level: d.law, tech_level: d.tl, government: d.gov,
     travel_zone: zoneWord, bases: w.bases, trade_codes: d.remarks,
     allegiance: w.allegianceName ?? w.allegiance, weapons_ashore: weaponsAshore,
@@ -124,6 +124,7 @@ export function buildBriefing(canon: WorldHit, wiki: WikiArticle | null, options
     generated: options.generated ?? new Date().toISOString().slice(0, 10), cssclasses: ['ta-brief'],
     tags: ['traveller', 'campaign', 'field-log', 'landing-brief'], status: 'draft',
   };
+  if (/^\d{4}-\d{2}-\d{2}$/.test(date)) fm.session_date = date;
   lines.push('---');
   for (const [key, value] of Object.entries(fm)) {
     if (Array.isArray(value)) { lines.push(`${key}:${value.length ? '' : ' []'}`); value.forEach(x => lines.push(`  - ${x.includes(':') ? JSON.stringify(x) : x}`)); }

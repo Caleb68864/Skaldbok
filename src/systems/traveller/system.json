@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 24,
+  "version": 25,
   "name": "traveller",
   "displayName": "Traveller",
   "attributes": [
@@ -1339,6 +1339,11 @@
       {
         "id": "name",
         "label": "Name",
+        "type": "text"
+      },
+      {
+        "id": "sector",
+        "label": "Sector",
         "type": "text"
       },
       {

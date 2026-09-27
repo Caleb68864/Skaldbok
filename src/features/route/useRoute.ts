@@ -8,6 +8,7 @@ import type { RoutePlan } from '../../types/routePlan';
 import { reorder, totalDistance } from '../../utils/routeMath';
 import type { RouteStop } from '../../types/routeStop';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
+import { getEngine } from '../systems/engine';
 
 /**
  * The active campaign's route, and the field declaration that shapes it.
@@ -34,6 +35,7 @@ export function useRoute() {
 
   const campaignId = activeCampaign?.id;
   const planner = system?.routePlanner;
+  const routeMap = system ? getEngine(system).routeMap : undefined;
 
   const reload = useCallback(async () => {
     if (!campaignId) {
@@ -111,14 +113,25 @@ export function useRoute() {
   );
 
   const addStop = useCallback(
-    async (name: string) => {
+    async (name: string, values?: Record<string, string>) => {
       const trimmed = name.trim();
       if (!trimmed || !campaignId) return;
-      await routeRepository.create({ campaignId, name: trimmed });
+      await routeRepository.create({ campaignId, name: trimmed, values });
       await reload();
     },
     [campaignId, reload],
   );
+
+  const insertBetween = useCallback(async (
+    beforeId: string,
+    afterId: string,
+    worlds: Array<{ name: string; values: Record<string, string> }>,
+    afterValuesPatch?: Record<string, string>,
+  ) => {
+    if (!campaignId) return;
+    await routeRepository.insertBetween(campaignId, beforeId, afterId, worlds, afterValuesPatch);
+    await reload();
+  }, [campaignId, reload]);
 
   const updateStop = useCallback(
     async (stop: RouteStop, changes: Partial<Pick<RouteStop, 'name' | 'values'>>) => {
@@ -179,6 +192,7 @@ export function useRoute() {
     stops,
     isLoading,
     planner,
+    routeMap,
     /**
      * Whether the system definition has resolved.
      *
@@ -200,6 +214,7 @@ export function useRoute() {
     updatePlan,
     setStopSchedule,
     addStop,
+    insertBetween,
     importStops,
     updateStop,
     moveStop,

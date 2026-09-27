@@ -3,6 +3,7 @@ import { describe, expect, it, beforeEach } from 'vitest';
 import { db } from '../db/client';
 import {
   create,
+  insertBetween,
   listByCampaign,
   reorder,
   softDelete,
@@ -116,6 +117,26 @@ describe('routeRepository', () => {
     await update(stop.id, { values: { ...stop.values, jump: '3' } });
     const [reread] = await listByCampaign('c1');
     expect(reread.values).toEqual({ uwp: 'A788899-C', hex: '1910', jump: '3' });
+  });
+
+  it('inserts suggested hops into one leg while preserving the existing stop identities and notes', async () => {
+    const ids = await seedRoute();
+    await update(ids[2], { values: { notes: 'Keep this note', jump: '4' } });
+    await insertBetween('c1', ids[1], ids[2], [
+      { name: 'Pysadi', values: { sector: 'Spinward Marches', hex: '3008', jump: '1' } },
+      { name: 'Lewis', values: { sector: 'Spinward Marches', hex: '3107', jump: '2' } },
+    ], { jump: '1' });
+    const route = await listByCampaign('c1');
+    expect(route.map(stop => stop.name)).toEqual(['Regina', 'Extolay', 'Pysadi', 'Lewis', 'Knorbes', 'Zila']);
+    expect(route.map(stop => stop.order)).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(route[4].id).toBe(ids[2]);
+    expect(route[4].values).toEqual({ notes: 'Keep this note', jump: '1' });
+  });
+
+  it('refuses to apply a stale route suggestion when the selected leg has changed', async () => {
+    const ids = await seedRoute();
+    await expect(insertBetween('c1', ids[0], ids[2], [{ name: 'Pysadi', values: {} }])).rejects.toThrow('route changed');
+    expect(await names()).toEqual(['Regina', 'Extolay', 'Knorbes', 'Zila']);
   });
 
   it('is a no-op on an already-deleted stop', async () => {

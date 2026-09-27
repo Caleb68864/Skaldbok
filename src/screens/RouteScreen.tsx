@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
@@ -11,6 +11,9 @@ import { Button } from '../components/primitives/Button';
 import { useToast } from '../context/ToastContext';
 import { useExportActions } from '../features/export/useExportActions';
 import { RouteImportModal } from '../features/route/RouteImportModal';
+import { distanceBetweenWorlds, type WorldHit } from '../features/travellerBriefing/worldData';
+import { useSessionLog } from '../features/session/useSessionLog';
+import { routeLogSnapshot } from '../features/route/routeLog';
 
 const inputClass =
   'w-full min-h-[44px] px-2 border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)] text-[var(--color-text)]';
@@ -34,18 +37,38 @@ const moveBtn =
  * drag primitive to reuse.
  */
 export default function RouteScreen() {
-  const { activeCampaign } = useCampaignContext();
+  const { activeCampaign, activeSession } = useCampaignContext();
   const route = useRoute();
+  const { logToSession } = useSessionLog();
   const { showToast } = useToast();
   const { exportRoute } = useExportActions();
   const [newName, setNewName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const [chosenLeg, setChosenLeg] = useState<number | null>(null);
+  const [chosenJump, setChosenJump] = useState<number | null>(null);
+  const [milieu, setMilieu] = useState<string | null>(null);
+  const [avoidRed, setAvoidRed] = useState(false);
+  const [wildernessRefuel, setWildernessRefuel] = useState(false);
+  const [planning, setPlanning] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [apiError, setApiError] = useState('');
+  const [savingRoute, setSavingRoute] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [savedRoute, setSavedRoute] = useState<{ sessionId: string; body: string } | null>(null);
+  const saveInFlight = useRef(false);
+  const [suggestion, setSuggestion] = useState<{ beforeId: string; afterId: string; worlds: WorldHit[] } | null>(null);
+  const planToken = useRef(0);
 
   if (!activeCampaign) return <NoCampaignPrompt />;
 
-  const { stops, planner, valueFields, nameField, distanceLabel, total, schedule, plan, calendar } = route;
+  const { stops, planner, routeMap, valueFields, nameField, distanceLabel, total, schedule, plan, calendar } = route;
+  const legIndex = Math.min(chosenLeg ?? Math.max(0, stops.length - 2), Math.max(0, stops.length - 2));
+  const jump = chosenJump ?? routeMap?.defaultJumpRange ?? 1;
+  const routeMilieu = milieu ?? routeMap?.defaultMilieu ?? '';
   const dateHint = calendar?.example ?? 'day number';
   const fmtDate = (d: number | null) => (d === null ? '—' : formatRouteDate(d, calendar));
+  const routeSnapshot = planner && stops.length > 0 ? routeLogSnapshot(planner, stops, plan, distanceLabel, total) : null;
+  const routeAlreadySaved = savedRoute !== null && savedRoute.sessionId === activeSession?.id && savedRoute.body === routeSnapshot?.body;
 
   // A ruleset that declares no route fields has no route screen — so this is a
   // redirect, not an error page. Telling someone "not available" implies the
@@ -69,6 +92,67 @@ export default function RouteScreen() {
   async function handleDelete(stop: RouteStop) {
     await route.removeStop(stop.id);
     showToast(`${stop.name} removed from the route`, 'success');
+  }
+
+  async function saveRouteToSessionLog() {
+    if (!routeSnapshot || !activeSession || saveInFlight.current) return;
+    const snapshot = routeSnapshot;
+    const session = { id: activeSession.id, campaignId: activeSession.campaignId };
+    saveInFlight.current = true;
+    setSavingRoute(true);
+    setSaveError('');
+    try {
+      const noteId = await logToSession(snapshot.title, 'log', { kind: 'route-snapshot' }, {
+        body: snapshot.body, session, targetEncounterId: null,
+      });
+      if (!noteId) throw new Error('No active session is available.');
+      setSavedRoute({ sessionId: session.id, body: snapshot.body });
+      showToast('Route saved to session log', 'success');
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'Could not save the route.');
+    } finally {
+      saveInFlight.current = false;
+      setSavingRoute(false);
+    }
+  }
+
+  async function findMappedRoute() {
+    if (!routeMap || stops.length < 2 || planning) return;
+    const before = stops[legIndex], after = stops[legIndex + 1];
+    const token = ++planToken.current;
+    setPlanning(true);
+    setSuggestion(null);
+    setApiError('');
+    try {
+      const worlds = await routeMap.plan(routeMap.locationOf(before), routeMap.locationOf(after), {
+        jump, avoidRed, wildernessRefuel, milieu: routeMilieu,
+      });
+      if (token === planToken.current) setSuggestion({ beforeId: before.id, afterId: after.id, worlds });
+    } catch (error) {
+      if (token === planToken.current) setApiError(error instanceof Error ? error.message : 'Could not find a route.');
+    } finally { if (token === planToken.current) setPlanning(false); }
+  }
+
+  function invalidateSuggestion() {
+    planToken.current++;
+    setSuggestion(null);
+    setPlanning(false);
+  }
+
+  async function applyMappedRoute() {
+    if (!routeMap || !suggestion || applying) return;
+    const { worlds, beforeId, afterId } = suggestion;
+    const middle = worlds.slice(1, -1).map((world, index) => routeMap.worldToStop(world, distanceBetweenWorlds(worlds[index], world)));
+    const lastJump = distanceBetweenWorlds(worlds[worlds.length - 2], worlds[worlds.length - 1]);
+    setApplying(true);
+    setApiError('');
+    try {
+      await route.insertBetween(beforeId, afterId, middle, routeMap.legValues(lastJump));
+      showToast(`Route applied with ${middle.length} intermediate ${middle.length === 1 ? 'world' : 'worlds'}`, 'success');
+      setSuggestion(null);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not apply the route.');
+    } finally { setApplying(false); }
   }
 
   return (
@@ -102,8 +186,55 @@ export default function RouteScreen() {
               Export
             </Button>
           )}
+          {stops.length > 0 && (
+            <Button variant="secondary" disabled={!activeSession || savingRoute || routeAlreadySaved} onClick={() => void saveRouteToSessionLog()}>
+              {savingRoute ? 'Saving route…' : routeAlreadySaved ? 'Saved to session log' : 'Save route to session log'}
+            </Button>
+          )}
         </div>
+        {stops.length > 0 && !activeSession && <p className="text-sm text-[var(--color-text-muted)] mt-2">Start a session to save this route to its log.</p>}
+        {saveError && <p role="alert" className="text-red-500 mt-2">{saveError}</p>}
       </SectionPanel>
+
+      {routeMap && <SectionPanel title={`Plan with ${routeMap.sourceLabel}`} subtitle="Find the shortest path for one leg of this itinerary">
+        <p className="text-sm text-[var(--color-text-muted)] mb-3">
+          {routeMap.sourceLabel} supplies the route and world profiles. Red Zone and wilderness refuelling options apply to intermediate stops. Amber Zones are marked in the result for review.
+          {' '}<a href={routeMap.apiReferenceUrl} target="_blank" rel="noreferrer" className="underline">Route API details</a>
+        </p>
+        {stops.length < 2 ? <p>Add two worlds to the route to plan a leg. You can add them from Worlds.</p> : <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label>Leg
+              <select className={inputClass} value={legIndex} onChange={e => { setChosenLeg(Number(e.target.value)); invalidateSuggestion(); }}>
+                {stops.slice(0, -1).map((stop, index) => <option key={stop.id} value={index}>{stop.name} → {stops[index + 1].name}</option>)}
+              </select>
+            </label>
+            <label>Jump range
+              <select className={inputClass} value={jump} onChange={e => { setChosenJump(Number(e.target.value)); invalidateSuggestion(); }}>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(range => <option key={range} value={range}>Jump-{range}</option>)}
+              </select>
+            </label>
+            <label>Milieu <input className={inputClass} value={routeMilieu} onChange={e => { setMilieu(e.target.value); invalidateSuggestion(); }} /></label>
+          </div>
+          <div className="flex gap-4 flex-wrap my-3">
+            <label className="flex items-center gap-2"><input type="checkbox" checked={avoidRed} onChange={e => { setAvoidRed(e.target.checked); invalidateSuggestion(); }} />Avoid Red Zones</label>
+            <label className="flex items-center gap-2"><input type="checkbox" checked={wildernessRefuel} onChange={e => { setWildernessRefuel(e.target.checked); invalidateSuggestion(); }} />Require wilderness refuelling</label>
+          </div>
+          <Button disabled={planning} onClick={() => void findMappedRoute()}>{planning ? 'Finding route…' : 'Find shortest route'}</Button>
+          {apiError && <p role="alert" className="text-red-500 mt-2">{apiError}</p>}
+          {suggestion && <div className="mt-4">
+            <h3 className="font-semibold mb-2">Suggested path · {suggestion.worlds.length - 1} {suggestion.worlds.length === 2 ? 'jump' : 'jumps'}</h3>
+            <ol className="list-decimal pl-6 space-y-1">
+              {suggestion.worlds.map((world, index) => <li key={`${world.sector}/${world.hex}`}>
+                {world.name} · {world.sector} {world.hex} · {world.uwp}
+                {index > 0 && ` · ${distanceBetweenWorlds(suggestion.worlds[index - 1], world) ?? '?'} pc`}
+                {world.zone === 'R' && <strong className="text-red-500"> · Red Zone</strong>}
+                {world.zone === 'A' && <strong className="text-amber-500"> · Amber Zone</strong>}
+              </li>)}
+            </ol>
+            <Button className="mt-3" disabled={applying} onClick={() => void applyMappedRoute()}>{applying ? 'Applying…' : `Apply path to this leg`}</Button>
+          </div>}
+        </>}
+      </SectionPanel>}
 
       <SectionPanel
         title="Schedule"

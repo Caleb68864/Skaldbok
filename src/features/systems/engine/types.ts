@@ -1,6 +1,8 @@
 import type { CharacterRecord, CharacterSkill } from '../../../types/character';
 import type { SystemDefinition } from '../../../types/system';
 import type { DerivedValues } from '../../../utils/derivedValues';
+import type { RouteStop } from '../../../types/routeStop';
+import type { WorldHit } from '../../travellerBriefing/worldData';
 
 // `PanelKey` and its backing list live in types/system so the schema can
 // validate a JSON-declared `panels` array against exactly the keys the app
@@ -658,6 +660,17 @@ export interface DerivedFieldDef {
 export interface SystemEngine {
   /** Landing briefing tool offered by rulesets that support TravellerMap worlds. */
   landingBriefing?: { label: string };
+  /** Optional map integration for turning worlds into route stops and suggesting a path. */
+  routeMap?: {
+    sourceLabel: string;
+    apiReferenceUrl: string;
+    defaultJumpRange: number;
+    defaultMilieu: string;
+    worldToStop: (world: WorldHit, jump?: number | null) => { name: string; values: Record<string, string> };
+    legValues: (jump: number | null) => Record<string, string>;
+    locationOf: (stop: RouteStop) => string;
+    plan: (start: string, end: string, options: { jump: number; avoidRed: boolean; wildernessRefuel: boolean; milieu: string }) => Promise<WorldHit[]>;
+  };
   /**
    * The system id whose rules are *not* being applied, when no adapter matched.
    *

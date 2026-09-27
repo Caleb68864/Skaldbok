@@ -7,6 +7,8 @@ import {
 } from '../../../systems/traveller/travellerMath';
 import { attrKey, resKey, skillKey } from '../../../utils/statKeys';
 import type { SystemEngine, SkillDisplayContext } from './types';
+import { DEFAULT_TRAVELLER_JUMP_RANGE, DEFAULT_TRAVELLER_MILIEU } from '../../../config/defaults/travellerBriefing';
+import { planTravellerMapRoute } from '../../route/travellerMapRoute';
 
 export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'];
 
@@ -297,7 +299,21 @@ function travellerRollContext(
  * is how those panels get hidden.
  */
 export const travellerEngine: SystemEngine = {
-  landingBriefing: { label: 'Weather Report' },
+  landingBriefing: { label: 'Worlds' },
+  routeMap: {
+    sourceLabel: 'TravellerMap',
+    apiReferenceUrl: 'https://travellermap.com/doc/api',
+    defaultJumpRange: DEFAULT_TRAVELLER_JUMP_RANGE,
+    defaultMilieu: DEFAULT_TRAVELLER_MILIEU,
+    worldToStop: (world, jump) => ({
+      name: world.name,
+      values: { sector: world.sector, hex: world.hex, uwp: world.uwp, jump: jump == null ? '' : String(jump) },
+    }),
+    legValues: jump => ({ jump: jump == null ? '' : String(jump) }),
+    locationOf: stop => /^\d{4}$/.test(stop.values.hex ?? '') && stop.values.sector
+      ? `${stop.values.sector} ${stop.values.hex}` : stop.name,
+    plan: planTravellerMapRoute,
+  },
   attributeBadge: (attributeId, character) => {
     const score = character.attributes?.[attributeId];
     if (score === undefined || score === null) return null;

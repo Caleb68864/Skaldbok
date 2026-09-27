@@ -123,7 +123,7 @@ export default function SettingsScreen() {
       {/* Theme */}
       <Card>
         <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">Traveller world sectors</h2>
-        <p className="text-[var(--color-text-muted)] text-sm">Weather Report caches these sectors for offline world search.</p>
+        <p className="text-[var(--color-text-muted)] text-sm">Worlds caches these sectors for offline search and nearby destinations.</p>
         <div className="flex flex-wrap gap-2 my-3">
           {briefingPreferences.sectors.map(sector => <span key={sector} className="px-2 py-1 rounded border border-[var(--color-border)]">
             {sector} <button aria-label={`Remove ${sector}`} onClick={() => void briefingPreferences.updateSettings({ travellerBriefingSectors: briefingPreferences.sectors.filter(s => s !== sector) })}>×</button>
