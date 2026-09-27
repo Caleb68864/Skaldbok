@@ -51,7 +51,7 @@ export default function TravellerBriefingScreen() {
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [remote, setRemote] = useState<WorldHit[]>([]);
+  const [remote, setRemote] = useState<{ query: string; worlds: WorldHit[] }>({ query: '', worlds: [] });
   const [open, setOpen] = useState(false);
   const [suggestionPosition, setSuggestionPosition] = useState<{ left: number; top?: number; bottom?: number; width: number; maxHeight: number } | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -90,7 +90,10 @@ export default function TravellerBriefingScreen() {
       Promise.all(memberIds.map(id => characterRepository.getById(id))),
       inventoryContainerRepository.list(campaignId),
     ]).then(([characters, containers]) => {
-      if (!cancelled) setPartyGear({ characters: characters.filter((value): value is CharacterRecord => Boolean(value)), containers });
+      if (!cancelled) {
+        setPartyGear({ characters: characters.filter((value): value is CharacterRecord => Boolean(value)), containers });
+        if (characters.some(value => !value)) setGearLoadError('Some linked party characters are unavailable.');
+      }
     }).catch(() => {
       if (!cancelled) { setPartyGear({ characters: [], containers: [] }); setGearLoadError('Could not load all party inventory data.'); }
     }).finally(() => { if (!cancelled) setGearLoading(false); });
@@ -127,15 +130,27 @@ export default function TravellerBriefingScreen() {
   }, [sectors, milieu]);
   useEffect(() => { const timer = setTimeout(() => setDebouncedQuery(query.trim()), 200); return () => clearTimeout(timer); }, [query]);
   const local = useMemo(() => rankWorlds(catalog, debouncedQuery), [catalog, debouncedQuery]);
+  const strongLocalMatch = useMemo(() => {
+    const q = debouncedQuery.toLowerCase();
+    const [sector, hex] = q.split(/\s+/);
+    return local.some(world => world.name.toLowerCase().startsWith(q) || world.hex.startsWith(q)
+      || world.uwp.toLowerCase().startsWith(q)
+      || (hex && world.sector.toLowerCase().startsWith(sector) && world.hex.startsWith(hex)));
+  }, [local, debouncedQuery]);
+  const exactLocalName = local.some(world => world.name.toLowerCase() === debouncedQuery.toLowerCase());
   useEffect(() => {
-    if (!debouncedQuery || local.length) { setRemote([]); return; }
+    if (!debouncedQuery || (strongLocalMatch && !exactLocalName)) { setRemote({ query: '', worlds: [] }); return; }
     let cancelled = false;
-    remoteSearch(debouncedQuery, milieu).then(found => { if (!cancelled) setRemote(found); }).catch(() => { if (!cancelled) setRemote([]); });
+    remoteSearch(debouncedQuery, milieu).then(found => { if (!cancelled) setRemote({ query: debouncedQuery, worlds: found }); })
+      .catch(() => { if (!cancelled) setRemote({ query: debouncedQuery, worlds: [] }); });
     return () => { cancelled = true; };
-  }, [debouncedQuery, local.length, milieu]);
+  }, [debouncedQuery, strongLocalMatch, exactLocalName, milieu]);
   const suggestions = query.trim()
-    ? (debouncedQuery === query.trim() ? (local.length ? local : remote) : [])
-    : preferences.recent;
+    ? (debouncedQuery === query.trim() ? rankWorlds(
+      [...new Map([...(remote.query === debouncedQuery ? remote.worlds : []), ...local].map(world => [worldKey(world), world])).values()],
+      debouncedQuery,
+    ).slice(0, 20) : [])
+    : preferences.recent.slice(0, 20);
   useEffect(() => {
     if (!open || suggestions.length === 0 || !searchInputRef.current) { setSuggestionPosition(null); return; }
     const updatePosition = () => {
@@ -218,6 +233,7 @@ export default function TravellerBriefingScreen() {
             milieu, date, session, homeDistance: jumpDistance(selected), alternatives, overrides,
             gearReview: gearFindings ?? undefined,
             gearReviewSources: partyGear.characters.length + partyGear.containers.length,
+            gearReviewError: gearLoadError || undefined,
           });
           navigate('/weather-report', { state: {
             campaignId: activeCampaign.id, report, wiki: article, wikiError,
@@ -237,7 +253,7 @@ export default function TravellerBriefingScreen() {
     setAddingRoute(true);
     setRouteAddError('');
     try {
-      await routeRepository.create({ campaignId: activeCampaign.id, ...routeMap.worldToStop(selected) });
+      await routeRepository.create({ campaignId: activeCampaign.id, ...routeMap.worldToStop({ ...selected, ...overrides }) });
       setRouteAddedFor(key);
     } catch (error) {
       setRouteAddError(error instanceof Error ? error.message : 'Could not add the world to the route.');
@@ -291,7 +307,7 @@ export default function TravellerBriefingScreen() {
     {open && suggestions.length > 0 && suggestionPosition && createPortal(
       <ul id="world-suggestions" role="listbox" className="fixed z-[1000] overflow-y-auto rounded border border-[var(--color-border)] bg-[var(--color-surface)] shadow-xl"
         style={{ left: suggestionPosition.left, top: suggestionPosition.top, bottom: suggestionPosition.bottom, width: suggestionPosition.width, maxHeight: suggestionPosition.maxHeight }}>
-        {suggestions.slice(0, 20).map((w, i) => <li key={worldKey(w)} role="option" aria-selected={activeIndex === i}>
+        {suggestions.map((w, i) => <li key={worldKey(w)} role="option" aria-selected={activeIndex === i}>
           <button type="button" className={`w-full text-left p-2 min-h-11 border-b border-[var(--color-border)] ${activeIndex === i ? 'bg-[var(--color-surface-alt)]' : ''}`}
             onMouseDown={e => e.preventDefault()} onClick={() => void choose(w, suggestions.filter(x => x.name === w.name && worldKey(x) !== worldKey(w)))}>
             <strong><Highlight value={w.name} query={query} /></strong> · {w.sector} <Highlight value={w.hex} query={query.split(/\s+/).slice(-1)[0] ?? query} /> {w.subsector && `· ${w.subsector}`}
@@ -302,8 +318,8 @@ export default function TravellerBriefingScreen() {
     )}
     {busy && <p role="status">Loading world data…</p>}
     {selected && <>
-      <SectionPanel title={`${selected.name} · ${selected.sector} ${selected.hex}`} subtitle={selected.uwp} collapsible defaultOpen>
-        {selected.zone && <p className={`font-bold ${selected.zone === 'R' ? 'text-red-500' : 'text-amber-500'}`}>{zoneLabel(selected.zone)} Zone</p>}
+      <SectionPanel title={`${selected.name} · ${selected.sector} ${selected.hex}`} subtitle={overrides?.uwp ?? selected.uwp} collapsible defaultOpen>
+        {(overrides?.zone ?? selected.zone) && <p className={`font-bold ${(overrides?.zone ?? selected.zone) === 'R' ? 'text-red-500' : 'text-amber-500'}`}>{zoneLabel(overrides?.zone ?? selected.zone)} Zone</p>}
         {(() => {
           try {
             const decoded = decodeWorld({ ...selected, ...overrides });
@@ -329,8 +345,8 @@ export default function TravellerBriefingScreen() {
         })()}
         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 my-3">
           <div><dt className="font-semibold">Subsector</dt><dd>{selected.subsector || '—'}</dd></div>
-          <div><dt className="font-semibold">Starport</dt><dd>{selected.uwp[0] || '—'}</dd></div>
-          <div><dt className="font-semibold">Remarks</dt><dd>{selected.remarks || '—'}</dd></div>
+          <div><dt className="font-semibold">Starport</dt><dd>{(overrides?.uwp ?? selected.uwp)[0] || '—'}</dd></div>
+          <div><dt className="font-semibold">Remarks</dt><dd>{(overrides?.remarks ?? selected.remarks) || '—'}</dd></div>
           <div><dt className="font-semibold">Allegiance</dt><dd>{selected.allegianceName || selected.allegiance || '—'}</dd></div>
           <div><dt className="font-semibold">Bases</dt><dd>{selected.bases || '—'}</dd></div>
           <div><dt className="font-semibold">From Regina</dt><dd>{jumpDistance(selected) == null ? 'Unknown' : `${jumpDistance(selected)} parsecs`}</dd></div>

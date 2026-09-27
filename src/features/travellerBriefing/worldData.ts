@@ -168,7 +168,9 @@ export async function loadWorld(hit: WorldHit, milieu = 'M1105'): Promise<WorldH
     remarks: str(w.Remarks), pbg: str(w.PBG), allegiance: str(w.Allegiance),
     allegianceName: str(w.AllegianceName), stellar: str(w.Stellar),
     ix: str(w.Ix), ex: str(w.Ex), cx: str(w.Cx), nobility: str(w.Nobility),
-    worlds: str(w.Worlds), worldX: Number(w.WorldX), worldY: Number(w.WorldY),
+    worlds: str(w.Worlds),
+    worldX: w.WorldX != null && Number.isFinite(Number(w.WorldX)) ? Number(w.WorldX) : hit.worldX,
+    worldY: w.WorldY != null && Number.isFinite(Number(w.WorldY)) ? Number(w.WorldY) : hit.worldY,
   };
 }
 
@@ -176,8 +178,8 @@ export interface NearbyWorld { world: WorldHit; distance: number | null; }
 
 /** Distance between two selected worlds, including worlds in adjacent sectors. */
 export function distanceBetweenWorlds(a: WorldHit, b: WorldHit): number | null {
-  if (a.worldX !== undefined && a.worldY !== undefined && b.worldX !== undefined && b.worldY !== undefined)
-    return hexDistance([a.worldX, a.worldY], [b.worldX, b.worldY]);
+  if ([a.worldX, a.worldY, b.worldX, b.worldY].every(value => value !== undefined && Number.isFinite(value)))
+    return hexDistance([a.worldX!, a.worldY!], [b.worldX!, b.worldY!]);
   if (!/^\d{4}$/.test(a.hex) || !/^\d{4}$/.test(b.hex)) return null;
   const x = (w: WorldHit) => Number(w.hex.slice(0, 2));
   const y = (w: WorldHit) => Number(w.hex.slice(2));

@@ -6,6 +6,7 @@ import TravellerBriefingScreen from '../../screens/TravellerBriefingScreen';
 import TravellerWeatherReportsScreen from '../../screens/TravellerWeatherReportsScreen';
 import { reviewTravellerGear } from './gearRestrictions';
 import { buildBriefing } from './briefing';
+import { loadSectorBasic, remoteSearch } from './worldData';
 
 const mocks = vi.hoisted(() => ({
   session: { id: 'session-1', campaignId: 'campaign-1', title: 'Arrival at Zila', date: '2026-09-26' } as { id: string; campaignId: string; title: string; date: string } | null,
@@ -22,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   party: null as { members: Array<{ linkedCharacterId: string }> } | null,
   gearEnabled: false,
   sectors: [] as string[],
+  overrides: {} as Record<string, { uwp?: string; zone?: string; remarks?: string }>,
   filters: { starports: [] as string[], gasGiantOnly: false, zone: 'all' as 'all' | 'noRed' | 'greenOnly' },
   world: {
     name: 'Zila', sector: 'Spinward Marches', hex: '2908', subsector: 'Aramis',
@@ -42,7 +44,7 @@ vi.mock('../systems/engine', () => ({ getEngine: () => ({
   gearRestrictions: mocks.gearEnabled ? mocks.gearRules : undefined,
 }) }));
 vi.mock('./useBriefingPreferences', () => ({
-  useBriefingPreferences: () => ({ sectors: mocks.sectors, jumpRange: 2, filters: mocks.filters, starportCodes: ['A', 'B', 'C', 'D', 'E', 'X'], recent: [{ ...mocks.world, name: 'Regina', hex: '1910' }], overrides: {}, updateSettings: mocks.updateSettings }),
+  useBriefingPreferences: () => ({ sectors: mocks.sectors, jumpRange: 2, filters: mocks.filters, starportCodes: ['A', 'B', 'C', 'D', 'E', 'X'], recent: [{ ...mocks.world, name: 'Regina', hex: '1910' }], overrides: mocks.overrides, updateSettings: mocks.updateSettings }),
 }));
 vi.mock('./worldData', async importOriginal => ({
   ...await importOriginal<typeof import('./worldData')>(),
@@ -99,6 +101,10 @@ describe('Traveller briefing session log action', () => {
     };
     mocks.party = null;
     mocks.gearEnabled = false;
+    mocks.sectors = [];
+    mocks.overrides = {};
+    vi.mocked(loadSectorBasic).mockReset().mockResolvedValue([]);
+    vi.mocked(remoteSearch).mockReset().mockResolvedValue([mocks.world]);
   });
 
   it('browses a world and nearby destinations before requesting Wiki data', async () => {
@@ -128,6 +134,26 @@ describe('Traveller briefing session log action', () => {
     expect(screen.getAllByRole('option')).toHaveLength(1);
     await selectZila();
     expect(screen.getByRole('button', { name: /Nearby worlds · Jump-2/ })).toBeTruthy();
+  });
+
+  it('checks unloaded sectors when the local catalog has only a fuzzy match', async () => {
+    mocks.sectors = ['Spinward Marches'];
+    vi.mocked(loadSectorBasic).mockResolvedValue([{ ...mocks.world, name: 'Zilo' }]);
+    vi.mocked(remoteSearch).mockResolvedValue([{ ...mocks.world, sector: 'Another Sector', hex: '1204' }]);
+    renderWorlds();
+    fireEvent.change(screen.getByRole('combobox', { name: 'World' }), { target: { value: 'Zila' } });
+    expect(await screen.findByRole('option', { name: /Zila · Another Sector/ })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /Zilo/ })).toBeTruthy();
+  });
+
+  it('shows same-name worlds in unloaded sectors alongside an exact local match', async () => {
+    mocks.sectors = ['Spinward Marches'];
+    vi.mocked(loadSectorBasic).mockResolvedValue([mocks.world]);
+    vi.mocked(remoteSearch).mockResolvedValue([{ ...mocks.world, sector: 'Another Sector', hex: '1204' }]);
+    renderWorlds();
+    fireEvent.change(screen.getByRole('combobox', { name: 'World' }), { target: { value: 'Zila' } });
+    expect(await screen.findByRole('option', { name: /Zila · Another Sector/ })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /Zila · Spinward Marches/ })).toBeTruthy();
   });
 
   it('saves the complete report as a session-level log entry', async () => {
@@ -219,6 +245,16 @@ describe('Traveller briefing session log action', () => {
     expect(mocks.loadWikiArticle).not.toHaveBeenCalled();
   });
 
+  it('shows and routes with the GM-corrected world profile', async () => {
+    mocks.overrides = { 'spinward marches/2908': { uwp: 'A556727-7', zone: '', remarks: 'Hi' } };
+    renderWorlds();
+    await selectZila();
+    expect(screen.getByText('A556727-7')).toBeTruthy();
+    expect(screen.getByText('Hi')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Add to Jump Route' }));
+    await waitFor(() => expect(mocks.createRouteStop).toHaveBeenCalledWith(expect.objectContaining({ values: expect.objectContaining({ uwp: 'A556727-7' }) })));
+  });
+
   it('includes the linked party gear review in the visible and saved report', async () => {
     mocks.gearEnabled = true;
     mocks.party = { members: [{ linkedCharacterId: 'milo-1' }] };
@@ -244,7 +280,20 @@ describe('Traveller briefing session log action', () => {
     renderWorlds();
     await selectZila();
     await buildReport();
-    expect(await screen.findByText(/Could not load all party inventory data/)).toBeTruthy();
+    expect((await screen.findAllByText(/Could not load all party inventory data/)).length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Party gear check incomplete' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'Save to session log' }));
+    await waitFor(() => expect(mocks.logToSession).toHaveBeenCalledTimes(1));
+    expect(mocks.logToSession.mock.calls[0][3].body).toContain('**Gear check incomplete:**');
+  });
+
+  it('warns when a linked party character is missing', async () => {
+    mocks.gearEnabled = true;
+    mocks.party = { members: [{ linkedCharacterId: 'missing-1' }] };
+    mocks.getCharacter.mockResolvedValue(undefined);
+    renderWorlds();
+    await selectZila();
+    await buildReport();
+    expect((await screen.findAllByText(/Some linked party characters are unavailable/)).length).toBeGreaterThan(0);
   });
 });

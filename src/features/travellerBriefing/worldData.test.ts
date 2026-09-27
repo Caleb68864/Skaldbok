@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cachedText, fetchTextWithTimeout, distanceBetweenWorlds, loadNearbyWorlds, nearbyFromCatalog, type WorldHit } from './worldData';
+import { cachedText, fetchTextWithTimeout, distanceBetweenWorlds, loadNearbyWorlds, loadWorld, nearbyFromCatalog, type WorldHit } from './worldData';
 
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -36,6 +36,15 @@ const zila: WorldHit = {
 };
 
 describe('nearby world discovery', () => {
+  it('uses hex distance when detail data omits world coordinates', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ Worlds: [
+      { Name: 'Zila', Sector: 'Spinward Marches', Hex: '2908', UWP: 'E556727-7' },
+    ] }), { status: 200 })));
+    const selected = await loadWorld({ ...zila, worldX: undefined, worldY: undefined }, 'M1201');
+    expect(distanceBetweenWorlds(selected, { ...zila, hex: '3008', worldX: undefined, worldY: undefined })).toBe(1);
+    expect(selected.worldX).toBeUndefined();
+  });
+
   it('shows cached neighbors immediately and excludes the selected world', () => {
     const nearby = nearbyFromCatalog(zila, [zila, { ...zila, name: 'Pysadi', hex: '3008', worldX: -99, worldY: -72 }], 2);
     expect(nearby).toMatchObject([{ world: { name: 'Pysadi' }, distance: 1 }]);

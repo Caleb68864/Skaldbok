@@ -14,6 +14,7 @@ export interface BriefingOptions {
   overrides?: Partial<Pick<WorldHit, 'uwp' | 'zone' | 'bases' | 'remarks' | 'pbg' | 'stellar' | 'allegianceName'>> & { note?: string };
   gearReview?: GearFinding[];
   gearReviewSources?: number;
+  gearReviewError?: string;
 }
 export interface BriefingPoints {
   law: string;
@@ -180,7 +181,8 @@ export function buildBriefing(canon: WorldHit, wiki: WikiArticle | null, options
   if (options.gearReview) {
     const plain = (value: string) => value.replace(/\s+/g, ' ').replace(/[\\*_`[\]]/g, '\\$&').trim();
     lines.push('## Party gear before going ashore', '', '*Based on recorded gear and the survey law. The GM decides local exceptions and permits.*', '');
-    if (options.gearReview.length) {
+    if (options.gearReviewError) lines.push(`**Gear check incomplete:** ${options.gearReviewError} The report does not confirm that the party's gear is clear.`);
+    else if (options.gearReview.length) {
       for (const finding of options.gearReview) {
         lines.push(`- **${finding.action === 'leave aboard' ? 'Leave aboard' : 'Ask GM'}:** ${plain(finding.owner)} — ${plain(finding.item)} (${plain(finding.category)}). ${plain(finding.reason)}.`);
       }
