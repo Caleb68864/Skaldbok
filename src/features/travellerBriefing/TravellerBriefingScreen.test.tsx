@@ -36,13 +36,14 @@ vi.mock('../systems/engine', () => ({ getEngine: () => ({
   gearRestrictions: mocks.gearEnabled ? mocks.gearRules : undefined,
 }) }));
 vi.mock('./useBriefingPreferences', () => ({
-  useBriefingPreferences: () => ({ sectors: mocks.sectors, jumpRange: 2, filters: mocks.filters, starportCodes: ['A', 'B', 'C', 'D', 'E', 'X'], recent: [mocks.world], overrides: {}, updateSettings: mocks.updateSettings }),
+  useBriefingPreferences: () => ({ sectors: mocks.sectors, jumpRange: 2, filters: mocks.filters, starportCodes: ['A', 'B', 'C', 'D', 'E', 'X'], recent: [{ ...mocks.world, name: 'Regina', hex: '1910' }], overrides: {}, updateSettings: mocks.updateSettings }),
 }));
 vi.mock('./worldData', async importOriginal => ({
   ...await importOriginal<typeof import('./worldData')>(),
   loadSectorBasic: vi.fn(async () => []),
   loadWorld: vi.fn(async () => mocks.world),
   loadNearbyWorlds: vi.fn(async () => [{ world: { ...mocks.world, name: 'Pysadi', hex: '3008', uwp: 'C5766D8-5' }, distance: 1 }]),
+  remoteSearch: vi.fn(async () => [mocks.world]),
 }));
 vi.mock('./wikiData', () => ({ loadWikiArticle: mocks.loadWikiArticle }));
 vi.mock('../../storage/repositories/routeRepository', () => ({ create: mocks.createRouteStop }));
@@ -52,7 +53,7 @@ vi.mock('../../storage/repositories/inventoryContainerRepository', () => ({ list
 function renderWorlds() { return render(<MemoryRouter><TravellerBriefingScreen /></MemoryRouter>); }
 
 async function selectZila() {
-  fireEvent.focus(screen.getByRole('combobox', { name: 'World' }));
+  fireEvent.change(screen.getByRole('combobox', { name: 'World' }), { target: { value: 'Zila' } });
   const option = await screen.findByRole('option', { name: /Zila/ });
   fireEvent.click(option.querySelector('button')!);
   await screen.findByRole('button', { name: 'Build weather report' });
@@ -86,9 +87,23 @@ describe('Traveller briefing session log action', () => {
     expect((screen.getByRole('textbox', { name: 'Session' }) as HTMLInputElement).value).toBe('Arrival at Zila');
     expect(mocks.loadWikiArticle).not.toHaveBeenCalled();
     expect(screen.queryByRole('button', { name: 'Save to session log' })).toBeNull();
+    expect(screen.getByText(/Participating Democracy/)).toBeTruthy();
+    expect(screen.getByText(/gas giants/)).toBeTruthy();
+    expect(screen.queryByRole('option', { name: /Regina/ })).toBeNull();
     await screen.findByRole('button', { name: /Pysadi/ });
     await buildReport();
     expect(mocks.loadWikiArticle).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps recent worlds in autocomplete until a new query is entered', async () => {
+    renderWorlds();
+    fireEvent.focus(screen.getByRole('combobox', { name: 'World' }));
+    expect(await screen.findByRole('option', { name: /Regina/ })).toBeTruthy();
+    fireEvent.change(screen.getByRole('combobox', { name: 'World' }), { target: { value: 'Zila' } });
+    expect(await screen.findByRole('option', { name: /Zila/ })).toBeTruthy();
+    expect(screen.getAllByRole('option')).toHaveLength(1);
+    await selectZila();
+    expect(screen.getByRole('button', { name: /Nearby worlds · Jump-2/ })).toBeTruthy();
   });
 
   it('saves the complete report as a session-level log entry', async () => {
