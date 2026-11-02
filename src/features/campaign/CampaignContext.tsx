@@ -483,13 +483,17 @@ export function CampaignProvider({ children }: { children: ReactNode }) {
       const dateStr = localDateOnlyISO();
       const title = `Session ${sessionCount + 1} — ${dateStr}`;
 
-      const newSession = await sessionRepository.createSession({
+      const newSession = await sessionRepository.startSessionIfNoneActive({
         campaignId: activeCampaign.id,
         title,
         status: 'active',
         date: dateStr,
         startedAt: now,
       });
+      if (!newSession) {
+        showToast('A session is already active');
+        return;
+      }
       setActiveSession_(newSession);
 
       // Refill every party character's session-refreshing resources — Savage

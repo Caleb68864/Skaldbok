@@ -156,6 +156,29 @@ export async function createSession(data: Omit<Session, 'id' | 'createdAt' | 'up
 }
 
 /**
+ * Creates a session unless the campaign already has a live active one.
+ *
+ * @remarks
+ * Check and write share one transaction. The check used to be on React state, so
+ * a double tap, or a second tab, could start two sessions.
+ *
+ * @returns The new session, or `undefined` when one was already active.
+ */
+export async function startSessionIfNoneActive(
+  data: Omit<Session, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>,
+): Promise<Session | undefined> {
+  try {
+    return await db.transaction('rw', db.sessions, async () => {
+      const rows = await db.sessions.where('campaignId').equals(data.campaignId).toArray();
+      if (excludeDeleted(rows).some(session => session.status === 'active')) return undefined;
+      return createSession(data);
+    });
+  } catch (e) {
+    throw new Error(`sessionRepository.startSessionIfNoneActive failed: ${e}`, { cause: e });
+  }
+}
+
+/**
  * Applies a partial update to an existing {@link Session} and returns the full
  * updated record.
  *

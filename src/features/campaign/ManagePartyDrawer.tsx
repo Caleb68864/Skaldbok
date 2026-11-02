@@ -63,7 +63,7 @@ export function ManagePartyDrawer({ onClose }: ManagePartyDrawerProps) {
     let mounted = true;
     getAllCharacters().then(chars => {
       if (mounted) setAllCharacters(chars);
-    });
+    }).catch(console.error);
     return () => { mounted = false; };
   }, []);
 

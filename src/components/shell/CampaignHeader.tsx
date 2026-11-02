@@ -1,3 +1,4 @@
+import { useIsPlayMode } from '../../utils/modeGuards';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Menu } from 'lucide-react';
@@ -60,7 +61,7 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
   const { activeCampaign, activeSession, activeCharacterInCampaign, setActiveCampaign } = useCampaignContext();
   const { exportAllNotes, exportCampaign } = useExportActions();
   const { startImport, showPreview, parsedResult, contentHashMismatch, conflicts, executeImport, cancelImport, isImporting } = useImportActions();
-  const { settings, toggleMode } = useAppState();
+  const { toggleMode } = useAppState();
   const [includePrivateExport, setIncludePrivateExport] = useState(false);
   const { isFullscreen, toggleFullscreen, isSupported: fsSupported } = useFullscreen();
   const { isActive: wakeLockActive, toggleWakeLock, isSupported: wlSupported } = useWakeLock();
@@ -75,7 +76,7 @@ export function CampaignHeader({ onCreateCampaign, onManageParty }: CampaignHead
   // is campaign-scoped and is most often opened with no character loaded.
   const { system } = useSystemDefinition(activeCampaign?.system ?? DEFAULT_SYSTEM_ID);
   const vehicles = system?.vehicles;
-  const isPlayMode = settings.mode === 'play';
+  const isPlayMode = useIsPlayMode();
 
   useEffect(() => {
     if (!selectorOpen) return;

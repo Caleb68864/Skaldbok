@@ -29,7 +29,7 @@ import { join } from 'node:path';
  * - **Behaviour, not names.** A tombstone is a write of a `deletedAt`
  *   timestamp, a restore is a write clearing one, and a listing is a read that
  *   keeps rows *because* they are deleted. What the function is called does not
- *   enter into it, so `removePartyMember` and `referenceSectionRepository.remove`
+ *   enter into it, so `hardDeletePartyMember` and `referenceSectionRepository.remove`
  *   are as visible as anything named `softDelete`.
  * - **Per table, not per module.** `partyRepository` deletes and restores both
  *   `parties` and `partyMembers`, and lists only the second. At module

@@ -90,7 +90,8 @@ async function danglingLinkEndpoint(link: Record<string, unknown>): Promise<stri
     const table = Object.prototype.hasOwnProperty.call(LINK_ENDPOINT_TABLES, type) ? LINK_ENDPOINT_TABLES[type] : undefined;
     if (!table) continue; // unverifiable endpoint type — don't reject on it
     const exists = await db.table(table).get(entityId);
-    if (!exists) return `${type} "${entityId}"`;
+    // A tombstone counts as missing: a live edge must not point at a deleted row.
+    if (!exists || exists.deletedAt) return `${type} "${entityId}"`;
   }
   return null;
 }
@@ -382,6 +383,14 @@ async function mergeEntity(
   // Dedup rules based on updatedAt
   const bundleUpdatedAt = entity.updatedAt as string | undefined;
   const localUpdatedAt = existing.updatedAt as string | undefined;
+
+  // Attachments have no `updatedAt` because they never change. With the same id and
+  // the same `createdAt` this is the same row, so re-importing a backup is a skip,
+  // not one error per photo.
+  if (!bundleUpdatedAt && !localUpdatedAt) {
+    report.skipped++;
+    return;
+  }
 
   if (!bundleUpdatedAt || !localUpdatedAt) {
     // Can't compare — surface it instead of silently dropping the entity, since

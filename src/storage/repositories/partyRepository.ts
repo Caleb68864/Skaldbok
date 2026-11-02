@@ -118,11 +118,11 @@ export async function addPartyMember(data: Omit<PartyMember, 'id' | 'createdAt' 
  * Predates the soft-delete convention; {@link softDeletePartyMember} is the
  * reversible path. This is retained for callers that intend a permanent removal.
  */
-export async function removePartyMember(memberId: string): Promise<void> {
+export async function hardDeletePartyMember(memberId: string): Promise<void> {
   try {
     await db.partyMembers.delete(memberId);
   } catch (e) {
-    throw new Error(`partyRepository.removePartyMember failed: ${e}`, { cause: e });
+    throw new Error(`partyRepository.hardDeletePartyMember failed: ${e}`, { cause: e });
   }
 }
 

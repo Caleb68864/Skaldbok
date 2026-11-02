@@ -184,7 +184,7 @@ export function useNoteActions() {
     try {
       const txId = generateSoftDeleteTxId();
       // Note, edges and attachments together, in one transaction. The previous
-      // form called `deleteLinksForNote` and `softDelete` separately, so a throw
+      // form called `softDeleteLinksForNote` and `softDelete` separately, so a throw
       // between them left a live note whose edges were soft-deleted — which
       // `restore` cannot repair, because it no-ops on a note that was never
       // deleted.

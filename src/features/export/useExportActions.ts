@@ -1,3 +1,4 @@
+import { nowISO } from '../../utils/dates';
 import { useCallback } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useToast } from '../../context/ToastContext';
@@ -472,7 +473,7 @@ export function useExportActions() {
       // a `.click()` on a detached anchor whose object URL was revoked on the
       // next line — a DOM call with no failure mode, turning the safety card
       // green whether or not a file was ever written.
-      void updateSettings({ lastBackupAt: new Date().toISOString() });
+      void updateSettings({ lastBackupAt: nowISO() });
       showToast('Campaign exported');
     } catch (err) {
       showToast(privacyBlockedMessage(err) ?? 'Export failed. Please try again.');

@@ -5,8 +5,11 @@ import { App } from './app/App';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { ensurePersistentStorage } from './storage/persistence';
 import { flushWhenPageHides } from './features/persistence/autosaveFlush';
+import { installDiagnosticsCapture } from './utils/diagnostics';
 import './styles/tailwind.css';
 import './styles/fonts.css';
+
+installDiagnosticsCapture();
 
 // Ask before rendering, and do not await: the request is advisory and must
 // never gate the first paint. Without a persistence grant the browser treats

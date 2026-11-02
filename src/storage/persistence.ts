@@ -1,3 +1,4 @@
+import { db } from './db/client';
 /**
  * Storage durability for a local-first app.
  *
@@ -97,4 +98,9 @@ export function formatBytes(bytes: number): string {
     unit += 1;
   }
   return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[unit]}`;
+}
+
+/** The IndexedDB schema version this device is on, for a diagnostics report. */
+export function databaseSchemaVersion(): number {
+  return db.verno;
 }

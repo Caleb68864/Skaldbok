@@ -95,7 +95,14 @@ export function useRoute() {
     async (patch: Partial<Pick<RoutePlan, 'startDate' | 'targetDate' | 'targetNote'>>) => {
       if (!plan) return;
       setPlan({ ...plan, ...patch });
-      await routePlanRepository.update(plan.id, patch);
+      try {
+        await routePlanRepository.update(plan.id, patch);
+      } catch (e) {
+        // Optimistic state must not outlive a failed write: it would show a value
+        // that is not stored until the screen next reloads.
+        setPlan(plan);
+        throw e;
+      }
     },
     [plan],
   );

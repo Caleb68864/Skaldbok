@@ -4,36 +4,48 @@ import { useActiveCharacter } from '../../../context/ActiveCharacterContext';
 import { classicFantasyEngine } from './classicFantasyEngine';
 import { travellerEngine } from './travellerEngine';
 import { savageWorldsEngine } from './savageWorldsEngine';
-import type { SystemEngine } from './types';
-import { makeFormatAmount } from '../../../utils/currency';
-import { DEFAULT_SYSTEM_ID } from '../../../systems/registry';
+import type { RulesEngineId, SystemEngine } from './types';
+import { currencyFromDenominations } from './declaredEngineData';
+import { BUNDLED_SYSTEMS, DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 
 export type { SystemEngine, PanelKey, SystemTerms, SystemLabels, SkillDisplayContext } from './types';
 export { classicFantasyEngine } from './classicFantasyEngine';
 export { travellerEngine } from './travellerEngine';
 export { savageWorldsEngine } from './savageWorldsEngine';
 
+/** The rules adapters, keyed by what a `system.json` declares in `engine`. */
+const ENGINE_ADAPTERS: Record<RulesEngineId, SystemEngine> = {
+  'd20-roll-under': classicFantasyEngine,
+  '2d6-plus': travellerEngine,
+  'trait-die-vs-tn': savageWorldsEngine,
+};
+
 /**
- * Every system id that has a rules adapter.
+ * Every bundled system id with its adapter.
  *
  * @remarks
- * A map rather than a chain of `if (system.id === …)` so that "does this system
- * have an adapter?" is a question the code can answer, not just a fallthrough.
- * `fallbackAdapter.test.ts` asserts this stays in lockstep with
- * `BUNDLED_SYSTEMS`, in both directions; CLAUDE.md names these as two
- * hand-maintained lists, and a bundled system registered without an adapter
- * used to be invisible.
- *
- * This comment used to credit an `engineRegistryParity` test that has never
- * existed — worse than no citation, because it stops the next reader looking
- * for the guard that does. `testCitations.test.ts` now fails on a comment
- * naming a test file that is not there.
+ * Derived from each bundled system's own `engine` declaration, so the registry
+ * and this map can no longer drift. It stays as a lookup for a copy of a bundled
+ * system that predates the field: an older export still carries the id and no
+ * `engine`, and must not fall back to another ruleset's rules on import.
+ * `fallbackAdapter.test.ts` fails if a bundled system declares no adapter.
  */
-export const SYSTEM_ADAPTERS: Record<string, SystemEngine> = {
-  'classic-fantasy': classicFantasyEngine,
-  traveller: travellerEngine,
-  'savage-worlds': savageWorldsEngine,
-};
+export const SYSTEM_ADAPTERS: Record<string, SystemEngine> = Object.fromEntries(
+  BUNDLED_SYSTEMS.flatMap(s => {
+    const adapter = s.engine && ENGINE_ADAPTERS[s.engine];
+    return adapter ? [[s.id, adapter]] : [];
+  }),
+);
+
+const hasOwn = (map: object, key: string) => Object.prototype.hasOwnProperty.call(map, key);
+
+/** The adapter a system resolves to, or undefined when it has to fall back. */
+function adapterFor(system: SystemDefinition): SystemEngine | undefined {
+  // Own-property lookups: both values can come from an imported file, and
+  // `"constructor"` would otherwise resolve to a function.
+  if (system.engine && hasOwn(ENGINE_ADAPTERS, system.engine)) return ENGINE_ADAPTERS[system.engine];
+  return hasOwn(SYSTEM_ADAPTERS, system.id) ? SYSTEM_ADAPTERS[system.id] : undefined;
+}
 
 /** Ids already reported, so a warning during render does not repeat every frame. */
 const warnedSystemIds = new Set<string>();
@@ -41,7 +53,7 @@ const warnedSystemIds = new Set<string>();
 /** Base adapter for a system id, before any system.json overrides are applied. */
 function baseEngineFor(system: SystemDefinition | undefined | null): SystemEngine {
   if (!system) return classicFantasyEngine;
-  const adapter = SYSTEM_ADAPTERS[system.id];
+  const adapter = adapterFor(system);
   if (adapter) return adapter;
 
   // classic-fantasy is the fail-safe default, but it is not a neutral one: it
@@ -64,29 +76,26 @@ function baseEngineFor(system: SystemDefinition | undefined | null): SystemEngin
  * Folds a system's declared money over the adapter's.
  *
  * @remarks
- * `read` and `write` stay in code: they know where on the character record the
- * money lives, which is not something JSON can state. Everything else — the
- * purse label, the denominations, which one is the base unit — is data.
+ * The purse label, the denominations and the base unit are data. `read` and
+ * `write` follow the denominations, see {@link currencyFromDenominations}.
  *
- * Declaring `denominations` also **rebuilds `formatAmount`**. The adapter's
- * closes over its own hardcoded list, so without this a ruleset could declare
- * its own coins, see them in the purse and the inputs, and still watch every
- * total in the ledger decompose into the adapter's — a declaration that half
- * works, which is worse than one that does not work at all.
+ * Declaring `denominations` therefore **rebuilds the whole model**: a formatter
+ * or a `read` left closing over the adapter's coins would make a declaration
+ * that half works, which is worse than one that does not work at all.
  */
 function mergeCurrency(
   base: SystemEngine['currency'],
   declared: SystemDefinition['currency'],
 ): SystemEngine['currency'] {
   if (!declared) return base;
-  const denominations = declared.denominations ?? base.denominations;
-  return {
+  const merged = {
     ...base,
     label: declared.label ?? base.label,
-    denominations,
     baseDenominationId: declared.baseDenominationId ?? base.baseDenominationId,
-    formatAmount: declared.denominations ? makeFormatAmount(denominations) : base.formatAmount,
   };
+  return declared.denominations
+    ? currencyFromDenominations(merged.label, merged.baseDenominationId, declared.denominations)
+    : merged;
 }
 
 /**
@@ -141,15 +150,16 @@ export function getEngine(
     // Undefined, not `false`, for a system that has its own adapter: the field
     // is the id of the system whose rules are missing, so its absence is the
     // normal case and its presence is the whole message.
-    fallbackRulesFor: SYSTEM_ADAPTERS[system.id] ? undefined : system.id,
+    fallbackRulesFor: adapterFor(system) ? undefined : system.id,
     // Derive attributeIds from the definition so adding/renaming a characteristic
     // in system.json fully wires it (DM badge, characteristic grid, modifier
     // targets) without also editing the adapter's hardcoded array.
     // engineContract.test.ts pins engine.attributeIds === system.attributes ids
-    // in order for every bundled system. resourceIds is deliberately NOT derived:
-    // an adapter may expose a subset (Dragonbane omits the deathRolls/
-    // deathSuccesses death-track counters that its system.json still declares).
+    // in order for every bundled system. Resources are the same, minus any the
+    // system marks `role: 'counter'` (Dragonbane's death-roll tallies), which a
+    // rules model reads and which never appear as a tracker.
     attributeIds: system.attributes.map(a => a.id),
+    resourceIds: system.resources?.filter(r => r.role !== 'counter').map(r => r.id) ?? base.resourceIds,
     terms: { ...base.terms, ...system.terms },
     labels: { ...base.labels, ...system.labels },
     // Declarative display arrays: when system.json provides one it REPLACES the

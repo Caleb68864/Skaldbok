@@ -1,8 +1,9 @@
 {
   "id": "traveller",
-  "version": 25,
+  "version": 26,
   "name": "traveller",
   "displayName": "Traveller",
+  "engine": "2d6-plus",
   "attributes": [
     {
       "id": "str",
@@ -1108,10 +1109,10 @@
       "title": "Core Roll",
       "rows": [
         [
-          "2d6 + Skill + Characteristic DM  \u2265  Target (default 8+)"
+          "2d6 + Skill + Characteristic DM  ≥  Target (default 8+)"
         ]
       ],
-      "note": "Unskilled: \u22123 DM. Skill 0 = trained, no bonus. Boon: roll 3d6 keep best 2. Bane: keep worst 2."
+      "note": "Unskilled: −3 DM. Skill 0 = trained, no bonus. Boon: roll 3d6 keep best 2. Bane: keep worst 2."
     },
     {
       "title": "Task Difficulty (Target)",
@@ -1155,22 +1156,22 @@
       ]
     },
     {
-      "title": "Effect (roll total \u2212 target)",
+      "title": "Effect (roll total − target)",
       "columns": [
         "Effect",
         "Result"
       ],
       "rows": [
         [
-          "\u22126 or worse",
+          "−6 or worse",
           "Exceptional Failure"
         ],
         [
-          "\u22125 to \u22122",
+          "−5 to −2",
           "Average Failure"
         ],
         [
-          "\u22121",
+          "−1",
           "Marginal Failure"
         ],
         [
@@ -1196,19 +1197,19 @@
       "rows": [
         [
           "Significant",
-          "Attack \u00b7 complex skill \u00b7 stabilize wounded"
+          "Attack · complex skill · stabilize wounded"
         ],
         [
           "Minor",
-          "Move 6m \u00b7 Aim (+1) \u00b7 draw weapon \u00b7 change stance"
+          "Move 6m · Aim (+1) · draw weapon · change stance"
         ],
         [
           "Reaction",
-          "Dodge \u00b7 Dive for cover"
+          "Dodge · Dive for cover"
         ],
         [
           "Free",
-          "Talk \u00b7 drop prone \u00b7 drop item"
+          "Talk · drop prone · drop item"
         ]
       ],
       "note": "Per round: 1 Significant + 1 Minor, or 3 Minor. Initiative = 2d6 + DEX DM, rolled once for the whole fight."
@@ -1217,10 +1218,10 @@
       "title": "Attack Rolls",
       "rows": [
         [
-          "Melee:  2d6 + Melee (spec) + STR or DEX DM  \u2265 8"
+          "Melee:  2d6 + Melee (spec) + STR or DEX DM  ≥ 8"
         ],
         [
-          "Ranged: 2d6 + Gun Combat (spec) + DEX DM  \u2265 8"
+          "Ranged: 2d6 + Gun Combat (spec) + DEX DM  ≥ 8"
         ]
       ]
     },
@@ -1233,26 +1234,26 @@
       "rows": [
         [
           "0",
-          "\u22123"
+          "−3"
         ],
         [
-          "1\u20132",
-          "\u22122"
+          "1–2",
+          "−2"
         ],
         [
-          "3\u20135",
-          "\u22121"
+          "3–5",
+          "−1"
         ],
         [
-          "6\u20138",
+          "6–8",
           "+0"
         ],
         [
-          "9\u201311",
+          "9–11",
           "+1"
         ],
         [
-          "12\u201314",
+          "12–14",
           "+2"
         ],
         [
@@ -1566,6 +1567,129 @@
           "label": "Augments"
         }
       ]
+    }
+  ],
+  "terms": {
+    "abilities": "Talents",
+    "spells": "Psionic Powers",
+    "magicResource": "PSI",
+    "healthResource": "END",
+    "roleFallback": "Traveller",
+    "reservePot": "Ship fund"
+  },
+  "labels": {
+    "abilitiesScreen": null,
+    "resourcesPanel": "Damage Track",
+    "attributesPanel": "Characteristics",
+    "derivedPanel": "Stats",
+    "encumbrance": "Encumbrance",
+    "participantHealth": "Current END",
+    "conditionExamples": "e.g. stunned, wounded",
+    "encounterTagExamples": "e.g. boarding, starport, pirates",
+    "locationExample": "e.g. Cargo Bay 3",
+    "armorFeatures": "Features",
+    "memento": null,
+    "tinyItems": null
+  },
+  "logActions": [
+    {
+      "id": "attack",
+      "label": "attack"
+    },
+    {
+      "id": "spell",
+      "label": "psionics"
+    },
+    {
+      "id": "ability",
+      "label": "talent"
+    },
+    {
+      "id": "damage",
+      "label": "damage"
+    },
+    {
+      "id": "heal",
+      "label": "first aid"
+    },
+    {
+      "id": "condition",
+      "label": "condition"
+    },
+    {
+      "id": "note",
+      "label": "note"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "exceptional-success",
+      "label": "Exceptional Success",
+      "tone": "critical"
+    },
+    {
+      "id": "success",
+      "label": "Success",
+      "tone": "success"
+    },
+    {
+      "id": "failure",
+      "label": "Failure",
+      "tone": "failure"
+    },
+    {
+      "id": "exceptional-failure",
+      "label": "Exceptional Failure",
+      "tone": "fumble"
+    }
+  ],
+  "rollModifiers": [
+    {
+      "id": "boon",
+      "label": "Boon"
+    },
+    {
+      "id": "bane",
+      "label": "Bane"
+    }
+  ],
+  "timeUnits": [
+    {
+      "id": "round",
+      "label": "Round",
+      "abbrev": "RND",
+      "expiresOn": {
+        "encounterEnd": true
+      }
+    },
+    {
+      "id": "stretch",
+      "label": "Watch",
+      "abbrev": "WCH",
+      "expiresOn": {
+        "sessionStart": true
+      }
+    },
+    {
+      "id": "shift",
+      "label": "Day",
+      "abbrev": "DAY",
+      "expiresOn": {
+        "sessionStart": true
+      }
+    },
+    {
+      "id": "scene",
+      "label": "Scene",
+      "abbrev": "SCN",
+      "expiresOn": {
+        "encounterEnd": true
+      }
+    },
+    {
+      "id": "permanent",
+      "label": "Permanent",
+      "abbrev": "∞"
     }
   ]
 }

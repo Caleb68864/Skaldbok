@@ -200,7 +200,7 @@ export default function CharacterLibraryScreen() {
 
   async function handleSetActive(id: string) {
     await setCharacter(id);
-    navigate('/sheet');
+    navigate('/character/sheet');
   }
 
   function handleExport(char: CharacterRecord) {

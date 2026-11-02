@@ -4,7 +4,7 @@ import { cn } from '../lib/utils';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
 import { useAppState } from '../context/AppStateContext';
 import { useSystemDefinition } from '../features/systems/useSystemDefinition';
-import { useFieldEditable, FIELD_PATHS } from '../utils/modeGuards';
+import { useFieldEditable, FIELD_PATHS, useIsPlayMode } from '../utils/modeGuards';
 import { useAutosave } from '../hooks/useAutosave';
 import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import { Chip } from '../components/primitives/Chip';
@@ -80,6 +80,7 @@ export default function SkillsScreen() {
     settings,
   } = useAppState();
   const skillsEditable = useFieldEditable(FIELD_PATHS.skills);
+  const isPlayMode = useIsPlayMode();
   const [filter, setFilter] = useState<'all' | 'relevant'>('relevant');
   const [search, setSearch] = useState('');
   /**
@@ -121,7 +122,7 @@ export default function SkillsScreen() {
   }
 
   function cycleSkillMark(skillId: string) {
-    if (!character || skillsEditable || !engine.skill.supportsMarks) return;
+    if (!character || !isPlayMode || !engine.skill.supportsMarks) return;
     const cs = character.skills[skillId];
     // Merged categories, not the system's own: a player-authored skill has no
     // entry in `system.skillCategories`, so looking it up there returned
@@ -642,13 +643,13 @@ export default function SkillsScreen() {
                       )}
 
                       {/* Skill mark cycle: unmarked -> dragon -> demon -> clear (play mode only) */}
-                      {engine.skill.supportsMarks && !skillsEditable && (
+                      {engine.skill.supportsMarks && isPlayMode && (
                         <button
                           className={cn(
                             'dragon-mark-toggle',
                             isDragonMarked && 'dragon-mark-toggle--active',
                             isDemonMarked && 'dragon-mark-toggle--demon',
-                            isDragonMarked ? 'bg-[var(--color-accent)] text-white' : isDemonMarked ? 'bg-[#c0392b] text-white' : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]',
+                            isDragonMarked ? 'bg-[var(--color-accent)] text-white' : isDemonMarked ? 'bg-[var(--color-danger)] text-white' : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]',
                           )}
                           onClick={() => cycleSkillMark(skill.id)}
                           title={isDragonMarked ? 'Dragon marked — tap for demon mark' : isDemonMarked ? 'Demon marked — tap to clear' : 'Tap to dragon mark'}

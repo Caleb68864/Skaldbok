@@ -19,6 +19,8 @@ export interface NoteTypeConfig {
    * a log entry is not a thing.
    */
   promotable?: boolean;
+  /** Offered by the note editor's type selector. System-assigned types are not. */
+  selectable?: boolean;
 }
 
 /**
@@ -32,7 +34,7 @@ export interface NoteTypeConfig {
  * never directly. Order here is display order.
  */
 export const DEFAULT_NOTE_TYPE_CONFIG: NoteTypeConfig[] = [
-  { id: 'generic', label: 'Note', promotable: true },
+  { id: 'generic', label: 'Note', promotable: true, selectable: true },
   // `npc`, `spell-cast` and `ability-use` were missing from this list while
   // being actively written — by `useSessionLog`, `noteCreationService`,
   // `SkillCheckEditDrawer` and `PromoteEntriesSheet`. `NotesGrid` builds its
@@ -40,14 +42,14 @@ export const DEFAULT_NOTE_TYPE_CONFIG: NoteTypeConfig[] = [
   // three, and the "All" filter is assembled from it too. None is `promotable`:
   // like `combat` and `skill-check`, the flow that creates them picks the type.
   { id: 'npc', label: 'NPC' },
-  { id: 'location', label: 'Location', promotable: true },
-  { id: 'combat', label: 'Combat' },
-  { id: 'loot', label: 'Loot', promotable: true },
-  { id: 'rumor', label: 'Rumor', promotable: true },
-  { id: 'quote', label: 'Quote', promotable: true },
+  { id: 'location', label: 'Location', promotable: true, selectable: true },
+  { id: 'combat', label: 'Combat', selectable: true },
+  { id: 'loot', label: 'Loot', promotable: true, selectable: true },
+  { id: 'rumor', label: 'Rumor', promotable: true, selectable: true },
+  { id: 'quote', label: 'Quote', promotable: true, selectable: true },
   { id: 'skill-check', label: 'Skill Check' },
-  { id: 'spell-cast', label: 'Spell Cast' },
-  { id: 'ability-use', label: 'Ability Use' },
+  { id: 'spell-cast', label: 'Spell Cast', selectable: true },
+  { id: 'ability-use', label: 'Ability Use', selectable: true },
   { id: 'recap', label: 'Recap', promotable: true },
-  { id: 'log', label: 'Log', hiddenByDefault: true },
+  { id: 'log', label: 'Log', hiddenByDefault: true, selectable: true },
 ];

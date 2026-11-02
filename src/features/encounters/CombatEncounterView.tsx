@@ -1,3 +1,4 @@
+import { nowISO } from '../../utils/dates';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Encounter, EncounterParticipant } from '../../types/encounter';
 import * as encounterRepository from '../../storage/repositories/encounterRepository';
@@ -140,7 +141,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       id: generateId(),
       round: currentRound,
       ...eventData,
-      timestamp: new Date().toISOString(),
+      timestamp: nowISO(),
     };
     const updatedEvents = [...events, newEvent];
     await encounterRepository.update(encounter.id, {

@@ -1,6 +1,7 @@
+import { nowISO } from '../../utils/dates';
 import { createElement } from 'react';
 import type { TimelineDataset, TimelineItem, TimelineMarker, TimelineTrack } from '@/components/timeline';
-import { DEFAULT_TIMELINE_TRACK_CATALOG } from '@/components/timeline/config/defaultTimelineTrackCatalog';
+import { DEFAULT_TIMELINE_TRACK_CATALOG, type TimelineTrackCatalogEntry } from '@/config/defaults/timelineTracks';
 import { getNotesBySession } from '@/storage/repositories/noteRepository';
 import * as entityLinkRepository from '@/storage/repositories/entityLinkRepository';
 import type { Encounter } from '@/types/encounter';
@@ -43,6 +44,8 @@ export interface BuildSessionTimelineDatasetInput {
   encounters: Encounter[];
   timelineData: SessionTimelineSourceData;
   now?: string;
+  /** Which kinds cluster into which lane; `useTimelineTrackCatalog()` supplies it. */
+  trackCatalog?: Record<string, TimelineTrackCatalogEntry>;
 }
 
 function humanizeLabel(value: string): string {
@@ -51,8 +54,8 @@ function humanizeLabel(value: string): string {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-function buildTrack(kind: string): TimelineTrack {
-  const catalogEntry = DEFAULT_TIMELINE_TRACK_CATALOG[kind] ?? DEFAULT_TIMELINE_TRACK_CATALOG.generic;
+function buildTrack(kind: string, catalog: Record<string, TimelineTrackCatalogEntry>): TimelineTrack {
+  const catalogEntry = catalog[kind] ?? catalog.generic ?? DEFAULT_TIMELINE_TRACK_CATALOG.generic;
 
   return {
     id: `track-${kind}`,
@@ -168,9 +171,10 @@ export function buildSessionTimelineDataset({
   encounters,
   timelineData,
   now,
+  trackCatalog = DEFAULT_TIMELINE_TRACK_CATALOG,
 }: BuildSessionTimelineDatasetInput): TimelineDataset {
-  const nowValue = now ?? session.endedAt ?? new Date().toISOString();
-  const tracks: TimelineTrack[] = [buildTrack('session'), buildTrack('encounter')];
+  const nowValue = now ?? session.endedAt ?? nowISO();
+  const tracks: TimelineTrack[] = [buildTrack('session', trackCatalog), buildTrack('encounter', trackCatalog)];
   const items: TimelineItem[] = [];
   const markers: TimelineMarker[] = [
     {
@@ -199,9 +203,9 @@ export function buildSessionTimelineDataset({
   const activeNotes = timelineData.notes.filter((note) => !note.deletedAt && note.status === 'active');
   const noteTrackKinds = new Set(activeNotes.map((note) => resolveSessionTimelineTrackKind(note)));
 
-  tracks.push(buildTrack('notes'));
+  tracks.push(buildTrack('notes', trackCatalog));
   for (const childKind of NOTE_CHILD_TRACK_KINDS) {
-    tracks.push(buildTrack(childKind));
+    tracks.push(buildTrack(childKind, trackCatalog));
   }
   // `npc` and `log` are first-class top-level tracks; neither belongs in
   // NOTE_CHILD_TRACK_KINDS.
@@ -217,9 +221,9 @@ export function buildSessionTimelineDataset({
   // `defaultHidden`, deliberately not `visible: false`: that would make the
   // lane permanently unreachable — see TimelineTrack.defaultHidden.
   if (noteTrackKinds.has('npc')) {
-    tracks.push(buildTrack('npc'));
+    tracks.push(buildTrack('npc', trackCatalog));
   }
-  tracks.push(buildTrack('log'));
+  tracks.push(buildTrack('log', trackCatalog));
 
   items.push({
     id: `session-${session.id}`,

@@ -12,4 +12,3 @@ import type { SystemDefinition } from '../../types/system';
  */
 export const savageWorldsSystem: SystemDefinition = systemData as SystemDefinition;
 
-export * from './savageMath';

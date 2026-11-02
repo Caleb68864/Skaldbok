@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { ErrorBoundary } from '../../app/ErrorBoundary';
 import { ShellDockProvider } from './ShellDock';
 import { CampaignHeader } from './CampaignHeader';
 import { CharacterSubNav } from './CharacterSubNav';
@@ -101,7 +102,9 @@ export function ShellLayout() {
             aria-label="Main content"
             className={`flex-1 overflow-y-auto overflow-x-hidden${isFabHiddenRoute(location.pathname) ? '' : ' pb-[140px]'}`}
           >
-            <Outlet />
+            <ErrorBoundary resetKey={location.pathname} route={location.pathname} inline>
+              <Outlet />
+            </ErrorBoundary>
           </main>
         </ShellDockProvider>
         {/* The dock and the button that has to clear it share one wrapper, so

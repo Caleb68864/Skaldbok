@@ -1,8 +1,9 @@
 {
   "id": "classic-fantasy",
-  "version": 3,
+  "version": 4,
   "name": "classic-fantasy",
   "displayName": "Dragonbane",
+  "engine": "d20-roll-under",
   "attributes": [
     {
       "id": "str",
@@ -104,13 +105,15 @@
       "id": "deathRolls",
       "name": "Death Rolls",
       "min": 0,
-      "defaultMax": 3
+      "defaultMax": 3,
+      "role": "counter"
     },
     {
       "id": "deathSuccesses",
       "name": "Death Successes",
       "min": 0,
-      "defaultMax": 3
+      "defaultMax": 3,
+      "role": "counter"
     }
   ],
   "skillCategories": [
@@ -354,5 +357,168 @@
       "label": "Weakness",
       "type": "text"
     }
-  ]
+  ],
+  "panels": [
+    "attributes",
+    "skills",
+    "resources",
+    "inventory",
+    "magic",
+    "combat",
+    "rest",
+    "death",
+    "notes"
+  ],
+  "terms": {
+    "abilities": "Heroic Abilities",
+    "spells": "Spells",
+    "magicResource": "WP",
+    "healthResource": "HP",
+    "roleFallback": "Adventurer",
+    "reservePot": "Party fund"
+  },
+  "labels": {
+    "abilitiesScreen": "Abilities / Magic",
+    "resourcesPanel": "Resources",
+    "printResources": "Hit Points & Willpower",
+    "printAbilities": "Abilities",
+    "attributesPanel": "Attributes",
+    "encumbrance": "Encumbrance",
+    "participantHealth": "Current HP",
+    "conditionExamples": "e.g. poisoned, prone",
+    "encounterTagExamples": "e.g. ambush, forest, kobolds",
+    "locationExample": "e.g. Riverside Clearing",
+    "armorFeatures": "Features / Bane-on",
+    "memento": "Memento:",
+    "tinyItems": "Tiny Items"
+  },
+  "logActions": [
+    {
+      "id": "attack",
+      "label": "attack"
+    },
+    {
+      "id": "spell",
+      "label": "spell"
+    },
+    {
+      "id": "ability",
+      "label": "ability"
+    },
+    {
+      "id": "damage",
+      "label": "damage"
+    },
+    {
+      "id": "heal",
+      "label": "heal"
+    },
+    {
+      "id": "condition",
+      "label": "condition"
+    },
+    {
+      "id": "note",
+      "label": "note"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "success",
+      "label": "Success",
+      "tone": "success"
+    },
+    {
+      "id": "failure",
+      "label": "Failure",
+      "tone": "failure"
+    },
+    {
+      "id": "dragon",
+      "label": "Dragon (1)",
+      "tone": "critical"
+    },
+    {
+      "id": "demon",
+      "label": "Demon (20)",
+      "tone": "fumble"
+    }
+  ],
+  "rollModifiers": [
+    {
+      "id": "boon",
+      "label": "Boon"
+    },
+    {
+      "id": "bane",
+      "label": "Bane"
+    },
+    {
+      "id": "pushed",
+      "label": "Pushed"
+    }
+  ],
+  "timeUnits": [
+    {
+      "id": "round",
+      "label": "Round",
+      "abbrev": "RND",
+      "expiresOn": {
+        "rest": "round"
+      }
+    },
+    {
+      "id": "stretch",
+      "label": "Stretch",
+      "abbrev": "STR",
+      "expiresOn": {
+        "rest": "stretch"
+      }
+    },
+    {
+      "id": "shift",
+      "label": "Shift",
+      "abbrev": "SHI",
+      "expiresOn": {
+        "rest": "shift"
+      }
+    },
+    {
+      "id": "scene",
+      "label": "Scene",
+      "abbrev": "SCN",
+      "expiresOn": {
+        "encounterEnd": true
+      }
+    },
+    {
+      "id": "permanent",
+      "label": "Permanent",
+      "abbrev": "∞"
+    }
+  ],
+  "currency": {
+    "label": "Coins",
+    "baseDenominationId": "copper",
+    "denominations": [
+      {
+        "id": "gold",
+        "label": "Gold",
+        "abbr": "g",
+        "value": 100
+      },
+      {
+        "id": "silver",
+        "label": "Silver",
+        "abbr": "s",
+        "value": 10
+      },
+      {
+        "id": "copper",
+        "label": "Copper",
+        "abbr": "c",
+        "value": 1
+      }
+    ]
+  }
 }

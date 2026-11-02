@@ -32,7 +32,7 @@ import { summariseCounters, vehicleSubtitle } from '../features/vehicles/vehicle
 import { useAutosave } from '../hooks/useAutosave';
 import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBanner';
 import { useSyncedResourceMaxima } from '../features/characters/useSyncedResourceMaxima';
-import { useFieldEditable, useIsEditMode, FIELD_PATHS } from '../utils/modeGuards';
+import { useFieldEditable, useIsEditMode, FIELD_PATHS, useIsPlayMode } from '../utils/modeGuards';
 import { AttributeField } from '../components/fields/AttributeField';
 import { SystemDataPanel } from '../features/systems/SystemDataPanel';
 import { CharacterPortrait } from '../components/fields/CharacterPortrait';
@@ -44,6 +44,7 @@ import { getEffectiveValue, resolveDerivedField } from '../utils/derivedValues';
 import { attrKey } from '../utils/statKeys';
 import { damageStatus } from '../utils/damageTrack';
 import { BuffChipBar } from '../components/panels/BuffChipBar';
+import { formatStatLabel } from '../features/systems/engine/statLabel';
 import { AddModifierDrawer } from '../components/panels/AddModifierDrawer';
 import type { TempModifier } from '../types/character';
 import { GameIcon } from '../components/primitives/GameIcon';
@@ -122,6 +123,7 @@ function warnAboutTemplatePanels(
  */
 
 export default function SheetScreen() {
+  const isPlayMode = useIsPlayMode();
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
@@ -252,14 +254,10 @@ export default function SheetScreen() {
   if (stillLoading || waitingForCharacter) return <div className="p-[var(--space-md)] text-[var(--color-text)]">Loading...</div>;
   if (!character) return null;
 
-  const isPlayMode = settings.mode === 'play';
   const engine = getEngine(system);
   // Engines may surface derived keys beyond the shared `DerivedValues` shape
   // (e.g. Traveller's `initiativeDM`), so index the result by string key.
-  const derivedStats = engine.derivedStats(character, system ?? undefined) as unknown as Record<
-    string,
-    number | string | undefined
-  >;
+  const derivedStats = engine.derivedStats(character, system ?? undefined);
   const currencyAmounts = engine.currency.read(character);
 
   // Derived fields this surface shows. The Derived Values panel exists to
@@ -657,6 +655,7 @@ export default function SheetScreen() {
         onRemove={handleRemoveModifier}
         onClearAll={handleClearAllModifiers}
         onAdd={() => setAddModifierOpen(true)}
+        system={system}
       />
       {system && (() => {
         const linkedAttrIds = new Set(system.attributes.map(a => a.id));
@@ -899,6 +898,7 @@ export default function SheetScreen() {
         <DebtList
           debts={character.debts ?? []}
           abbr={baseDenomination?.abbr ?? ''}
+          formatAmount={engine.currency.formatAmount}
           editable={identityEditable}
           onAdd={debt => updateCharacter({
             ...addDebt(character, debt, generateId(), nowISO()), updatedAt: nowISO(),
@@ -1467,13 +1467,13 @@ export default function SheetScreen() {
       >
         <div className="flex flex-col gap-[var(--space-md)]">
           <p className="text-[var(--color-text)] text-[length:var(--font-size-md)]">
-            These effects expire after a {expiryCheck?.rest.id} rest:
+            These effects expire after a {expiryCheck?.rest.label} rest:
           </p>
           {expiryCheck?.expiring.map(m => (
             <div key={m.id} className="p-[var(--space-sm)] border border-[var(--color-border)] rounded-[var(--radius-sm)] bg-[var(--color-surface-alt)]">
               <strong className="text-[var(--color-text)]">{m.label}</strong>
               <span className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)] ml-[var(--space-sm)]">
-                {m.effects.map(e => `${e.stat.toUpperCase()} ${e.delta > 0 ? '+' : ''}${e.delta}`).join(', ')}
+                {m.effects.map(e => `${formatStatLabel(e.stat, engine, system)} ${e.delta > 0 ? '+' : ''}${e.delta}`).join(', ')}
               </span>
             </div>
           ))}

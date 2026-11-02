@@ -8,6 +8,7 @@ import { AutosaveErrorBanner } from '../components/persistence/AutosaveErrorBann
 import { Card } from '../components/primitives/Card';
 import { Button } from '../components/primitives/Button';
 import { StorageSafetyCard } from '../features/settings/StorageSafetyCard';
+import { DiagnosticsCard } from '../features/settings/DiagnosticsCard';
 import { Modal } from '../components/primitives/Modal';
 import { db } from '../storage/db/client';
 import * as characterRepository from '../storage/repositories/characterRepository';
@@ -228,6 +229,8 @@ export default function SettingsScreen() {
         <h2 className="text-[length:var(--font-size-lg)] text-[var(--color-text)] mb-[var(--space-sm)]">About</h2>
         <p className="text-[var(--color-text-muted)] text-[length:var(--font-size-sm)]">Skaldbok v1.0 — The Adventurer's Ledger</p>
       </Card>
+
+      <DiagnosticsCard />
 
       {/* Danger zone */}
       <Card>

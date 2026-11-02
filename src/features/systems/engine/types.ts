@@ -13,6 +13,9 @@ import type { PanelKey } from '../../../types/system';
 export type { PanelKey };
 
 
+/** The rules adapters a `system.json` can declare with `engine`. */
+export type RulesEngineId = 'd20-roll-under' | '2d6-plus' | 'trait-die-vs-tn';
+
 export type CurrencyMode = 'coins' | 'abstract' | 'single';
 
 /** One denomination in a system's currency. */

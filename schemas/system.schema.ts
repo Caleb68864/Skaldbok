@@ -43,6 +43,7 @@ const conditionDefinitionSchema = z.object({
 const resourceDefinitionSchema = z.object({
   id: z.string().min(1).describe('Unique resource identifier'),
   name: z.string().min(1).describe('Resource display name'),
+  role: z.enum(['track', 'counter']).optional().describe('counter keeps a tally out of the tracker list'),
   derivedFrom: z.string().optional().describe('Attribute id this resource derives from'),
   min: z.number().describe('Minimum resource value'),
   defaultMax: z.number().describe('Default maximum value'),
@@ -212,7 +213,16 @@ export const systemDefinitionSchema = z.object({
     tone: z.enum(['success', 'failure', 'critical', 'fumble']).optional(),
   })).optional(),
   rollModifiers: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).optional(),
-  timeUnits: z.array(z.object({ id: z.string().min(1), label: z.string().min(1), abbrev: z.string().min(1) })).optional(),
+  timeUnits: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    abbrev: z.string().min(1),
+    expiresOn: z.object({
+      rest: z.string().min(1).optional(),
+      sessionStart: z.boolean().optional(),
+      encounterEnd: z.boolean().optional(),
+    }).optional(),
+  })).optional(),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),
@@ -259,6 +269,8 @@ export const systemDefinitionSchema = z.object({
   }).optional().describe('Per-system vehicle sheet (e.g. Traveller starships)'),
   // Enumerated against the keys the app actually renders: a typo'd panel is
   // otherwise a screen that silently never appears.
+  engine: z.enum(['d20-roll-under', '2d6-plus', 'trait-die-vs-tn']).optional()
+    .describe('Which rules adapter runs this system; absent falls back with a notice'),
   panels: z.array(z.enum(PANEL_KEYS)).min(1).optional()
     .describe("Panels this system's character surfaces offer; replaces the adapter's list"),
   currency: z.object({
@@ -272,7 +284,7 @@ export const systemDefinitionSchema = z.object({
       quickSteps: z.array(z.number().positive()).optional(),
     })).min(1).optional(),
     baseDenominationId: z.string().min(1).optional(),
-  }).optional().describe('Denominations and purse label; read/write stay in the adapter'),
+  }).optional().describe('Denominations and purse label; read/write are built from the denominations'),
   creatures: z.object({
     statFields: z.array(z.object({
       id: z.string().min(1),

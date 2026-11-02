@@ -41,6 +41,11 @@ jobs:
       - name: Lint
         run: npx eslint .
 
+      # Unused and undeclared packages. The two Radix packages this replaced sat in
+      # dependencies, imported nowhere, for as long as nothing looked.
+      - name: Dependencies
+        run: npm run lint:deps
+
       - name: Test
         run: npx vitest run
 

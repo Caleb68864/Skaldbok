@@ -1,3 +1,4 @@
+import { nowISO } from '../dates';
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
 import { shareFile, type DeliveryOutcome } from './delivery';
 import {
@@ -89,7 +90,7 @@ export async function serializeBundle(
   const envelope: BundleEnvelope = {
     version: 1,
     type,
-    exportedAt: new Date().toISOString(),
+    exportedAt: nowISO(),
     exportedBy: options.exportedBy,
     system,
     contentHash: contentHash ?? undefined,

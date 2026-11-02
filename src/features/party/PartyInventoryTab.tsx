@@ -1,3 +1,4 @@
+import { useConfirm } from '../../components/primitives/ConfirmDialog';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Plus, Trash2, Pencil, ArrowRightLeft } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -131,6 +132,7 @@ function kindIcon(kind: InventoryContainerKind, kinds: InventoryContainerKindCon
 }
 
 export function PartyInventoryTab() {
+  const { confirm } = useConfirm();
   const containerKinds = useInventoryContainerKinds();
   const { activeCampaign, activeParty } = useCampaignContext();
   const { showToast } = useToast();
@@ -576,8 +578,8 @@ export function PartyInventoryTab() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (confirm(`Delete "${c.name}"?`)) handleContainerDelete(c.container.id);
+                    onClick={async () => {
+                      if (await confirm(`Delete "${c.name}"?`)) handleContainerDelete(c.container.id);
                     }}
                     aria-label={`Delete ${c.name}`}
                     className="min-w-[44px] min-h-[44px] bg-transparent border-none text-[var(--color-danger)] cursor-pointer flex items-center justify-center"
@@ -705,8 +707,8 @@ export function PartyInventoryTab() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (confirm(`Delete "${item.name}"?`)) handleItemDelete(c, item.id);
+                        onClick={async () => {
+                          if (await confirm(`Delete "${item.name}"?`)) handleItemDelete(c, item.id);
                         }}
                         aria-label={`Delete ${item.name}`}
                         className="min-w-[36px] min-h-[36px] bg-transparent border-none text-[var(--color-danger)] cursor-pointer flex items-center justify-center"

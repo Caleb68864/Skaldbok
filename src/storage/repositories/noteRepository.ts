@@ -281,7 +281,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
  * Soft-deletes a note **and its edges** atomically under one transaction id.
  *
  * @remarks
- * The two-call form — `deleteLinksForNote` then `softDelete` — is not atomic, and
+ * The two-call form — `softDeleteLinksForNote` then `softDelete` — is not atomic, and
  * either failure order corrupts something: stopping after the links leaves a live
  * note that has silently lost its `promoted_into` provenance and cannot be
  * repaired (`restore` no-ops on a live note, so `restoreLinksForTxId` is
@@ -305,7 +305,7 @@ export async function softDeleteWithLinks(id: string, txId?: string): Promise<vo
         softDeletedBy: finalTxId,
         updatedAt: now,
       });
-      await entityLinkRepository.deleteLinksForNote(id, finalTxId);
+      await entityLinkRepository.softDeleteLinksForNote(id, finalTxId);
       // Attachments ride the same cascade id. They used to be hard-deleted by
       // the caller before this transaction ran, so Trash would restore the note
       // and its edges onto photos that no longer existed — the one place in the
@@ -583,6 +583,12 @@ export async function appendEntriesToNote(
 /** Adds one `promoted_into` edge per source entry. Caller supplies the transaction. */
 async function addPromotedIntoEdges(entries: Note[], targetNoteId: string, now: string): Promise<void> {
   for (const entry of entries) {
+    // Promoting the same entry into the same note again is not a second relation.
+    const existing = await db.entityLinks
+      .where('[fromEntityId+relationshipType]')
+      .equals([entry.id, 'promoted_into'])
+      .toArray();
+    if (excludeDeleted(existing).some(link => link.toEntityId === targetNoteId)) continue;
     await db.entityLinks.add({
       id: generateId(),
       fromEntityId: entry.id,

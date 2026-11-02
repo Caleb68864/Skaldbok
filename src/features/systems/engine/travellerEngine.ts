@@ -7,11 +7,14 @@ import {
 } from '../../../systems/traveller/travellerMath';
 import { attrKey, resKey, skillKey } from '../../../utils/statKeys';
 import type { SystemEngine, SkillDisplayContext } from './types';
+import type { SystemDefinition } from '../../../types/system';
 import { DEFAULT_TRAVELLER_JUMP_RANGE, DEFAULT_TRAVELLER_MILIEU } from '../../../config/defaults/travellerBriefing';
 import { planTravellerMapRoute } from '../../route/travellerMapRoute';
 import { TRAVELLER_GEAR_CATEGORIES, inferTravellerGearCategory, reviewTravellerGear } from '../../travellerBriefing/gearRestrictions';
+import { declaredEngineData } from './declaredEngineData';
+import { travellerSystem } from '../../../systems/traveller';
 
-export const TRAVELLER_ATTRIBUTE_IDS = ['str', 'dex', 'end', 'int', 'edu', 'soc'];
+export const TRAVELLER_ATTRIBUTE_IDS = travellerSystem.attributes.map(a => a.id);
 
 /**
  * The characteristics that carry a damage track.
@@ -143,10 +146,13 @@ export function computeSkillBudget(character: CharacterRecord): { total: number;
 }
 
 /** Computes the six characteristic DMs (and an initiative DM = DEX DM) for a Traveller character. */
-export function computeTravellerDerivedValues(character: CharacterRecord): TravellerDerivedValues {
+export function computeTravellerDerivedValues(
+  character: CharacterRecord,
+  system?: SystemDefinition | null,
+): TravellerDerivedValues {
   const characteristicDMs: Record<string, number> = {};
   const characteristicScores: Record<string, number> = {};
-  for (const id of TRAVELLER_ATTRIBUTE_IDS) {
+  for (const id of system?.attributes.map(a => a.id) ?? TRAVELLER_ATTRIBUTE_IDS) {
     const score = effectiveCharacteristic(character, id);
     characteristicScores[id] = score;
     characteristicDMs[id] = characteristicToDM(score);
@@ -329,8 +335,8 @@ export const travellerEngine: SystemEngine = {
   // beside it: a player is asked for "END 7" as often as for "+0", and the two
   // must come from one number or they disagree the moment damage lands.
   attributeSummary: (character, system) => {
-    const derived = computeTravellerDerivedValues(character);
-    return TRAVELLER_ATTRIBUTE_IDS.map(id => ({
+    const derived = computeTravellerDerivedValues(character, system);
+    return Object.keys(derived.characteristicScores).map(id => ({
       id,
       label: system?.attributes.find(attr => attr.id === id)?.abbreviation ?? id.toUpperCase(),
       value: derived.characteristicScores[id] ?? 0,
@@ -373,89 +379,9 @@ export const travellerEngine: SystemEngine = {
     // Boon/Bane use the canonical 3d6-keep-best/worst-two odds.
     supportsBoonBane: true,
   },
-  derivedStats: character => computeTravellerDerivedValues(character),
+  derivedStats: (character, system) => computeTravellerDerivedValues(character, system),
   resourceIds: TRAVELLER_DAMAGE_TRACK_IDS,
-  panels: ['characteristics', 'skills', 'resources', 'finances', 'careers', 'augments', 'inventory', 'combat', 'notes'],
-  currency: {
-    mode: 'single',
-    label: 'Credits',
-    denominations: [
-      { id: 'credits', label: 'Credits', abbr: 'Cr', value: 1, step: 100, quickSteps: [1, 5, 10, 100, 1000, 10000] },
-    ],
-    baseDenominationId: 'credits',
-    formatAmount: baseUnits => {
-      const sign = baseUnits < 0 ? '-' : '';
-      return `${sign}Cr ${Math.abs(baseUnits).toLocaleString('en-US')}`;
-    },
-    read: character => ({ credits: character.wealth?.credits ?? 0 }),
-    write: (character, amounts) => ({
-      wealth: { ...character.wealth, ...amounts },
-    }),
-  },
-  outcomes: [
-    { id: 'exceptional-success', label: 'Exceptional Success', tone: 'critical' },
-    { id: 'success', label: 'Success', tone: 'success' },
-    { id: 'failure', label: 'Failure', tone: 'failure' },
-    { id: 'exceptional-failure', label: 'Exceptional Failure', tone: 'fumble' },
-  ],
-  // No "pushed" mechanic in Traveller.
-  rollModifiers: [
-    { id: 'boon', label: 'Boon' },
-    { id: 'bane', label: 'Bane' },
-  ],
-  // Reuses the existing TempModifier duration ids, relabelled for a sci-fi setting.
-  timeUnits: [
-    // Traveller has `rest: null`, so the rest-button expiry path never fired
-    // here: a Watch- or Day-long modifier lasted for ever. The `stretch`/`shift`
-    // ids are relabelled Watch/Day and no rest of either id exists to press.
-    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { encounterEnd: true } },
-    { id: 'stretch', label: 'Watch', abbrev: 'WCH', expiresOn: { sessionStart: true } },
-    { id: 'shift', label: 'Day', abbrev: 'DAY', expiresOn: { sessionStart: true } },
-    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
-    { id: 'permanent', label: 'Permanent', abbrev: '∞' },
-  ],
-  terms: {
-    abilities: 'Talents',
-    spells: 'Psionic Powers',
-    magicResource: 'PSI',
-    healthResource: 'END',
-    roleFallback: 'Traveller',
-    reservePot: 'Ship fund',
-  },
-  labels: {
-    // null => the abilities/magic tab is hidden entirely rather than linking to
-    // a dead-end screen. Set `labels.abilitiesScreen` in system.json to surface
-    // it (e.g. "Psionics") once that content exists.
-    abilitiesScreen: null,
-    resourcesPanel: 'Damage Track',
-    attributesPanel: 'Characteristics',
-    // Nothing in this panel is derived in the Dragonbane sense — a
-    // characteristic score is authored, and its DM is just how that score reads
-    // at the table. "Stats" is what a Traveller player calls them.
-    derivedPanel: 'Stats',
-    encumbrance: 'Encumbrance',
-    // Traveller has no hit points; END is the pool a hit actually depletes.
-    participantHealth: 'Current END',
-    conditionExamples: 'e.g. stunned, wounded',
-    encounterTagExamples: 'e.g. boarding, starport, pirates',
-    locationExample: 'e.g. Cargo Bay 3',
-    armorFeatures: 'Features',
-    // No keepsake concept in Traveller; the slot is hidden entirely.
-    memento: null,
-    // Weight-based encumbrance counts every item; no free "tiny" tier.
-    tinyItems: null,
-  },
-  logActions: [
-    { id: 'attack', label: 'attack' },
-    // No spellcasting; 'spell' is reused as the psionics slot so already-logged
-    // events keep resolving while the label reads correctly for the setting.
-    { id: 'spell', label: 'psionics' },
-    { id: 'ability', label: 'talent' },
-    { id: 'damage', label: 'damage' },
-    { id: 'heal', label: 'first aid' },
-    { id: 'condition', label: 'condition' },
-    { id: 'note', label: 'note' },
-  ],
+  ...declaredEngineData(travellerSystem),
   primaryHealthResourceId: 'end',
   // Damage fills END first, then spills into whichever physical characteristic
   // the player chooses. Two empty tracks put a Traveller out of the fight;

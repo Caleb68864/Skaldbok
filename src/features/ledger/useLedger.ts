@@ -1,3 +1,4 @@
+import { localDateOnlyISO } from '../../utils/dates';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useCampaignContext } from '../campaign/CampaignContext';
 import { useSystemDefinition } from '../systems/useSystemDefinition';
@@ -289,7 +290,7 @@ export function useLedger() {
         created += 1;
       }
 
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateOnlyISO();
 
       // Openings first, so the book reads in the order it happened.
       for (const account of parsed.accounts) {
@@ -350,27 +351,23 @@ export function useLedger() {
     const result = accrueBills({ bills: live, campaignDate, calendar });
     if (result.charges.length === 0) return { count: 0, total: 0, truncated: false, cashAfter: balance };
 
-    for (const charge of result.charges) {
-      await ledgerRepository.create({
+    await ledgerRepository.postBillCharges(
+      result.charges.map(charge => ({
         campaignId,
         date: charge.date,
         memo: charge.bill.name,
         amount: -charge.bill.amount,
         accountId: charge.bill.accountId,
         counterAccountId: charge.bill.counterAccountId,
-      });
-    }
-
-    // Watermarks last: if the entry writes fail partway, the bill still shows
-    // the charges as outstanding rather than silently swallowing them.
-    for (const accrual of result.accruals) {
-      if (accrual.charges.length === 0) continue;
-      await recurringBillRepository.markPosted(
-        accrual.bill.id,
-        accrual.postedThrough,
-        accrual.postedCount,
-      );
-    }
+      })),
+      result.accruals
+        .filter(accrual => accrual.charges.length > 0)
+        .map(accrual => ({
+          billId: accrual.bill.id,
+          postedThrough: accrual.postedThrough,
+          postedCount: accrual.postedCount,
+        })),
+    );
 
     // One line per posting run, not one per charge. Advancing the date three
     // months posts a dozen charges and catching up on the benefactor's whole
@@ -572,7 +569,7 @@ export function useLedger() {
       if (opening !== 0) {
         const entry = await ledgerRepository.create({
           campaignId,
-          date: new Date().toISOString().slice(0, 10),
+          date: localDateOnlyISO(),
           memo: `Opening balance — ${input.name}`,
           amount: opening,
           accountId: account.id,
@@ -634,7 +631,7 @@ export function useLedger() {
         } else if (next !== 0) {
           await ledgerRepository.create({
             campaignId,
-            date: new Date().toISOString().slice(0, 10),
+            date: localDateOnlyISO(),
             memo: `Opening balance — ${name}`,
             amount: next,
             accountId: id,

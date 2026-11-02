@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
+import { readFileSync } from 'node:fs';
 
 // https://vite.dev/config/
 /**
@@ -63,6 +64,11 @@ function contentSecurityPolicy(): import('vite').Plugin {
 }
 
 export default defineConfig({
+  define: {
+    __APP_VERSION__: JSON.stringify(
+      (JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }).version,
+    ),
+  },
   plugins: [
     tailwindcss(),
     react(),
@@ -131,8 +137,30 @@ export default defineConfig({
    *
    * `jsdomBoundary.test.ts` enforces the per-file half of this.
    */
+  build: {
+    // Warns when the first chunk grows past today's size, rather than at Vite's
+    // default, which this bundle already exceeded with no one reading the warning.
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        // Rarely changing libraries in their own chunks, so a service-worker update
+        // after an app change does not re-download them over the LAN.
+        manualChunks: id => {
+          if (/node_modules\/(react|react-dom|react-router|react-router-dom|scheduler)\//.test(id)) return 'vendor-react';
+          if (/node_modules\/(dexie|zod)\//.test(id)) return 'vendor-data';
+          return undefined;
+        },
+      },
+    },
+  },
   test: {
     globals: false,
     environment: 'node',
+    // Run with `npm run test:coverage`. Thresholds sit just under what was measured
+    // when they were added (68/71/78/68), so they stop a slide rather than set a goal.
+    coverage: {
+      include: ['src/storage/**', 'src/utils/migrations.ts'],
+      thresholds: { statements: 65, branches: 68, functions: 75, lines: 65 },
+    },
   },
 });

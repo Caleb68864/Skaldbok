@@ -1,5 +1,3 @@
-import JSZip from 'jszip';
-
 /**
  * Packs a filename → content map into a single zip blob via JSZip.
  *
@@ -9,6 +7,8 @@ import JSZip from 'jszip';
  * and hand it over in one call.
  */
 export async function bundleToZip(files: Map<string, string | Blob>): Promise<Blob> {
+  // Loaded on export: it is 95 kB of the first chunk for an occasional action.
+  const { default: JSZip } = await import('jszip');
   const zip = new JSZip();
   for (const [filename, content] of files) {
     zip.file(filename, content);

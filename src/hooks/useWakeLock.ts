@@ -30,17 +30,21 @@ export function useWakeLock() {
     }
   }, []);
 
-  // Auto-acquire on mount if preference is enabled
+  // Acquire when the preference is on, including when it arrives after mount:
+  // settings load asynchronously, so a mount-only effect saw only the default and
+  // ignored the saved preference until the tab was next hidden and shown.
   useEffect(() => {
-    if (settings.wakeLockEnabled && isSupported) {
+    if (settings.wakeLockEnabled && isSupported && !sentinelRef.current) {
       acquire().catch(console.error);
     }
+  }, [settings.wakeLockEnabled, isSupported, acquire]);
+
+  useEffect(() => {
     return () => {
       if (sentinelRef.current) {
         sentinelRef.current.release().catch(console.error);
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Re-acquire on visibility change if preference enabled

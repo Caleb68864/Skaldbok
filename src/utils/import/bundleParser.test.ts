@@ -213,6 +213,11 @@ describe('legacy bare-character files', () => {
     expect(result.bundle.contents.characters).toHaveLength(1);
   });
 
+  it('rejects a bare record whose skills are null (roadmap F5)', () => {
+    const { schemaVersion: _v, ...bare } = validChar;
+    expect(parseBundle(JSON.stringify({ ...bare, skills: null })).success).toBe(false);
+  });
+
   it('rejects a bare object that is not a character instead of storing it raw', () => {
     // This branch used to skip validation entirely, so any JSON object without
     // a `version` key landed in IndexedDB unvalidated and unmigrated.

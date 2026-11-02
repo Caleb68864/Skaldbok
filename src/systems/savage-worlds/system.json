@@ -1,8 +1,9 @@
 {
   "id": "savage-worlds",
-  "version": 7,
+  "version": 8,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
+  "engine": "trait-die-vs-tn",
   "attributes": [
     {
       "id": "agility",
@@ -113,7 +114,7 @@
     {
       "id": "distracted",
       "name": "Distracted",
-      "description": "\u22122 to all trait rolls until the end of your next turn.",
+      "description": "−2 to all trait rolls until the end of your next turn.",
       "effect": {
         "scope": "all-traits",
         "modifier": -2
@@ -129,13 +130,13 @@
     {
       "id": "prone",
       "name": "Prone",
-      "description": "\u22122 to your attacks. Melee attackers get +2 to hit you; ranged attackers are at \u22122. Stand (costs movement) to clear.",
+      "description": "−2 to your attacks. Melee attackers get +2 to hit you; ranged attackers are at −2. Stand (costs movement) to clear.",
       "duration": "until-cleared"
     },
     {
       "id": "entangled",
       "name": "Entangled",
-      "description": "\u22122 to all actions. Break free to clear.",
+      "description": "−2 to all actions. Break free to clear.",
       "effect": {
         "scope": "all-traits",
         "modifier": -2
@@ -145,7 +146,7 @@
     {
       "id": "fatigued",
       "name": "Fatigued",
-      "description": "\u22121 to all trait rolls (first Fatigue level).",
+      "description": "−1 to all trait rolls (first Fatigue level).",
       "effect": {
         "scope": "all-traits",
         "modifier": -1
@@ -159,7 +160,7 @@
     {
       "id": "exhausted",
       "name": "Exhausted",
-      "description": "\u22122 to all trait rolls (second Fatigue level). One more level Incapacitates.",
+      "description": "−2 to all trait rolls (second Fatigue level). One more level Incapacitates.",
       "effect": {
         "scope": "all-traits",
         "modifier": -2
@@ -485,19 +486,19 @@
       "title": "Damage & Wounds",
       "rows": [
         [
-          "Damage total vs Toughness (2 + \u00bd Vigor + Armor)."
+          "Damage total vs Toughness (2 + ½ Vigor + Armor)."
         ],
         [
-          "\u2265 Toughness \u2192 Shaken; if already Shaken \u2192 +1 Wound; +1 Wound per +4 over Toughness."
+          "≥ Toughness → Shaken; if already Shaken → +1 Wound; +1 Wound per +4 over Toughness."
         ]
       ],
-      "note": "Each Wound: \u22121 to all trait rolls. 3 Wounds = Incapacitated (Extras drop at 1). Soak: spend a Benny, roll Vigor, each raise removes a Wound."
+      "note": "Each Wound: −1 to all trait rolls. 3 Wounds = Incapacitated (Extras drop at 1). Soak: spend a Benny, roll Vigor, each raise removes a Wound."
     },
     {
       "title": "Bennies",
       "rows": [
         [
-          "Reroll any trait test \u00b7 Soak wounds (Vigor) \u00b7 remove Shaken."
+          "Reroll any trait test · Soak wounds (Vigor) · remove Shaken."
         ]
       ],
       "note": "Refresh to 3 at the start of each session."
@@ -512,7 +513,7 @@
         {
           "kind": "text",
           "key": "edges",
-          "placeholder": "One Edge per line \u2014 e.g. Two-Fisted, Quick, Alertness\u2026",
+          "placeholder": "One Edge per line — e.g. Two-Fisted, Quick, Alertness…",
           "minHeight": 120
         }
       ]
@@ -525,10 +526,159 @@
         {
           "kind": "text",
           "key": "hindrances",
-          "placeholder": "One Hindrance per line, with (Major)/(Minor) \u2014 e.g. Loyal (Minor), Heroic (Major)\u2026",
+          "placeholder": "One Hindrance per line, with (Major)/(Minor) — e.g. Loyal (Minor), Heroic (Major)…",
           "minHeight": 120
         }
       ]
     }
-  ]
+  ],
+  "panels": [
+    "attributes",
+    "skills",
+    "resources",
+    "edges",
+    "hindrances",
+    "bennies",
+    "inventory",
+    "combat",
+    "notes"
+  ],
+  "terms": {
+    "abilities": "Edges",
+    "spells": "Powers",
+    "magicResource": "PP",
+    "healthResource": "Wounds",
+    "roleFallback": "Wild Card",
+    "reservePot": "Party fund"
+  },
+  "labels": {
+    "abilitiesScreen": null,
+    "resourcesPanel": "Wounds & Fatigue",
+    "attributesPanel": "Attributes",
+    "encumbrance": "Load Limit",
+    "participantHealth": "Wounds",
+    "conditionExamples": "e.g. Shaken, Distracted",
+    "encounterTagExamples": "e.g. chase, social, mass battle",
+    "locationExample": "e.g. The Saloon",
+    "armorFeatures": "Notes",
+    "memento": null,
+    "tinyItems": null
+  },
+  "logActions": [
+    {
+      "id": "attack",
+      "label": "attack"
+    },
+    {
+      "id": "spell",
+      "label": "power"
+    },
+    {
+      "id": "ability",
+      "label": "edge"
+    },
+    {
+      "id": "damage",
+      "label": "wound"
+    },
+    {
+      "id": "heal",
+      "label": "heal"
+    },
+    {
+      "id": "condition",
+      "label": "condition"
+    },
+    {
+      "id": "note",
+      "label": "note"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "raise",
+      "label": "Success with a Raise",
+      "tone": "critical"
+    },
+    {
+      "id": "success",
+      "label": "Success",
+      "tone": "success"
+    },
+    {
+      "id": "failure",
+      "label": "Failure",
+      "tone": "failure"
+    },
+    {
+      "id": "critical-failure",
+      "label": "Critical Failure",
+      "tone": "fumble"
+    }
+  ],
+  "rollModifiers": [
+    {
+      "id": "gang-up",
+      "label": "Gang Up (+1 each)"
+    },
+    {
+      "id": "cover",
+      "label": "Cover (−2/−4)"
+    },
+    {
+      "id": "wild-attack",
+      "label": "Wild Attack (+2)"
+    }
+  ],
+  "timeUnits": [
+    {
+      "id": "round",
+      "label": "Round",
+      "abbrev": "RND",
+      "expiresOn": {
+        "encounterEnd": true
+      }
+    },
+    {
+      "id": "scene",
+      "label": "Scene",
+      "abbrev": "SCN",
+      "expiresOn": {
+        "encounterEnd": true
+      }
+    },
+    {
+      "id": "session",
+      "label": "Session",
+      "abbrev": "SES",
+      "expiresOn": {
+        "sessionStart": true
+      }
+    },
+    {
+      "id": "permanent",
+      "label": "Permanent",
+      "abbrev": "∞"
+    }
+  ],
+  "currency": {
+    "label": "Cash",
+    "baseDenominationId": "cash",
+    "denominations": [
+      {
+        "id": "cash",
+        "label": "Cash",
+        "abbr": "$",
+        "value": 1,
+        "step": 1,
+        "quickSteps": [
+          1,
+          5,
+          10,
+          50,
+          100
+        ]
+      }
+    ]
+  }
 }

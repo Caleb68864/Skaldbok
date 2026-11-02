@@ -2,7 +2,6 @@ import { SectionPanel } from '../../../../components/primitives/SectionPanel';
 import { getEngine } from '../../engine';
 import { attrKey, parseStatKey, resKey } from '../../../../utils/statKeys';
 import { getEffectiveValue, resolveDerivedField } from '../../../../utils/derivedValues';
-import type { DerivedFieldValue } from '../../../../utils/derivedValues';
 import type { PlayModuleProps } from '../../../playDashboard/types';
 import type { SystemEngine } from '../../engine/types';
 import type { CharacterRecord } from '../../../../types/character';
@@ -56,7 +55,7 @@ export function resolveDataPath(
   if (namespace === 'derived') {
     const field = engine.derivedFields.find((f) => f.key === id);
     if (!field) return undefined;
-    const values = engine.derivedStats(character, system ?? undefined) as unknown as Record<string, DerivedFieldValue>;
+    const values = engine.derivedStats(character, system ?? undefined);
     return resolveDerivedField(character, values, field).display;
   }
 

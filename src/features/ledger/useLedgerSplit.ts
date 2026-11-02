@@ -75,7 +75,12 @@ export function useLedgerSplit() {
     async (patch: Partial<{ shipFundPct: number; rows: PayoutSplitRow[] }>) => {
       if (!split) return;
       setSplit({ ...split, ...patch });
-      await ledgerSplitRepository.update(split.id, patch);
+      try {
+        await ledgerSplitRepository.update(split.id, patch);
+      } catch (e) {
+        setSplit(split);
+        throw e;
+      }
     },
     [split],
   );

@@ -118,7 +118,7 @@ export default function PrintableSheetScreen() {
   const resolvedEntries = engine.derivedFields.map(field => {
     const resolved = resolveDerivedField(
       character,
-      engineDerived as unknown as Record<string, string | number | undefined>,
+      engineDerived,
       field,
     );
     return [field.key, resolved.display] as const;

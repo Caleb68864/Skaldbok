@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import type { TempModifier } from '../../types/character';
 import { useSystemEngine } from '../../features/systems/engine';
+import { formatStatLabel } from '../../features/systems/engine/statLabel';
+import type { SystemDefinition } from '../../types/system';
 
 /** Props for {@link BuffChipBar}. `onAdd` opens the modifier form; the rest mutate the active list. */
 export interface BuffChipBarProps {
@@ -9,6 +11,8 @@ export interface BuffChipBarProps {
   onRemove: (id: string) => void;
   onClearAll: () => void;
   onAdd: () => void;
+  /** The active system, so a stat prints under the label the engine offered it with. */
+  system?: SystemDefinition | null;
 }
 
 /** Formats a signed delta with an explicit leading `+` for non-negatives. */
@@ -23,9 +27,9 @@ function sumDelta(mod: TempModifier): number {
 }
 
 /** Human-readable "STR +2, AGL -1" summary of a modifier's individual effects. */
-function formatEffectsList(mod: TempModifier): string {
+function formatEffectsList(mod: TempModifier, label: (stat: string) => string): string {
   return mod.effects
-    .map((e) => `${e.stat.toUpperCase()} ${formatDelta(e.delta)}`)
+    .map((e) => `${label(e.stat)} ${formatDelta(e.delta)}`)
     .join(', ');
 }
 
@@ -43,9 +47,11 @@ export function BuffChipBar({
   onRemove,
   onClearAll,
   onAdd,
+  system,
 }: BuffChipBarProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const engine = useSystemEngine();
+  const statLabel = (stat: string) => formatStatLabel(stat, engine, system);
 
   /** Compact duration label from the active system's time units. */
   const durationAbbrev = (duration: TempModifier['duration']): string =>
@@ -81,7 +87,7 @@ export function BuffChipBar({
             {isExpanded && (
               <div className="mt-[var(--space-1)] p-[var(--space-2)] bg-[var(--color-surface,#1a1a1a)] rounded-[var(--radius-md)] text-[length:var(--font-size-xs)] text-[var(--color-text-secondary,#aaa)]">
                 <div className="mb-[var(--space-1)]">
-                  {formatEffectsList(mod)}
+                  {formatEffectsList(mod, statLabel)}
                 </div>
                 <button
                   type="button"

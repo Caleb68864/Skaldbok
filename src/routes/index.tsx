@@ -63,8 +63,8 @@ const KnowledgeBaseScreen = lazyScreen(() => import('../screens/KnowledgeBaseScr
 const SessionLog = lazyScreen(() => import('../features/session/sessionLog/SessionLog'), (m) => m.SessionLog);
 
 /**
- * Application route configuration consumed by `createBrowserRouter` /
- * `RouterProvider` at the entry point.
+ * Application route configuration, rendered with `useRoutes` in `App.tsx` under
+ * the `BrowserRouter` in `AppProviders.tsx`.
  *
  * @remarks
  * The tree is structured in two layers:
@@ -81,14 +81,6 @@ const SessionLog = lazyScreen(() => import('../features/session/sessionLog/Sessi
  * The catch-all `'*'` path redirects unknown URLs to the character sheet to
  * prevent a blank screen.
  *
- * @example
- * ```tsx
- * import { createBrowserRouter, RouterProvider } from 'react-router-dom';
- * import { routes } from './routes';
- *
- * const router = createBrowserRouter(routes);
- * <RouterProvider router={router} />
- * ```
  */
 export const routes: RouteObject[] = [
   { path: '/print', element: screen(PrintableSheetScreen) },
@@ -98,7 +90,7 @@ export const routes: RouteObject[] = [
       { index: true, element: <Navigate to="/character/sheet" replace /> },
       { path: '/session', element: screen(SessionScreen) },
       { path: '/session/log', element: screen(SessionLog) },
-      { path: '/notes', element: <Navigate to="/session?view=notes" replace /> },
+      { path: '/notes', element: <Navigate to="/session" replace /> },
       { path: '/note/new', element: screen(NoteEditorScreen) },
       { path: '/note/:id/edit', element: screen(NoteEditorScreen) },
       {
