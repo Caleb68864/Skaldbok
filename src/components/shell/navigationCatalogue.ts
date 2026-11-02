@@ -92,6 +92,15 @@ export const NAV_DESTINATIONS: NavDestination[] = [
     conditional: 'engine.landingBriefing',
     dynamicLabel: true,
   },
+  {
+    path: '/weather-reports',
+    label: 'Previous weather reports',
+    surfaces: ['in-screen'],
+    conditional: 'engine.landingBriefing',
+    note:
+      'A button on the worlds screen, and another on the report screen. No tab or menu offers ' +
+      'it, so a ruleset without a landing briefing has no way in.',
+  },
 
   // --- Library and tools --------------------------------------------------
   { path: '/reference', label: 'Reference', surfaces: ['bottom', 'menu'] },
@@ -147,6 +156,12 @@ export const ROUTES_WITHOUT_A_NAV_SURFACE: Record<string, string> = {
   '/note/new': 'Contextual: reached by composing a note, never by navigating to a blank one.',
   '/note/:id/edit': 'Parameterised — meaningless without a note id.',
   '/kb/:nodeId': 'Parameterised — the node is chosen inside the Knowledge Base.',
+  '/weather-reports/:noteId':
+    'Parameterised — the saved report is chosen from the list at /weather-reports, and saving a ' +
+    'draft lands here.',
+  '/weather-report':
+    'Contextual: the unsaved draft, opened by building a report on /worlds and carried in ' +
+    'router state. Without that state it redirects to /weather-reports.',
   '/bestiary/trash':
     'Alias kept for links made before the trash held anything but creatures; /trash is the ' +
     'catalogued destination.',

@@ -87,3 +87,6 @@ revert).
 `navigationCatalogue.test.ts` fails on `main` at `5d45927`, before any of this work:
 `/weather-reports`, `/weather-reports/:noteId` and `/weather-report` are routed with no
 nav surface or written reason. Not fixed, as it is outside the two documents in scope.
+
+Fixed afterwards on this branch by recording the routes in `navigationCatalogue.ts`: all
+three are reachable from `/worlds`, so no navigation changed. `vitest run` is 2496 passed.
