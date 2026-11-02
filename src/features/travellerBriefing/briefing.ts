@@ -1,3 +1,4 @@
+import { localDateOnlyISO } from '../../utils/dates';
 import * as T from './rules';
 import { hexDistance, type WorldHit } from './worldData';
 import type { WikiArticle } from './wikiData';
@@ -125,7 +126,7 @@ export function buildBriefing(canon: WorldHit, wiki: WikiArticle | null, options
     travel_zone: zoneWord, bases: w.bases, trade_codes: d.remarks,
     allegiance: w.allegianceName ?? w.allegiance, weapons_ashore: weaponsAshore,
     personas_used: [], source: 'travellermap.com + wiki.travellerrpg.com (canon; GM wins)',
-    generated: options.generated ?? new Date().toISOString().slice(0, 10), cssclasses: ['ta-brief'],
+    generated: options.generated ?? localDateOnlyISO(), cssclasses: ['ta-brief'],
     tags: ['traveller', 'campaign', 'field-log', 'landing-brief'], status: 'draft',
   };
   if (/^\d{4}-\d{2}-\d{2}$/.test(date)) fm.session_date = date;

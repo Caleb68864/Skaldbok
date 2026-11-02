@@ -1,3 +1,4 @@
+import { ConfirmProvider } from '../components/primitives/ConfirmDialog';
 import { BrowserRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { ThemeProvider } from '../theme/ThemeProvider';
@@ -17,10 +18,12 @@ export function AppProviders({ children }: AppProvidersProps) {
         <AppStateProvider>
           <ActiveCharacterProvider>
             <ToastProvider>
+<ConfirmProvider>
               <CampaignProvider>
                 {children}
               </CampaignProvider>
-            </ToastProvider>
+            </ConfirmProvider>
+</ToastProvider>
           </ActiveCharacterProvider>
         </AppStateProvider>
       </ThemeProvider>

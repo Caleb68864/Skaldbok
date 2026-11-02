@@ -41,7 +41,15 @@ async function loadSystemFor(character: Pick<CharacterRecord, 'systemId'>) {
  * ```
  */
 export async function getAll(options?: { includeDeleted?: boolean }): Promise<CharacterRecord[]> {
-  const rows = (await db.characters.toArray()).map(upgradeCharacter);
+  // Per row: one record a migration throws on must not hide the whole library.
+  const rows = (await db.characters.toArray()).flatMap((row): CharacterRecord[] => {
+    try {
+      return [upgradeCharacter(row)];
+    } catch (e) {
+      console.error('characterRepository.getAll: skipped a character that could not be upgraded', row?.id, e);
+      return [];
+    }
+  });
   return options?.includeDeleted ? rows : excludeDeleted(rows);
 }
 

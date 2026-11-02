@@ -9,8 +9,8 @@ screen and never branched on `systemId`.
 
 Source: `src/features/systems/engine/`. Three adapters ship today:
 `classicFantasyEngine` (Dragonbane-like), `travellerEngine` and
-`savageWorldsEngine`, registered in the `SYSTEM_ADAPTERS` map in
-`engine/index.ts`. A system with no adapter falls back to classic-fantasy,
+`savageWorldsEngine`. A `system.json` picks one by declaring `engine`
+(`ENGINE_ADAPTERS` in `engine/index.ts`). A system with no adapter falls back to classic-fantasy,
 which is not a neutral default — it brings Dragonbane's formulas with it — so
 the engine sets `fallbackRulesFor` and `CharacterSubNav` says so on screen.
 
@@ -109,12 +109,12 @@ scene-long buff in permanently. `resolveSkillValue` returns `base` and
 
 1. Add `src/systems/<id>/system.json` + `index.ts`, and register it in
    `src/systems/registry.ts` (this drives the character-creation picker).
-2. Add an engine adapter under `src/features/systems/engine/` and add it to the
-   `SYSTEM_ADAPTERS` map in `engine/index.ts` — the one sanctioned place for a
-   systemId-to-behaviour mapping (the "no `systemId ===`" rule applies
-   everywhere *else*). The `registry.ts` list and that map are two
-   hand-maintained lists that must stay in lockstep;
-   `fallbackAdapter.test.ts` fails if they drift.
+2. Declare `engine` in `system.json` to run on an existing adapter. A new set of
+   rules means a new adapter under `src/features/systems/engine/` and an entry in
+   `ENGINE_ADAPTERS` in `engine/index.ts`, the one sanctioned mapping to behaviour
+   (the "no `systemId ===`" rule applies everywhere *else*). Pure data — terms,
+   labels, panels, currency, outcomes, roll modifiers, time units, log actions —
+   lives in `system.json`, and an adapter spreads it with `declaredEngineData`.
 3. **Bump the `version` whenever you edit a bundled `system.json` — AND bump
    `sheet.json`'s *separate* `version` whenever you edit that file.** Both are
    cached in IndexedDB behind independent version gates (`useSystemDefinition`
@@ -128,6 +128,14 @@ scene-long buff in permanently. `resolveSkillValue` returns `base` and
      layout/panel order/tiles → bump `sheet.json`. Edit both, bump one → half
      your change ships. The two counters are unrelated and nothing cross-checks
      them. (The `sheet.json` gate is the most-forgotten one.)
+
+4. Keep `system.json` to one shape. Every bundled system declares `engine`,
+   `terms`, `labels`, `panels`, `currency`, `outcomes`, `rollModifiers`,
+   `timeUnits` and `logActions`; `declaredEngineData` throws at load if one is
+   missing. Its blank template in `sample-data/` carries the current
+   `schemaVersion` and every declared resource, which `bundledShape.test.ts`
+   checks. A field added to `types/system.ts` also goes in
+   `schemas/system.schema.ts`, or it vanishes on import.
 
 ### Character schema migrations
 
@@ -197,7 +205,7 @@ one. `migrated_from` was missing from all three for as long as it has existed.
   `getLinksTo(noteId, 'contains')` then filter `fromEntityType === 'encounter'`.
 - **Reassignment:** delete the old edge and create a new one. Never mutate an
   existing link row — edges are immutable identities.
-- **Cleanup on delete:** call `deleteLinksForNote(noteId)` when a note is
+- **Cleanup on delete:** call `softDeleteLinksForNote(noteId)` when a note is
   deleted so dangling edges don't accumulate. When new entity types gain
   deletion flows, add a matching `deleteLinksFor<Entity>` helper.
 

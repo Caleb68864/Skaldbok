@@ -5,8 +5,10 @@ import { attrKey, resKey } from '../../../utils/statKeys';
 import { conditionPenalty } from '../../../utils/conditionEffects';
 import type { SystemDefinition } from '../../../types/system';
 import type { SystemEngine } from './types';
+import { declaredEngineData } from './declaredEngineData';
+import { savageWorldsSystem } from '../../../systems/savage-worlds';
 
-export const SAVAGE_WORLDS_ATTRIBUTE_IDS = ['agility', 'smarts', 'spirit', 'strength', 'vigor'];
+export const SAVAGE_WORLDS_ATTRIBUTE_IDS = savageWorldsSystem.attributes.map(a => a.id);
 
 /**
  * The unskilled trait die (d4) — Savage Worlds' skill floor. Named so the die
@@ -216,72 +218,8 @@ export const savageWorldsEngine: SystemEngine = {
     supportsBoonBane: false,
   },
   derivedStats: character => computeSavageWorldsDerivedValues(character),
-  resourceIds: ['wounds', 'fatigue', 'bennies'],
-  panels: ['attributes', 'skills', 'resources', 'edges', 'hindrances', 'bennies', 'inventory', 'combat', 'notes'],
-  currency: {
-    mode: 'single',
-    label: 'Cash',
-    denominations: [
-      { id: 'cash', label: 'Cash', abbr: '$', value: 1, step: 1, quickSteps: [1, 5, 10, 50, 100] },
-    ],
-    baseDenominationId: 'cash',
-    formatAmount: baseUnits => {
-      const sign = baseUnits < 0 ? '-' : '';
-      return `${sign}$${Math.abs(baseUnits).toLocaleString('en-US')}`;
-    },
-    read: character => ({ cash: character.wealth?.cash ?? 0 }),
-    write: (character, amounts) => ({ wealth: { ...character.wealth, ...amounts } }),
-  },
-  outcomes: [
-    { id: 'raise', label: 'Success with a Raise', tone: 'critical' },
-    { id: 'success', label: 'Success', tone: 'success' },
-    { id: 'failure', label: 'Failure', tone: 'failure' },
-    { id: 'critical-failure', label: 'Critical Failure', tone: 'fumble' },
-  ],
-  rollModifiers: [
-    { id: 'gang-up', label: 'Gang Up (+1 each)' },
-    { id: 'cover', label: 'Cover (−2/−4)' },
-    { id: 'wild-attack', label: 'Wild Attack (+2)' },
-  ],
-  timeUnits: [
-    // SWADE has no rest ladder, so before `expiresOn` nothing in this system
-    // could expire a modifier at all — every buff was permanent in practice.
-    // A round ends with the fight it was in.
-    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { encounterEnd: true } },
-    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
-    { id: 'session', label: 'Session', abbrev: 'SES', expiresOn: { sessionStart: true } },
-    { id: 'permanent', label: 'Permanent', abbrev: '∞' },
-  ],
-  terms: {
-    abilities: 'Edges',
-    spells: 'Powers',
-    magicResource: 'PP',
-    healthResource: 'Wounds',
-    roleFallback: 'Wild Card',
-    reservePot: 'Party fund',
-  },
-  labels: {
-    abilitiesScreen: null,
-    resourcesPanel: 'Wounds & Fatigue',
-    attributesPanel: 'Attributes',
-    encumbrance: 'Load Limit',
-    participantHealth: 'Wounds',
-    conditionExamples: 'e.g. Shaken, Distracted',
-    encounterTagExamples: 'e.g. chase, social, mass battle',
-    locationExample: 'e.g. The Saloon',
-    armorFeatures: 'Notes',
-    memento: null,
-    tinyItems: null,
-  },
-  logActions: [
-    { id: 'attack', label: 'attack' },
-    { id: 'spell', label: 'power' },
-    { id: 'ability', label: 'edge' },
-    { id: 'damage', label: 'wound' },
-    { id: 'heal', label: 'heal' },
-    { id: 'condition', label: 'condition' },
-    { id: 'note', label: 'note' },
-  ],
+  resourceIds: savageWorldsSystem.resources.map(r => r.id),
+  ...declaredEngineData(savageWorldsSystem),
   // Damage total vs Toughness (2 + ½ Vigor + Armor, less any armor-piercing):
   // under = nothing; at/over = Shaken, or +1 Wound if already Shaken; +1 Wound
   // per 4 over Toughness. `raises` is intentionally unused — SWADE attack raises

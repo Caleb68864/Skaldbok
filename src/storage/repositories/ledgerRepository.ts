@@ -121,6 +121,29 @@ export async function update(
   await db.ledgerEntries.update(id, { ...patch, updatedAt: nowISO() });
 }
 
+/**
+ * Posts recurring-bill charges and advances each bill's watermark, all or nothing.
+ *
+ * @remarks
+ * These were separate writes. A throw at entry k+1 left the first k entries with
+ * no watermark, so the next open posted every one of them again.
+ */
+export async function postBillCharges(
+  charges: Array<Parameters<typeof create>[0]>,
+  watermarks: Array<{ billId: string; postedThrough: string; postedCount: number }>,
+): Promise<void> {
+  await db.transaction('rw', db.ledgerEntries, db.recurringBills, async () => {
+    for (const charge of charges) await create(charge);
+    for (const mark of watermarks) {
+      await db.recurringBills.update(mark.billId, {
+        postedThrough: mark.postedThrough,
+        postedCount: mark.postedCount,
+        updatedAt: nowISO(),
+      });
+    }
+  });
+}
+
 const lifecycle = createSoftDeleteOps({
   repository: 'ledgerRepository',
   table: 'ledgerEntries',

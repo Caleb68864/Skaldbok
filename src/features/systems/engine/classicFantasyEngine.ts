@@ -11,15 +11,9 @@ import { calcNormalProb, calcBoonProb, calcBaneProb, formatProb } from '../../..
 import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
 import { attrKey, armorKey, derivedKey } from '../../../utils/statKeys';
-import { makeFormatAmount } from '../../../utils/currency';
-import type { SystemEngine, RestDefinition, CurrencyDenomination } from './types';
-
-/** Dragonbane's coin denominations, shared between the `denominations` list and `formatAmount`. */
-const classicFantasyCoinDenominations: CurrencyDenomination[] = [
-  { id: 'gold', label: 'Gold', abbr: 'g', value: 100 },
-  { id: 'silver', label: 'Silver', abbr: 's', value: 10 },
-  { id: 'copper', label: 'Copper', abbr: 'c', value: 1 },
-];
+import type { SystemEngine, RestDefinition } from './types';
+import { declaredEngineData } from './declaredEngineData';
+import { classicFantasySystem } from '../../../systems/classic-fantasy';
 
 /**
  * Skill value at or below which a roll cannot fail.
@@ -130,7 +124,7 @@ const classicFantasyRests: RestDefinition[] = [
  */
 export const classicFantasyEngine: SystemEngine = {
   attributeBadge: () => null,
-  attributeIds: ['str', 'con', 'agl', 'int', 'wil', 'cha'],
+  attributeIds: classicFantasySystem.attributes.map(a => a.id),
   skill: {
     valueLabel: 'Value',
     range: { min: 0, max: 20 },
@@ -168,81 +162,8 @@ export const classicFantasyEngine: SystemEngine = {
     trainedAffectsValue: true,
   },
   derivedStats: (character, system) => computeDerivedValues(character, system),
-  resourceIds: ['hp', 'wp'],
-  panels: ['attributes', 'skills', 'resources', 'inventory', 'magic', 'combat', 'rest', 'death', 'notes'],
-  currency: {
-    mode: 'coins',
-    label: 'Coins',
-    denominations: classicFantasyCoinDenominations,
-    baseDenominationId: 'copper',
-    // Built from the same denomination list everything else reads — see
-    // makeFormatAmount. Was a private decomposition closing over the constant
-    // above, which a system.json override could not reach.
-    formatAmount: makeFormatAmount(classicFantasyCoinDenominations),
-    read: character => ({
-      gold: character.wealth?.gold ?? 0,
-      silver: character.wealth?.silver ?? 0,
-      copper: character.wealth?.copper ?? 0,
-    }),
-    write: (character, amounts) => ({
-      wealth: { ...character.wealth, ...amounts },
-    }),
-  },
-  outcomes: [
-    { id: 'success', label: 'Success', tone: 'success' },
-    { id: 'failure', label: 'Failure', tone: 'failure' },
-    { id: 'dragon', label: 'Dragon (1)', tone: 'critical' },
-    { id: 'demon', label: 'Demon (20)', tone: 'fumble' },
-  ],
-  rollModifiers: [
-    { id: 'boon', label: 'Boon' },
-    { id: 'bane', label: 'Bane' },
-    { id: 'pushed', label: 'Pushed' },
-  ],
-  timeUnits: [
-    { id: 'round', label: 'Round', abbrev: 'RND', expiresOn: { rest: 'round' } },
-    { id: 'stretch', label: 'Stretch', abbrev: 'STR', expiresOn: { rest: 'stretch' } },
-    { id: 'shift', label: 'Shift', abbrev: 'SHI', expiresOn: { rest: 'shift' } },
-    // A scene is an encounter here; nothing expired this before.
-    { id: 'scene', label: 'Scene', abbrev: 'SCN', expiresOn: { encounterEnd: true } },
-    // No expiry: removed by hand.
-    { id: 'permanent', label: 'Permanent', abbrev: '∞' },
-  ],
-  terms: {
-    abilities: 'Heroic Abilities',
-    spells: 'Spells',
-    magicResource: 'WP',
-    healthResource: 'HP',
-    roleFallback: 'Adventurer',
-    reservePot: 'Party fund',
-  },
-  labels: {
-    abilitiesScreen: 'Abilities / Magic',
-    resourcesPanel: 'Resources',
-    // The paper sheet names these blocks differently from the screen. Declared
-    // here so the printed Dragonbane sheet is unchanged while the strings stop
-    // being literals in shared print code.
-    printResources: 'Hit Points & Willpower',
-    printAbilities: 'Abilities',
-    attributesPanel: 'Attributes',
-    encumbrance: 'Encumbrance',
-    participantHealth: 'Current HP',
-    conditionExamples: 'e.g. poisoned, prone',
-    encounterTagExamples: 'e.g. ambush, forest, kobolds',
-    locationExample: 'e.g. Riverside Clearing',
-    armorFeatures: 'Features / Bane-on',
-    memento: 'Memento:',
-    tinyItems: 'Tiny Items',
-  },
-  logActions: [
-    { id: 'attack', label: 'attack' },
-    { id: 'spell', label: 'spell' },
-    { id: 'ability', label: 'ability' },
-    { id: 'damage', label: 'damage' },
-    { id: 'heal', label: 'heal' },
-    { id: 'condition', label: 'condition' },
-    { id: 'note', label: 'note' },
-  ],
+  resourceIds: classicFantasySystem.resources.filter(r => r.role !== 'counter').map(r => r.id),
+  ...declaredEngineData(classicFantasySystem),
   primaryHealthResourceId: 'hp',
   // Dragonbane damage lands on HP and stops; being at 0 is handled by the
   // death-roll model below, not by a cascading track.

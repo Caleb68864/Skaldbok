@@ -172,22 +172,6 @@ export function computeEncumbranceLimit(character: CharacterRecord): number {
 }
 
 /**
- * Skill base chance by attribute value.
- *   Attribute 1-5 → base chance 3
- *   Attribute 6-8 → base chance 4
- *   Attribute 9-12 → base chance 5
- *   Attribute 13-15 → base chance 6
- *   Attribute 16-18 → base chance 7
- */
-export function getSkillBaseChance(attributeValue: number): number {
-  if (attributeValue <= 5) return 3;
-  if (attributeValue <= 8) return 4;
-  if (attributeValue <= 12) return 5;
-  if (attributeValue <= 15) return 6;
-  return 7;
-}
-
-/**
  * Max prepared spells = INT base chance (3–7).
  * Uses the standard skill base chance table applied to the INT attribute.
  * Defaults to 5 (equivalent to INT 10) if INT is undefined.
@@ -195,7 +179,7 @@ export function getSkillBaseChance(attributeValue: number): number {
 export function computeMaxPreparedSpells(character: CharacterRecord): number {
   const int = character.attributes['int'];
   if (int === undefined || int === null) return 5;
-  return getSkillBaseChance(effectiveAttribute(character, 'int', 10));
+  return computeBaseChance(effectiveAttribute(character, 'int', 10));
 }
 
 /**

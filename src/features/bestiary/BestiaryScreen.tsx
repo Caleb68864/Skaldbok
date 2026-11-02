@@ -1,6 +1,8 @@
+import { useConfirm } from '../../components/primitives/ConfirmDialog';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useBestiary, type CategoryFilter } from './useBestiary';
+import { useBestiaryCategories } from '../../hooks/useConfigurableDefaults';
 import { CreatureTemplateCard } from './CreatureTemplateCard';
 import { CreatureTemplateForm } from './CreatureTemplateForm';
 import { CreatureImportModal } from './CreatureImportModal';
@@ -40,13 +42,6 @@ export interface BestiaryScreenProps {
   onClose?: () => void;
 }
 
-const categories: Array<{ value: CategoryFilter; label: string }> = [
-  { value: 'all', label: 'All' },
-  { value: 'monster', label: 'Monster' },
-  { value: 'npc', label: 'NPC' },
-  { value: 'animal', label: 'Animal' },
-];
-
 const pillClass = 'min-h-9 px-3 rounded-full border-none cursor-pointer text-xs font-semibold';
 const actionBtnClass = 'min-h-11 px-4 py-2 bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)] border-none rounded-lg text-sm font-semibold cursor-pointer';
 
@@ -56,6 +51,12 @@ const actionBtnClass = 'min-h-11 px-4 py-2 bg-[var(--color-accent)] text-[var(--
  */
 export function BestiaryScreen({ campaignId, campaignName, systemId, activeEncounterId, onClose }: BestiaryScreenProps) {
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
+  const configuredCategories = useBestiaryCategories();
+  const categories: Array<{ value: CategoryFilter; label: string }> = [
+    { value: 'all', label: 'All' },
+    ...configuredCategories.map(c => ({ value: c.id, label: c.label })),
+  ];
   const {
     templates,
     search,
@@ -197,7 +198,7 @@ export function BestiaryScreen({ campaignId, campaignName, systemId, activeEncou
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this creature? It can be restored from Trash.')) return;
+    if (!(await confirm('Delete this creature? It can be restored from Trash.'))) return;
     await softDelete(id);
     setViewingTemplate(null);
   };

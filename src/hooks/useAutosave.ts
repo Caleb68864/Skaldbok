@@ -1,3 +1,4 @@
+import { nowISO } from '../utils/dates';
 import { useEffect, useRef, useState } from 'react';
 import type { CharacterRecord } from '../types/character';
 import { registerFlush, trackPendingWrite } from '../features/persistence/autosaveFlush';
@@ -46,7 +47,7 @@ export function useAutosave(
       setError(null);
       try {
         await saveFn(record);
-        setLastSaved(new Date().toISOString());
+        setLastSaved(nowISO());
         erroredRef.current = false;
         // Only clear if nothing newer arrived while we were awaiting, so a change
         // made mid-save is still flagged dirty for the next tick / unmount flush.

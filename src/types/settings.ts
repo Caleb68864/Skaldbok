@@ -1,6 +1,8 @@
 import type { TagPresetGroup } from '../config/defaults/tagPresets';
 import type { InventoryContainerKindConfig } from '../config/defaults/inventoryContainerKinds';
 import type { NoteTypeConfig } from '../config/defaults/noteTypes';
+import type { TimelineTrackCatalogEntry } from '../config/defaults/timelineTracks';
+import type { BestiaryCategoryConfig } from '../config/defaults/bestiaryCategories';
 import type { KBCategoryTab } from '../config/defaults/kbCategories';
 import type { Versioned } from './common';
 import type { ID } from './common';
@@ -132,6 +134,16 @@ export interface AppSettings extends Versioned {
    * `DEFAULT_KB_CATEGORY_TABS`. Read via `useKBCategoryTabs()`.
    */
   kbCategoryTabs?: KBCategoryTab[];
+  /**
+   * Session-timeline lanes, overriding `DEFAULT_TIMELINE_TRACK_CATALOG`. Read via
+   * `useTimelineTrackCatalog()`.
+   */
+  timelineTrackCatalog?: Record<string, TimelineTrackCatalogEntry>;
+  /**
+   * Bestiary categories, overriding `DEFAULT_BESTIARY_CATEGORIES`. Read via
+   * `useBestiaryCategories()`.
+   */
+  bestiaryCategories?: BestiaryCategoryConfig[];
   /**
    * If `true`, the `Abilities / Magic` character screen shows both Spells and
    * Heroic Abilities. If `false` (or absent), only Heroic Abilities render —

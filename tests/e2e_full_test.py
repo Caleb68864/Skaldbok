@@ -1,9 +1,9 @@
 """
-Skaldmark E2E Full Test Suite — Playwright
+Skaldbok E2E Full Test Suite — Playwright
 ============================================
 
 Comprehensive end-to-end test that exercises every UI surface of the
-Skaldmark Dragonbane TTRPG companion web app.
+Skaldbok TTRPG companion web app.
 
 **Test Phases (per iteration):**
 
@@ -60,7 +60,7 @@ import random
 import traceback
 from playwright.sync_api import sync_playwright, Page, expect
 
-#: Base URL for the Skaldmark dev server (HTTPS due to Vite basicSsl plugin).
+#: Base URL for the Skaldbok dev server (HTTPS due to Vite basicSsl plugin).
 BASE_URL = os.environ.get("SKALDBOK_E2E_URL", "https://localhost:5173")
 
 #: Number of full test iterations to run. Override via CLI argument.
@@ -1571,7 +1571,7 @@ def main():
 
     # Write issues to file for analysis
     with open("tests/test_report.txt", "w") as f:
-        f.write(f"Skaldmark E2E Test Report — {ITERATIONS} iterations\n")
+        f.write(f"Skaldbok E2E Test Report — {ITERATIONS} iterations\n")
         f.write(f"{'='*60}\n\n")
         f.write(f"Total tests: {total_tests}\n")
         f.write(f"Passes: {total_passes}\n")

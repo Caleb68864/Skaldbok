@@ -1,3 +1,4 @@
+import { parseEditorBody } from '../utils/reference/parseEditorBody';
 import { readTextFile } from '../utils/import/readTextFile';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -54,24 +55,6 @@ function sectionToEditorBody(section: ReferenceSection): string {
     return JSON.stringify(section.items ?? [], null, 2);
   }
   return (section.paragraphs ?? []).join('\n\n');
-}
-
-function parseEditorBody(section: ReferenceSection, body: string): ReferenceSection {
-  if (section.type === 'table') {
-    const parsed = JSON.parse(body || '{"columns":[],"rows":[]}') as Pick<ReferenceSection, 'columns' | 'rows'>;
-    return { ...section, columns: parsed.columns ?? [], rows: parsed.rows ?? [], items: undefined, paragraphs: undefined };
-  }
-  if (section.type === 'key_value_list') {
-    const parsed = JSON.parse(body || '[]') as ReferenceSection['items'];
-    return { ...section, items: parsed ?? [], columns: undefined, rows: undefined, paragraphs: undefined };
-  }
-  return {
-    ...section,
-    paragraphs: body.split(/\n{2,}/).map(p => p.trim()).filter(Boolean),
-    columns: undefined,
-    rows: undefined,
-    items: undefined,
-  };
 }
 
 /**

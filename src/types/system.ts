@@ -1,3 +1,4 @@
+import type { RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -47,6 +48,11 @@ export interface ConditionDefinition {
 export interface ResourceDefinition {
   id: string;
   name: string;
+  /**
+   * `'counter'` keeps a resource out of the engine's tracker list, for a tally a
+   * rules model reads (Dragonbane's death rolls). Absent means `'track'`.
+   */
+  role?: 'track' | 'counter';
   derivedFrom?: string;
   min: number;
   defaultMax: number;
@@ -490,6 +496,12 @@ export interface SystemDefinition {
    */
   creatures?: CreatureModel;
   /**
+   * The rules adapter this system runs on, chosen by what it declares rather than
+   * by its id, so an authored system can use existing maths with no code change.
+   * Absent on an unknown id means the classic-fantasy fallback, with a notice.
+   */
+  engine?: RulesEngineId;
+  /**
    * Panels this ruleset's character surfaces offer. Absent = the engine
    * adapter's own list.
    *
@@ -501,13 +513,13 @@ export interface SystemDefinition {
   panels?: PanelKey[];
   /**
    * Money, when this ruleset wants its own denominations without an adapter
-   * change. `read`/`write` stay in code (they know where on the record the
-   * money lives); everything a JSON author can meaningfully state is here.
+   * change. `read`/`write` are built from the denominations, since a denomination
+   * id is its key in `CharacterRecord.wealth`.
    *
    * @remarks
-   * Declaring `denominations` also rebuilds `formatAmount`, which would
-   * otherwise keep decomposing over the adapter's hardcoded list and quietly
-   * ignore the declaration — the exact "declared capability with no reader"
+   * Declaring `denominations` rebuilds `formatAmount` with them, which would
+   * otherwise keep decomposing over the adapter's list and quietly ignore the
+   * declaration — the exact "declared capability with no reader"
    * failure this codebase keeps finding.
    */
   currency?: {
@@ -555,23 +567,12 @@ export interface SystemDefinition {
    * Optional overrides for system vocabulary (see `SystemTerms` in the engine).
    * Any omitted key falls back to the engine adapter's default.
    */
-  terms?: Partial<{
-    abilities: string;
-    spells: string;
-    magicResource: string;
-    healthResource: string;
-    roleFallback: string;
-  }>;
+  terms?: Partial<SystemTerms>;
   /**
    * Optional overrides for panel/screen titles (see `SystemLabels`).
    * `abilitiesScreen: null` hides the abilities/magic tab for this system.
    */
-  labels?: Partial<{
-    abilitiesScreen: string | null;
-    resourcesPanel: string;
-    attributesPanel: string;
-    encumbrance: string;
-  }>;
+  labels?: Partial<SystemLabels>;
   /**
    * Optional overrides for declarative, user-facing arrays. When present, each
    * REPLACES the engine adapter's default wholesale (a system defines its own
@@ -583,7 +584,7 @@ export interface SystemDefinition {
   logActions?: Array<{ id: string; label: string }>;
   outcomes?: Array<{ id: string; label: string; tone?: 'success' | 'failure' | 'critical' | 'fumble' }>;
   rollModifiers?: Array<{ id: string; label: string }>;
-  timeUnits?: Array<{ id: string; label: string; abbrev: string }>;
+  timeUnits?: TimeUnit[];
   /**
    * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
    * a table of legs with system-specific fields. Absent = no route planner

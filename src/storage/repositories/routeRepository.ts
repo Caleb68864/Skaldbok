@@ -216,7 +216,8 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
 export async function restore(id: string): Promise<void> {
   await db.transaction('rw', db.routeStops, async () => {
     const row = await db.routeStops.get(id);
-    if (!row) return;
+    // A live stop has nothing to restore, and would be moved to the end below.
+    if (!row || !row.deletedAt) return;
     const live = excludeDeleted(
       await db.routeStops.where('campaignId').equals(row.campaignId).toArray(),
     );

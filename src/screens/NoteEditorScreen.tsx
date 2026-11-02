@@ -6,7 +6,7 @@ import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { getNoteById, updateNote } from '../storage/repositories/noteRepository';
 import { useNoteActions } from '../features/notes/useNoteActions';
 import { NotePrivacyToggle } from '../features/notes/NotePrivacy';
-import { NOTE_TYPES } from '../types/note';
+import { useNoteTypeConfig } from '../hooks/useConfigurableDefaults';
 import type { Note, NoteType } from '../types/note';
 import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
@@ -33,7 +33,7 @@ import { registerFlush } from '../features/persistence/autosaveFlush';
  *
  * **Fields:**
  * - **Title** — plain text input at the top of the editor.
- * - **Note type** — pill-button selector for all {@link NOTE_TYPES} except
+ * - **Note type** — pill-button selector for the configured `selectable` types, not
  *   system-generated types (`'skill-check'`, `'recap'`).
  * - **Body** — rich-text editor powered by {@link TiptapNoteEditor}.
  * - **Tags** — tag picker using campaign-scoped custom tags via
@@ -82,7 +82,31 @@ export default function NoteEditorScreen() {
   // Mirror of `note` state for the flush closure (register-once-on-mount needs
   // a stable ref, not closed-over state).
   const noteRef = useRef<Note | null>(null);
+  const loadedIdRef = useRef<string | undefined>(undefined);
   const isNewNote = !id || id === 'new';
+  const noteTypeConfig = useNoteTypeConfig();
+
+  // Moving between notes reuses this screen, so a pending edit has to be written
+  // to the note it was typed in before the next one loads. Left in the ref, the
+  // next flush wrote note A's title onto note B.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = null;
+      }
+      const previous = noteRef.current;
+      const pending = pendingUpdatesRef.current;
+      pendingUpdatesRef.current = {};
+      noteRef.current = null;
+      if (previous && Object.keys(pending).length > 0) {
+        updateNote(previous.id, pending).catch(e => {
+          console.error('NoteEditorScreen: save on leaving a note failed', e);
+          showToast('Could not save note before leaving — your latest changes are not saved.', 'error');
+        });
+      }
+    };
+  }, [id, showToast]);
 
   // Load or create note
   useEffect(() => {
@@ -130,8 +154,12 @@ export default function NoteEditorScreen() {
       return;
     }
 
+    // Only for a different note. This effect also re-runs when the campaign context
+    // changes, and that must not unmount the editor someone is typing in.
+    if (loadedIdRef.current !== id) setLoading(true);
     getNoteById(id).then(loaded => {
       if (!mounted) return;
+      loadedIdRef.current = id;
       if (!loaded) {
         showToast('Note not found');
         navigate('/session');
@@ -268,18 +296,18 @@ export default function NoteEditorScreen() {
 
       {/* Note type selector */}
       <div className="flex gap-2 flex-wrap mb-3">
-        {NOTE_TYPES.filter(t => !['skill-check', 'recap', 'npc'].includes(t)).map(t => (
+        {noteTypeConfig.filter(t => t.selectable).map(t => (
           <button
-            key={t}
-            onClick={() => handleTypeChange(t as NoteType)}
+            key={t.id}
+            onClick={() => handleTypeChange(t.id)}
             className={cn(
               'min-h-9 px-2.5 rounded-full border-none cursor-pointer text-xs font-semibold',
-              noteType === t
+              noteType === t.id
                 ? 'bg-[var(--color-accent)] text-[var(--color-on-accent,#fff)]'
                 : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
             )}
           >
-            {t}
+            {t.label}
           </button>
         ))}
       </div>

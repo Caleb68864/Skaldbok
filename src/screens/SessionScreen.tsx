@@ -195,7 +195,7 @@ function NoActiveSessionContent() {
       if (ended.length > 0) {
         getNotesBySession(ended[0].id).then((notes: Note[]) => {
           if (mounted) setLastSessionNoteCount(notes.length);
-        });
+        }).catch(console.error);
       }
       setLoadingPast(false);
     }).catch(() => {

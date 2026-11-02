@@ -1,3 +1,4 @@
+import { localDateOnlyISO } from '../../utils/dates';
 import { useMemo, useState } from 'react';
 import { Button } from '../../components/primitives/Button';
 import { useToast } from '../../context/ToastContext';
@@ -70,7 +71,7 @@ export function DistributeModal({
   const [alsoRecordIncome, setAlsoRecordIncome] = useState(false);
   const [grossText, setGrossText] = useState('');
   const [memo, setMemo] = useState('');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => localDateOnlyISO());
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 

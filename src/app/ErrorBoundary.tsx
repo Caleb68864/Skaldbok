@@ -10,6 +10,10 @@ export interface ErrorBoundaryProps {
    * on the fallback after the user navigates elsewhere.
    */
   resetKey?: unknown;
+  /** The route that crashed, shown in the report so a tablet user can pass it on. */
+  route?: string;
+  /** Sits inside the shell, so it fills its region rather than the whole viewport. */
+  inline?: boolean;
 }
 
 export interface ErrorBoundaryState {
@@ -55,7 +59,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('[ErrorBoundary]', error, info);
+    console.error('[ErrorBoundary]', this.props.route ?? '(no route)', error, info);
   }
 
   componentDidUpdate(prevProps: ErrorBoundaryProps) {
@@ -68,14 +72,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     if (!this.state.error) return this.props.children;
 
     return (
-      <div className="min-h-dvh bg-bg text-text flex items-center justify-center p-[var(--space-md)]">
+      <div className={`${this.props.inline ? 'min-h-full' : 'min-h-dvh'} bg-bg text-text flex items-center justify-center p-[var(--space-md)]`}>
         <div className="max-w-xl border border-border rounded-[var(--radius-md)] bg-surface p-[var(--space-md)]">
           <h1 className="text-[length:var(--font-size-xl)] font-bold mb-2">Something went wrong</h1>
           <p className="text-[var(--color-text-muted)] mb-[var(--space-md)]">
             The app caught an unexpected error before it could break the whole screen.
           </p>
           <pre className="max-h-40 overflow-auto rounded-[var(--radius-sm)] bg-surface-alt p-[var(--space-sm)] text-xs text-danger">
-            {this.state.error.message}
+            {this.props.route ? `${this.props.route}\n` : ''}{this.state.error.message}
           </pre>
           <div className="mt-[var(--space-md)] flex gap-3">
             <Button

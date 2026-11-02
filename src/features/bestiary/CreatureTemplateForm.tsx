@@ -1,3 +1,4 @@
+import { useBestiaryCategories } from '../../hooks/useConfigurableDefaults';
 import { useState } from 'react';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { CreatureStatField } from '../../types/system';
@@ -65,6 +66,7 @@ const SKILL_COLUMNS: RepeatableColumn[] = [
  * Renders as a modal overlay.
  */
 export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, onCancel }: CreatureTemplateFormProps) {
+  const categories = useBestiaryCategories();
   const [name, setName] = useState(initial?.name ?? '');
   const [category, setCategory] = useState<'monster' | 'npc' | 'animal'>(initial?.category ?? 'monster');
   const [role, setRole] = useState(initial?.role ?? '');
@@ -140,7 +142,7 @@ export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, 
           <div>
             <label className={labelClass}>Category</label>
             <div className="flex gap-2">
-              {(['monster', 'npc', 'animal'] as const).map((c) => (
+              {categories.map(({ id: c, label }) => (
                 <button
                   key={c}
                   type="button"
@@ -152,7 +154,7 @@ export function CreatureTemplateForm({ initial, statFields, campaignId, onSave, 
                       : 'bg-[var(--color-surface-raised)] text-[var(--color-text-muted)]'
                   )}
                 >
-                  {c}
+                  {label}
                 </button>
               ))}
             </div>

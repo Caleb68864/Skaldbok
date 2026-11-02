@@ -1,3 +1,4 @@
+import { useConfirm } from '../../../components/primitives/ConfirmDialog';
 import { useEffect, useState } from 'react';
 import { Drawer } from '../../../components/primitives/Drawer';
 import { Button } from '../../../components/primitives/Button';
@@ -24,9 +25,9 @@ import {
  */
 const TONE_STYLES: Record<string, string> = {
   critical: 'bg-[var(--color-accent)] text-white border-transparent',
-  success: 'bg-[#27ae60] text-white border-transparent',
+  success: 'bg-[var(--color-success)] text-white border-transparent',
   failure: 'bg-[var(--color-surface-raised)] text-[var(--color-text)] border-[var(--color-accent)]',
-  fumble: 'bg-[#c0392b] text-white border-transparent',
+  fumble: 'bg-[var(--color-danger)] text-white border-transparent',
 };
 
 export interface SkillCheckEditDrawerProps {
@@ -56,6 +57,7 @@ function subjectLabel(noteType: string | undefined): string {
  * outcome button during play.
  */
 export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillCheckEditDrawerProps) {
+  const { confirm } = useConfirm();
   const { showToast } = useToast();
   // Campaign-scoped: this edits a note belonging to the session, which belongs
   // to the campaign, regardless of which character happens to be active.
@@ -103,7 +105,7 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
 
   async function handleDelete() {
     if (!note) return;
-    if (!confirm('Delete this entry?')) return;
+    if (!(await confirm('Delete this entry?'))) return;
     try {
       await softDeleteNote(note.id);
       showToast('Entry deleted', 'success', 2000);

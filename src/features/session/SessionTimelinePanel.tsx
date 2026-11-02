@@ -10,6 +10,7 @@ import {
   loadSessionTimelineSourceData,
   type SessionTimelineSourceData,
 } from './sessionTimelineAdapter';
+import { useTimelineTrackCatalog } from '../../hooks/useConfigurableDefaults';
 
 export interface SessionTimelinePanelProps {
   session: Session;
@@ -168,14 +169,16 @@ export function SessionTimelinePanel({
     [session.endedAt, nowTick],
   );
 
+  const trackCatalog = useTimelineTrackCatalog();
   const timelineDataset = useMemo(
     () => buildSessionTimelineDataset({
       session,
       encounters,
       timelineData,
       now: nowValue,
+      trackCatalog,
     }),
-    [encounters, nowValue, session, timelineData],
+    [encounters, nowValue, session, timelineData, trackCatalog],
   );
 
   /**

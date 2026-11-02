@@ -49,6 +49,33 @@ export default tseslint.config(
       // design, so this is a warning rather than an error.
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
 
+      // Roadmap I4 and I6. These stay fixed only if something fails on them: a raw
+      // colour does not follow the theme, `crypto.randomUUID` does not exist over
+      // the plain-http LAN flow, and a hand-written timestamp bypasses `nowISO`.
+      'no-restricted-globals': ['error',
+        { name: 'confirm', message: 'Use useConfirm().confirm, not a native dialog.' },
+        { name: 'prompt', message: 'Use useConfirm().promptText, not a native dialog.' },
+      ],
+      'no-restricted-properties': ['error',
+        { object: 'window', property: 'confirm', message: 'Use useConfirm().confirm, not a native dialog.' },
+        { object: 'window', property: 'prompt', message: 'Use useConfirm().promptText, not a native dialog.' },
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "Literal[value=/\\[#[0-9a-fA-F]{3,8}\\]/]",
+          message: 'Use a --color-* token, not a raw colour in a Tailwind class.',
+        },
+        {
+          selector: "CallExpression[callee.property.name='randomUUID']",
+          message: 'Use generateId() from utils/ids.',
+        },
+        {
+          selector: "CallExpression[callee.property.name='toISOString'][callee.object.type='NewExpression'][callee.object.callee.name='Date'][callee.object.arguments.length=0]",
+          message: 'Use nowISO() from utils/dates.',
+        },
+      ],
+
       // A leading underscore is this codebase's existing convention for a
       // parameter that exists to satisfy a signature.
       '@typescript-eslint/no-unused-vars': [
@@ -81,13 +108,19 @@ export default tseslint.config(
     },
   },
   {
+    // The two helpers themselves, and released migrations, which are frozen by
+    // `releasedSchemaVersions.test.ts` and so cannot change even to call a helper.
+    files: ['src/utils/ids.ts', 'src/utils/dates.ts', 'src/storage/db/client.ts', 'src/storage/db/migrations/**'],
+    rules: { 'no-restricted-syntax': 'off' },
+  },
+  {
     // The tests reach for `any` to build deliberately malformed input — a
     // system definition missing a required field, a bundle row of the wrong
     // shape — which is the point of those tests. The invariant this codebase
     // actually holds is zero `any` in *shipped* source, so that is where the
     // rule is enforced.
     files: ['**/*.test.{ts,tsx}'],
-    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+    rules: { 'no-restricted-syntax': 'off', '@typescript-eslint/no-explicit-any': 'off' },
   },
   {
     // Node globals, not browser: config and tooling files run outside the app.

@@ -97,6 +97,12 @@ export function useFieldEditable(fieldPath: string): boolean {
   return isFieldEditableInPlayMode(fieldPath);
 }
 
+/** True in play mode. Ask this rather than reading `settings.mode` or inverting a field guard. */
+export function useIsPlayMode(): boolean {
+  const { settings } = useAppState();
+  return settings.mode === 'play';
+}
+
 /** True when the app is in edit mode rather than play mode. */
 export function useIsEditMode(): boolean {
   const { settings } = useAppState();

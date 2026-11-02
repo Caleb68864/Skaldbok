@@ -330,8 +330,10 @@ export function useSessionLog() {
     const label = healed
       ? `${buf.character}: Healed ${amount} ${resLabel} (${readout})`
       : `${buf.character}: Took ${amount} ${resLabel} damage (${readout})`;
-    await logToSession(label, 'generic', {}, { session: buf.session });
+    // Empty the buffer before the write. A change arriving during the await joined
+    // this batch, so it was counted again in the next line or wiped with the reset.
     resourceBuffer.current = { character: '', resource: '', startValue: 0, currentValue: 0, maxValue: 0, accumulates: false, session: null, timer: null };
+    await logToSession(label, 'generic', {}, { session: buf.session });
   }, [logToSession]);
 
   /**

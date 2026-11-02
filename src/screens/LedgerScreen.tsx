@@ -1,3 +1,4 @@
+import { localDateOnlyISO } from '../utils/dates';
 import { useEffect, useRef, useState } from 'react';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
@@ -43,7 +44,7 @@ export default function LedgerScreen() {
   const { exportLedger } = useExportActions();
   const { showToast } = useToast();
 
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => localDateOnlyISO());
   const [memo, setMemo] = useState('');
   const amount = useAmountEntry();
   const [isDistributing, setIsDistributing] = useState(false);
@@ -80,6 +81,10 @@ export default function LedgerScreen() {
               : ''),
           overdrawn ? 'error' : 'success',
         );
+      })
+      .catch(e => {
+        console.error('LedgerScreen: posting recurring charges failed', e);
+        showToast('Could not post recurring charges. Nothing was posted; reopen to try again.', 'error');
       })
       .finally(() => {
         postingRef.current = false;
@@ -297,8 +302,13 @@ export default function LedgerScreen() {
                       showToast('Entry updated', 'success');
                     }}
                     onRemove={id => {
-                      void ledger.removeEntry(id);
-                      showToast('Entry removed', 'success');
+                      ledger.removeEntry(id).then(
+                        () => showToast('Entry removed', 'success'),
+                        e => {
+                          console.error('LedgerScreen: remove entry failed', e);
+                          showToast('Could not remove the entry', 'error');
+                        },
+                      );
                     }}
                   />
                 ))}

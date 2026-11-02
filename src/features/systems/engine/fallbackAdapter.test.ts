@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { getEngine, SYSTEM_ADAPTERS } from './index';
+import { getEngine, SYSTEM_ADAPTERS, travellerEngine } from './index';
+import { systemDefinitionSchema } from '../../../../schemas/system.schema';
+import { travellerSystem } from '../../../systems/traveller';
 import { BUNDLED_SYSTEMS, DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 import type { SystemDefinition } from '../../../types/system';
 
@@ -25,6 +27,35 @@ function authoredSystem(id: string): SystemDefinition {
     attributes: [{ id: 'might', name: 'Might', abbreviation: 'MIG', min: 1, max: 10 }],
   } as unknown as SystemDefinition;
 }
+
+describe('selecting the adapter by declaration (roadmap E4)', () => {
+  it('runs an authored system on the rules it declares, with no fallback notice', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const authored = systemDefinitionSchema.parse({
+      ...travellerSystem, id: 'homebrew-2d6', engine: '2d6-plus',
+    }) as unknown as SystemDefinition;
+    const engine = getEngine(authored);
+    expect(engine.fallbackRulesFor).toBeUndefined();
+    expect(engine.probability).toBe(travellerEngine.probability);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('still falls back loudly when nothing is declared', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(getEngine(authoredSystem('homebrew-undeclared')).fallbackRulesFor).toBe('homebrew-undeclared');
+  });
+
+  it('still honours an older copy of a bundled system that predates the field', () => {
+    const { engine: _engine, ...older } = travellerSystem;
+    const engine = getEngine({ ...older, version: 1 } as SystemDefinition);
+    expect(engine.fallbackRulesFor).toBeUndefined();
+    expect(engine.probability).toBe(travellerEngine.probability);
+  });
+
+  it('refuses an engine id that does not exist at import', () => {
+    expect(systemDefinitionSchema.safeParse({ ...travellerSystem, engine: 'nonsense' }).success).toBe(false);
+  });
+});
 
 afterEach(() => {
   vi.unstubAllEnvs();

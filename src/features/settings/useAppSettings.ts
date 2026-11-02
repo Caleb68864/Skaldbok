@@ -44,6 +44,7 @@ export function useAppSettings() {
    * sequential calls compose.
    */
   const latestSettings = useRef<AppSettings>(DEFAULT_SETTINGS);
+  const loadFailed = useRef(false);
 
   const applySettings = useCallback((next: AppSettings) => {
     latestSettings.current = next;
@@ -82,6 +83,7 @@ export function useAppSettings() {
       // never see, because Dexie leaves the promise pending rather than
       // rejecting it. That case is handled above.
       console.error('[useAppSettings] settings load failed', err);
+      loadFailed.current = true;
       if (!mounted) return;
       setStorageError(err instanceof Error ? `${err.name}: ${err.message}` : String(err));
       setIsLoading(false);
@@ -93,6 +95,12 @@ export function useAppSettings() {
   }, [applySettings]);
 
   const updateSettings = useCallback(async (partial: Partial<AppSettings>) => {
+    // After a failed load `latestSettings` holds defaults, not what is on disk, so
+    // saving would replace the user's stored settings with them.
+    if (loadFailed.current) {
+      setError('Failed to save settings: stored settings could not be read.');
+      return;
+    }
     const updated = { ...latestSettings.current, ...partial };
     applySettings(updated);
     try {

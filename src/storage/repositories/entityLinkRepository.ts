@@ -240,7 +240,7 @@ export async function createLink(data: Omit<EntityLink, 'id' | 'createdAt' | 'up
  * transaction as the note (so they restore together); omit it to mint a fresh
  * one. Already-deleted edges are left untouched.
  */
-export async function deleteLinksForNote(noteId: string, txId?: string): Promise<void> {
+export async function softDeleteLinksForNote(noteId: string, txId?: string): Promise<void> {
   try {
     const fromLinks = await db.entityLinks.where('fromEntityId').equals(noteId).toArray();
     const toLinks = await db.entityLinks.where('toEntityId').equals(noteId).toArray();
@@ -258,7 +258,7 @@ export async function deleteLinksForNote(noteId: string, txId?: string): Promise
       await db.entityLinks.bulkUpdate(changes);
     }
   } catch (e) {
-    throw new Error(`entityLinkRepository.deleteLinksForNote failed: ${e}`, { cause: e });
+    throw new Error(`entityLinkRepository.softDeleteLinksForNote failed: ${e}`, { cause: e });
   }
 }
 

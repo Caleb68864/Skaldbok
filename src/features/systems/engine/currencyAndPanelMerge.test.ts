@@ -4,6 +4,7 @@ import { classicFantasyEngine } from './classicFantasyEngine';
 import { travellerSystem } from '../../../systems/traveller';
 import { classicFantasySystem } from '../../../systems/classic-fantasy';
 import type { SystemDefinition } from '../../../types/system';
+import type { CharacterRecord } from '../../../types/character';
 
 /**
  * Covers the last two code→data moves on the engine roadmap: `panels` and
@@ -78,12 +79,15 @@ describe('currency', () => {
     expect(engine.currency.baseDenominationId).toBe('bit');
   });
 
-  it('keeps read and write from the adapter, which knows where money lives', () => {
+  it('reads and writes the declared denominations, not the adapter coins', () => {
+    // The adapter's `read` spelled gold/silver/copper, so a system declaring its
+    // own coins offered them in the purse and every one read back as nothing.
     const engine = getEngine(withOverrides({
       currency: { denominations: [{ id: 'bit', label: 'Bits', abbr: 'b', value: 1 }] },
     }));
-    expect(engine.currency.read).toBe(classicFantasyEngine.currency.read);
-    expect(engine.currency.write).toBe(classicFantasyEngine.currency.write);
+    const character = { wealth: { bit: 7, gold: 2 } } as unknown as CharacterRecord;
+    expect(engine.currency.read(character)).toEqual({ bit: 7 });
+    expect(engine.currency.write(character, { bit: 9 })).toEqual({ wealth: { bit: 9, gold: 2 } });
   });
 
   it('formats Traveller credits identically now they come from JSON', () => {

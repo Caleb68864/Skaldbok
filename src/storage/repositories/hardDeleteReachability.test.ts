@@ -56,7 +56,7 @@ const DOMAIN_HARD_DELETES = new Set([
   'createHardDelete',
   'deleteAttachment',
   'deleteAttachmentsByNote',
-  'removePartyMember',
+  'hardDeletePartyMember',
 ]);
 
 /**

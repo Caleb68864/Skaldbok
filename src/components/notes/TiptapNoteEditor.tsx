@@ -1,3 +1,4 @@
+import { useConfirm } from '../../components/primitives/ConfirmDialog';
 import React, { useEffect, useRef, useState } from 'react';
 import { cn } from '../../lib/utils';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -373,7 +374,7 @@ function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) =
  * ### Features
  * - **StarterKit** — bold, italic, headings (H2/H3), bullet and ordered lists,
  *   blockquote, and code blocks out of the box.
- * - **Link extension** — inline hyperlinks; URL is prompted via `window.prompt`
+ * - **Link extension** — inline hyperlinks; URL is asked for via `useConfirm().promptText`
  *   from the optional toolbar.
  * - **`@mention`** — typing `@` opens a fixed-position dropdown populated with
  *   notes from the active campaign (NPCs, locations, loot, etc.) and all
@@ -413,6 +414,7 @@ function TextareaFallback({ onChange, placeholder }: { onChange: (val: string) =
  * />
  */
 export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeholder, showToolbar = false, minHeight }: TiptapNoteEditorProps) {
+  const { promptText } = useConfirm();
   const [failed, setFailed] = React.useState(false);
   const [campaignNotes, setCampaignNotes] = useState<Note[]>([]);
   /** Stable renderer instance for the `@mention` suggestion popup. */
@@ -588,11 +590,11 @@ export function TiptapNoteEditor({ initialContent, onChange, campaignId, placeho
           <button type="button" onClick={() => editor.chain().focus().toggleBulletList().run()} aria-pressed={editor.isActive('bulletList')} className={toolbarBtnClass(editor.isActive('bulletList'))}>• List</button>
           <button type="button" onClick={() => editor.chain().focus().toggleOrderedList().run()} aria-pressed={editor.isActive('orderedList')} className={toolbarBtnClass(editor.isActive('orderedList'))}>1. List</button>
           <button type="button" onClick={() => editor.chain().focus().toggleBlockquote().run()} aria-label="Blockquote" aria-pressed={editor.isActive('blockquote')} className={toolbarBtnClass(editor.isActive('blockquote'))}>❝</button>
-          <button type="button" onClick={() => {
+          <button type="button" onClick={async () => {
             if (editor.isActive('link')) {
               editor.chain().focus().unsetLink().run();
             } else {
-              const url = window.prompt('URL');
+              const url = await promptText('URL');
               if (url) editor.chain().focus().setLink({ href: url }).run();
             }
           }} aria-pressed={editor.isActive('link')} className={toolbarBtnClass(editor.isActive('link'))}>Link</button>

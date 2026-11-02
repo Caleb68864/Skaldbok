@@ -1,3 +1,4 @@
+import { nowISO } from '../dates';
 import {
   bundleEnvelopeParseSchema,
   type BundleEnvelope,
@@ -180,7 +181,7 @@ function handleLegacySkaldbok(obj: Record<string, unknown>): ParsedBundleResult 
   const wrappedBundle: BundleEnvelope = {
     version: 1,
     type: 'character',
-    exportedAt: new Date().toISOString(),
+    exportedAt: nowISO(),
     // Derive from the record's own systemId, not a hardcoded default — a bare
     // Traveller/Savage Worlds character export must not be mislabelled Dragonbane.
     system: typeof obj.systemId === 'string' ? obj.systemId : 'classic-fantasy',

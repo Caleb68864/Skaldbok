@@ -82,22 +82,6 @@ export async function update(
   await db.recurringBills.update(id, { ...patch, updatedAt: nowISO() });
 }
 
-/**
- * Moves a bill's watermark after its charges have been written.
- *
- * @remarks
- * Kept separate from {@link update} because it is not an edit — it is the record
- * of what has already been charged, and confusing the two is how a bill ends up
- * either double-charging or silently skipping a month.
- */
-export async function markPosted(
-  id: string,
-  postedThrough: string,
-  postedCount: number,
-): Promise<void> {
-  await db.recurringBills.update(id, { postedThrough, postedCount, updatedAt: nowISO() });
-}
-
 const lifecycle = createSoftDeleteOps({
   repository: 'recurringBillRepository',
   table: 'recurringBills',

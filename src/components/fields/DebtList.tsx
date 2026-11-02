@@ -8,6 +8,8 @@ export interface DebtListProps {
   debts: Debt[];
   /** Currency abbreviation from the engine, e.g. "Cr". */
   abbr: string;
+  /** The engine's money formatter, so a debt reads the way the purse does. */
+  formatAmount: (baseUnits: number) => string;
   editable: boolean;
   onAdd: (debt: Omit<Debt, 'id' | 'createdAt'>) => void;
   onSettle: (id: string) => void;
@@ -33,7 +35,7 @@ const EMPTY = { counterparty: '', amount: '', direction: 'owed' as Debt['directi
  * question asked months later is "did I ever pay that back?", and a deleted row
  * answers it with silence.
  */
-export function DebtList({ debts, abbr, editable, onAdd, onSettle, onPay, onReopen, onRemove }: DebtListProps) {
+export function DebtList({ debts, abbr, formatAmount, editable, onAdd, onSettle, onPay, onReopen, onRemove }: DebtListProps) {
   const [draft, setDraft] = useState<typeof EMPTY | null>(null);
   const [showSettled, setShowSettled] = useState(false);
   /** Which debt has its part-payment field open, and what has been typed. */
@@ -42,7 +44,7 @@ export function DebtList({ debts, abbr, editable, onAdd, onSettle, onPay, onReop
   const open = openDebts(debts);
   const settled = debts.filter(d => d.settledAt);
   const net = netDebt(debts);
-  const fmt = (n: number) => `${n.toLocaleString()} ${abbr}`;
+  const fmt = formatAmount;
 
   /** Records the typed part-payment and closes the field. */
   function commitPayment(debt: Debt) {

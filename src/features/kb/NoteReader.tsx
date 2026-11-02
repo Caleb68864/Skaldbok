@@ -1,3 +1,4 @@
+import { useConfirm } from '../../components/primitives/ConfirmDialog';
 /**
  * Read-only note viewer with tappable wikilinks, backlinks panel,
  * forward links summary, and peek cards.
@@ -48,6 +49,7 @@ export interface NoteReaderProps {
  * both `/kb/note-<id>` links and bare note ids resolve here.
  */
 export function NoteReader({ noteId }: NoteReaderProps) {
+  const { confirm } = useConfirm();
   const navigate = useNavigate();
   const [note, setNote] = useState<Note | null>(null);
   const [kbNode, setKbNode] = useState<KBNode | null>(null);
@@ -205,9 +207,7 @@ export function NoteReader({ noteId }: NoteReaderProps) {
 
   const handleUnresolvedClick = useCallback(
     async (label: string) => {
-      const confirmed = window.confirm(
-        `Note "${label}" not found. Create it?`
-      );
+      const confirmed = await confirm(`Note "${label}" not found. Create it?`);
       if (!confirmed || !note) return;
 
       try {
@@ -236,7 +236,7 @@ export function NoteReader({ noteId }: NoteReaderProps) {
         if (import.meta.env.DEV) console.warn('[NoteReader] Failed to create note', err);
       }
     },
-    [note, navigate]
+    [note, navigate, confirm]
   );
 
   // Handle clicks on wikilink nodes in the editor

@@ -377,10 +377,7 @@ export default function GearScreen() {
   // derivedOverrides channel the sheet uses, and a temp modifier may adjust it
   // (a grav harness, a strength augment). One shared resolver applies all three
   // in the same order as every other derived surface.
-  const derivedStats = engine.derivedStats(character, system ?? undefined) as unknown as Record<
-    string,
-    number | string | undefined
-  >;
+  const derivedStats = engine.derivedStats(character, system ?? undefined);
   const encumbranceField = engine.derivedFields.find(f => f.key === 'encumbranceLimit');
   const resolvedEncumbrance = resolveDerivedField(character, derivedStats, {
     key: 'encumbranceLimit',

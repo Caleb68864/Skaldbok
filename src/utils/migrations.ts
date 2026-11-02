@@ -315,6 +315,14 @@ export function upgradeCharacter(data: unknown): CharacterRecord {
  * generic failure.
  */
 export function migrateCharacter(data: unknown): CharacterRecord {
+  // The ladder only climbs, so a record from a newer app passed through unchanged
+  // and was stored under a shape this build cannot read.
+  const claimed = (data as { schemaVersion?: unknown } | null)?.schemaVersion;
+  if (typeof claimed === 'number' && claimed > CURRENT_SCHEMA_VERSION) {
+    throw new Error(
+      `Invalid character data: schema version ${claimed} is newer than this app supports (${CURRENT_SCHEMA_VERSION}). Update the app and import again.`,
+    );
+  }
   const current = upgradeCharacter(data);
 
   const result = characterRecordSchema.safeParse(current);

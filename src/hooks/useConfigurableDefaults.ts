@@ -4,6 +4,8 @@ import { DEFAULT_INVENTORY_CONTAINER_KINDS } from '../config/defaults/inventoryC
 import { DEFAULT_TAG_PRESETS } from '../config/defaults/tagPresets';
 import { DEFAULT_BACKUP_REMINDER_DAYS } from '../config/defaults/backup';
 import { DEFAULT_NOTE_TYPE_CONFIG } from '../config/defaults/noteTypes';
+import { DEFAULT_TIMELINE_TRACK_CATALOG, type TimelineTrackCatalogEntry } from '../config/defaults/timelineTracks';
+import { DEFAULT_BESTIARY_CATEGORIES, type BestiaryCategoryConfig } from '../config/defaults/bestiaryCategories';
 import { DEFAULT_KB_CATEGORY_TABS } from '../config/defaults/kbCategories';
 import type { NoteTypeConfig } from '../config/defaults/noteTypes';
 import type { KBCategoryTab } from '../config/defaults/kbCategories';
@@ -96,6 +98,30 @@ export function useKBCategoryTabs(): KBCategoryTab[] {
   const stored = settings.kbCategoryTabs;
   return useMemo(
     () => (stored && stored.length > 0 ? stored : DEFAULT_KB_CATEGORY_TABS),
+    [stored],
+  );
+}
+
+/**
+ * Which note and entity kinds cluster into which session-timeline lane.
+ *
+ * @returns The user's stored catalog, or {@link DEFAULT_TIMELINE_TRACK_CATALOG}.
+ */
+export function useTimelineTrackCatalog(): Record<string, TimelineTrackCatalogEntry> {
+  const { settings } = useAppState();
+  return settings.timelineTrackCatalog ?? DEFAULT_TIMELINE_TRACK_CATALOG;
+}
+
+/**
+ * Bestiary category labels and order.
+ *
+ * @returns The user's configured list, or {@link DEFAULT_BESTIARY_CATEGORIES}.
+ */
+export function useBestiaryCategories(): BestiaryCategoryConfig[] {
+  const { settings } = useAppState();
+  const stored = settings.bestiaryCategories;
+  return useMemo(
+    () => (stored && stored.length > 0 ? stored : DEFAULT_BESTIARY_CATEGORIES),
     [stored],
   );
 }
