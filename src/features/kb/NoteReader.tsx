@@ -9,7 +9,7 @@ import { useConfirm } from '../../components/primitives/ConfirmDialog';
  * Embedded within KnowledgeBaseScreen (not a standalone screen).
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
@@ -28,8 +28,8 @@ import { useForwardLinks } from './KnowledgeBaseContext';
 import { BacklinksPanel } from './BacklinksPanel';
 import { NoteAttachments } from './NoteAttachments';
 import { loadNoteForReader } from './loadNoteForReader';
+import { ForwardLinksList } from './ForwardLinksList';
 import { PeekCard } from './PeekCard';
-import { getNodeById } from '../../storage/repositories/kbNodeRepository';
 import type { Note } from '../../types/note';
 import type { Attachment } from '../../types/attachment';
 import type { KBNode } from '../../storage/db/client';
@@ -391,65 +391,6 @@ export function NoteReader({ noteId }: NoteReaderProps) {
           }}
         />
       )}
-    </div>
-  );
-}
-
-/**
- * Renders a list of forward links from the current note.
- */
-function ForwardLinksList({
-  edges,
-  onPeek,
-}: {
-  edges: import('../../storage/db/client').KBEdge[];
-  onPeek?: (nodeId: string) => void;
-}) {
-  const navigate = useNavigate();
-  const [nodes, setNodes] = useState<KBNode[]>([]);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    async function loadNodes() {
-      const results: KBNode[] = [];
-      for (const edge of edges) {
-        const node = await getNodeById(edge.toId);
-        if (node) results.push(node);
-      }
-      if (mounted) setNodes(results);
-    }
-    loadNodes();
-    return () => {
-      mounted = false;
-    };
-  }, [edges]);
-
-  return (
-    <div className="flex flex-col gap-1">
-      {nodes.map((node) => (
-        <button
-          key={node.id}
-          onClick={() => navigate(`/kb/${node.id}`)}
-          onPointerDown={() => {
-            if (onPeek) {
-              longPressTimer.current = setTimeout(() => onPeek(node.id), 500);
-            }
-          }}
-          onPointerUp={() => {
-            if (longPressTimer.current) clearTimeout(longPressTimer.current);
-          }}
-          onPointerLeave={() => {
-            if (longPressTimer.current) clearTimeout(longPressTimer.current);
-          }}
-          className="text-left px-2 py-1 text-sm text-[var(--color-accent)] bg-transparent border-none cursor-pointer hover:underline"
-        >
-          {node.label}
-          <span className="ml-1 text-xs text-[var(--color-text-muted)]">
-            [{node.type}]
-          </span>
-        </button>
-      ))}
     </div>
   );
 }

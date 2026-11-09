@@ -2666,8 +2666,30 @@ a test that fails against the code before it, or says plainly why it cannot.
   happy-path case fails only because the old hook had no error fields to be
   `null`.
 
+### U4. One failed forward-link read emptied the whole list — DONE
+
+- **Where:** `NoteReader`'s private `ForwardLinksList` awaited `getNodeById`
+  per edge with no `catch`. One rejection was an unhandled rejection that also
+  abandoned every later edge, so the list was blank under its "(N)" heading.
+- **Fix:** moved to `ForwardLinksList.tsx` (it could not be imported for a test
+  as a private function); a rejected read is counted and reported ("1 link
+  couldn't be read."), the readable links still render, and a target that is
+  simply gone is still skipped.
+- **Test:** `ForwardLinksList.test.tsx`. Its first case fails with the `catch`
+  changed to rethrow, which is equivalent to the old loop.
+
 ### Recorded, not fixed
 
-- `NoteReader`'s `ForwardLinksList` resolves each edge with an un-caught
-  `await getNodeById` inside an effect, so one failed read is an unhandled
-  rejection and the list stays empty with no message.
+- `PeekCard` closes itself on any load error (`catch { onClose() }`): a long
+  press that hits a storage failure looks like nothing happened.
+- `NoteReader` / `PeekCard` parse `note.body` with `JSON.parse` in a bare
+  `catch`, so a corrupt body renders as an empty note with no message. Read-only,
+  so nothing is overwritten, but the user cannot tell a blank note from a
+  damaged one.
+- `useBacklinks` / `useForwardLinks` have no callers outside the KB reader; the
+  `KnowledgeBaseContext` provider's other surface was not audited this pass.
+- `KnowledgeBaseContext` and `SessionLog.tsx` (5 bare `catch` sites, lines
+  ~133–338) were not reviewed this pass; `SessionLog`'s
+  `handleInkCommit().catch(() => {})` is the first to check.
+- Import code (`src/utils/import`, `src/features/import`) was deliberately
+  out of scope for this pass: another branch is working there.
