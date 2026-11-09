@@ -2693,3 +2693,9 @@ a test that fails against the code before it, or says plainly why it cannot.
   `handleInkCommit().catch(() => {})` is the first to check.
 - Import code (`src/utils/import`, `src/features/import`) was deliberately
   out of scope for this pass: another branch is working there.
+- **`TravellerBriefingScreen.test.tsx` is flaky under full-suite load, on
+  `main` too.** It passes 14/14 when run alone. In a full run, 1 to 4 of its
+  cases fail with a `findByRole` timeout ("Unable to find role=button …"), and
+  which cases fail changes from run to run. Reproduced on an untouched `main`
+  checkout (4 failed / 2492 passed), so it is not caused by this pass. The
+  likely fix is an explicit `findBy…` timeout or less work per case.
