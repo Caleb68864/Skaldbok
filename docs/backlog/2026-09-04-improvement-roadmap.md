@@ -2658,7 +2658,7 @@ demonstrated directly.
 ### U2. Open items found while doing U1
 
 - **A campaign created in the import dialog survived a cancelled import** — DONE
-  (this commit, V). `ImportPreview.tsx` now records the campaigns it created and,
+  (80bc05e, V). `ImportPreview.tsx` now records the campaigns it created and,
   on cancel (button, backdrop, Escape) or on an import into a different campaign,
   soft-deletes the unused ones — campaign row only, matching every other campaign
   delete, so a Trash restore gives back a working campaign with its party. A
@@ -2667,7 +2667,7 @@ demonstrated directly.
   transactions, so a crash between them still leaves the campaign; folding the
   create into `mergeBundle` (a "new campaign" spec on `MergeOptions`,
   `utils/import/mergeEngine.ts`) would close that.
-- **The landing-campaign activation had no test** — DONE (this commit, V).
+- **The landing-campaign activation had no test** — DONE (aa78a97, V).
   `features/import/useImportActions.test.tsx` (3): opens the chosen campaign when
   none was open, leaves an open one alone, never opens one missing from the
   database. Reverting the `required` branch turns the first red (checked). The
