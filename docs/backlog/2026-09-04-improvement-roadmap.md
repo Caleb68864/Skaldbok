@@ -2592,6 +2592,8 @@ demonstrated directly.
 
 ### T1. Track training progress and completion — OPEN (V)
 
+- **Build spec:** [`docs/specs/2026-09-26-traveller-skill-training-tracker.md`](../specs/2026-09-26-traveller-skill-training-tracker.md)
+
 - **Where:** Traveller's `system.json` declares a manual `training` row with
   Skill, Completed Weeks, and Study Periods; `SheetScreen.tsx` stores those rows
   in `character.systemData`. `travellerEngine.ts` has `advancement: null`, so
