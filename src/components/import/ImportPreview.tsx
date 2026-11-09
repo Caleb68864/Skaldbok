@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { BundleEnvelope, BundleContents } from '../../types/bundle';
 import type { ValidationWarning } from '../../utils/import/bundleParser';
 import type { MergeOptions } from '../../utils/import/mergeEngine';
-import { getAllCampaigns, createCampaignWithParty } from '../../storage/repositories/campaignRepository';
+import { getAllCampaigns, createCampaignWithParty, softDelete as softDeleteCampaign } from '../../storage/repositories/campaignRepository';
 import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../../systems/registry';
 import type { Campaign } from '../../types/campaign';
 import { BUNDLE_ENTITY_LABELS } from '../../types/bundleTables';
@@ -88,6 +88,13 @@ export function ImportPreview({
   );
   const [creatingCampaign, setCreatingCampaign] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  // Campaigns this dialog created. One that the import does not end up using —
+  // the dialog was cancelled, or the user created one and then picked another —
+  // is soft-deleted on the way out rather than left as an empty campaign the
+  // user never asked to keep. Soft, so it is still in the Trash; and only the
+  // campaign row, matching every other campaign delete (its party stays with it,
+  // so a restore brings back a working campaign).
+  const createdCampaignIds = useRef<string[]>([]);
 
   // What this import needs in the way of a campaign, answered from the rows the
   // user actually selected rather than from `bundle.type`. Branching on the
@@ -127,6 +134,7 @@ export function ImportPreview({
     setCreateError(null);
     try {
       const created = await createCampaignWithParty({ name, system: newCampaignSystem, status: 'active' });
+      createdCampaignIds.current.push(created.id);
       setCampaigns((prev) => [...prev, created]);
       setTargetCampaignId(created.id);
       setShowCreate(false);
@@ -146,15 +154,32 @@ export function ImportPreview({
     setSelectedTypes(next);
   };
 
+  /** Soft-deletes every campaign this dialog created except `keepId`. Never throws. */
+  const discardUnusedCampaigns = async (keepId?: string) => {
+    const unused = createdCampaignIds.current.filter((id) => id !== keepId);
+    createdCampaignIds.current = createdCampaignIds.current.filter((id) => id === keepId);
+    for (const id of unused) {
+      try {
+        await softDeleteCampaign(id);
+      } catch (err) {
+        console.error('[ImportPreview] could not discard an unused campaign', id, err);
+      }
+    }
+  };
+
   const handleImport = async () => {
     await onImport({
       targetCampaignId: effectiveTargetCampaignId,
       selectedEntityTypes: selectedTypes as Set<keyof BundleContents>,
     });
+    await discardUnusedCampaigns(effectiveTargetCampaignId);
   };
 
+  const handleCancel = () => {
+    void discardUnusedCampaigns().finally(onCancel);
+  };
 
-  const dialogRef = useModalBehaviour<HTMLDivElement>(onCancel);
+  const dialogRef = useModalBehaviour<HTMLDivElement>(handleCancel);
 
   return (
     <div
@@ -162,7 +187,7 @@ export function ImportPreview({
       aria-modal="true"
       role="dialog"
       aria-label="Import preview"
-      onClick={onCancel}
+      onClick={handleCancel}
       className="fixed inset-0 bg-black/50 z-[300] flex items-end sm:items-center justify-center"
     >
       <div
@@ -375,7 +400,7 @@ export function ImportPreview({
         {/* Action buttons */}
         <div className="flex gap-3 justify-end">
           <button
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={isImporting}
             className="min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer"
           >

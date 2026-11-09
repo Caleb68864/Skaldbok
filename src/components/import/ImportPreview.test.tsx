@@ -23,10 +23,12 @@ import type { Campaign } from '../../types/campaign';
 let campaigns: Campaign[] = [];
 
 const createCampaignWithParty = vi.fn();
+const softDeleteCampaign = vi.fn();
 
 vi.mock('../../storage/repositories/campaignRepository', () => ({
   getAllCampaigns: () => Promise.resolve(campaigns),
   createCampaignWithParty: (...args: unknown[]) => createCampaignWithParty(...args),
+  softDelete: (...args: unknown[]) => softDeleteCampaign(...args),
 }));
 
 const NOW = '2026-01-01T00:00:00.000Z';
@@ -56,14 +58,18 @@ const noteRow = {
   updatedAt: NOW,
 };
 
-function renderPreview(bundle: BundleEnvelope, onImport = vi.fn().mockResolvedValue(undefined)) {
+function renderPreview(
+  bundle: BundleEnvelope,
+  onImport = vi.fn().mockResolvedValue(undefined),
+  onCancel = vi.fn(),
+) {
   render(
     <ImportPreview
       bundle={bundle}
       warnings={[]}
       conflicts={[]}
       onImport={onImport}
-      onCancel={vi.fn()}
+      onCancel={onCancel}
     />,
   );
   return onImport;
@@ -77,6 +83,8 @@ function importButton(): HTMLButtonElement {
 beforeEach(() => {
   campaigns = [];
   createCampaignWithParty.mockReset();
+  softDeleteCampaign.mockReset();
+  softDeleteCampaign.mockResolvedValue(undefined);
 });
 
 // Testing Library only auto-cleans when Vitest globals are on, and they are not.
@@ -299,5 +307,70 @@ describe('ImportPreview creating a campaign to import into', () => {
     expect(screen.getByTestId('import-create-campaign')).toBeTruthy();
     fireEvent.click(screen.getByText('Pick an existing one'));
     expect(screen.queryByTestId('import-create-campaign')).toBeNull();
+  });
+});
+
+/**
+ * Creating a campaign commits before the import does, so a campaign the import
+ * did not use is soft-deleted on the way out rather than left behind empty.
+ */
+describe('ImportPreview discarding a campaign it created but did not use', () => {
+  beforeEach(() => {
+    createCampaignWithParty.mockImplementation(async (data: { name: string; system: string }) => ({
+      id: 'new-1', name: data.name, system: data.system, status: 'active',
+      activePartyId: 'party-1', schemaVersion: 1, createdAt: NOW, updatedAt: NOW,
+    }));
+  });
+
+  async function createOne() {
+    await waitFor(() => expect(screen.getByTestId('import-create-campaign')).toBeTruthy());
+    fireEvent.change(screen.getByLabelText('New campaign name'), { target: { value: 'Spinward' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create campaign' }));
+    await waitFor(() => expect(importButton().disabled).toBe(false));
+  }
+
+  it('soft-deletes it when the dialog is cancelled', async () => {
+    const onCancel = vi.fn();
+    renderPreview(envelope({ type: 'session', contents: { sessions: [sessionRow] } }), undefined, onCancel);
+    await createOne();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+    expect(softDeleteCampaign).toHaveBeenCalledWith('new-1');
+  });
+
+  it('still closes when the discard fails', async () => {
+    softDeleteCampaign.mockRejectedValue(new Error('boom'));
+    const onCancel = vi.fn();
+    renderPreview(envelope({ type: 'session', contents: { sessions: [sessionRow] } }), undefined, onCancel);
+    await createOne();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(onCancel).toHaveBeenCalledTimes(1));
+  });
+
+  it('keeps it when the import goes into it', async () => {
+    const onImport = renderPreview(envelope({ type: 'session', contents: { sessions: [sessionRow] } }));
+    await createOne();
+
+    fireEvent.click(importButton());
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+    expect(softDeleteCampaign).not.toHaveBeenCalled();
+  });
+
+  it('discards it when the user then imports into an existing campaign instead', async () => {
+    campaigns = [
+      { id: 'local-1', name: 'Local Campaign', system: 'classic-fantasy', status: 'active', schemaVersion: 1, createdAt: NOW, updatedAt: NOW } as Campaign,
+    ];
+    const onImport = renderPreview(envelope({ type: 'session', contents: { sessions: [sessionRow] } }));
+    await waitFor(() => expect(screen.getByText('Or create a new campaign')).toBeTruthy());
+    fireEvent.click(screen.getByText('Or create a new campaign'));
+    await createOne();
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'local-1' } });
+    fireEvent.click(importButton());
+    await waitFor(() => expect(onImport).toHaveBeenCalledTimes(1));
+    expect(onImport.mock.calls[0][0].targetCampaignId).toBe('local-1');
+    await waitFor(() => expect(softDeleteCampaign).toHaveBeenCalledWith('new-1'));
   });
 });

@@ -2628,7 +2628,7 @@ demonstrated directly.
 
 ## Workstream U — 2026-11-09
 
-### U1. Import asked for a campaign it would not let you make — DONE (V)
+### U1. Import asked for a campaign it would not let you make — DONE (3b0c4eb, V)
 
 - **Where:** `components/import/ImportPreview.tsx` (the `import-no-campaigns`
   branch); `features/campaign/CampaignCreateModal.tsx`;
@@ -2657,12 +2657,16 @@ demonstrated directly.
 
 ### U2. Open items found while doing U1
 
-- **A campaign created in the import dialog survives a cancelled import** — OPEN.
-  `ImportPreview.tsx` `handleCreateCampaign` commits the campaign before the
-  import is confirmed, so cancelling leaves an empty campaign (deletable from the
-  normal UI, and in the Trash after). Folding the create into `mergeBundle`'s
-  transaction would remove it; that means passing a "new campaign" spec through
-  `MergeOptions` (`utils/import/mergeEngine.ts`).
+- **A campaign created in the import dialog survived a cancelled import** — DONE
+  (this commit, V). `ImportPreview.tsx` now records the campaigns it created and,
+  on cancel (button, backdrop, Escape) or on an import into a different campaign,
+  soft-deletes the unused ones — campaign row only, matching every other campaign
+  delete, so a Trash restore gives back a working campaign with its party. A
+  failed discard is logged and never blocks closing. Tests: +4 in
+  `ImportPreview.test.tsx`. **Still open:** the create and the import are two
+  transactions, so a crash between them still leaves the campaign; folding the
+  create into `mergeBundle` (a "new campaign" spec on `MergeOptions`,
+  `utils/import/mergeEngine.ts`) would close that.
 - **The landing-campaign activation for the `required` path has no test** — OPEN.
   `useImportActions.ts` `executeImport` has no hook test at all; the bundled-path
   activation is covered only end to end in the 2026-09-09 browser run.
