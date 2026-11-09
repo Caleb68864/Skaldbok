@@ -29,8 +29,10 @@ export interface BacklinksPanelProps {
  * instead of a crash.
  */
 export function BacklinksPanel({ nodeId, onPeek }: BacklinksPanelProps) {
-  const backlinks = useBacklinks(nodeId);
+  const { edges: backlinks, error: edgeError } = useBacklinks(nodeId);
   const [sourceNodes, setSourceNodes] = useState<KBNode[]>([]);
+  /** Edges whose source node could not be *read* — distinct from one that no longer exists. */
+  const [unreadable, setUnreadable] = useState(0);
 
   // Resolve each backlink edge's fromId to a KBNode
   useEffect(() => {
@@ -38,15 +40,23 @@ export function BacklinksPanel({ nodeId, onPeek }: BacklinksPanelProps) {
 
     async function resolve() {
       const nodes: KBNode[] = [];
+      let failed = 0;
       for (const edge of backlinks) {
         try {
           const node = await getNodeById(edge.fromId);
+          // A missing node is a stale edge and is skipped on purpose.
           if (node) nodes.push(node);
-        } catch {
-          // skip unresolvable
+        } catch (err) {
+          // A rejected read is a storage failure, not a stale edge: count it so
+          // the panel can say some backlinks are hidden rather than undercount.
+          console.error(err);
+          failed += 1;
         }
       }
-      if (mounted) setSourceNodes(nodes);
+      if (mounted) {
+        setSourceNodes(nodes);
+        setUnreadable(failed);
+      }
     }
 
     if (backlinks.length > 0) {
@@ -65,12 +75,21 @@ export function BacklinksPanel({ nodeId, onPeek }: BacklinksPanelProps) {
       <h3 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">
         Backlinks ({sourceNodes.length})
       </h3>
-      {sourceNodes.length === 0 ? (
+      {edgeError ? (
+        <p role="alert" className="text-xs text-[var(--color-danger)]">
+          Couldn't load backlinks — {edgeError}
+        </p>
+      ) : sourceNodes.length === 0 && unreadable === 0 ? (
         <p className="text-xs text-[var(--color-text-muted)]">
           No notes link here yet.
         </p>
       ) : (
         <BacklinkList nodes={sourceNodes} onPeek={onPeek} />
+      )}
+      {!edgeError && unreadable > 0 && (
+        <p role="alert" className="text-xs text-[var(--color-danger)]">
+          {unreadable} backlink{unreadable === 1 ? '' : 's'} couldn't be read.
+        </p>
       )}
     </div>
   );

@@ -17,7 +17,7 @@ import Link from '@tiptap/extension-link';
 import { WikiLink } from '../notes/wikilinkExtension';
 import { DescriptorMention } from '../notes/descriptorMentionExtension';
 import Mention from '@tiptap/extension-mention';
-import { getNoteById, createNote } from '../../storage/repositories/noteRepository';
+import { createNote } from '../../storage/repositories/noteRepository';
 import * as noteRepository from '../../storage/repositories/noteRepository';
 import { useNoteActions } from '../notes/useNoteActions';
 import { NotePrivacyToggle, PrivateBadge } from '../notes/NotePrivacy';
@@ -27,6 +27,7 @@ import * as entityLinkRepository from '../../storage/repositories/entityLinkRepo
 import { useForwardLinks } from './KnowledgeBaseContext';
 import { BacklinksPanel } from './BacklinksPanel';
 import { NoteAttachments } from './NoteAttachments';
+import { loadNoteForReader } from './loadNoteForReader';
 import { PeekCard } from './PeekCard';
 import { getNodeById } from '../../storage/repositories/kbNodeRepository';
 import type { Note } from '../../types/note';
@@ -55,6 +56,9 @@ export function NoteReader({ noteId }: NoteReaderProps) {
   const [kbNode, setKbNode] = useState<KBNode | null>(null);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [notFound, setNotFound] = useState(false);
+  /** A storage failure while loading — never shown as "not found". */
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
   const [peekNodeId, setPeekNodeId] = useState<string | null>(null);
   const { deleteNote } = useNoteActions();
   const { showToast } = useToast();
@@ -70,6 +74,7 @@ export function NoteReader({ noteId }: NoteReaderProps) {
     if (!note) return;
     try {
       setAttachments(await getAttachmentsByNote(note.id));
+      setAttachmentsError(null);
     } catch (e) {
       showToast(e instanceof Error ? e.message : 'Could not reload attachments', 'error');
     }
@@ -114,44 +119,17 @@ export function NoteReader({ noteId }: NoteReaderProps) {
     let mounted = true;
 
     async function load() {
-      try {
-        // First try to find the KB node
-        const node = await getNodeById(noteId);
-        if (node) {
-          if (mounted) setKbNode(node);
-          // Load the actual note from sourceId
-          if (node.sourceId) {
-            const n = await getNoteById(node.sourceId);
-            if (mounted) {
-              if (n) {
-                setNote(n);
-                const atts = await getAttachmentsByNote(n.id);
-                setAttachments(atts);
-              } else {
-                setNotFound(true);
-              }
-            }
-          } else {
-            if (mounted) setNotFound(true);
-          }
-        } else {
-          // Try as a direct note ID
-          const n = await getNoteById(noteId);
-          if (mounted) {
-            if (n) {
-              setNote(n);
-              const atts = await getAttachmentsByNote(n.id);
-              setAttachments(atts);
-              // Look up the KB node
-              const kbn = await getNodeById(`note-${n.id}`);
-              if (kbn) setKbNode(kbn);
-            } else {
-              setNotFound(true);
-            }
-          }
-        }
-      } catch {
-        if (mounted) setNotFound(true);
+      const result = await loadNoteForReader(noteId);
+      if (!mounted) return;
+      if (result.kind === 'error') {
+        setLoadError(result.message);
+      } else if (result.kind === 'not-found') {
+        setNotFound(true);
+      } else {
+        setKbNode(result.kbNode);
+        setNote(result.note);
+        setAttachments(result.attachments);
+        setAttachmentsError(result.attachmentsError);
       }
     }
 
@@ -163,7 +141,7 @@ export function NoteReader({ noteId }: NoteReaderProps) {
 
   // Backlinks and forward links
   const kbNodeId = kbNode?.id ?? `note-${noteId}`;
-  const forwardLinks = useForwardLinks(kbNodeId);
+  const { edges: forwardLinks, error: forwardLinksError } = useForwardLinks(kbNodeId);
 
   // Read-only Tiptap editor
   const editor = useEditor(
@@ -269,6 +247,14 @@ export function NoteReader({ noteId }: NoteReaderProps) {
     };
   }, [editor, handleUnresolvedClick, navigate]);
 
+  if (loadError) {
+    return (
+      <div role="alert" className="p-8 text-center text-[var(--color-danger)]">
+        Couldn't load this note — {loadError}
+      </div>
+    );
+  }
+
   if (notFound) {
     return (
       <div className="p-8 text-center text-[var(--color-text-muted)]">
@@ -364,6 +350,11 @@ export function NoteReader({ noteId }: NoteReaderProps) {
       {/* Attachment gallery. Rendered unconditionally: the "Add photo" control
           lives inside it, and hiding the whole block when there are none is
           what left the app with no way to create a first attachment. */}
+      {attachmentsError && (
+        <p role="alert" className="text-xs text-[var(--color-danger)]">
+          Couldn't load this note's attachments — {attachmentsError}
+        </p>
+      )}
       <NoteAttachments
         noteId={note.id}
         campaignId={note.campaignId}
@@ -372,6 +363,11 @@ export function NoteReader({ noteId }: NoteReaderProps) {
       />
 
       {/* Forward links summary */}
+      {forwardLinksError && (
+        <p role="alert" className="text-xs text-[var(--color-danger)]">
+          Couldn't load links from this note — {forwardLinksError}
+        </p>
+      )}
       {forwardLinks.length > 0 && (
         <div className="border-t border-[var(--color-border)] pt-3">
           <h3 className="text-sm font-semibold text-[var(--color-text-muted)] mb-2">

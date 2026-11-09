@@ -2613,3 +2613,47 @@ demonstrated directly.
   review a training plan; a partial plan never raises the skill; completion
   raises the intended speciality once; export/import preserves the plan and
   its history; systems without training rules do not show the workflow.
+
+---
+
+## Workstream U — hardening pass: swallowed errors (2026-11-09)
+
+A sweep of `catch {}` / `.catch(() => {})` sites outside the import code for
+errors that reach the user as a false statement about their data. Each fix has
+a test that fails against the code before it, or says plainly why it cannot.
+
+### U1. A failed backlink read said "No notes link here yet." — DONE
+
+- **Where:** `useBacklinks` / `useForwardLinks` (`KnowledgeBaseContext.tsx`)
+  caught with `.catch(() => {})` and kept `[]`; `BacklinksPanel` resolved each
+  edge's source in a bare `catch {}` that dropped the row. The R2 shape: the
+  failure was known and thrown away, so the screen asserted something about the
+  user's notes instead of about the database.
+- **Fix:** both hooks return `{ edges, error }` through one `useEdgeRead`, log
+  the error, and the panel renders `Couldn't load backlinks — <message>`. A
+  source node whose read *throws* is counted ("1 backlink couldn't be read.")
+  rather than treated like a stale edge; a node that is simply gone is still
+  skipped. `NoteReader` shows the forward-links error the same way.
+- **Test:** `BacklinksPanel.test.tsx`. 2 of its 3 cases fail against the old
+  code. The third pins the stale-edge behaviour, which did not change.
+
+### U2. A storage failure in `NoteReader` said "Note not found." — DONE
+
+- **Where:** `NoteReader`'s loader was one bare `catch {}` that set `notFound`.
+  A rejected read told the user their note was gone. Worse, an attachments read
+  that failed *after the note had loaded* also set `notFound`, which renders
+  before the note, so one bad attachments query hid a note that exists.
+- **Fix:** extracted to `loadNoteForReader`, which returns `found` /
+  `not-found` / `error`. `error` renders `Couldn't load this note — <message>`;
+  an attachments failure renders beside the note instead of hiding it; the
+  KB-node lookup on the direct-id path is best effort (it only feeds the link
+  panels).
+- **Test:** `loadNoteForReader.test.ts`. Caveat: the function is new, so the
+  cases cannot be run against the old inline code. The `error` and
+  `attachmentsError` cases are outcomes the old code had no way to produce.
+
+### Recorded, not fixed
+
+- `NoteReader`'s `ForwardLinksList` resolves each edge with an un-caught
+  `await getNodeById` inside an effect, so one failed read is an unhandled
+  rejection and the list stays empty with no message.

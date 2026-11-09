@@ -160,33 +160,46 @@ export function KnowledgeBaseProvider({ children, campaignId }: KnowledgeBasePro
   );
 }
 
+/** The edges read for one node, plus why the read failed when it did. */
+export interface EdgeReadResult {
+  edges: KBEdge[];
+  /**
+   * Set when the edge read rejected. Before this field existed the rejection
+   * was caught with `.catch(() => {})`, so a storage failure reached the screen
+   * as an empty list — "No notes link here yet." — a claim about the user's
+   * notes rather than about the database.
+   */
+  error: string | null;
+}
+
+function useEdgeRead(nodeId: string, read: (id: string) => Promise<KBEdge[]>): EdgeReadResult {
+  const [state, setState] = useState<EdgeReadResult>({ edges: [], error: null });
+  useEffect(() => {
+    let mounted = true;
+    read(nodeId)
+      .then((edges) => { if (mounted) setState({ edges, error: null }); })
+      .catch((err: unknown) => {
+        console.error(err);
+        if (mounted) {
+          setState({ edges: [], error: err instanceof Error ? err.message : String(err) });
+        }
+      });
+    return () => { mounted = false; };
+  }, [nodeId, read]);
+  return state;
+}
+
 /**
  * React hook for using backlinks data reactively.
  */
-export function useBacklinks(nodeId: string): KBEdge[] {
-  const [edges, setEdges] = useState<KBEdge[]>([]);
-  useEffect(() => {
-    let mounted = true;
-    getEdgesToNode(nodeId)
-      .then((result) => { if (mounted) setEdges(result); })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, [nodeId]);
-  return edges;
+export function useBacklinks(nodeId: string): EdgeReadResult {
+  return useEdgeRead(nodeId, getEdgesToNode);
 }
 
 /**
  * React hook for using forward links data reactively.
  */
-export function useForwardLinks(nodeId: string): KBEdge[] {
-  const [edges, setEdges] = useState<KBEdge[]>([]);
-  useEffect(() => {
-    let mounted = true;
-    getEdgesFromNode(nodeId)
-      .then((result) => { if (mounted) setEdges(result); })
-      .catch(() => {});
-    return () => { mounted = false; };
-  }, [nodeId]);
-  return edges;
+export function useForwardLinks(nodeId: string): EdgeReadResult {
+  return useEdgeRead(nodeId, getEdgesFromNode);
 }
 
