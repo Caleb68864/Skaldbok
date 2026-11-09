@@ -2670,8 +2670,14 @@ demonstrated directly.
 - **The landing-campaign activation had no test** — DONE (aa78a97, V).
   `features/import/useImportActions.test.tsx` (3): opens the chosen campaign when
   none was open, leaves an open one alone, never opens one missing from the
-  database. Reverting the `required` branch turns the first red (checked). The
-  hook's other paths (errors toast, KB rebuild failure) are still untested.
+  database. Reverting the `required` branch turns the first red (checked).
+- **The hook's failure paths had no tests** — DONE (2026-11-09, V). +4 in
+  `useImportActions.test.tsx`: merge errors are named (first three, plus a
+  "+n more" count), an unexpected merge failure toasts and leaves the preview open
+  with nothing activated, the KB graph is rebuilt for the target campaign, and a
+  failed rebuild says so and still reports the import. Each was mutation-checked
+  against `useImportActions.ts`: dropping the error detail, the failure toast, the
+  rebuild call or the rebuild-failure toast each turns its test red.
 - **`TravellerBriefingScreen.test.tsx` is flaky under full-suite load** — OPEN.
   "explains why saving is unavailable without an active session" failed once in a
   full `vitest run` on 2026-11-09 and passes alone; the file takes ~19 s, so it is

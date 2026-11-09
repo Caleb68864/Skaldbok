@@ -35,10 +35,14 @@ vi.mock('../../utils/import/bundleParser', () => ({
   parseBundle: () => ({ success: true, bundle, warnings: [] }),
   verifyContentHash: () => Promise.resolve(true),
 }));
+const mergeBundle = vi.fn();
+const bulkRebuildGraph = vi.fn();
 vi.mock('../../utils/import/mergeEngine', () => ({
-  mergeBundle: () => Promise.resolve({ inserted: 1, updated: 0, skipped: 0, errors: [] }),
+  mergeBundle: (...args: unknown[]) => mergeBundle(...args),
 }));
-vi.mock('../kb/linkSyncEngine', () => ({ bulkRebuildGraph: () => Promise.resolve() }));
+vi.mock('../kb/linkSyncEngine', () => ({
+  bulkRebuildGraph: (...args: unknown[]) => bulkRebuildGraph(...args),
+}));
 vi.mock('../../storage/db/client', () => ({
   db: { table: () => ({ get: () => Promise.resolve(undefined) }) },
 }));
@@ -69,6 +73,12 @@ async function importSessionInto(targetCampaignId: string) {
       selectedEntityTypes: new Set(['sessions']) as never,
     });
   });
+  return result;
+}
+
+/** Every message shown, in order. */
+function toasts(): string[] {
+  return showToast.mock.calls.map((c) => String(c[0]));
 }
 
 beforeEach(() => {
@@ -77,6 +87,11 @@ beforeEach(() => {
   showToast.mockReset();
   getCampaignById.mockReset();
   getCampaignById.mockImplementation(async (id: string) => ({ id }));
+  mergeBundle.mockReset();
+  mergeBundle.mockResolvedValue({ inserted: 1, updated: 0, skipped: 0, errors: [] });
+  bulkRebuildGraph.mockReset();
+  bulkRebuildGraph.mockResolvedValue(undefined);
+  vi.spyOn(console, 'error').mockImplementation(() => {});
   bundle = {
     version: 1, type: 'session', exportedAt: NOW, system: 'classic-fantasy',
     contents: { sessions: [sessionRow] },
@@ -105,5 +120,60 @@ describe('useImportActions landing campaign', () => {
     getCampaignById.mockResolvedValue(undefined);
     await importSessionInto('gone');
     expect(setActiveCampaign).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * The hook's failure paths. Each one used to be untested (roadmap `U2`), and
+ * each is a place where an import can look like it worked when it did not.
+ */
+describe('useImportActions when things go wrong', () => {
+  it('names the first merge errors instead of only counting them', async () => {
+    mergeBundle.mockResolvedValue({
+      inserted: 0, updated: 0, skipped: 0,
+      errors: [
+        { entityType: 'sessions', entityId: 'sess-1', message: 'bad date' },
+        { entityType: 'sessions', entityId: 'sess-2', message: 'bad a' },
+        { entityType: 'sessions', entityId: 'sess-3', message: 'bad b' },
+        { entityType: 'sessions', entityId: 'sess-4', message: 'bad c' },
+      ],
+    });
+    const result = await importSessionInto('camp-x');
+
+    const all = toasts();
+    const last = all[all.length - 1];
+    expect(last).toContain('4 error(s)');
+    expect(last).toContain('sessions sess-1: bad date');
+    expect(last).toContain('(+1 more in the console)');
+    expect(last).not.toContain('sess-4');
+    expect(result.current.showPreview).toBe(false);
+  });
+
+  it('reports an unexpected merge failure and keeps the preview open to retry', async () => {
+    mergeBundle.mockRejectedValue(new Error('DatabaseClosedError'));
+    const result = await importSessionInto('camp-x');
+
+    expect(toasts()).toEqual(['Import failed unexpectedly. Please try again.']);
+    expect(result.current.showPreview).toBe(true);
+    expect(result.current.isImporting).toBe(false);
+    // A failed import never lands the user anywhere.
+    expect(setActiveCampaign).not.toHaveBeenCalled();
+  });
+
+  it('rebuilds the knowledge graph for the campaign the rows went into', async () => {
+    await importSessionInto('camp-x');
+    expect(bulkRebuildGraph).toHaveBeenCalledWith('camp-x');
+    expect(toasts().some((t) => t.includes('knowledge graph'))).toBe(false);
+  });
+
+  it('says so when the graph rebuild fails, and still reports the import', async () => {
+    bulkRebuildGraph.mockRejectedValue(new Error('boom'));
+    const result = await importSessionInto('camp-x');
+
+    expect(toasts()).toEqual([
+      'Imported, but the knowledge graph could not be rebuilt. Open the Knowledge Base to refresh it.',
+      'Imported 1 new, updated 0, skipped 0.',
+    ]);
+    expect(result.current.showPreview).toBe(false);
   });
 });
