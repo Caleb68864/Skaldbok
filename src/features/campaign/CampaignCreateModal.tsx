@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { useCampaignContext } from './CampaignContext';
-import { createCampaign } from '../../storage/repositories/campaignRepository';
-import { createParty } from '../../storage/repositories/partyRepository';
-import { updateCampaign } from '../../storage/repositories/campaignRepository';
+import { createCampaignWithParty } from '../../storage/repositories/campaignRepository';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../lib/utils';
 import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../../systems/registry';
@@ -27,21 +25,13 @@ export function CampaignCreateModal({ onClose }: CampaignCreateModalProps) {
 
     setSaving(true);
     try {
-      const campaign = await createCampaign({
+      // Campaign, its party and the party pointer land together or not at all.
+      const campaign = await createCampaignWithParty({
         name: name.trim(),
         description: description.trim() || undefined,
         system,
         status: 'active',
       });
-
-      // Auto-create party for the campaign
-      const party = await createParty({
-        campaignId: campaign.id,
-        name: `${campaign.name} Party`,
-      });
-
-      // Store partyId on campaign
-      await updateCampaign(campaign.id, { activePartyId: party.id });
 
       // Set this as active campaign
       await setActiveCampaign(campaign.id);

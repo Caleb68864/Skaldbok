@@ -62,6 +62,13 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > `linkSyncEngine` gained cause-carrying rethrows. Neither is a defect; both make
 > the sentence in `O2`'s title wrong.
 
+> **Reconciled 2026-11-09.** The 2026-11-02 status changes (PR #4, `05a9583`) are
+> recorded in `ROADMAP-UPDATES-2026-11-02.md` beside this file and have **not** been
+> folded into the headings below, so a heading here that says OPEN may be DONE
+> there; read both. Cross-project decision 5 ("import should create its own
+> campaign or ask") was checked against the code on this date: the *create* half
+> landed as `O1` (`f3f193d`) and the *ask* half had not — see `U1`.
+
 Status values: **OPEN** · **DONE** (record the commit) · **BLOCKED** (needs a
 product decision) · **WONTFIX** (record why).
 
@@ -2452,7 +2459,10 @@ than acted on. Two are serious.
   not.
 - `attachments` and `kbEdges` carry no `updatedAt`, so re-importing the same
   backup reports one error per row and neither can ever be updated by a bundle.
-- `envelope.system` is derived on export and read by nothing on import.
+- ~~`envelope.system` is derived on export and read by nothing on import.~~ **Partly
+  closed in `U1`:** the import dialog's create-a-campaign form defaults its ruleset
+  to it. Nothing else on import reads it; a bundle whose system is neither bundled
+  nor carried in `contents.systems` is still imported without a warning.
 - `note.typeData` — where ink strokes live — survives the JSON bundle and is
   dropped by every Markdown/ZIP renderer.
 - Five test-only pure helpers (`entriesForAccount`, `countEarnedMarks`,
@@ -2615,3 +2625,46 @@ demonstrated directly.
   review a training plan; a partial plan never raises the skill; completion
   raises the intended speciality once; export/import preserves the plan and
   its history; systems without training rules do not show the workflow.
+
+## Workstream U — 2026-11-09
+
+### U1. Import asked for a campaign it would not let you make — DONE (V)
+
+- **Where:** `components/import/ImportPreview.tsx` (the `import-no-campaigns`
+  branch); `features/campaign/CampaignCreateModal.tsx`;
+  `features/import/useImportActions.ts` (landing campaign).
+- **What:** `O1` made a campaign bundle create its own campaign and a character
+  bundle need none, but a **session or notes bundle on a fresh install** still hit
+  a dead end: the dialog said "create a campaign first from the campaign menu",
+  which meant cancelling, losing the picked file, creating, and starting over.
+  Decision 5 asked for "create its own campaign *or ask the user to create one*";
+  the asking half was missing.
+- **Fix.** The dialog asks in place: a name the user types (never guessed — an
+  empty name cannot create) and a ruleset defaulting to `envelope.system` when
+  this build ships it, else the default system. Creating selects the new campaign
+  but does not import; the import is still its own click. With campaigns already
+  present the same form is one "Or create a new campaign" away. After the import,
+  a device with no campaign open lands in the chosen campaign, as the bundled case
+  already did.
+- **Hardened on the way:** campaign + default party + `activePartyId` were three
+  separate writes in `CampaignCreateModal`, so a failure after the first left a
+  campaign with no party. `campaignRepository.createCampaignWithParty` does all
+  three in one transaction and both call sites use it. Removing the transaction
+  turns its rollback test red (checked).
+- **Tests:** `components/import/ImportPreview.test.tsx` (+4: fresh-install create
+  then import, system fallback, failed create stays blocked, create beside an
+  existing list); `storage/repositories/campaignCreateWithParty.test.ts` (2).
+
+### U2. Open items found while doing U1
+
+- **A campaign created in the import dialog survives a cancelled import** — OPEN.
+  `ImportPreview.tsx` `handleCreateCampaign` commits the campaign before the
+  import is confirmed, so cancelling leaves an empty campaign (deletable from the
+  normal UI, and in the Trash after). Folding the create into `mergeBundle`'s
+  transaction would remove it; that means passing a "new campaign" spec through
+  `MergeOptions` (`utils/import/mergeEngine.ts`).
+- **The landing-campaign activation for the `required` path has no test** — OPEN.
+  `useImportActions.ts` `executeImport` has no hook test at all; the bundled-path
+  activation is covered only end to end in the 2026-09-09 browser run.
+- **`envelope.system` unread for validation** — OPEN, see the `R` list above.
+
