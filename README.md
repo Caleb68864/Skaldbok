@@ -97,8 +97,9 @@ than from the label on the file:
   bundle imports with no campaign involved at all.
 - Only rows that genuinely carry a `campaignId` — sessions, notes, encounters,
   the ledger, and the rest — need a home, and only those are asked about. If
-  there is nowhere for them to go yet, the dialog says which groups those are so
-  you can bring in the rest now.
+  there is nowhere for them to go yet, the dialog says which groups those are and
+  asks for a campaign in place — a name you type and a ruleset defaulting to the
+  one the file was exported from — or you can untick them and bring in the rest.
 
 The merge runs in a single Dexie transaction, so a restore either lands whole or
 not at all.

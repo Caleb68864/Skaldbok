@@ -196,9 +196,20 @@ export function useImportActions() {
       // open, because `applyReparenting` has just merged the bundle's sessions
       // and notes onto it. The read-back is a guard against absence, not
       // against collision.
-      if (campaignTarget.kind === 'bundled' && !activeCampaign) {
+      //
+      // The same holds for a session or notes bundle imported into a campaign
+      // the user chose — on a fresh install, typically one they just created
+      // from the import dialog: with nothing open, that campaign is where the
+      // rows went, so it is where the user should land.
+      const landingCampaignId =
+        campaignTarget.kind === 'bundled'
+          ? campaignTarget.campaignId
+          : campaignTarget.kind === 'required'
+            ? effectiveOptions.targetCampaignId
+            : undefined;
+      if (landingCampaignId && !activeCampaign) {
         try {
-          const restored = await getCampaignById(campaignTarget.campaignId);
+          const restored = await getCampaignById(landingCampaignId);
           if (restored) await setActiveCampaign(restored.id);
         } catch (err) {
           // Non-fatal: the rows are committed. The campaign is selectable from

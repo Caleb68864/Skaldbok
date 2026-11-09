@@ -4,6 +4,7 @@ import type { Campaign } from '../../types/campaign';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
+import { createParty } from './partyRepository';
 
 /** Fetches and validates one campaign by id; a soft-deleted or invalid row reads as absent unless opted in. */
 export async function getCampaignById(id: string, options?: { includeDeleted?: boolean }): Promise<Campaign | undefined> {
@@ -57,6 +58,34 @@ export async function createCampaign(data: Omit<Campaign, 'id' | 'createdAt' | '
     return campaign;
   } catch (e) {
     throw new Error(`campaignRepository.createCampaign failed: ${e}`, { cause: e });
+  }
+}
+
+/**
+ * Creates a campaign together with its default party, atomically.
+ *
+ * @remarks
+ * Every campaign the UI makes gets a party seated as its `activePartyId`. That
+ * used to be three separate writes in `CampaignCreateModal` — campaign, party,
+ * then the pointer — so a failure after the first left a campaign with no party
+ * and no way to tell. One transaction now: either all three land or none does.
+ * Used by the create modal and by the import dialog's inline "create a campaign
+ * to import into" form, which must not leave a half-made campaign behind on the
+ * recovery path.
+ */
+export async function createCampaignWithParty(
+  data: Omit<Campaign, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion' | 'activePartyId'>,
+): Promise<Campaign> {
+  try {
+    return await db.transaction('rw', [db.campaigns, db.parties], async () => {
+      const campaign = await createCampaign(data);
+      const party = await createParty({ campaignId: campaign.id, name: `${campaign.name} Party` });
+      const linked: Campaign = { ...campaign, activePartyId: party.id };
+      await db.campaigns.put(linked);
+      return linked;
+    });
+  } catch (e) {
+    throw new Error(`campaignRepository.createCampaignWithParty failed: ${e}`, { cause: e });
   }
 }
 

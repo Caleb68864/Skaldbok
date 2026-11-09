@@ -62,6 +62,13 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > `linkSyncEngine` gained cause-carrying rethrows. Neither is a defect; both make
 > the sentence in `O2`'s title wrong.
 
+> **Reconciled 2026-11-09.** The 2026-11-02 status changes (PR #4, `05a9583`) are
+> recorded in `ROADMAP-UPDATES-2026-11-02.md` beside this file and have **not** been
+> folded into the headings below, so a heading here that says OPEN may be DONE
+> there; read both. Cross-project decision 5 ("import should create its own
+> campaign or ask") was checked against the code on this date: the *create* half
+> landed as `O1` (`f3f193d`) and the *ask* half had not — see `U1`.
+
 Status values: **OPEN** · **DONE** (record the commit) · **BLOCKED** (needs a
 product decision) · **WONTFIX** (record why).
 
@@ -2452,7 +2459,10 @@ than acted on. Two are serious.
   not.
 - `attachments` and `kbEdges` carry no `updatedAt`, so re-importing the same
   backup reports one error per row and neither can ever be updated by a bundle.
-- `envelope.system` is derived on export and read by nothing on import.
+- ~~`envelope.system` is derived on export and read by nothing on import.~~ **Partly
+  closed in `U1`:** the import dialog's create-a-campaign form defaults its ruleset
+  to it. Nothing else on import reads it; a bundle whose system is neither bundled
+  nor carried in `contents.systems` is still imported without a warning.
 - `note.typeData` — where ink strokes live — survives the JSON bundle and is
   dropped by every Markdown/ZIP renderer.
 - Five test-only pure helpers (`entriesForAccount`, `countEarnedMarks`,
@@ -2592,6 +2602,8 @@ demonstrated directly.
 
 ### T1. Track training progress and completion — OPEN (V)
 
+- **Build spec:** [`docs/specs/2026-09-26-traveller-skill-training-tracker.md`](../specs/2026-09-26-traveller-skill-training-tracker.md)
+
 - **Where:** Traveller's `system.json` declares a manual `training` row with
   Skill, Completed Weeks, and Study Periods; `SheetScreen.tsx` stores those rows
   in `character.systemData`. `travellerEngine.ts` has `advancement: null`, so
@@ -2616,13 +2628,13 @@ demonstrated directly.
 
 ---
 
-## Workstream U — hardening pass: swallowed errors (2026-11-09)
+## Workstream V — hardening pass: swallowed errors (2026-11-09)
 
 A sweep of `catch {}` / `.catch(() => {})` sites outside the import code for
 errors that reach the user as a false statement about their data. Each fix has
 a test that fails against the code before it, or says plainly why it cannot.
 
-### U1. A failed backlink read said "No notes link here yet." — DONE
+### V1. A failed backlink read said "No notes link here yet." — DONE
 
 - **Where:** `useBacklinks` / `useForwardLinks` (`KnowledgeBaseContext.tsx`)
   caught with `.catch(() => {})` and kept `[]`; `BacklinksPanel` resolved each
@@ -2637,7 +2649,7 @@ a test that fails against the code before it, or says plainly why it cannot.
 - **Test:** `BacklinksPanel.test.tsx`. 2 of its 3 cases fail against the old
   code. The third pins the stale-edge behaviour, which did not change.
 
-### U2. A storage failure in `NoteReader` said "Note not found." — DONE
+### V2. A storage failure in `NoteReader` said "Note not found." — DONE
 
 - **Where:** `NoteReader`'s loader was one bare `catch {}` that set `notFound`.
   A rejected read told the user their note was gone. Worse, an attachments read
@@ -2652,7 +2664,7 @@ a test that fails against the code before it, or says plainly why it cannot.
   cases cannot be run against the old inline code. The `error` and
   `attachmentsError` cases are outcomes the old code had no way to produce.
 
-### U3. A failed or missing encounter showed "Loading encounter..." forever — DONE
+### V3. A failed or missing encounter showed "Loading encounter..." forever — DONE
 
 - **Where:** `useEncounter.loadEncounter` had no `catch` around `getById`, so a
   rejection was an unhandled rejection from the mount effect; a missing
@@ -2666,7 +2678,7 @@ a test that fails against the code before it, or says plainly why it cannot.
   happy-path case fails only because the old hook had no error fields to be
   `null`.
 
-### U4. One failed forward-link read emptied the whole list — DONE
+### V4. One failed forward-link read emptied the whole list — DONE
 
 - **Where:** `NoteReader`'s private `ForwardLinksList` awaited `getNodeById`
   per edge with no `catch`. One rejection was an unhandled rejection that also
@@ -2699,3 +2711,65 @@ a test that fails against the code before it, or says plainly why it cannot.
   which cases fail changes from run to run. Reproduced on an untouched `main`
   checkout (4 failed / 2492 passed), so it is not caused by this pass. The
   likely fix is an explicit `findBy…` timeout or less work per case.
+||||||| 05a9583
+
+
+## Workstream U — 2026-11-09
+
+### U1. Import asked for a campaign it would not let you make — DONE (3b0c4eb, V)
+
+- **Where:** `components/import/ImportPreview.tsx` (the `import-no-campaigns`
+  branch); `features/campaign/CampaignCreateModal.tsx`;
+  `features/import/useImportActions.ts` (landing campaign).
+- **What:** `O1` made a campaign bundle create its own campaign and a character
+  bundle need none, but a **session or notes bundle on a fresh install** still hit
+  a dead end: the dialog said "create a campaign first from the campaign menu",
+  which meant cancelling, losing the picked file, creating, and starting over.
+  Decision 5 asked for "create its own campaign *or ask the user to create one*";
+  the asking half was missing.
+- **Fix.** The dialog asks in place: a name the user types (never guessed — an
+  empty name cannot create) and a ruleset defaulting to `envelope.system` when
+  this build ships it, else the default system. Creating selects the new campaign
+  but does not import; the import is still its own click. With campaigns already
+  present the same form is one "Or create a new campaign" away. After the import,
+  a device with no campaign open lands in the chosen campaign, as the bundled case
+  already did.
+- **Hardened on the way:** campaign + default party + `activePartyId` were three
+  separate writes in `CampaignCreateModal`, so a failure after the first left a
+  campaign with no party. `campaignRepository.createCampaignWithParty` does all
+  three in one transaction and both call sites use it. Removing the transaction
+  turns its rollback test red (checked).
+- **Tests:** `components/import/ImportPreview.test.tsx` (+4: fresh-install create
+  then import, system fallback, failed create stays blocked, create beside an
+  existing list); `storage/repositories/campaignCreateWithParty.test.ts` (2).
+
+### U2. Open items found while doing U1
+
+- **A campaign created in the import dialog survived a cancelled import** — DONE
+  (80bc05e, V). `ImportPreview.tsx` now records the campaigns it created and,
+  on cancel (button, backdrop, Escape) or on an import into a different campaign,
+  soft-deletes the unused ones — campaign row only, matching every other campaign
+  delete, so a Trash restore gives back a working campaign with its party. A
+  failed discard is logged and never blocks closing. Tests: +4 in
+  `ImportPreview.test.tsx`. **Still open:** the create and the import are two
+  transactions, so a crash between them still leaves the campaign; folding the
+  create into `mergeBundle` (a "new campaign" spec on `MergeOptions`,
+  `utils/import/mergeEngine.ts`) would close that.
+- **The landing-campaign activation had no test** — DONE (aa78a97, V).
+  `features/import/useImportActions.test.tsx` (3): opens the chosen campaign when
+  none was open, leaves an open one alone, never opens one missing from the
+  database. Reverting the `required` branch turns the first red (checked).
+- **The hook's failure paths had no tests** — DONE (2026-11-09, V). +4 in
+  `useImportActions.test.tsx`: merge errors are named (first three, plus a
+  "+n more" count), an unexpected merge failure toasts and leaves the preview open
+  with nothing activated, the KB graph is rebuilt for the target campaign, and a
+  failed rebuild says so and still reports the import. Each was mutation-checked
+  against `useImportActions.ts`: dropping the error detail, the failure toast, the
+  rebuild call or the rebuild-failure toast each turns its test red.
+- **`TravellerBriefingScreen.test.tsx` is flaky under full-suite load** — OPEN.
+  "explains why saving is unavailable without an active session" failed once in a
+  full `vitest run` on 2026-11-09 and passes alone; the file takes ~19 s, so it is
+  a timeout under contention rather than a logic failure. Not touched by `U`.
+  `src/features/travellerBriefing/TravellerBriefingScreen.test.tsx`.
+- **`envelope.system` unread for validation** — OPEN, see the `R` list above.
+

@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { BundleEnvelope, BundleContents } from '../../types/bundle';
 import type { ValidationWarning } from '../../utils/import/bundleParser';
 import type { MergeOptions } from '../../utils/import/mergeEngine';
-import { getAllCampaigns } from '../../storage/repositories/campaignRepository';
+import { getAllCampaigns, createCampaignWithParty, softDelete as softDeleteCampaign } from '../../storage/repositories/campaignRepository';
+import { DEFAULT_SYSTEM_ID, getSelectableSystems } from '../../systems/registry';
 import type { Campaign } from '../../types/campaign';
 import { BUNDLE_ENTITY_LABELS } from '../../types/bundleTables';
 import { resolveImportCampaignTarget } from '../../utils/import/importCampaignTarget';
@@ -74,6 +75,26 @@ export function ImportPreview({
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set(availableTypes));
   const [targetCampaignId, setTargetCampaignId] = useState<string | undefined>();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const selectableSystems = getSelectableSystems();
+  // The inline "create a campaign to import into" form. Defaults to the
+  // exported data's own ruleset when this build ships it — `envelope.system`
+  // is the one place a session or notes bundle records which rules it was
+  // played under — and otherwise to the default system, which the user can
+  // change before creating.
+  const [showCreate, setShowCreate] = useState(false);
+  const [newCampaignName, setNewCampaignName] = useState('');
+  const [newCampaignSystem, setNewCampaignSystem] = useState(() =>
+    selectableSystems.some((s) => s.id === bundle.system) ? bundle.system : DEFAULT_SYSTEM_ID,
+  );
+  const [creatingCampaign, setCreatingCampaign] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  // Campaigns this dialog created. One that the import does not end up using —
+  // the dialog was cancelled, or the user created one and then picked another —
+  // is soft-deleted on the way out rather than left as an empty campaign the
+  // user never asked to keep. Soft, so it is still in the Trash; and only the
+  // campaign row, matching every other campaign delete (its party stays with it,
+  // so a restore brings back a working campaign).
+  const createdCampaignIds = useRef<string[]>([]);
 
   // What this import needs in the way of a campaign, answered from the rows the
   // user actually selected rather than from `bundle.type`. Branching on the
@@ -104,6 +125,28 @@ export function ImportPreview({
     return () => { cancelled = true; };
   }, []);
 
+  // Asks for the campaign rather than inventing one: the name is the user's,
+  // never guessed, and the import itself stays a separate, explicit click.
+  const handleCreateCampaign = async () => {
+    const name = newCampaignName.trim();
+    if (!name || creatingCampaign) return;
+    setCreatingCampaign(true);
+    setCreateError(null);
+    try {
+      const created = await createCampaignWithParty({ name, system: newCampaignSystem, status: 'active' });
+      createdCampaignIds.current.push(created.id);
+      setCampaigns((prev) => [...prev, created]);
+      setTargetCampaignId(created.id);
+      setShowCreate(false);
+      setNewCampaignName('');
+    } catch (err) {
+      console.error('[ImportPreview] could not create a campaign to import into', err);
+      setCreateError('The campaign could not be created. Nothing was imported.');
+    } finally {
+      setCreatingCampaign(false);
+    }
+  };
+
   const handleToggle = (type: string, checked: boolean) => {
     const next = new Set(selectedTypes);
     if (checked) next.add(type);
@@ -111,15 +154,32 @@ export function ImportPreview({
     setSelectedTypes(next);
   };
 
+  /** Soft-deletes every campaign this dialog created except `keepId`. Never throws. */
+  const discardUnusedCampaigns = async (keepId?: string) => {
+    const unused = createdCampaignIds.current.filter((id) => id !== keepId);
+    createdCampaignIds.current = createdCampaignIds.current.filter((id) => id === keepId);
+    for (const id of unused) {
+      try {
+        await softDeleteCampaign(id);
+      } catch (err) {
+        console.error('[ImportPreview] could not discard an unused campaign', id, err);
+      }
+    }
+  };
+
   const handleImport = async () => {
     await onImport({
       targetCampaignId: effectiveTargetCampaignId,
       selectedEntityTypes: selectedTypes as Set<keyof BundleContents>,
     });
+    await discardUnusedCampaigns(effectiveTargetCampaignId);
   };
 
+  const handleCancel = () => {
+    void discardUnusedCampaigns().finally(onCancel);
+  };
 
-  const dialogRef = useModalBehaviour<HTMLDivElement>(onCancel);
+  const dialogRef = useModalBehaviour<HTMLDivElement>(handleCancel);
 
   return (
     <div
@@ -127,7 +187,7 @@ export function ImportPreview({
       aria-modal="true"
       role="dialog"
       aria-label="Import preview"
-      onClick={onCancel}
+      onClick={handleCancel}
       className="fixed inset-0 bg-black/50 z-[300] flex items-end sm:items-center justify-center"
     >
       <div
@@ -245,12 +305,66 @@ export function ImportPreview({
             <label className="block text-[var(--color-text-muted)] text-xs font-semibold mb-1">
               Import into campaign
             </label>
-            {campaigns.length === 0 ? (
-              <p data-testid="import-no-campaigns" className="text-xs text-[var(--color-warning)]">
+            {campaigns.length === 0 && (
+              <p data-testid="import-no-campaigns" className="text-xs text-[var(--color-warning)] mb-2">
                 {campaignTarget.groupLabels.join(', ')} belong to a campaign, and this device has
-                none yet. Untick {campaignTarget.groupLabels.length > 1 ? 'those groups' : 'that group'} to
-                import the rest now, or create a campaign first from the campaign menu.
+                none yet. Create one below to import into, or untick{' '}
+                {campaignTarget.groupLabels.length > 1 ? 'those groups' : 'that group'} to import the rest.
               </p>
+            )}
+            {(campaigns.length === 0 || showCreate) ? (
+              <div data-testid="import-create-campaign" className="flex flex-col gap-2">
+                <input
+                  type="text"
+                  aria-label="New campaign name"
+                  value={newCampaignName}
+                  onChange={(e) => setNewCampaignName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleCreateCampaign();
+                    }
+                  }}
+                  placeholder="New campaign name"
+                  maxLength={200}
+                  className="w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm"
+                />
+                <select
+                  aria-label="New campaign game system"
+                  value={newCampaignSystem}
+                  onChange={(e) => setNewCampaignSystem(e.target.value)}
+                  className="w-full px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm"
+                >
+                  {selectableSystems.map((sys) => (
+                    <option key={sys.id} value={sys.id}>{sys.displayName}</option>
+                  ))}
+                </select>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateCampaign()}
+                    disabled={!newCampaignName.trim() || creatingCampaign || isImporting}
+                    className={cn(
+                      'min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer',
+                      (!newCampaignName.trim() || creatingCampaign || isImporting) && 'opacity-60',
+                    )}
+                  >
+                    {creatingCampaign ? 'Creating...' : 'Create campaign'}
+                  </button>
+                  {campaigns.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCreate(false)}
+                      className="min-h-11 px-4 py-2 bg-transparent border-none text-[var(--color-text-muted)] text-sm cursor-pointer"
+                    >
+                      Pick an existing one
+                    </button>
+                  )}
+                </div>
+                {createError && (
+                  <p role="alert" className="text-xs text-red-500">{createError}</p>
+                )}
+              </div>
             ) : (
               <>
                 <select
@@ -271,6 +385,13 @@ export function ImportPreview({
                     them to import the rest.
                   </p>
                 )}
+                <button
+                  type="button"
+                  onClick={() => setShowCreate(true)}
+                  className="mt-1 min-h-11 px-0 bg-transparent border-none text-[var(--color-accent)] text-xs cursor-pointer"
+                >
+                  Or create a new campaign
+                </button>
               </>
             )}
           </div>
@@ -279,7 +400,7 @@ export function ImportPreview({
         {/* Action buttons */}
         <div className="flex gap-3 justify-end">
           <button
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={isImporting}
             className="min-h-11 px-4 py-2 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm cursor-pointer"
           >

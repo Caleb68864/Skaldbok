@@ -6,6 +6,10 @@ dist/
 vault/
 tests/screenshots/
 docs/
+!docs/
+docs/*
+!docs/specs/
+!docs/specs/**
 bash.exe.stackdump
 tmp-backup/
 *.log
