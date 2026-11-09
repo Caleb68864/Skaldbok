@@ -43,6 +43,8 @@ export function EncounterScreen({ encounterId, onClose }: EncounterScreenProps) 
   const {
     encounter,
     linkedNotes,
+    linkedNotesError,
+    loadError,
     removeParticipant,
     updateDescription,
     updateBody,
@@ -95,6 +97,13 @@ export function EncounterScreen({ encounterId, onClose }: EncounterScreenProps) 
   }, [encounterId, getParentEncounter, getChildEncounters]);
 
   if (!encounter) {
+    if (loadError) {
+      return (
+        <div role="alert" className="p-4 text-center text-[var(--color-danger)]">
+          Couldn't load this encounter — {loadError}
+        </div>
+      );
+    }
     return (
       <div className="p-4 text-center text-[var(--color-text-muted)]">
         Loading encounter...
@@ -297,7 +306,11 @@ export function EncounterScreen({ encounterId, onClose }: EncounterScreenProps) 
         <h2 className="text-lg font-semibold text-[var(--color-text)] mb-2">
           Attached log
         </h2>
-        {linkedNotes.length === 0 ? (
+        {linkedNotesError ? (
+          <p role="alert" className="text-[var(--color-danger)] text-sm">
+            Couldn't load the attached log — {linkedNotesError}
+          </p>
+        ) : linkedNotes.length === 0 ? (
           <p className="text-[var(--color-text-muted)] text-sm">
             No notes attached yet.
           </p>

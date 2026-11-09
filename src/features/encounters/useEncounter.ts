@@ -24,15 +24,34 @@ import * as entityLinkRepository from '../../storage/repositories/entityLinkRepo
 export function useEncounter(encounterId: string | null) {
   const [encounter, setEncounter] = useState<Encounter | null>(null);
   const [linkedNotes, setLinkedNotes] = useState<Note[]>([]);
+  /**
+   * Why the encounter itself could not be loaded. Before this, a rejected
+   * `getById` was an unhandled rejection from the mount effect and a missing
+   * encounter was `null` — and `EncounterScreen` renders "Loading encounter..."
+   * for `null`, so both read as a load that never finishes.
+   */
+  const [loadError, setLoadError] = useState<string | null>(null);
+  /** Set when the encounter loaded but its attached notes could not be read. */
+  const [linkedNotesError, setLinkedNotesError] = useState<string | null>(null);
 
   const loadEncounter = useCallback(async () => {
     if (!encounterId) {
       setEncounter(null);
       setLinkedNotes([]);
+      setLoadError(null);
+      setLinkedNotesError(null);
       return;
     }
-    const enc = await encounterRepository.getById(encounterId);
+    let enc: Encounter | undefined;
+    try {
+      enc = await encounterRepository.getById(encounterId);
+    } catch (err) {
+      console.error(err);
+      setLoadError(err instanceof Error ? err.message : String(err));
+      return;
+    }
     setEncounter(enc ?? null);
+    setLoadError(enc ? null : 'This encounter no longer exists.');
 
     // Load notes linked to this encounter
     if (enc) {
@@ -45,8 +64,12 @@ export function useEncounter(encounterId: string | null) {
           await Promise.all(noteIds.map((id) => getNoteById(id)))
         ).filter((n): n is Note => n !== undefined);
         setLinkedNotes(notes);
-      } catch {
+        setLinkedNotesError(null);
+      } catch (err) {
+        // Was a bare `catch` → `[]`, rendered as "No notes attached yet."
+        console.error(err);
         setLinkedNotes([]);
+        setLinkedNotesError(err instanceof Error ? err.message : String(err));
       }
     }
   }, [encounterId]);
@@ -237,6 +260,8 @@ export function useEncounter(encounterId: string | null) {
     encounter,
     participants: encounter?.participants ?? [],
     linkedNotes,
+    linkedNotesError,
+    loadError,
     endEncounter,
     addParticipantFromTemplate,
     addParticipantFromCharacter,

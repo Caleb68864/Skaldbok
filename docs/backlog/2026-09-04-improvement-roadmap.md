@@ -2652,6 +2652,20 @@ a test that fails against the code before it, or says plainly why it cannot.
   cases cannot be run against the old inline code. The `error` and
   `attachmentsError` cases are outcomes the old code had no way to produce.
 
+### U3. A failed or missing encounter showed "Loading encounter..." forever — DONE
+
+- **Where:** `useEncounter.loadEncounter` had no `catch` around `getById`, so a
+  rejection was an unhandled rejection from the mount effect; a missing
+  encounter was plain `null`. `EncounterScreen` renders "Loading encounter..."
+  for `null`, so both looked like a load that never finishes. The attached-notes
+  read was a bare `catch` → `[]`, rendered as "No notes attached yet."
+- **Fix:** the hook returns `loadError` (the message, or "This encounter no
+  longer exists.") and `linkedNotesError`. The screen renders each as a
+  `role="alert"` line in place of the misleading text.
+- **Test:** `useEncounter.test.tsx`. All 4 cases fail against the old hook; the
+  happy-path case fails only because the old hook had no error fields to be
+  `null`.
+
 ### Recorded, not fixed
 
 - `NoteReader`'s `ForwardLinksList` resolves each edge with an un-caught
