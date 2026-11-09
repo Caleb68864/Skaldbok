@@ -2667,8 +2667,15 @@ demonstrated directly.
   transactions, so a crash between them still leaves the campaign; folding the
   create into `mergeBundle` (a "new campaign" spec on `MergeOptions`,
   `utils/import/mergeEngine.ts`) would close that.
-- **The landing-campaign activation for the `required` path has no test** — OPEN.
-  `useImportActions.ts` `executeImport` has no hook test at all; the bundled-path
-  activation is covered only end to end in the 2026-09-09 browser run.
+- **The landing-campaign activation had no test** — DONE (this commit, V).
+  `features/import/useImportActions.test.tsx` (3): opens the chosen campaign when
+  none was open, leaves an open one alone, never opens one missing from the
+  database. Reverting the `required` branch turns the first red (checked). The
+  hook's other paths (errors toast, KB rebuild failure) are still untested.
+- **`TravellerBriefingScreen.test.tsx` is flaky under full-suite load** — OPEN.
+  "explains why saving is unavailable without an active session" failed once in a
+  full `vitest run` on 2026-11-09 and passes alone; the file takes ~19 s, so it is
+  a timeout under contention rather than a logic failure. Not touched by `U`.
+  `src/features/travellerBriefing/TravellerBriefingScreen.test.tsx`.
 - **`envelope.system` unread for validation** — OPEN, see the `R` list above.
 
