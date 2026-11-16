@@ -1,6 +1,6 @@
 {
   "id": "savage-worlds",
-  "version": 8,
+  "version": 9,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
   "engine": "trait-die-vs-tn",
@@ -680,5 +680,32 @@
         ]
       }
     ]
-  }
+  },
+  "derivedFields": [
+    {
+      "key": "pace",
+      "label": "Pace",
+      "shortLabel": "Pace"
+    },
+    {
+      "key": "parry",
+      "label": "Parry",
+      "shortLabel": "Parry"
+    },
+    {
+      "key": "toughness",
+      "label": "Toughness",
+      "shortLabel": "Tough"
+    },
+    {
+      "key": "encumbranceLimit",
+      "label": "Load Limit",
+      "shortLabel": "Load",
+      "overridable": true,
+      "surfaces": [
+        "dashboard",
+        "print"
+      ]
+    }
+  ]
 }

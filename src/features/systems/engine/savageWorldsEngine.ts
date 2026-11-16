@@ -279,18 +279,6 @@ export const savageWorldsEngine: SystemEngine = {
         bonus: (context ? savageTraitPenalty(context.character, context.system) : 0) + die.bonus,
       }))(decodeTraitDie(value))),
   },
-  derivedFields: [
-    { key: 'pace', label: 'Pace', shortLabel: 'Pace' },
-    { key: 'parry', label: 'Parry', shortLabel: 'Parry' },
-    { key: 'toughness', label: 'Toughness', shortLabel: 'Tough' },
-    {
-      key: 'encumbranceLimit',
-      label: 'Load Limit',
-      shortLabel: 'Load',
-      overridable: true,
-      surfaces: ['dashboard', 'print'],
-    },
-  ],
   modifiableStats: system => [
     ...(system?.attributes ?? []).map(a => ({
       id: attrKey(a.id),

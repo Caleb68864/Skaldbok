@@ -1,4 +1,4 @@
-import type { RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
+import type { DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -585,6 +585,16 @@ export interface SystemDefinition {
   outcomes?: Array<{ id: string; label: string; tone?: 'success' | 'failure' | 'critical' | 'fumble' }>;
   rollModifiers?: Array<{ id: string; label: string }>;
   timeUnits?: TimeUnit[];
+  /**
+   * The derived stats this system shows, with their labels and the surfaces
+   * (sheet, dashboard, print) each appears on. REPLACES the adapter's list.
+   *
+   * @remarks
+   * Labels and placement only. The numbers come from the adapter's
+   * `derivedStats`, so a `key` must be one it computes
+   * (`engineContract.test.ts` checks the bundled systems).
+   */
+  derivedFields?: DerivedFieldDef[];
   /**
    * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
    * a table of legs with system-specific fields. Absent = no route planner

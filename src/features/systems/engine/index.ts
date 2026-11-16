@@ -171,6 +171,7 @@ export function getEngine(
     rollModifiers: system.rollModifiers ?? base.rollModifiers,
     timeUnits: system.timeUnits ?? base.timeUnits,
     panels: system.panels ?? base.panels,
+    derivedFields: system.derivedFields ?? base.derivedFields,
     currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);

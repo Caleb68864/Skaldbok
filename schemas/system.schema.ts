@@ -223,6 +223,14 @@ export const systemDefinitionSchema = z.object({
       encounterEnd: z.boolean().optional(),
     }).optional(),
   })).optional(),
+  // Labels and placement of derived stats; the maths stays in the adapter.
+  derivedFields: z.array(z.object({
+    key: z.string().min(1),
+    label: z.string().min(1),
+    shortLabel: z.string().min(1).optional(),
+    overridable: z.boolean().optional(),
+    surfaces: z.array(z.enum(['sheet', 'dashboard', 'print'])).optional(),
+  })).optional().describe("Derived stats this system shows; replaces the adapter's list"),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),

@@ -163,6 +163,9 @@ export const classicFantasyEngine: SystemEngine = {
   },
   derivedStats: (character, system) => computeDerivedValues(character, system),
   resourceIds: classicFantasySystem.resources.filter(r => r.role !== 'counter').map(r => r.id),
+  // Also `derivedFields`. Their surfaces reproduce the three layouts that existed
+  // before: the sheet shows five rows (no encumbrance), the dashboard four (no
+  // HP/WP maxima, which the vitals module already shows), and the print sheet four.
   ...declaredEngineData(classicFantasySystem),
   primaryHealthResourceId: 'hp',
   // Dragonbane damage lands on HP and stops; being at 0 is handled by the
@@ -227,16 +230,5 @@ export const classicFantasyEngine: SystemEngine = {
     { id: derivedKey('movement'), label: 'Movement', group: 'Derived' },
     { id: derivedKey('hpMax'), label: 'Max HP', group: 'Derived' },
     { id: derivedKey('wpMax'), label: 'Max WP', group: 'Derived' },
-  ],
-  // Surfaces reproduce today's three distinct layouts exactly: the sheet shows
-  // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
-  // vitals module already shows), and the print sheet four.
-  derivedFields: [
-    { key: 'movement', label: 'Movement', shortLabel: 'Move', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
-    { key: 'hpMax', label: 'HP Max', overridable: true, surfaces: ['sheet'] },
-    { key: 'wpMax', label: 'WP Max', overridable: true, surfaces: ['sheet'] },
-    { key: 'damageBonus', label: 'STR Damage Bonus', shortLabel: 'STR Dmg', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
-    { key: 'aglDamageBonus', label: 'AGL Damage Bonus', shortLabel: 'AGL Dmg', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
-    { key: 'encumbranceLimit', label: 'Encumbrance Limit', shortLabel: 'Carry', overridable: true, surfaces: ['dashboard', 'print'] },
   ],
 };

@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 26,
+  "version": 27,
   "name": "traveller",
   "displayName": "Traveller",
   "engine": "2d6-plus",
@@ -1690,6 +1690,39 @@
       "id": "permanent",
       "label": "Permanent",
       "abbrev": "∞"
+    }
+  ],
+  "derivedFields": [
+    {
+      "key": "initiativeDM",
+      "label": "Initiative DM",
+      "shortLabel": "Init"
+    },
+    {
+      "key": "encumbranceLimit",
+      "label": "Carry Limit (kg)",
+      "shortLabel": "Carry",
+      "overridable": true,
+      "surfaces": [
+        "dashboard",
+        "print"
+      ]
+    },
+    {
+      "key": "skillLevelTotal",
+      "label": "Skill Levels Spent",
+      "shortLabel": "Skills",
+      "surfaces": [
+        "print"
+      ]
+    },
+    {
+      "key": "creationSkillCap",
+      "label": "Creation Cap (3 × INT+EDU)",
+      "shortLabel": "Cap",
+      "surfaces": [
+        "print"
+      ]
     }
   ]
 }

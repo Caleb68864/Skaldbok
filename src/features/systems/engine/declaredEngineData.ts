@@ -5,7 +5,8 @@ import type { CurrencyModel, SystemEngine } from './types';
 /** The parts of an engine that are pure data and live in `system.json` (roadmap E1). */
 export type DeclaredEngineData = Pick<
   SystemEngine,
-  'terms' | 'labels' | 'logActions' | 'outcomes' | 'rollModifiers' | 'timeUnits' | 'panels' | 'currency'
+  | 'terms' | 'labels' | 'logActions' | 'outcomes' | 'rollModifiers' | 'timeUnits' | 'panels' | 'currency'
+  | 'derivedFields'
 >;
 
 /**
@@ -44,9 +45,9 @@ export function currencyFromDenominations(
  * missing one throws at module load instead of leaving a hole in the engine.
  */
 export function declaredEngineData(system: SystemDefinition): DeclaredEngineData {
-  const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency } = system;
+  const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields } = system;
   if (
-    !terms || !labels || !logActions || !outcomes || !rollModifiers || !timeUnits || !panels ||
+    !terms || !labels || !logActions || !outcomes || !rollModifiers || !timeUnits || !panels || !derivedFields ||
     !currency?.label || !currency.baseDenominationId || !currency.denominations
   ) {
     throw new Error(`Bundled system "${system.id}" does not declare all of its engine data in system.json`);
@@ -60,5 +61,6 @@ export function declaredEngineData(system: SystemDefinition): DeclaredEngineData
     timeUnits,
     panels,
     currency: currencyFromDenominations(currency.label, currency.baseDenominationId, currency.denominations),
+    derivedFields,
   };
 }

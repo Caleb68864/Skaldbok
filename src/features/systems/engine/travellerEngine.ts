@@ -381,6 +381,10 @@ export const travellerEngine: SystemEngine = {
   },
   derivedStats: (character, system) => computeTravellerDerivedValues(character, system),
   resourceIds: TRAVELLER_DAMAGE_TRACK_IDS,
+  // Also `derivedFields`. Skill Levels Spent and Creation Cap are print only:
+  // they are creation-time checks, and a permanent sheet tile reading "18 / 51"
+  // is noise for the rest of a character's life, but it is exactly what you want
+  // on the sheet you build a character against.
   ...declaredEngineData(travellerSystem),
   primaryHealthResourceId: 'end',
   // Damage fills END first, then spills into whichever physical characteristic
@@ -447,31 +451,6 @@ export const travellerEngine: SystemEngine = {
       return twoD6SuccessProbability(target, modifier);
     },
   },
-  derivedFields: [
-    { key: 'initiativeDM', label: 'Initiative DM', shortLabel: 'Init' },
-    {
-      key: 'encumbranceLimit',
-      label: 'Carry Limit (kg)',
-      shortLabel: 'Carry',
-      overridable: true,
-      surfaces: ['dashboard', 'print'],
-    },
-    {
-      // Print only. It is a creation-time check, and a permanent sheet tile
-      // reading "18 / 51" is noise for the rest of a character's life — but it
-      // is exactly what you want on the sheet you build a character against.
-      key: 'skillLevelTotal',
-      label: 'Skill Levels Spent',
-      shortLabel: 'Skills',
-      surfaces: ['print'],
-    },
-    {
-      key: 'creationSkillCap',
-      label: 'Creation Cap (3 × INT+EDU)',
-      shortLabel: 'Cap',
-      surfaces: ['print'],
-    },
-  ],
   // Characteristics and damage-track resources share ids (str/dex/end), so the
   // namespace is what keeps `attr:str` and `res:str` distinct targets.
   modifiableStats: system => [
