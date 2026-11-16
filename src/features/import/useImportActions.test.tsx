@@ -43,6 +43,10 @@ vi.mock('../../utils/import/mergeEngine', () => ({
 vi.mock('../kb/linkSyncEngine', () => ({
   bulkRebuildGraph: (...args: unknown[]) => bulkRebuildGraph(...args),
 }));
+const storedSystems = vi.fn();
+vi.mock('../../storage/repositories/systemRepository', () => ({
+  getAll: () => storedSystems(),
+}));
 vi.mock('../../storage/db/client', () => ({
   db: { table: () => ({ get: () => Promise.resolve(undefined) }) },
 }));
@@ -91,6 +95,8 @@ beforeEach(() => {
   mergeBundle.mockResolvedValue({ inserted: 1, updated: 0, skipped: 0, errors: [] });
   bulkRebuildGraph.mockReset();
   bulkRebuildGraph.mockResolvedValue(undefined);
+  storedSystems.mockReset();
+  storedSystems.mockResolvedValue([]);
   vi.spyOn(console, 'error').mockImplementation(() => {});
   bundle = {
     version: 1, type: 'session', exportedAt: NOW, system: 'classic-fantasy',
@@ -175,5 +181,55 @@ describe('useImportActions when things go wrong', () => {
       'Imported 1 new, updated 0, skipped 0.',
     ]);
     expect(result.current.showPreview).toBe(false);
+  });
+});
+
+/**
+ * A bundle played under a ruleset this device has never seen.
+ *
+ * @remarks
+ * `envelope.system` was read only to default the create-a-campaign form, so a
+ * bundle whose ruleset was neither bundled, stored nor carried in
+ * `contents.systems` imported without a word, and its characters then ran on
+ * classic-fantasy's fallback rules. The first case fails against that code.
+ */
+describe('useImportActions unknown rulesets', () => {
+  async function preview() {
+    const { result } = renderHook(() => useImportActions());
+    await act(async () => { await result.current.startImport(); });
+    await waitFor(() => expect(result.current.showPreview).toBe(true));
+    const parsed = result.current.parsedResult;
+    if (!parsed?.success) throw new Error('expected a parsed bundle');
+    return parsed.warnings;
+  }
+
+  function homebrewBundle(extra: Record<string, unknown> = {}) {
+    bundle = {
+      version: 1, type: 'character', exportedAt: NOW, system: 'homebrew',
+      contents: { characters: [{ id: 'ch-1', name: 'Vale', systemId: 'homebrew' }], ...extra },
+    } as unknown as BundleEnvelope;
+  }
+
+  it('warns when the ruleset is neither bundled, stored nor carried', async () => {
+    homebrewBundle();
+    const warnings = await preview();
+    expect(warnings.length).toBe(1);
+    expect(warnings[0].message).toContain('homebrew');
+    expect(warnings[0].message).toContain('1 character');
+  });
+
+  it('says nothing when this device already stores the ruleset', async () => {
+    homebrewBundle();
+    storedSystems.mockResolvedValue([{ id: 'homebrew' }]);
+    expect(await preview()).toEqual([]);
+  });
+
+  it('says nothing when the bundle carries the ruleset', async () => {
+    homebrewBundle({ systems: [{ id: 'homebrew' }] });
+    expect(await preview()).toEqual([]);
+  });
+
+  it('says nothing for a bundled ruleset', async () => {
+    expect(await preview()).toEqual([]);
   });
 });
