@@ -87,13 +87,10 @@ export function closeBundleReferences(contents: BundleContents): ReferentialClos
     return false;
   };
 
-  const kept = links.filter((link) => {
-    const row = link as unknown as Record<string, unknown>;
-    return (
-      endpointResolves(row.fromEntityType, row.fromEntityId) &&
-      endpointResolves(row.toEntityType, row.toEntityId)
-    );
-  });
+  const kept = links.filter((link) =>
+    endpointResolves(link.fromEntityType, link.fromEntityId) &&
+    endpointResolves(link.toEntityType, link.toEntityId),
+  );
 
   return {
     contents: { ...contents, entityLinks: kept },

@@ -108,11 +108,10 @@ export function applyPrivacyFilter(
   if (dropped.size === 0) return contents;
 
   const result = { ...contents } as Record<string, unknown>;
-  for (const [key, rows] of collections) {
+  for (const [key, rows, original] of collections) {
     if (!rows.some((row) => dropped.has(row))) continue;
     // Filtered off the original array, not off `rows`: a non-object entry is
     // not a row this filter can reason about, and must not be removed by one.
-    const original = (contents as unknown as Record<string, unknown[]>)[key];
     result[key] = original.filter((row) => !dropped.has(row as object));
   }
   return result as BundleContents;
@@ -132,15 +131,17 @@ export function applyPrivacyFilter(
  */
 function bundleCollections(
   contents: BundleContents,
-): Array<[string, Record<string, unknown>[]]> {
-  const out: Array<[string, Record<string, unknown>[]]> = [];
+): Array<[string, Record<string, unknown>[], unknown[]]> {
+  const out: Array<[string, Record<string, unknown>[], unknown[]]> = [];
   for (const [key, value] of Object.entries(contents)) {
     if (!Array.isArray(value)) continue;
+    const original: unknown[] = value;
     out.push([
       key,
-      value.filter(
+      original.filter(
         (row): row is Record<string, unknown> => typeof row === 'object' && row !== null,
       ),
+      original,
     ]);
   }
   return out;

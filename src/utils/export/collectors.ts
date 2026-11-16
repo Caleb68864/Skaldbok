@@ -4,6 +4,8 @@ import type { CreatureTemplate } from '../../types/creatureTemplate';
 import { closeBundleReferences } from './referentialClosure';
 import type { Note } from '../../types/note';
 import type { Attachment } from '../../types/attachment';
+import type { InventoryContainer } from '../../types/inventoryContainer';
+import type { SystemDefinition } from '../../types/system';
 import { getById as getCharacterById } from '../../storage/repositories/characterRepository';
 import { getCampaignById } from '../../storage/repositories/campaignRepository';
 import { getSessionById, getSessionsByCampaign } from '../../storage/repositories/sessionRepository';
@@ -181,7 +183,7 @@ export function collectBundleSystemIds(contents: Partial<BundleContents>): Set<s
 async function loadBundleSystems(
   contents: Partial<BundleContents>,
   alsoNamed: ReadonlyArray<string | undefined> = [],
-): Promise<Record<string, unknown>[]> {
+): Promise<SystemDefinition[]> {
   const named = collectBundleSystemIds(contents);
   for (const id of alsoNamed) {
     if (typeof id === 'string' && id.length > 0) named.add(id);
@@ -189,9 +191,7 @@ async function loadBundleSystems(
   const ids = [...named];
   if (ids.length === 0) return [];
   const loaded = await Promise.all(ids.map((id) => getSystemById(id)));
-  return loaded
-    .filter((s): s is NonNullable<typeof s> => s !== undefined)
-    .map((s) => s as unknown as Record<string, unknown>);
+  return loaded.filter((s): s is SystemDefinition => s !== undefined);
 }
 
 /**
@@ -285,7 +285,7 @@ export async function collectCharacterBundle(characterId: string): Promise<Colle
     ).flat();
 
     const rows = {
-        characters: [character as unknown as Record<string, unknown>],
+        characters: [character],
         notes,
         entityLinks: allLinks,
         attachments: attachments.map(toBundleAttachment),
@@ -294,7 +294,7 @@ export async function collectCharacterBundle(characterId: string): Promise<Colle
     //    character bundle is the documented way to restore onto a fresh
     //    install, and it was the one scope that carried no ruleset at all.
     const assembled = { ...rows, systems: await loadBundleSystems(rows) };
-    const closed = closeBundleReferences(assembled as unknown as BundleContents);
+    const closed = closeBundleReferences(assembled);
     if (closed.droppedLinks > 0) {
       console.warn(
         `[collectors] dropped ${closed.droppedLinks} entity link(s) whose endpoints are not in the bundle; `
@@ -390,11 +390,11 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
       parties,
       partyMembers,
       attachments: attachments.map(toBundleAttachment),
-      inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
+      inventoryContainers: inventoryContainers.map(toBundleContainer),
     };
     const seedIds = collectBundleEntityIds({
       ...collected,
-      characters: characters as unknown as BundleContents['characters'],
+      characters,
     });
     const touching = allLinks.filter(
       (l) => seedIds.has(l.fromEntityId) || seedIds.has(l.toEntityId),
@@ -402,13 +402,13 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
     const allCharacters = await withLinkedCharacters(touching, characters);
     const bundleIds = collectBundleEntityIds({
       ...collected,
-      characters: allCharacters as unknown as BundleContents['characters'],
+      characters: allCharacters,
     });
     const entityLinks = linksWithinBundle(allLinks, bundleIds);
 
     const rows = {
         ...collected,
-        characters: allCharacters.map((c) => c as unknown as Record<string, unknown>),
+        characters: allCharacters,
         entityLinks,
       };
     // 10. The rulesets those rows name — derived, not enumerated — plus the
@@ -416,7 +416,7 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
     //     names. See `loadBundleSystems`.
     const campaign = await getCampaignById(session.campaignId);
     const assembled = { ...rows, systems: await loadBundleSystems(rows, [campaign?.system]) };
-    const closed = closeBundleReferences(assembled as unknown as BundleContents);
+    const closed = closeBundleReferences(assembled);
     if (closed.droppedLinks > 0) {
       console.warn(
         `[collectors] dropped ${closed.droppedLinks} entity link(s) whose endpoints are not in the bundle; `
@@ -544,7 +544,7 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
       parties,
       partyMembers,
       attachments: attachments.map(toBundleAttachment),
-      inventoryContainers: inventoryContainers as unknown as BundleContents['inventoryContainers'],
+      inventoryContainers: inventoryContainers.map(toBundleContainer),
       ships,
       ledgerAccounts,
       ledgerEntries,
@@ -560,21 +560,21 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
     };
     const seedIds = collectBundleEntityIds({
       ...collected,
-      characters: characters as unknown as BundleContents['characters'],
-    } as unknown as Partial<BundleContents>);
+      characters,
+    });
     const touching = allLinks.filter(
       (l) => seedIds.has(l.fromEntityId) || seedIds.has(l.toEntityId),
     );
     const allCharacters = await withLinkedCharacters(touching, characters);
     const bundleIds = collectBundleEntityIds({
       ...collected,
-      characters: allCharacters as unknown as BundleContents['characters'],
-    } as unknown as Partial<BundleContents>);
+      characters: allCharacters,
+    });
     const entityLinks = linksWithinBundle(allLinks, bundleIds);
 
     const rows = {
         ...collected,
-        characters: allCharacters.map((c) => c as unknown as Record<string, unknown>),
+        characters: allCharacters,
         entityLinks,
       };
     // 13. Every ruleset the assembled rows name — the campaign's own, and any
@@ -583,7 +583,7 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
     //     imported character on a second authored ruleset backed up without it.
     //     See `collectBundleSystemIds`.
     const assembled = { ...rows, systems: await loadBundleSystems(rows) };
-    const closed = closeBundleReferences(assembled as unknown as BundleContents);
+    const closed = closeBundleReferences(assembled);
     if (closed.droppedLinks > 0) {
       console.warn(
         `[collectors] dropped ${closed.droppedLinks} entity link(s) whose endpoints are not in the bundle; `
@@ -611,4 +611,24 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
  */
 function toBundleAttachment(a: Attachment): Omit<Attachment, 'blob'> {
   return a as Omit<Attachment, 'blob'>;
+}
+
+/** One inventory container as the bundle schema types it. */
+type BundleInventoryContainer = NonNullable<BundleContents['inventoryContainers']>[number];
+
+/**
+ * A storage inventory container as the bundle schema's row type.
+ *
+ * @remarks
+ * The schema's container and item objects are `.passthrough()`, so their
+ * inferred types carry a `[k: string]: unknown` index signature that the
+ * `InventoryContainer` and `InventoryItem` interfaces do not declare. The
+ * fields agree; only the index signature is missing. Spreading each item into
+ * a plain object type gives TypeScript that signature, where the collectors
+ * used to say `as unknown as BundleContents['inventoryContainers']` and would
+ * have kept saying it through a real field mismatch. The JSON written is the
+ * same.
+ */
+function toBundleContainer(container: InventoryContainer): BundleInventoryContainer {
+  return { ...container, items: container.items.map((item) => ({ ...item })) };
 }

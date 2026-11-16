@@ -23,6 +23,7 @@ import { referenceGroupSchema, referenceNoteSchema, referenceSectionSchema } fro
 import { kbNodeSchema, kbEdgeSchema } from '../../types/knowledgeBase';
 import { systemDefinitionSchema } from '../../../schemas/system.schema';
 import { migrateCharacter } from '../migrations';
+import type { CharacterRecord } from '../../types/character';
 
 /**
  * A single per-entity validation warning produced during bundle parsing.
@@ -287,10 +288,10 @@ function validateContentsEntities(
   // first also means an older-schema-version bundled record lands already upgraded
   // rather than relying on the lazy read-path upgrade.
   if (contents.characters) {
-    const kept: Record<string, unknown>[] = [];
+    const kept: CharacterRecord[] = [];
     contents.characters.forEach((char, index) => {
       try {
-        kept.push(migrateCharacter(char) as unknown as Record<string, unknown>);
+        kept.push(migrateCharacter(char));
       } catch (err) {
         warnings.push({
           entityType: 'characters',
