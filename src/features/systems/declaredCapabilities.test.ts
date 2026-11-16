@@ -76,38 +76,15 @@ const DECLARATION_FILES = [
  * guard cannot prove it. Recording that separately keeps the allowlist of
  * *promises* from filling up with fields that are simply working.
  *
- * `restsUsed`'s three members are read as `restsUsed[def.id]`, where `def.id`
- * comes from `engine.restTypes` — a dynamic key, which is precisely the reach a
- * grep misses. `RestModule.tsx` says so in its own comment. Had these been
- * allowlisted as unimplemented instead, the entry would have been a false
- * statement that nobody could have disproved from the guard.
+ * It is empty. Its only entries were `stretch` and `shift`, two of the three
+ * members `CharacterUiState.restsUsed` declared and `RestModule` read as
+ * `restsUsed[def.id]`. `restsUsed` is now `Record<string, boolean | undefined>`,
+ * keyed by rest id, so there are no members left to declare, and the
+ * self-check below failed on both entries until they were removed. The record
+ * stays so the next dynamically read declaration has a place to be recorded
+ * with its reason.
  */
-const READ_DYNAMICALLY: Record<string, string> = {
-  stretch: 'a member of CharacterUiState.restsUsed, read as `restsUsed[def.id]` in RestModule where `def.id` comes from engine.restTypes — a key from engine data, never spelled in source',
-  shift: 'the same',
-};
-
-/*
- * `round` is the third member of `restsUsed` and is **not** listed above,
- * because the self-check below disproved the entry rather than accepting it:
- * `isRead('round')` is true. Two separate reasons were found, and only the first
- * was fixable.
- *
- * 1. `Math.round(` matched `\.round` across the whole corpus — a JS built-in
- *    reporting a reader for a field of this codebase's contract. That was a live
- *    false pass: had `restsUsed.round` ever been the bug, this guard would have
- *    excused it. `isRead` now checks the receiver, and it is pinned by example.
- *
- * 2. `CombatEncounterView` reads `event.round` — a *genuinely different field
- *    with the same name*, on `CombatEvent`. Nothing distinguishes the two in a
- *    bare-name search, which is the limitation `TOO_GENERIC` exists to manage
- *    and this is one more instance of it.
- *
- * So `round` passes for a reason that has nothing to do with `round`, and
- * recording that here is worth more than an allowlist entry the self-check would
- * reject. The way out, when it matters, is the one `cards/schema.test.ts` takes:
- * ask the reader question of a *specific* declaration instead of the corpus.
- */
+const READ_DYNAMICALLY: Record<string, string> = {};
 
 /**
  * A declared member's name: optionally quoted, and allowing `_`, `$` and `-`.
