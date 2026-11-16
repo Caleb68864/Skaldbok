@@ -1,4 +1,4 @@
-import type { AdvancementDeclaration, DamageTrackModel, DeathModel, MagicDeclaration, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
+import type { AdvancementDeclaration, DamageTrackModel, DeathModel, DifficultyModel, MagicDeclaration, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -634,6 +634,18 @@ export interface SystemDefinition {
    * model stays `null`.
    */
   advancement?: AdvancementDeclaration | null;
+  /**
+   * Data for this system's resolution mechanic. The odds themselves are the
+   * adapter's `probability.chance`.
+   */
+  probability?: {
+    /**
+     * The task difficulty ladder a player picks a target from, or `null` for a
+     * system whose roll needs none (roll-under, a fixed TN). Absent keeps the
+     * adapter's, `null` removes it.
+     */
+    difficulty?: DifficultyModel | null;
+  };
   /**
    * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
    * a table of legs with system-specific fields. Absent = no route planner

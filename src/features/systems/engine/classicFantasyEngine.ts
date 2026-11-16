@@ -197,6 +197,7 @@ export const classicFantasyEngine: SystemEngine = {
     rollPrompt: value => `Roll above ${value} on a d20 to advance`,
   }),
   probability: {
+    ...declared.probability,
     chance: (value, state) =>
       state === 'boon' ? calcBoonProb(value) : state === 'bane' ? calcBaneProb(value) : calcNormalProb(value),
   },

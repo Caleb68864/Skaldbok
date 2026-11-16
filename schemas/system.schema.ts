@@ -274,6 +274,14 @@ export const systemDefinitionSchema = z.object({
   advancement: z.object({
     sessionEvents: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })),
   }).nullable().optional().describe('End-of-session advancement events; null when the system has none'),
+  // Data only; the odds are the adapter's `chance`.
+  probability: z.object({
+    difficulty: z.object({
+      label: z.string().min(1),
+      defaultValue: z.number(),
+      options: z.array(z.object({ value: z.number(), label: z.string().min(1) })).min(1),
+    }).nullable().optional(),
+  }).optional().describe('Resolution data: the difficulty ladder, or null when the roll needs none'),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),
@@ -508,6 +516,16 @@ export const systemDefinitionSchema = z.object({
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: `damageTrack names unknown condition "${id}"` });
       }
     }
+  }
+
+  // The selector shows the default as one of its options; one that is not there
+  // would select nothing while every displayed odds assumed it.
+  const difficulty = def.probability?.difficulty;
+  if (difficulty && !difficulty.options.some(o => o.value === difficulty.defaultValue)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `probability.difficulty default ${difficulty.defaultValue} is not one of its options`,
+    });
   }
 
   // Two events with one id would tick and untick together.

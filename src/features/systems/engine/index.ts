@@ -107,6 +107,25 @@ function mergeCurrency(
 }
 
 /**
+ * Folds a system's declared difficulty ladder over the adapter's probability.
+ *
+ * @remarks
+ * `chance` is always the adapter's. Absent keeps its ladder, `null` removes it.
+ */
+function mergeProbability(
+  base: SystemEngine['probability'],
+  declared: SystemDefinition['probability'],
+): SystemEngine['probability'] {
+  const difficulty = declared?.difficulty;
+  if (difficulty === undefined) return base;
+  if (difficulty === null) {
+    const { difficulty: _removed, ...rest } = base;
+    return rest;
+  }
+  return { ...base, difficulty };
+}
+
+/**
  * Memo cache so `getEngine` returns a stable object identity per system.
  *
  * @remarks
@@ -187,6 +206,7 @@ export function getEngine(
     advancement: system.advancement === undefined
       ? base.advancement
       : withAdvancementRules(system.advancement, base.advancement),
+    probability: mergeProbability(base.probability, system.probability),
     currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);

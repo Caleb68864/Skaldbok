@@ -53,11 +53,11 @@ interface Fingerprint {
  * `src/systems` tree disagree.
  */
 const FINGERPRINTS: Record<string, Fingerprint> = {
-  'classic-fantasy/system.json': { version: 9, hash: '3cbd3ee18bdc46b6' },
+  'classic-fantasy/system.json': { version: 10, hash: 'e9f3f76d4a44483e' },
   'classic-fantasy/sheet.json': { version: 8, hash: 'c49a19522c387d59' },
-  'savage-worlds/system.json': { version: 13, hash: '9bc9ce36da6b7b9f' },
+  'savage-worlds/system.json': { version: 14, hash: '88b0711f50315b30' },
   'savage-worlds/sheet.json': { version: 5, hash: '3d7be8f99aa172b0' },
-  'traveller/system.json': { version: 31, hash: 'd4e72d2d07c27088' },
+  'traveller/system.json': { version: 32, hash: '41d17dbf8cb39f65' },
   'traveller/sheet.json': { version: 9, hash: '3cba59389c7e5989' },
 };
 

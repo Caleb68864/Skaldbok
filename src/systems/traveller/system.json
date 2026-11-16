@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 31,
+  "version": 32,
   "name": "traveller",
   "displayName": "Traveller",
   "engine": "2d6-plus",
@@ -1748,5 +1748,45 @@
     }
   },
   "magic": null,
-  "advancement": null
+  "advancement": null,
+  "probability": {
+    "difficulty": {
+      "label": "Difficulty",
+      "defaultValue": 8,
+      "options": [
+        {
+          "value": 2,
+          "label": "Simple"
+        },
+        {
+          "value": 4,
+          "label": "Easy"
+        },
+        {
+          "value": 6,
+          "label": "Routine"
+        },
+        {
+          "value": 8,
+          "label": "Average"
+        },
+        {
+          "value": 10,
+          "label": "Difficult"
+        },
+        {
+          "value": 12,
+          "label": "Very Difficult"
+        },
+        {
+          "value": 14,
+          "label": "Formidable"
+        },
+        {
+          "value": 16,
+          "label": "Impossible"
+        }
+      ]
+    }
+  }
 }

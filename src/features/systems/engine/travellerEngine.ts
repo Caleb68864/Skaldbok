@@ -14,6 +14,9 @@ import { TRAVELLER_GEAR_CATEGORIES, inferTravellerGearCategory, reviewTravellerG
 import { declaredEngineData } from './declaredEngineData';
 import { travellerSystem } from '../../../systems/traveller';
 
+/** traveller's `system.json` data, which the engine spreads. */
+const declared = declaredEngineData(travellerSystem);
+
 export const TRAVELLER_ATTRIBUTE_IDS = travellerSystem.attributes.map(a => a.id);
 
 /**
@@ -193,8 +196,17 @@ export function computeTravellerDerivedValues(
  * `twoD6SuccessProbability` and `threeD6KeepTwoProbability` already take the
  * target as a parameter, so a difficulty selector is a UI change, not a maths
  * one.
+ *
+ * It is the declared ladder's `defaultValue` (`probability.difficulty` in
+ * `system.json`) rather than a second copy of it.
  */
-export const TRAVELLER_DEFAULT_TARGET = 8;
+export const TRAVELLER_DEFAULT_TARGET = travellerDefaultTarget();
+
+function travellerDefaultTarget(): number {
+  const difficulty = declared.probability.difficulty;
+  if (!difficulty) throw new Error('traveller system.json declares no probability.difficulty');
+  return difficulty.defaultValue;
+}
 
 /** The book's penalty for attempting a skill the character does not have at all. */
 export const UNSKILLED_DM = -3;
@@ -393,7 +405,7 @@ export const travellerEngine: SystemEngine = {
   // they are creation-time checks, and a permanent sheet tile reading "18 / 51"
   // is noise for the rest of a character's life, but it is exactly what you want
   // on the sheet you build a character against.
-  ...declaredEngineData(travellerSystem),
+  ...declared,
   primaryHealthResourceId: 'end',
   encumbrance: {
     limit: computeTravellerCarryLimit,
@@ -406,25 +418,10 @@ export const travellerEngine: SystemEngine = {
   // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
   rest: null,
   probability: {
-    /**
-     * Mongoose's task difficulty ladder. Declared here rather than read from
-     * the Quick Reference card of the same name: that card is display copy a
-     * user may reword or delete, and the odds must not depend on prose.
-     */
-    difficulty: {
-      label: 'Difficulty',
-      defaultValue: TRAVELLER_DEFAULT_TARGET,
-      options: [
-        { value: 2, label: 'Simple' },
-        { value: 4, label: 'Easy' },
-        { value: 6, label: 'Routine' },
-        { value: 8, label: 'Average' },
-        { value: 10, label: 'Difficult' },
-        { value: 12, label: 'Very Difficult' },
-        { value: 14, label: 'Formidable' },
-        { value: 16, label: 'Impossible' },
-      ],
-    },
+    // Mongoose's task difficulty ladder, declared in system.json rather than
+    // read from the Quick Reference card of the same name: that card is display
+    // copy a user may reword or delete, and the odds must not depend on prose.
+    ...declared.probability,
     // Skill level + linked-characteristic DM vs the selected target.
     chance: (value, state, context) => {
       // Same DM + unskilled derivation as skill.display, via the shared helper,

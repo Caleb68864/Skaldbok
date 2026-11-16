@@ -1,6 +1,6 @@
 {
   "id": "classic-fantasy",
-  "version": 9,
+  "version": 10,
   "name": "classic-fantasy",
   "displayName": "Dragonbane",
   "engine": "d20-roll-under",
@@ -639,5 +639,8 @@
         "label": "✨ Used a heroic ability"
       }
     ]
+  },
+  "probability": {
+    "difficulty": null
   }
 }

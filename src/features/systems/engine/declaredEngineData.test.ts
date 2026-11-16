@@ -8,6 +8,8 @@ import type { SystemDefinition } from '../../../types/system';
 import type { CharacterRecord } from '../../../types/character';
 import { savageWorldsSystem } from '../../../systems/savage-worlds';
 import { savageTraitPenalty } from './savageWorldsEngine';
+import { travellerSystem } from '../../../systems/traveller';
+import { TRAVELLER_DEFAULT_TARGET } from './travellerEngine';
 
 const bundled = BUNDLED_SYSTEMS.map(s => [s.id, s] as const);
 
@@ -202,5 +204,40 @@ describe('advancement.sessionEvents declared in system.json (roadmap E1)', () =>
 
   it('refuses a bundled system without it', () => {
     expect(() => declaredEngineData(without(classicFantasySystem, 'advancement'))).toThrow(/does not declare/);
+  });
+});
+
+describe('probability.difficulty declared in system.json (roadmap E1)', () => {
+  it.each(bundled)('%s declares its difficulty ladder, or null, and keeps it through import', (_id, system) => {
+    expect(system.probability?.difficulty, 'no probability.difficulty in system.json').toBeDefined();
+    expect(systemDefinitionSchema.parse(system).probability).toEqual(system.probability);
+    expect(getEngine(system).probability.difficulty ?? null).toEqual(system.probability!.difficulty);
+  });
+
+  it("Traveller's default target is the declared one", () => {
+    expect(TRAVELLER_DEFAULT_TARGET).toBe(travellerSystem.probability?.difficulty?.defaultValue);
+  });
+
+  it('an imported system declares a difficulty ladder and keeps the adapter maths', () => {
+    const difficulty = { label: 'Target', defaultValue: 10, options: [{ value: 10, label: 'Hard' }] };
+    const engine = getEngine(imported('imported-e1-difficulty', { probability: { difficulty } }));
+    expect(engine.probability.difficulty).toEqual(difficulty);
+    expect(engine.probability.chance).toBe(classicFantasyEngine.probability.chance);
+  });
+
+  it('an imported system can declare that it has no difficulty ladder', () => {
+    const engine = getEngine(imported('imported-e1-no-difficulty', {
+      engine: '2d6-plus', probability: { difficulty: null },
+    }));
+    expect(engine.probability.difficulty).toBeUndefined();
+  });
+
+  it('rejects a default target that is not on the ladder', () => {
+    const difficulty = { label: 'Target', defaultValue: 9, options: [{ value: 10, label: 'Hard' }] };
+    expect(() => imported('imported-e1-bad-difficulty', { probability: { difficulty } })).toThrow(/difficulty.*9/);
+  });
+
+  it('refuses a bundled system without it', () => {
+    expect(() => declaredEngineData(without(travellerSystem, 'probability'))).toThrow(/does not declare/);
   });
 });

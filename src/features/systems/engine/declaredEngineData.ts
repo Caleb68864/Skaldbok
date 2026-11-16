@@ -2,7 +2,7 @@ import type { SystemDefinition } from '../../../types/system';
 import { makeFormatAmount } from '../../../utils/currency';
 import type {
   AdvancementDeclaration, AdvancementModel, AdvancementRules,
-  CurrencyModel, MagicDeclaration, MagicModel, MagicRules, SystemEngine,
+  CurrencyModel, MagicDeclaration, MagicModel, MagicRules, ProbabilityModel, SystemEngine,
 } from './types';
 
 /** The parts of an engine that are pure data and live in `system.json` (roadmap E1). */
@@ -15,6 +15,8 @@ export type DeclaredEngineData = Pick<
   magic: MagicDeclaration | null;
   /** The session events only; the adapter adds the roll with {@link withAdvancementRules}. */
   advancement: AdvancementDeclaration | null;
+  /** The difficulty ladder only; the adapter adds `chance`. */
+  probability: Omit<ProbabilityModel, 'chance'>;
 };
 
 /**
@@ -79,12 +81,12 @@ export function currencyFromDenominations(
  */
 export function declaredEngineData(system: SystemDefinition): DeclaredEngineData {
   const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields, death, damageTrack, magic,
-    advancement } = system;
+    advancement, probability } = system;
   if (
     !terms || !labels || !logActions || !outcomes || !rollModifiers || !timeUnits || !panels || !derivedFields ||
     // Nullable models: `null` declares the mechanic absent, so only `undefined` is missing.
     death === undefined || damageTrack === undefined || magic === undefined ||
-    advancement === undefined ||
+    advancement === undefined || probability?.difficulty === undefined ||
     !currency?.label || !currency.baseDenominationId || !currency.denominations
   ) {
     throw new Error(`Bundled system "${system.id}" does not declare all of its engine data in system.json`);
@@ -103,5 +105,6 @@ export function declaredEngineData(system: SystemDefinition): DeclaredEngineData
     damageTrack,
     magic,
     advancement,
+    probability: probability.difficulty ? { difficulty: probability.difficulty } : {},
   };
 }

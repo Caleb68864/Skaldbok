@@ -8,6 +8,9 @@ import type { SystemEngine } from './types';
 import { declaredEngineData } from './declaredEngineData';
 import { savageWorldsSystem } from '../../../systems/savage-worlds';
 
+/** savage-worlds' `system.json` data, which the engine spreads. */
+const declared = declaredEngineData(savageWorldsSystem);
+
 export const SAVAGE_WORLDS_ATTRIBUTE_IDS = savageWorldsSystem.attributes.map(a => a.id);
 
 /**
@@ -227,7 +230,7 @@ export const savageWorldsEngine: SystemEngine = {
   // adds a PP pool later) and `damageTrack`: Wounds is a 0–3 level counter. A full track
   // incapacitates a Wild Card (Extras drop at 1, handled by status rules later).
   // Damage is applied as wounds, not points.
-  ...declaredEngineData(savageWorldsSystem),
+  ...declared,
   // Damage total vs Toughness (2 + ½ Vigor + Armor, less any armor-piercing):
   // under = nothing; at/over = Shaken, or +1 Wound if already Shaken; +1 Wound
   // per 4 over Toughness. `raises` is intentionally unused — SWADE attack raises
@@ -263,6 +266,7 @@ export const savageWorldsEngine: SystemEngine = {
   // No per-session advancement roll; the declared `advancement` is `null`.
   advancement: null,
   probability: {
+    ...declared.probability,
     // Trait die + Wild Die vs TN 4 (PCs are Wild Cards), with the character's
     // current Wound/Fatigue/condition penalty folded in.
     chance: (value, _state, context) =>
