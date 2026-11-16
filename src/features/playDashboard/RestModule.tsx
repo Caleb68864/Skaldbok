@@ -10,17 +10,8 @@ import { useSessionLog } from '../session/useSessionLog';
 import { getEngine } from '../systems/engine';
 import type { RestDefinition } from '../systems/engine/types';
 
-/**
- * `CharacterUIState.restsUsed` is declared with the three Dragonbane keys; the
- * module keys it by `RestDefinition.id` instead so any system's rest ladder can
- * be tracked. The ids match the old literals for classic-fantasy, so no stored
- * data changes shape.
- */
-type RestsUsedMap = Record<string, boolean | undefined>;
-
-function asStoredRestsUsed(map: RestsUsedMap): CharacterRecord['uiState']['restsUsed'] {
-  return map as CharacterRecord['uiState']['restsUsed'];
-}
+/** `CharacterUiState.restsUsed`, keyed by `RestDefinition.id`. */
+type RestsUsedMap = NonNullable<CharacterRecord['uiState']['restsUsed']>;
 
 export function RestModule({ character, system, updateCharacter }: PlayModuleProps) {
   const { showToast } = useToast();
@@ -33,7 +24,7 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
   const [rollInputs, setRollInputs] = useState<Record<string, string>>({});
   const [conditionToClear, setConditionToClear] = useState('');
 
-  const restsUsed = (character.uiState.restsUsed ?? {}) as RestsUsedMap;
+  const restsUsed: RestsUsedMap = character.uiState.restsUsed ?? {};
   const openRest = rests?.find(def => def.id === openRestId) ?? null;
 
   /**
@@ -69,13 +60,13 @@ export function RestModule({ character, system, updateCharacter }: PlayModulePro
       const conditions = { ...prev.conditions };
       for (const id of outcome.conditionsCleared) conditions[id] = false;
 
-      const prevUsed = (prev.uiState.restsUsed ?? {}) as RestsUsedMap;
+      const prevUsed: RestsUsedMap = prev.uiState.restsUsed ?? {};
       const nextUsed: RestsUsedMap = clearsTracker(def) ? {} : { ...prevUsed, [def.id]: true };
 
       return {
         resources,
         conditions,
-        uiState: { ...prev.uiState, restsUsed: asStoredRestsUsed(nextUsed) },
+        uiState: { ...prev.uiState, restsUsed: nextUsed },
         updatedAt: nowISO(),
       };
     });

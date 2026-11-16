@@ -255,12 +255,17 @@ export interface HeroicAbility {
   pinnedAsStamp?: boolean;
 }
 
-/** Flat stat key namespace resolved by getEffectiveValue(). */
-export type StatKey =
-  | 'str' | 'con' | 'agl' | 'int' | 'wil' | 'cha'
-  | 'armor' | 'helmet'
-  | 'movement' | 'hpMax' | 'wpMax'
-  | string;
+/**
+ * A stat key resolved by `getEffectiveValue()`: namespaced (`attr:str`,
+ * `derived:movement`, built with the helpers in `utils/statKeys`) or a legacy
+ * bare id.
+ *
+ * @remarks
+ * Plain `string`. It used to be a union of Dragonbane's ids ending in
+ * `| string`, which TypeScript collapses to `string` anyway, so the list
+ * checked nothing and read as if those were the only keys.
+ */
+export type StatKey = string;
 
 /** A single stat effect within a temp modifier. */
 export interface TempModifierEffect {
@@ -356,11 +361,17 @@ export interface CharacterUiState {
   /** Skill IDs pinned to the top of the skills list. */
   pinnedSkills?: string[];
   /**
-   * Per-rest-type usage marks for the play dashboard rest module.
-   * `true` means the rest has been used since the last reset; the
-   * Reset button clears all three back to undefined.
+   * Per-rest usage marks for the play dashboard rest module, keyed by
+   * `RestDefinition.id`. `true` means the rest has been used since the last
+   * reset; the Reset button clears the map.
+   *
+   * @remarks
+   * Keyed by whatever rests the active ruleset declares. It was typed with
+   * Dragonbane's three ids (`round`, `stretch`, `shift`), which are what
+   * classic-fantasy characters have stored, so widening the type changes no
+   * stored data; `RestModule` had been casting around the narrow one.
    */
-  restsUsed?: { round?: boolean; stretch?: boolean; shift?: boolean };
+  restsUsed?: Record<string, boolean | undefined>;
 }
 
 /**

@@ -6,7 +6,7 @@
  * `chunkSize: 200` to avoid blocking the main thread.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import MiniSearch from 'minisearch';
 import type { KBNode } from '../../storage/db/client';
 import {
@@ -14,20 +14,32 @@ import {
   getSharedNodes,
 } from '../../storage/repositories/kbNodeRepository';
 
+/** A built index and the nodes it was built from. */
+interface BuiltIndex {
+  search: MiniSearch<KBNode>;
+  nodes: KBNode[];
+}
+
 /**
  * Fuzzy-searches KB nodes by label. Returns matching nodes for the given query.
  *
+ * @remarks
+ * The built index is held in state, not a ref, so the search re-runs when a
+ * build finishes. With a ref, a query that arrived first (a search box
+ * restored with text in it, or a large vault still indexing) stayed blank
+ * until the next keystroke.
+ *
  * @param query - Search string (partial, fuzzy matching supported).
  * @param campaignId - Campaign to scope the search to.
+ * @param refreshToken - Rebuilds the index when it changes. Pass the same token
+ *   that reloads the node list beside the search, or a node written while the
+ *   list is mounted shows in the list and cannot be searched for.
  * @returns Array of matching {@link KBNode} objects.
  */
-export function useKBSearch(query: string, campaignId: string): KBNode[] {
-  const [results, setResults] = useState<KBNode[]>([]);
-  const indexRef = useRef<MiniSearch<KBNode> | null>(null);
-  const nodesRef = useRef<KBNode[]>([]);
-  const indexReadyRef = useRef(false);
+export function useKBSearch(query: string, campaignId: string, refreshToken = 0): KBNode[] {
+  const [built, setBuilt] = useState<BuiltIndex | null>(null);
 
-  // Build index on mount / campaignId change
+  // Build index on mount / campaignId / refreshToken change
   useEffect(() => {
     let mounted = true;
 
@@ -58,14 +70,12 @@ export function useKBSearch(query: string, campaignId: string): KBNode[] {
 
       if (!mounted) return;
 
-      nodesRef.current = allNodes;
       // Non-blocking chunked indexing
       await miniSearch.addAllAsync(allNodes, { chunkSize: 200 });
 
       if (!mounted) return;
 
-      indexRef.current = miniSearch;
-      indexReadyRef.current = true;
+      setBuilt({ search: miniSearch, nodes: allNodes });
     }
 
     buildIndex().catch((err) => {
@@ -76,22 +86,23 @@ export function useKBSearch(query: string, campaignId: string): KBNode[] {
     return () => {
       mounted = false;
     };
-  }, [campaignId]);
+  }, [campaignId, refreshToken]);
 
-  // Search whenever query changes
+  // Search whenever the query changes or a build finishes
+  const [results, setResults] = useState<KBNode[]>([]);
   useEffect(() => {
-    if (!indexReadyRef.current || !indexRef.current || !query.trim()) {
+    if (!built || !query.trim()) {
       setResults([]);
       return;
     }
 
-    const hits = indexRef.current.search(query);
+    const hits = built.search.search(query);
     // Map search results back to full KBNode objects
     const nodes = hits
-      .map((hit) => nodesRef.current.find((n) => n.id === hit.id))
+      .map((hit) => built.nodes.find((n) => n.id === hit.id))
       .filter((n): n is KBNode => n !== undefined);
     setResults(nodes);
-  }, [query]);
+  }, [built, query]);
 
   return results;
 }

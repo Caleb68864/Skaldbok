@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { explodingChance, traitChance, raiseChance, dieCode } from './savageMath';
+import { explodingChance, traitChance, dieCode } from './savageMath';
+import { raiseChance } from '../../test-utils/domainHelpers';
 
 const approx = (a: number, b: number) => Math.abs(a - b) < 1e-9;
 

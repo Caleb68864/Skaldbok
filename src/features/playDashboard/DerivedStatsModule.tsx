@@ -11,7 +11,6 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
 
   // The flat list is driven by the engine's declared derived fields; the dense
   // dashboard tile prefers the short label when the engine supplies one.
-  const derivedValues = derived as unknown as Record<string, string | number | undefined>;
 
   // The engine says whether it has per-attribute rows to show here, already
   // labelled and formatted. This was `'characteristicDMs' in derived` — a key
@@ -32,12 +31,12 @@ export function DerivedStatsModule({ character, system }: PlayModuleProps) {
     .filter(field => !field.surfaces || field.surfaces.includes('dashboard'))
     // A field the engine declares but does not compute would render as a blank
     // tile; skip it rather than show an empty box.
-    .filter(field => derivedValues[field.key] !== undefined)
+    .filter(field => derived[field.key] !== undefined)
     .map(field => {
       // Shared resolver: computed -> manual override (a hand-tuned Carry limit
       // set on the Gear screen) -> temp modifiers, so this tile matches the
       // sheet instead of each surface folding its own subset.
-      const resolved = resolveDerivedField(character, derivedValues, field);
+      const resolved = resolveDerivedField(character, derived, field);
       return {
         label: field.shortLabel ?? field.label,
         value: resolved.display ?? '—',

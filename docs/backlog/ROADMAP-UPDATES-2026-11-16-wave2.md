@@ -88,3 +88,10 @@ overstated it.
 out by subtracting the 13 added here, not measured); `eslint .` 0 errors, 32
 warnings (unchanged); `vite build` passed; `knip --dependencies` exit 0. Nothing
 was run in a browser.
+
+## Wave 3
+
+H9 (two `useKBSearch` defects), I7, the four movable test-only helpers,
+`TRAVELLER_DAMAGE_TRACK_IDS` and the D12 `StatKey`/`restsUsed` types were taken
+up on `work/h9-and-cleanups`. Status and reasons are in
+`ROADMAP-UPDATES-2026-11-16-wave3.md`.

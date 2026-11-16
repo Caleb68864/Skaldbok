@@ -198,38 +198,6 @@ export function payDebt(
   };
 }
 
-/**
- * Removes a part-payment — an undo for a mis-typed figure.
- *
- * @remarks
- * Reopens the debt if removing the payment leaves something outstanding, so a
- * corrected overpayment does not leave a settled row with a balance on it.
- */
-export function removeDebtPayment(
-  character: Pick<CharacterRecord, 'debts'>,
-  debtId: string,
-  paymentId: string,
-): Pick<CharacterRecord, 'debts'> | null {
-  const debts = character.debts ?? [];
-  const target = debts.find(d => d.id === debtId);
-  if (!target || !(target.payments ?? []).some(p => p.id === paymentId)) return null;
-
-  return {
-    debts: debts.map(d => {
-      if (d.id !== debtId) return d;
-      const payments = (d.payments ?? []).filter(p => p.id !== paymentId);
-      const next: Debt = { ...d, payments };
-      // Only undo a settle the payments caused. A hand-settled debt stays
-      // settled — that was a deliberate act about the debt, not about this row.
-      if (next.autoSettled && !isFullyPaid(next)) {
-        const { settledAt: _settled, autoSettled: _auto, ...rest } = next;
-        return rest;
-      }
-      return next;
-    }),
-  };
-}
-
 /** Reopens a settled debt — an undo for a mis-tap. */
 export function reopenDebt(
   character: Pick<CharacterRecord, 'debts'>,

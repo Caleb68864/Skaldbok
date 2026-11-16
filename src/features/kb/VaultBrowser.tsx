@@ -93,7 +93,7 @@ export function VaultBrowser({
   const [allTags, setAllTags] = useState<string[]>([]);
   const [tagLinkedNodeIds, setTagLinkedNodeIds] = useState<Set<string>>(new Set());
   const [displayCount, setDisplayCount] = useState(50);
-  const searchResults = useKBSearch(debouncedQuery, campaignId);
+  const searchResults = useKBSearch(debouncedQuery, campaignId, refreshToken);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchQuery = controlledSearchQuery ?? internalSearchQuery;
   const setSearchQuery = useCallback((nextQuery: string) => {

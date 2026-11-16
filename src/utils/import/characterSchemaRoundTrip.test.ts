@@ -74,8 +74,8 @@ function membersOf(body: string): Array<[string, string]> {
  * `Debt` is declared in `features/characters/debts.ts` and so is not walked;
  * `debts` is not enumerated by the schema at all, so the whole array travels on
  * the top-level passthrough untouched. Members of single-line inline object
- * types (`uiState.restsUsed`'s three flags) are likewise not walked — they are
- * inside a member, not members themselves.
+ * types are likewise not walked — they are inside a member, not members
+ * themselves.
  */
 function reachableInterfaces(interfaces: Map<string, string>, root: string): string[] {
   const order: string[] = [];

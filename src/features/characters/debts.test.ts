@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   openDebts, netDebt, totalByDirection, addDebt, settleDebt, reopenDebt, removeDebt,
-  paidSoFar, outstanding, isFullyPaid, payDebt, removeDebtPayment,
+  paidSoFar, outstanding, isFullyPaid, payDebt,
   type Debt,
 } from './debts';
+import { removeDebtPayment } from '../../test-utils/domainHelpers';
 
 const d = (over: Partial<Debt> = {}): Debt => ({
   id: 'd1', counterparty: 'Rell', amount: 10000, direction: 'owed',

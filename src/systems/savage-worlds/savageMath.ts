@@ -56,14 +56,6 @@ export function traitChance(sides: number, targetNumber: number, opts: TraitRoll
 }
 
 /**
- * Probability of clearing the target by **at least `raises` raises** (each raise
- * is +4 over the Target Number). `raises = 0` is a plain success.
- */
-export function raiseChance(sides: number, targetNumber: number, raises: number, opts: TraitRollOpts = {}): number {
-  return traitChance(sides, targetNumber + 4 * Math.max(0, raises), opts);
-}
-
-/**
  * Formats a die code for display: `dieCode(8)` → `"d8"`, `dieCode(12, 1)` →
  * `"d12+1"`, `dieCode(4, -2)` → `"d4-2"` (an untrained/penalised die).
  */

@@ -6,6 +6,9 @@ import { travellerSystem } from '../../../systems/traveller';
 import type { CharacterRecord } from '../../../types/character';
 import type { SystemDefinition } from '../../../types/system';
 import { getEngine } from './index';
+import { classicFantasyEngine } from './classicFantasyEngine';
+import { travellerEngine } from './travellerEngine';
+import { savageWorldsEngine } from './savageWorldsEngine';
 
 /** Roadmap E3: attribute and resource ids come from `system.json`. */
 
@@ -39,6 +42,14 @@ describe('ids declared in JSON', () => {
     expect(getEngine(classicFantasySystem).resourceIds).toEqual(['hp', 'wp']);
     expect(getEngine(travellerSystem).resourceIds).toEqual(['str', 'dex', 'end']);
     expect(getEngine(savageWorldsSystem).resourceIds).toEqual(['wounds', 'fatigue', 'bennies']);
+  });
+
+  it("each adapter's own resource list is the one getEngine derives", () => {
+    // The adapter list is what a caller holding the adapter directly sees (the
+    // print tests do). Traveller's used to restate ['str', 'dex', 'end'] by hand.
+    expect(classicFantasyEngine.resourceIds).toEqual(getEngine(classicFantasySystem).resourceIds);
+    expect(travellerEngine.resourceIds).toEqual(getEngine(travellerSystem).resourceIds);
+    expect(savageWorldsEngine.resourceIds).toEqual(getEngine(savageWorldsSystem).resourceIds);
   });
 
   it('role survives import validation', () => {

@@ -26,8 +26,15 @@ export const TRAVELLER_ATTRIBUTE_IDS = travellerSystem.attributes.map(a => a.id)
  * These ids intentionally collide with the resource ids of the same name —
  * `attr:str` is the characteristic, `res:str` is the damage taken to it. See
  * {@link utils/statKeys!statKey | statKey}.
+ *
+ * Read from the declared resources, the same derivation `getEngine` applies
+ * and the other two adapters already use, rather than restating
+ * `['str', 'dex', 'end']`: a resource added to `system.json` would otherwise
+ * reach the merged engine and not this adapter's own list.
  */
-export const TRAVELLER_DAMAGE_TRACK_IDS = ['str', 'dex', 'end'];
+export const TRAVELLER_DAMAGE_TRACK_IDS = travellerSystem.resources
+  .filter(r => r.role !== 'counter')
+  .map(r => r.id);
 
 /**
  * A characteristic's current score, after damage.
