@@ -64,15 +64,6 @@ export function advancementCandidates(
     });
 }
 
-/** How many session-checklist boxes are ticked. */
-export function countEarnedMarks(
-  character: Pick<CharacterRecord, 'advancementChecks'>,
-  advancement: AdvancementModel | null | undefined,
-): number {
-  const checks = character.advancementChecks ?? {};
-  return (advancement?.sessionEvents ?? []).filter(event => checks[event.id] === true).length;
-}
-
 /** Ticks or unticks one session-checklist box. */
 export function toggleSessionEvent(
   character: Pick<CharacterRecord, 'advancementChecks'>,

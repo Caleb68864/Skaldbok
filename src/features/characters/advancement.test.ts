@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   isMarkedForAdvancement,
   advancementCandidates,
-  countEarnedMarks,
   toggleSessionEvent,
   applyAdvance,
   clearMark,
   resetAdvancementChecks,
 } from './advancement';
+import { countEarnedMarks } from '../../test-utils/domainHelpers';
 import type { CharacterRecord } from '../../types/character';
 import type { SkillCategory } from '../../types/system';
 import type { AdvancementModel } from '../systems/engine/types';

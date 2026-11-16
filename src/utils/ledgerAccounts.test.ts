@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { computeAccountBalances, primaryAccount, entriesForAccount } from './ledgerAccounts';
+import { computeAccountBalances, primaryAccount } from './ledgerAccounts';
+import { entriesForAccount } from '../test-utils/domainHelpers';
 import type { LedgerAccount } from '../types/ledgerAccount';
 import type { LedgerEntry } from '../types/ledger';
 

@@ -133,27 +133,3 @@ export function computeAccountBalances(
   };
 }
 
-/**
- * The entries belonging to one account, either side of a transfer.
- *
- * @remarks
- * The sign is flipped for entries where this account is the *counter* side, so
- * the column always reads from that account's point of view. A mortgage payment
- * shows as money out of Cash and money in against the loan, which is what each
- * account actually experienced.
- */
-export function entriesForAccount(
-  accountId: string,
-  isPrimary: boolean,
-  entries: LedgerEntry[],
-): Array<LedgerEntry & { signedForAccount: number }> {
-  const rows: Array<LedgerEntry & { signedForAccount: number }> = [];
-  for (const entry of entries) {
-    const belongsNear = entry.accountId === accountId || (isPrimary && !entry.accountId);
-    if (belongsNear) rows.push({ ...entry, signedForAccount: entry.amount });
-    else if (entry.counterAccountId === accountId) {
-      rows.push({ ...entry, signedForAccount: -entry.amount });
-    }
-  }
-  return rows;
-}
