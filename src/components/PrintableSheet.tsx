@@ -62,15 +62,19 @@ function printedSkillRollValue(
 // Exported types (consumed by SS-02 screen)
 // ──────────────────────────────────────────────
 
-/** Pre-resolved derived stats the print screen computes once and passes down, already accounting for per-character overrides. */
-export interface PrintDerivedValues {
-  damageBonus: string;
-  aglDamageBonus: string;
-  movement: number;
-  encumbranceLimit: number;
-  hpMax: number;
-  wpMax: number;
-}
+/**
+ * Pre-resolved derived stats the print screen computes once and passes down,
+ * already accounting for per-character overrides.
+ *
+ * @remarks
+ * An open map keyed by derived-field id, because that is what the engine
+ * returns: Traveller has no `hpMax`, Savage Worlds adds `pace`. This used to be
+ * six required Dragonbane keys, which the screen satisfied with an
+ * `as unknown as` cast over whatever the engine produced. Only printable values
+ * (numbers and dice-expression strings) are carried; an adapter's lookup
+ * tables stay on the screen.
+ */
+export type PrintDerivedValues = Record<string, string | number | undefined>;
 
 /** Props for {@link PrintableSheet}. `colorMode` selects the color vs black-and-white print stylesheet. */
 export interface PrintableSheetProps {
@@ -313,13 +317,11 @@ function DerivedStatsRow({
   derived: PrintDerivedValues;
   engine: SystemEngine;
 }): React.ReactElement {
-  const values = derived as unknown as Record<string, string | number | undefined>;
-
   const fields = engine.derivedFields
     .filter(field => !field.surfaces || field.surfaces.includes('print'))
     // A system may declare derived stats the print screen does not compute
     // (Traveller's initiative DM); printing a blank field helps nobody.
-    .filter(field => values[field.key] !== undefined)
+    .filter(field => derived[field.key] !== undefined)
     .map((field, index) => ({ field, index }))
     .sort((a, b) => {
       const rank = (key: string) => {
@@ -335,7 +337,7 @@ function DerivedStatsRow({
       {fields.map(field => (
         <div key={field.key} className="sheet-derived-field">
           <span className="sheet-derived-label">{PRINT_DERIVED_LABELS[field.key] ?? field.label}</span>
-          <span className="sheet-derived-value">{values[field.key]}</span>
+          <span className="sheet-derived-value">{derived[field.key]}</span>
         </div>
       ))}
     </div>
@@ -876,8 +878,11 @@ function ResourceTrackers({
   const maxFor = (id: string): number => {
     // The derived maxima are Dragonbane's two, keyed by its own ids; a resource
     // outside that pair reads its stored max, as before.
-    if (id === 'hp') return derived.hpMax;
-    if (id === 'wp') return derived.wpMax;
+    // `Number` is the conversion `DotTracker` already applied to whatever it
+    // was handed (`Math.min`, `Array.from({ length })`), so a missing or
+    // string value draws exactly what it did before the type said so.
+    if (id === 'hp') return Number(derived.hpMax);
+    if (id === 'wp') return Number(derived.wpMax);
     return character.resources?.[id]?.max ?? 0;
   };
 

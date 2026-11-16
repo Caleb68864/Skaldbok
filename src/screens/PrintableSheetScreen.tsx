@@ -7,19 +7,9 @@ import { getEngine } from '../features/systems/engine';
 import { resolveDerivedField } from '../utils/derivedValues';
 import * as characterRepository from '../storage/repositories/characterRepository';
 import type { CharacterRecord } from '../types/character';
-import PrintableSheet from '../components/PrintableSheet';
+import PrintableSheet, { type PrintDerivedValues } from '../components/PrintableSheet';
 import '../styles/print-sheet.css';
 import { DEFAULT_SYSTEM_ID } from '../systems/registry';
-
-/** Derived stats resolved once for the printout, after per-character overrides. */
-interface PrintDerivedValues {
-  damageBonus: string;
-  aglDamageBonus: string;
-  movement: number;
-  encumbranceLimit: number;
-  hpMax: number;
-  wpMax: number;
-}
 
 /**
  * Shell-less print route: renders {@link PrintableSheet} for the active character
@@ -124,10 +114,18 @@ export default function PrintableSheetScreen() {
     return [field.key, resolved.display] as const;
   });
 
-  const derived = {
-    ...(engineDerived as unknown as Record<string, string | number | undefined>),
+  // Only printable values are spread: an adapter's lookup tables (Traveller's
+  // per-characteristic DMs) are objects, which the sheet never reads and could
+  // not render.
+  const derived: PrintDerivedValues = {
+    ...Object.fromEntries(
+      Object.entries(engineDerived).filter(
+        (entry): entry is [string, string | number] =>
+          typeof entry[1] === 'string' || typeof entry[1] === 'number',
+      ),
+    ),
     ...Object.fromEntries(resolvedEntries.filter(([, value]) => value !== undefined)),
-  } as unknown as PrintDerivedValues;
+  };
 
   return (
     <>
