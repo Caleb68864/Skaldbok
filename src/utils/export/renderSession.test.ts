@@ -115,3 +115,42 @@ describe('renderSessionBundle', () => {
     expect(files.size).toBe(2);
   });
 });
+
+/**
+ * Handwriting lives in `note.typeData.ink`, which survives the JSON bundle and
+ * was dropped by every Markdown renderer: an ink-only log entry exported as a
+ * bare timestamp, and an ink note as an empty body, with nothing to say content
+ * had been left behind (roadmap `R`, recorded). Both cases fail against that
+ * code; the last pins that a note without ink is unchanged.
+ */
+describe('handwriting in the Markdown export', () => {
+  const ink = {
+    ink: {
+      version: 1,
+      pageHeight: 400,
+      strokes: [
+        { tool: 'pen', color: '#000', width: 2, points: [[0, 0, 0.5], [10, 10, 0.5]] },
+        { tool: 'pen', color: '#000', width: 2, points: [[5, 5, 0.5]] },
+      ],
+    },
+  };
+
+  it('says an ink-only log entry holds handwriting', () => {
+    const entry = makeLogEntry({ id: 'log-ink', body: textToDoc(''), typeData: ink });
+    const files = renderSessionBundle(makeSession(), [entry], []);
+    const index = Array.from(files.values())[0];
+    expect(index).toContain('Handwritten page (2 strokes)');
+  });
+
+  it('says an ink note holds handwriting', () => {
+    const note = makeNote({ id: 'note-ink', title: 'Map sketch', body: textToDoc(''), typeData: ink });
+    const files = renderSessionBundle(makeSession(), [note], []);
+    const md = Array.from(files.entries()).find(([name]) => name !== Array.from(files.keys())[0])![1];
+    expect(md).toContain('Handwritten page (2 strokes)');
+  });
+
+  it('adds nothing for a note without ink', () => {
+    const files = renderSessionBundle(makeSession(), [makeNote({ id: 'note-a' })], []);
+    for (const content of files.values()) expect(content).not.toContain('Handwritten');
+  });
+});

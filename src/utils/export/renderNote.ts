@@ -2,6 +2,22 @@ import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
 import { resolveWikiLinks } from './resolveWikiLinks';
 import { yamlValue } from './yamlValue';
+import { inkStrokeCount } from '../../features/notes/ink/strokeModel';
+
+/**
+ * A line saying a note carries handwriting that Markdown cannot hold, or `''`.
+ *
+ * @remarks
+ * Ink lives in `note.typeData`, which the JSON bundle carries and no Markdown
+ * renderer can. Without this an ink-only note exported as an empty body and an
+ * ink log entry as a bare timestamp, so nothing said content had been left
+ * behind.
+ */
+export function inkNotice(note: Pick<Note, 'typeData'>): string {
+  const strokes = inkStrokeCount(note.typeData);
+  if (strokes === 0) return '';
+  return `_[Handwritten page (${strokes} stroke${strokes === 1 ? '' : 's'}). Handwriting is not exported to Markdown; it is kept in a Skaldbok JSON export.]_`;
+}
 
 
 /**
@@ -51,6 +67,9 @@ export function renderNoteToMarkdown(
   const body = resolveWikiLinks(note.body, allNotes);
 
   let result = frontMatter + '\n\n' + body;
+
+  const ink = inkNotice(note);
+  if (ink) result += (body.trim() === '' ? '' : '\n\n') + ink + '\n';
 
   if (attachmentFilenames && attachmentFilenames.length > 0) {
     result += '\n\n## Attachments\n\n';

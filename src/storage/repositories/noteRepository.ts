@@ -6,7 +6,7 @@ import { nowISO } from '../../utils/dates';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
 import * as entityLinkRepository from './entityLinkRepository';
 import * as attachmentRepository from './attachmentRepository';
-import { serializeStrokePage, deserializeStrokePage } from '../../features/notes/ink/strokeModel';
+import { serializeStrokePage, deserializeStrokePage, INK_TYPE_DATA_KEY } from '../../features/notes/ink/strokeModel';
 import type { StrokePage } from '../../features/notes/ink/strokeModel';
 
 // Lazy import to avoid circular dependency — linkSyncEngine imports noteRepository
@@ -634,7 +634,6 @@ export async function addTagsToNotes(notes: Note[], tags: string[]): Promise<voi
  * {@link saveInkPage}, which always read-modify-writes rather than replacing
  * the whole `typeData` object.
  */
-const INK_TYPE_DATA_KEY = 'ink';
 
 function asTypeDataRecord(typeData: unknown): Record<string, unknown> {
   return typeData !== null && typeof typeData === 'object' ? (typeData as Record<string, unknown>) : {};
