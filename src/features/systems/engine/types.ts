@@ -596,6 +596,27 @@ export interface AdvancementModel {
   rollPrompt: (value: number) => string;
 }
 
+/**
+ * A rest as `system.json` declares it: its label, prompt and tracker flag. The
+ * adapter supplies `apply`, matched by `id`.
+ */
+export type RestDeclaration = Omit<RestDefinition, 'apply'>;
+
+/** The data half of an {@link AdvancementModel}, which `system.json` declares. */
+export type AdvancementDeclaration = Pick<AdvancementModel, 'sessionEvents'>;
+
+/** The rest of an {@link AdvancementModel}, which an adapter supplies. */
+export type AdvancementRules = Omit<AdvancementModel, keyof AdvancementDeclaration>;
+
+/** A live magic economy: {@link SystemEngine.magic} when it is not `null`. */
+export type MagicModel = NonNullable<SystemEngine['magic']>;
+
+/** The rule functions of a {@link MagicModel}, which an adapter supplies. */
+export type MagicRules = Pick<MagicModel, 'maxPrepared' | 'castingImpairment'>;
+
+/** The data half of a {@link MagicModel}, which `system.json` declares. */
+export type MagicDeclaration = Omit<MagicModel, keyof MagicRules>;
+
 /** One selectable difficulty on a system's target ladder. */
 export interface DifficultyOption {
   /** The number the roll must meet or beat. */

@@ -1,6 +1,6 @@
 {
   "id": "savage-worlds",
-  "version": 8,
+  "version": 15,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
   "engine": "trait-die-vs-tn",
@@ -680,5 +680,52 @@
         ]
       }
     ]
-  }
+  },
+  "derivedFields": [
+    {
+      "key": "pace",
+      "label": "Pace",
+      "shortLabel": "Pace"
+    },
+    {
+      "key": "parry",
+      "label": "Parry",
+      "shortLabel": "Parry"
+    },
+    {
+      "key": "toughness",
+      "label": "Toughness",
+      "shortLabel": "Tough"
+    },
+    {
+      "key": "encumbranceLimit",
+      "label": "Load Limit",
+      "shortLabel": "Load",
+      "overridable": true,
+      "surfaces": [
+        "dashboard",
+        "print"
+      ]
+    }
+  ],
+  "death": null,
+  "damageTrack": {
+    "kind": "levels",
+    "levels": 3,
+    "penaltyPerLevel": -1,
+    "order": [
+      "wounds"
+    ],
+    "overflowTo": [],
+    "downAtDepleted": 1,
+    "deadAtDepleted": null,
+    "downLabel": "INCAPACITATED",
+    "deadLabel": "DEAD"
+  },
+  "magic": null,
+  "advancement": null,
+  "probability": {
+    "difficulty": null
+  },
+  "rest": null
 }

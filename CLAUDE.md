@@ -179,8 +179,13 @@ scene-long buff in permanently. `resolveSkillValue` returns `base` and
    rules means a new adapter under `src/features/systems/engine/` and an entry in
    `ENGINE_ADAPTERS` in `engine/index.ts`, the one sanctioned mapping to behaviour
    (the "no `systemId ===`" rule applies everywhere *else*). Pure data — terms,
-   labels, panels, currency, outcomes, roll modifiers, time units, log actions —
-   lives in `system.json`, and an adapter spreads it with `declaredEngineData`.
+   labels, panels, currency, outcomes, roll modifiers, time units, log actions,
+   derived-field labels, and the data halves of the rules models — lives in
+   `system.json`, and an adapter spreads it with `declaredEngineData`. Where a
+   model mixes data and rules, the adapter keeps only the functions and joins
+   them on: `withMagicRules`, `withAdvancementRules`, and `withRestRules` (each
+   rest's `apply`, matched by id). Traveller's difficulty ladder is
+   `probability.difficulty`; `chance` stays in code.
 3. **Bump the `version` whenever you edit a bundled `system.json` — AND bump
    `sheet.json`'s *separate* `version` whenever you edit that file.** Both are
    cached in IndexedDB behind independent version gates (`useSystemDefinition`
@@ -197,8 +202,12 @@ scene-long buff in permanently. `resolveSkillValue` returns `base` and
 
 4. Keep `system.json` to one shape. Every bundled system declares `engine`,
    `terms`, `labels`, `panels`, `currency`, `outcomes`, `rollModifiers`,
-   `timeUnits` and `logActions`; `declaredEngineData` throws at load if one is
-   missing. Its blank template in `sample-data/` carries the current
+   `timeUnits`, `logActions`, `derivedFields`, `death`, `damageTrack`, `magic`,
+   `advancement`, `probability.difficulty` and `rest`. The nullable models
+   declare `null` when the system lacks the mechanic: `null` removes the
+   adapter's model, while absent (allowed for a user-authored system) keeps it,
+   so merge them with `declaredOr`, never `??`. `declaredEngineData` throws at
+   load if one is missing. Its blank template in `sample-data/` carries the current
    `schemaVersion` and every declared resource, which `bundledShape.test.ts`
    checks. A field added to `types/system.ts` also goes in
    `schemas/system.schema.ts`, or it vanishes on import.

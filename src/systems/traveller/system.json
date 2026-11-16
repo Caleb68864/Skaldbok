@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 26,
+  "version": 33,
   "name": "traveller",
   "displayName": "Traveller",
   "engine": "2d6-plus",
@@ -1691,5 +1691,103 @@
       "label": "Permanent",
       "abbrev": "∞"
     }
-  ]
+  ],
+  "derivedFields": [
+    {
+      "key": "initiativeDM",
+      "label": "Initiative DM",
+      "shortLabel": "Init"
+    },
+    {
+      "key": "encumbranceLimit",
+      "label": "Carry Limit (kg)",
+      "shortLabel": "Carry",
+      "overridable": true,
+      "surfaces": [
+        "dashboard",
+        "print"
+      ]
+    },
+    {
+      "key": "skillLevelTotal",
+      "label": "Skill Levels Spent",
+      "shortLabel": "Skills",
+      "surfaces": [
+        "print"
+      ]
+    },
+    {
+      "key": "creationSkillCap",
+      "label": "Creation Cap (3 × INT+EDU)",
+      "shortLabel": "Cap",
+      "surfaces": [
+        "print"
+      ]
+    }
+  ],
+  "death": null,
+  "damageTrack": {
+    "order": [
+      "end"
+    ],
+    "overflowTo": [
+      "str",
+      "dex"
+    ],
+    "downAtDepleted": 2,
+    "deadAtDepleted": 3,
+    "downLabel": "UNCONSCIOUS",
+    "deadLabel": "DEAD",
+    "statusConditions": {
+      "down": [
+        "unconscious"
+      ],
+      "dead": [
+        "unconscious"
+      ]
+    }
+  },
+  "magic": null,
+  "advancement": null,
+  "probability": {
+    "difficulty": {
+      "label": "Difficulty",
+      "defaultValue": 8,
+      "options": [
+        {
+          "value": 2,
+          "label": "Simple"
+        },
+        {
+          "value": 4,
+          "label": "Easy"
+        },
+        {
+          "value": 6,
+          "label": "Routine"
+        },
+        {
+          "value": 8,
+          "label": "Average"
+        },
+        {
+          "value": 10,
+          "label": "Difficult"
+        },
+        {
+          "value": 12,
+          "label": "Very Difficult"
+        },
+        {
+          "value": 14,
+          "label": "Formidable"
+        },
+        {
+          "value": 16,
+          "label": "Impossible"
+        }
+      ]
+    }
+  },
+  "rest": null
 }

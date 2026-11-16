@@ -268,7 +268,6 @@ const consumerSource = walk('src')
  * the codebase is knowingly not keeping; anything NOT here and unread is a bug.
  */
 const KNOWN_UNIMPLEMENTED: Record<string, string> = {
-  penaltyPerLevel: 'the number is single-sourced in savageWorldsEngine (pass 11); the FIELD still has no reader',
   roleFallback: 'no surface shows a profession fallback yet; the library card now uses identityFields instead',
   sectionLayouts: 'sheet layout comes from sheet.json; this predates it',
   themesSupported: 'theming is app-level, not per-system',

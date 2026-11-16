@@ -223,6 +223,77 @@ export const systemDefinitionSchema = z.object({
       encounterEnd: z.boolean().optional(),
     }).optional(),
   })).optional(),
+  // Labels and placement of derived stats; the maths stays in the adapter.
+  derivedFields: z.array(z.object({
+    key: z.string().min(1),
+    label: z.string().min(1),
+    shortLabel: z.string().min(1).optional(),
+    overridable: z.boolean().optional(),
+    surfaces: z.array(z.enum(['sheet', 'dashboard', 'print'])).optional(),
+  })).optional().describe("Derived stats this system shows; replaces the adapter's list"),
+  // `null` declares that the system has no death model; absent keeps the adapter's.
+  death: z.object({
+    triggerResourceId: z.string().min(1),
+    triggerAtOrBelow: z.number(),
+    downLabel: z.string().min(1),
+    deadLabel: z.string().min(1),
+    stabilizedLabel: z.string().min(1),
+    tracks: z.array(z.object({
+      id: z.string().min(1),
+      label: z.string().min(1),
+      max: z.number().int().positive(),
+      tone: z.enum(['danger', 'success']),
+      printLabel: z.string().min(1).optional(),
+    })),
+  }).nullable().optional().describe('Downed/dying rules; null when the system has none'),
+  // `null`: damage lands on one pool and stops. Absent keeps the adapter's.
+  damageTrack: z.object({
+    kind: z.enum(['pool', 'accumulating', 'levels']).optional(),
+    levels: z.number().int().positive().optional(),
+    penaltyPerLevel: z.number().optional(),
+    order: z.array(z.string().min(1)).min(1),
+    overflowTo: z.array(z.string().min(1)),
+    downAtDepleted: z.number().int().positive(),
+    deadAtDepleted: z.number().int().positive().nullable(),
+    downLabel: z.string().min(1),
+    deadLabel: z.string().min(1),
+    statusConditions: z.object({
+      down: z.array(z.string().min(1)).optional(),
+      dead: z.array(z.string().min(1)).optional(),
+    }).optional(),
+  }).nullable().optional().describe('How damage flows across health resources; null when it does not'),
+  // Data only; the casting rules are the adapter's. `null`: no automated magic.
+  magic: z.object({
+    resourceId: z.string().min(1),
+    powerLevels: z.array(z.number().int().positive()).min(1),
+    costPerLevel: z.number().nonnegative(),
+    trickCost: z.number().nonnegative(),
+    trickSchools: z.array(z.string().min(1)).optional(),
+  }).nullable().optional().describe('Spell economy; null when the system automates no magic'),
+  // Event ids key the stored session checks. `null`: no per-session advancement.
+  advancement: z.object({
+    sessionEvents: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })),
+  }).nullable().optional().describe('End-of-session advancement events; null when the system has none'),
+  // Data only; the odds are the adapter's `chance`.
+  probability: z.object({
+    difficulty: z.object({
+      label: z.string().min(1),
+      defaultValue: z.number(),
+      options: z.array(z.object({ value: z.number(), label: z.string().min(1) })).min(1),
+    }).nullable().optional(),
+  }).optional().describe('Resolution data: the difficulty ladder, or null when the roll needs none'),
+  // Labels and prompts; what each rest does is the adapter's `apply` for its id.
+  rest: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    prompt: z.object({
+      text: z.string().min(1),
+      die: z.number().int().positive(),
+      fields: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).min(1),
+      clearOneCondition: z.boolean().optional(),
+    }).optional(),
+    clearsRestTracker: z.boolean().optional(),
+  })).nullable().optional().describe('Rests in button order; null when the system has no rest procedure'),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),
@@ -428,6 +499,66 @@ export const systemDefinitionSchema = z.object({
         });
       }
     }
+  }
+
+  // A death model reads its trigger and its tallies from resources, so an id that
+  // names none would read as 0 forever: always down, never dead.
+  if (def.death) {
+    const resSet = new Set(resIds);
+    for (const id of [def.death.triggerResourceId, ...def.death.tracks.map(t => t.id)]) {
+      if (!resSet.has(id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `death names unknown resource "${id}"` });
+      }
+    }
+  }
+
+  // A track over a resource that does not exist absorbs nothing, and a status
+  // condition that does not exist is never set.
+  if (def.damageTrack) {
+    const resSet = new Set(resIds);
+    for (const id of [...def.damageTrack.order, ...def.damageTrack.overflowTo]) {
+      if (!resSet.has(id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `damageTrack names unknown resource "${id}"` });
+      }
+    }
+    const conditionIds = new Set(def.conditions.map(c => c.id));
+    const { down = [], dead = [] } = def.damageTrack.statusConditions ?? {};
+    for (const id of [...down, ...dead]) {
+      if (!conditionIds.has(id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `damageTrack names unknown condition "${id}"` });
+      }
+    }
+  }
+
+  // The selector shows the default as one of its options; one that is not there
+  // would select nothing while every displayed odds assumed it.
+  const difficulty = def.probability?.difficulty;
+  if (difficulty && !difficulty.options.some(o => o.value === difficulty.defaultValue)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `probability.difficulty default ${difficulty.defaultValue} is not one of its options`,
+    });
+  }
+
+  // A modifier timed to a rest that does not exist never expires. Only checkable
+  // when the rests are declared; absent ones are the adapter's.
+  if (def.rest !== undefined) {
+    const restIds = (def.rest ?? []).map(r => r.id);
+    flagDupes(restIds, 'rest');
+    for (const unit of def.timeUnits ?? []) {
+      const restId = unit.expiresOn?.rest;
+      if (restId && !restIds.includes(restId)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `timeUnit "${unit.id}" expires on undeclared rest "${restId}"` });
+      }
+    }
+  }
+
+  // Two events with one id would tick and untick together.
+  if (def.advancement) flagDupes(def.advancement.sessionEvents.map(e => e.id), 'session event');
+
+  // A spell economy over a missing resource deducts every cast from nothing.
+  if (def.magic && !resIds.includes(def.magic.resourceId)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `magic spends unknown resource "${def.magic.resourceId}"` });
   }
 
   for (const a of def.attributes) {

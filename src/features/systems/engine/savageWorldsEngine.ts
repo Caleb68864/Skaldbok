@@ -5,8 +5,11 @@ import { attrKey, resKey } from '../../../utils/statKeys';
 import { conditionPenalty } from '../../../utils/conditionEffects';
 import type { SystemDefinition } from '../../../types/system';
 import type { SystemEngine } from './types';
-import { declaredEngineData } from './declaredEngineData';
+import { declaredEngineData, missingRestThrows, withRestRules } from './declaredEngineData';
 import { savageWorldsSystem } from '../../../systems/savage-worlds';
+
+/** savage-worlds' `system.json` data, which the engine spreads. */
+const declared = declaredEngineData(savageWorldsSystem);
 
 export const SAVAGE_WORLDS_ATTRIBUTE_IDS = savageWorldsSystem.attributes.map(a => a.id);
 
@@ -18,25 +21,25 @@ export const SAVAGE_WORLDS_ATTRIBUTE_IDS = savageWorldsSystem.attributes.map(a =
  */
 const SAVAGE_UNSKILLED_DIE = 4;
 
-/**
- * The trait-roll penalty per level of Wounds and of Fatigue, and the level each
- * track caps at.
- *
- * @remarks
- * One source for numbers that appeared twice: `savageTraitPenalty` applied them
- * and `damageTrack` *declared* them, with nothing tying the two together.
- * `damageTrack.penaltyPerLevel: -1` in particular was read by nothing at all —
- * it stated the rule the penalty function separately hardcoded, so editing the
- * declaration would have changed no behaviour while looking as though it had.
- *
- * SWADE caps the Wound penalty at −3 (a 4th wound is Incapacitation, not −4)
- * and Fatigue at −2 (a 3rd level is Incapacitation).
- */
 /** How far past d12 a trait may advance: d12+1, d12+2. */
 const SAVAGE_MAX_DIE_BONUS = 2;
 
-const SAVAGE_PENALTY_PER_LEVEL = -1;
-const SAVAGE_MAX_WOUND_LEVELS = 3;
+/**
+ * The bundled damage track, for a caller that passes no system.
+ *
+ * @remarks
+ * `damageTrack.levels` and `penaltyPerLevel` used to be restated here as
+ * constants, with `penaltyPerLevel` read by nothing: editing the declaration
+ * changed no behaviour while looking as though it had. `savageTraitPenalty` now
+ * reads them from the system it is given, and this is the fallback.
+ */
+const SAVAGE_DAMAGE_TRACK = savageWorldsSystem.damageTrack;
+
+/**
+ * SWADE caps the Fatigue penalty at −2: a 3rd level is Incapacitation. Wounds
+ * cap at the declared `damageTrack.levels` (−3: a 4th wound is Incapacitation).
+ * Fatigue is not on the damage track, so its cap stays here.
+ */
 const SAVAGE_MAX_FATIGUE_LEVELS = 2;
 
 /**
@@ -129,8 +132,8 @@ export function computeSavageWorldsDerivedValues(character: CharacterRecord): Sa
  * the declaration changed the description a player reads and not the number they
  * roll, and a fourth condition added to the JSON did nothing at all.
  *
- * Wounds and Fatigue stay here: they are level tracks, not conditions, and the
- * per-level penalty is a SWADE constant this adapter owns.
+ * Wounds and Fatigue stay here: they are level tracks, not conditions. The
+ * per-level penalty and the Wound cap are the system's declared `damageTrack`.
  *
  * @param character - Whose state is being measured.
  * @param system - The active definition, for its declared condition effects.
@@ -147,8 +150,12 @@ export function savageTraitPenalty(
   // targets — which the modifier picker offers — completely inert.
   const track = (id: string) =>
     character.resources?.[id] ? Math.max(0, getEffectiveValue(resKey(id), character).effective) : 0;
-  mod += SAVAGE_PENALTY_PER_LEVEL * Math.min(track('wounds'), SAVAGE_MAX_WOUND_LEVELS);
-  mod += SAVAGE_PENALTY_PER_LEVEL * Math.min(track('fatigue'), SAVAGE_MAX_FATIGUE_LEVELS);
+  // Absent keeps the bundled track; a declared `null` means no level penalty.
+  const damageTrack = system?.damageTrack === undefined ? SAVAGE_DAMAGE_TRACK : system.damageTrack;
+  const perLevel = damageTrack?.penaltyPerLevel ?? 0;
+  const maxWounds = damageTrack?.levels ?? 0;
+  mod += perLevel * Math.min(track('wounds'), maxWounds);
+  mod += perLevel * Math.min(track('fatigue'), SAVAGE_MAX_FATIGUE_LEVELS);
   mod += conditionPenalty(system, character).modifier;
   return mod;
 }
@@ -219,7 +226,11 @@ export const savageWorldsEngine: SystemEngine = {
   },
   derivedStats: character => computeSavageWorldsDerivedValues(character),
   resourceIds: savageWorldsSystem.resources.map(r => r.id),
-  ...declaredEngineData(savageWorldsSystem),
+  // Also `magic: null` (no Arcane Background in the base ruleset; a caster build
+  // adds a PP pool later) and `damageTrack`: Wounds is a 0–3 level counter. A full track
+  // incapacitates a Wild Card (Extras drop at 1, handled by status rules later).
+  // Damage is applied as wounds, not points.
+  ...declared,
   // Damage total vs Toughness (2 + ½ Vigor + Armor, less any armor-piercing):
   // under = nothing; at/over = Shaken, or +1 Wound if already Shaken; +1 Wound
   // per 4 over Toughness. `raises` is intentionally unused — SWADE attack raises
@@ -239,22 +250,6 @@ export const savageWorldsEngine: SystemEngine = {
     return { levels, setsConditions: ['shaken'] };
   },
   primaryHealthResourceId: 'wounds',
-  // Wounds is a 0–3 level counter; Fatigue a parallel 0–2 counter. A full Wounds
-  // track incapacitates a Wild Card (Extras drop at 1 — handled by status rules
-  // later). Modelled as a level track; damage is applied as wounds, not points.
-  damageTrack: {
-    kind: 'levels',
-    levels: SAVAGE_MAX_WOUND_LEVELS,
-    penaltyPerLevel: SAVAGE_PENALTY_PER_LEVEL,
-    order: ['wounds'],
-    overflowTo: [],
-    downAtDepleted: 1,
-    deadAtDepleted: null,
-    downLabel: 'INCAPACITATED',
-    deadLabel: 'DEAD',
-  },
-  // No Arcane Background in the base ruleset; a caster build adds a PP pool later.
-  magic: null,
   encumbrance: {
     // Load Limit is Strength x5; a d12+1 Strength carries as a 13 would.
     limit: character => {
@@ -267,10 +262,12 @@ export const savageWorldsEngine: SystemEngine = {
       (character.armor?.weight ?? 0) +
       (character.helmet?.weight ?? 0),
   },
-  rest: null,
-  death: null,
+  // SWADE recovery is trait rolls: this adapter runs no rests, and declares none.
+  rest: withRestRules(declared.rest, {}, missingRestThrows(savageWorldsSystem.id)),
+  // No per-session advancement roll; the declared `advancement` is `null`.
   advancement: null,
   probability: {
+    ...declared.probability,
     // Trait die + Wild Die vs TN 4 (PCs are Wild Cards), with the character's
     // current Wound/Fatigue/condition penalty folded in.
     chance: (value, _state, context) =>
@@ -279,18 +276,6 @@ export const savageWorldsEngine: SystemEngine = {
         bonus: (context ? savageTraitPenalty(context.character, context.system) : 0) + die.bonus,
       }))(decodeTraitDie(value))),
   },
-  derivedFields: [
-    { key: 'pace', label: 'Pace', shortLabel: 'Pace' },
-    { key: 'parry', label: 'Parry', shortLabel: 'Parry' },
-    { key: 'toughness', label: 'Toughness', shortLabel: 'Tough' },
-    {
-      key: 'encumbranceLimit',
-      label: 'Load Limit',
-      shortLabel: 'Load',
-      overridable: true,
-      surfaces: ['dashboard', 'print'],
-    },
-  ],
   modifiableStats: system => [
     ...(system?.attributes ?? []).map(a => ({
       id: attrKey(a.id),

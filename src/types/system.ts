@@ -1,4 +1,7 @@
-import type { RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
+import type {
+  AdvancementDeclaration, DamageTrackModel, DeathModel, DerivedFieldDef, DifficultyModel, MagicDeclaration,
+  RestDeclaration, RulesEngineId, SystemLabels, SystemTerms, TimeUnit,
+} from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -585,6 +588,79 @@ export interface SystemDefinition {
   outcomes?: Array<{ id: string; label: string; tone?: 'success' | 'failure' | 'critical' | 'fumble' }>;
   rollModifiers?: Array<{ id: string; label: string }>;
   timeUnits?: TimeUnit[];
+  /**
+   * The derived stats this system shows, with their labels and the surfaces
+   * (sheet, dashboard, print) each appears on. REPLACES the adapter's list.
+   *
+   * @remarks
+   * Labels and placement only. The numbers come from the adapter's
+   * `derivedStats`, so a `key` must be one it computes
+   * (`engineContract.test.ts` checks the bundled systems).
+   */
+  derivedFields?: DerivedFieldDef[];
+  /**
+   * The downed/dying rules (Dragonbane's death rolls), or `null` when this
+   * system has none.
+   *
+   * @remarks
+   * `null` is a declaration, not an absence: absent keeps the adapter's model,
+   * `null` removes it. The trigger and each track name a declared resource.
+   */
+  death?: DeathModel | null;
+  /**
+   * How damage flows across this system's health resources, or `null` when it
+   * lands on one pool and stops. Absent keeps the adapter's, `null` removes it.
+   * `order`/`overflowTo` name resources, `statusConditions` name conditions.
+   */
+  damageTrack?: DamageTrackModel | null;
+  /**
+   * The spell economy (resource, power levels, costs, trick schools), or `null`
+   * when the system has no spellcasting the app automates. Absent keeps the
+   * adapter's, `null` removes it.
+   *
+   * @remarks
+   * Data only. The rule functions (`maxPrepared`, `castingImpairment`) come from
+   * the adapter, so an imported system on the classic-fantasy engine keeps
+   * Dragonbane's prepared-spell cap and metal-armour rule.
+   */
+  magic?: MagicDeclaration | null;
+  /**
+   * End-of-session advancement: the events a player ticks off, or `null` when
+   * the system has no per-session advancement. Absent keeps the adapter's, `null`
+   * removes it.
+   *
+   * @remarks
+   * Event ids key `CharacterRecord` session checks, so keep them stable across
+   * renames. The advancement roll itself (`usesMarks`, `maxSkillValue`,
+   * `rollPrompt`) is the adapter's, so on an adapter with no advancement model
+   * (Traveller, Savage Worlds) declared events have nothing to feed and the
+   * model stays `null`.
+   */
+  advancement?: AdvancementDeclaration | null;
+  /**
+   * Data for this system's resolution mechanic. The odds themselves are the
+   * adapter's `probability.chance`.
+   */
+  /**
+   * The rests this system offers, in button order, or `null` when it has no
+   * fixed rest procedure. Absent keeps the adapter's, `null` removes them.
+   *
+   * @remarks
+   * Labels, prompts and the tracker flag only. What a rest *does* is the
+   * adapter's `apply` for the same `id`, so a declared rest the adapter has no
+   * rules for is dropped with a warning (and refused for a bundled system). The
+   * `apply` reads its rolls by prompt field id (`wp`, `hp`), so keep those.
+   * `timeUnits[].expiresOn.rest` must name one of these ids.
+   */
+  rest?: RestDeclaration[] | null;
+  probability?: {
+    /**
+     * The task difficulty ladder a player picks a target from, or `null` for a
+     * system whose roll needs none (roll-under, a fixed TN). Absent keeps the
+     * adapter's, `null` removes it.
+     */
+    difficulty?: DifficultyModel | null;
+  };
   /**
    * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
    * a table of legs with system-specific fields. Absent = no route planner

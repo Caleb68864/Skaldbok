@@ -5,7 +5,7 @@ import { classicFantasyEngine } from './classicFantasyEngine';
 import { travellerEngine } from './travellerEngine';
 import { savageWorldsEngine } from './savageWorldsEngine';
 import type { RulesEngineId, SystemEngine } from './types';
-import { currencyFromDenominations } from './declaredEngineData';
+import { currencyFromDenominations, withAdvancementRules, withMagicRules, withRestRules } from './declaredEngineData';
 import { BUNDLED_SYSTEMS, DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 
 export type { SystemEngine, PanelKey, SystemTerms, SystemLabels, SkillDisplayContext } from './types';
@@ -36,6 +36,14 @@ export const SYSTEM_ADAPTERS: Record<string, SystemEngine> = Object.fromEntries(
     return adapter ? [[s.id, adapter]] : [];
   }),
 );
+
+/**
+ * A nullable model a system may declare: absent keeps the adapter's, `null`
+ * removes it. `??` would treat the `null` as absent and bring the adapter's back.
+ */
+function declaredOr<T>(declared: T | null | undefined, base: T | null): T | null {
+  return declared === undefined ? base : declared;
+}
 
 const hasOwn = (map: object, key: string) => Object.prototype.hasOwnProperty.call(map, key);
 
@@ -96,6 +104,25 @@ function mergeCurrency(
   return declared.denominations
     ? currencyFromDenominations(merged.label, merged.baseDenominationId, declared.denominations)
     : merged;
+}
+
+/**
+ * Folds a system's declared difficulty ladder over the adapter's probability.
+ *
+ * @remarks
+ * `chance` is always the adapter's. Absent keeps its ladder, `null` removes it.
+ */
+function mergeProbability(
+  base: SystemEngine['probability'],
+  declared: SystemDefinition['probability'],
+): SystemEngine['probability'] {
+  const difficulty = declared?.difficulty;
+  if (difficulty === undefined) return base;
+  if (difficulty === null) {
+    const { difficulty: _removed, ...rest } = base;
+    return rest;
+  }
+  return { ...base, difficulty };
 }
 
 /**
@@ -171,6 +198,25 @@ export function getEngine(
     rollModifiers: system.rollModifiers ?? base.rollModifiers,
     timeUnits: system.timeUnits ?? base.timeUnits,
     panels: system.panels ?? base.panels,
+    derivedFields: system.derivedFields ?? base.derivedFields,
+    death: declaredOr(system.death, base.death),
+    damageTrack: declaredOr(system.damageTrack, base.damageTrack),
+    // Declared data, the adapter's casting rules.
+    magic: system.magic === undefined ? base.magic : withMagicRules(system.magic, base.magic ?? undefined),
+    advancement: system.advancement === undefined
+      ? base.advancement
+      : withAdvancementRules(system.advancement, base.advancement),
+    probability: mergeProbability(base.probability, system.probability),
+    // Declared labels and prompts, the adapter's `apply` for each id.
+    rest: system.rest === undefined
+      ? base.rest
+      : withRestRules(
+        system.rest,
+        Object.fromEntries((base.rest ?? []).map(r => [r.id, r.apply])),
+        restId => console.warn(
+          `getEngine: system "${system.id}" declares rest "${restId}", which its rules adapter cannot run. Left out.`,
+        ),
+      ),
     currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);

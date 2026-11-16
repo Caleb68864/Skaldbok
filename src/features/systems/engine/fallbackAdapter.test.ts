@@ -36,7 +36,7 @@ describe('selecting the adapter by declaration (roadmap E4)', () => {
     }) as unknown as SystemDefinition;
     const engine = getEngine(authored);
     expect(engine.fallbackRulesFor).toBeUndefined();
-    expect(engine.probability).toBe(travellerEngine.probability);
+    expect(engine.probability.chance).toBe(travellerEngine.probability.chance);
     expect(warn).not.toHaveBeenCalled();
   });
 
@@ -49,7 +49,7 @@ describe('selecting the adapter by declaration (roadmap E4)', () => {
     const { engine: _engine, ...older } = travellerSystem;
     const engine = getEngine({ ...older, version: 1 } as SystemDefinition);
     expect(engine.fallbackRulesFor).toBeUndefined();
-    expect(engine.probability).toBe(travellerEngine.probability);
+    expect(engine.probability.chance).toBe(travellerEngine.probability.chance);
   });
 
   it('refuses an engine id that does not exist at import', () => {

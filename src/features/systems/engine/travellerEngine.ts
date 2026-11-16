@@ -11,8 +11,11 @@ import type { SystemDefinition } from '../../../types/system';
 import { DEFAULT_TRAVELLER_JUMP_RANGE, DEFAULT_TRAVELLER_MILIEU } from '../../../config/defaults/travellerBriefing';
 import { planTravellerMapRoute } from '../../route/travellerMapRoute';
 import { TRAVELLER_GEAR_CATEGORIES, inferTravellerGearCategory, reviewTravellerGear } from '../../travellerBriefing/gearRestrictions';
-import { declaredEngineData } from './declaredEngineData';
+import { declaredEngineData, missingRestThrows, withRestRules } from './declaredEngineData';
 import { travellerSystem } from '../../../systems/traveller';
+
+/** traveller's `system.json` data, which the engine spreads. */
+const declared = declaredEngineData(travellerSystem);
 
 export const TRAVELLER_ATTRIBUTE_IDS = travellerSystem.attributes.map(a => a.id);
 
@@ -193,8 +196,17 @@ export function computeTravellerDerivedValues(
  * `twoD6SuccessProbability` and `threeD6KeepTwoProbability` already take the
  * target as a parameter, so a difficulty selector is a UI change, not a maths
  * one.
+ *
+ * It is the declared ladder's `defaultValue` (`probability.difficulty` in
+ * `system.json`) rather than a second copy of it.
  */
-export const TRAVELLER_DEFAULT_TARGET = 8;
+export const TRAVELLER_DEFAULT_TARGET = travellerDefaultTarget();
+
+function travellerDefaultTarget(): number {
+  const difficulty = declared.probability.difficulty;
+  if (!difficulty) throw new Error('traveller system.json declares no probability.difficulty');
+  return difficulty.defaultValue;
+}
 
 /** The book's penalty for attempting a skill the character does not have at all. */
 export const UNSKILLED_DM = -3;
@@ -381,60 +393,36 @@ export const travellerEngine: SystemEngine = {
   },
   derivedStats: (character, system) => computeTravellerDerivedValues(character, system),
   resourceIds: TRAVELLER_DAMAGE_TRACK_IDS,
-  ...declaredEngineData(travellerSystem),
+  // Also `damageTrack`: damage fills END first, then spills into whichever
+  // physical characteristic the player chooses. Two empty tracks put a Traveller
+  // out of the fight; all three is fatal. A depleted physical track is what
+  // "Unconscious" means in Mongoose 2e, so `statusConditions` makes the stored
+  // flag follow the banner. `wounded` is left to the player: its description
+  // overlaps, but a GM may want it ticked before a full depletion.
+  // Also `magic: null` (psionics exist but the app does not automate a PP
+  // economy yet), `death: null` (a downed character is handled by the damage track) and
+  // `derivedFields`. Skill Levels Spent and Creation Cap are print only:
+  // they are creation-time checks, and a permanent sheet tile reading "18 / 51"
+  // is noise for the rest of a character's life, but it is exactly what you want
+  // on the sheet you build a character against.
+  ...declared,
   primaryHealthResourceId: 'end',
-  // Damage fills END first, then spills into whichever physical characteristic
-  // the player chooses. Two empty tracks put a Traveller out of the fight;
-  // all three is fatal.
-  damageTrack: {
-    order: ['end'],
-    overflowTo: ['str', 'dex'],
-    downAtDepleted: 2,
-    deadAtDepleted: 3,
-    downLabel: 'UNCONSCIOUS',
-    deadLabel: 'DEAD',
-    // A depleted physical track is what "Unconscious" means in Mongoose 2e, so
-    // the stored flag follows the banner instead of the two disagreeing.
-    // `wounded` is left to the player: its description ("Physical damage track
-    // is depleted") overlaps, but a GM may want it ticked before a full
-    // depletion, and auto-owning it would fight them.
-    statusConditions: {
-      down: ['unconscious'],
-      dead: ['unconscious'],
-    },
-  },
-  // Psionics exist but the app does not automate a PP economy yet.
-  magic: null,
   encumbrance: {
     limit: computeTravellerCarryLimit,
     load: computeTravellerLoad,
   },
-  // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
-  rest: null,
-  // No death-roll track; a downed character is handled by the damage track.
-  death: null,
-  // Advancement is study/training time, not per-session rolls.
+  // Advancement is study/training time, not per-session rolls, so this adapter
+  // has no advancement roll and the declared `advancement: null` is the only
+  // value it can take.
   advancement: null,
+  // Traveller recovery is Medic checks and downtime, not a fixed rest ladder, so
+  // this adapter runs no rests and the declared `rest` is `null`.
+  rest: withRestRules(declared.rest, {}, missingRestThrows(travellerSystem.id)),
   probability: {
-    /**
-     * Mongoose's task difficulty ladder. Declared here rather than read from
-     * the Quick Reference card of the same name: that card is display copy a
-     * user may reword or delete, and the odds must not depend on prose.
-     */
-    difficulty: {
-      label: 'Difficulty',
-      defaultValue: TRAVELLER_DEFAULT_TARGET,
-      options: [
-        { value: 2, label: 'Simple' },
-        { value: 4, label: 'Easy' },
-        { value: 6, label: 'Routine' },
-        { value: 8, label: 'Average' },
-        { value: 10, label: 'Difficult' },
-        { value: 12, label: 'Very Difficult' },
-        { value: 14, label: 'Formidable' },
-        { value: 16, label: 'Impossible' },
-      ],
-    },
+    // Mongoose's task difficulty ladder, declared in system.json rather than
+    // read from the Quick Reference card of the same name: that card is display
+    // copy a user may reword or delete, and the odds must not depend on prose.
+    ...declared.probability,
     // Skill level + linked-characteristic DM vs the selected target.
     chance: (value, state, context) => {
       // Same DM + unskilled derivation as skill.display, via the shared helper,
@@ -447,31 +435,6 @@ export const travellerEngine: SystemEngine = {
       return twoD6SuccessProbability(target, modifier);
     },
   },
-  derivedFields: [
-    { key: 'initiativeDM', label: 'Initiative DM', shortLabel: 'Init' },
-    {
-      key: 'encumbranceLimit',
-      label: 'Carry Limit (kg)',
-      shortLabel: 'Carry',
-      overridable: true,
-      surfaces: ['dashboard', 'print'],
-    },
-    {
-      // Print only. It is a creation-time check, and a permanent sheet tile
-      // reading "18 / 51" is noise for the rest of a character's life — but it
-      // is exactly what you want on the sheet you build a character against.
-      key: 'skillLevelTotal',
-      label: 'Skill Levels Spent',
-      shortLabel: 'Skills',
-      surfaces: ['print'],
-    },
-    {
-      key: 'creationSkillCap',
-      label: 'Creation Cap (3 × INT+EDU)',
-      shortLabel: 'Cap',
-      surfaces: ['print'],
-    },
-  ],
   // Characteristics and damage-track resources share ids (str/dex/end), so the
   // namespace is what keeps `attr:str` and `res:str` distinct targets.
   modifiableStats: system => [

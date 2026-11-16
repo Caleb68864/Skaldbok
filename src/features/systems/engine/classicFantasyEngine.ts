@@ -12,7 +12,9 @@ import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
 import { attrKey, armorKey, derivedKey } from '../../../utils/statKeys';
 import type { SystemEngine, RestDefinition } from './types';
-import { declaredEngineData } from './declaredEngineData';
+import {
+  declaredEngineData, missingRestThrows, withAdvancementRules, withMagicRules, withRestRules,
+} from './declaredEngineData';
 import { classicFantasySystem } from '../../../systems/classic-fantasy';
 
 /**
@@ -35,80 +37,58 @@ export function formatSkillProbability(value: number, state: BoonBaneState): str
 }
 
 /**
- * Dragonbane's three rests, expressed as data.
+ * What Dragonbane's three rests do, keyed by the rest ids `system.json` declares.
  *
  * @remarks
- * Each `apply` delegates to the existing pure helpers in `utils/restActions`
- * rather than restating the rules, so behaviour is unchanged.
+ * The labels and prompts are declared data. Each function delegates to the
+ * existing pure helpers in `utils/restActions` rather than restating the rules,
+ * so behaviour is unchanged. Rolls arrive keyed by the declared prompt field ids
+ * (`wp`, `hp`).
  */
-const classicFantasyRests: RestDefinition[] = [
-  {
-    id: 'round',
-    label: 'Round Rest',
-    prompt: {
-      text: 'Roll a d6 for WP recovery.',
-      die: 6,
-      fields: [{ id: 'wp', label: 'd6 Result' }],
-    },
-    apply: (character, rolls) => {
-      const result = applyRoundRest(character, rolls.wp ?? 0);
-      const noop = result.alreadyFull && result.recovered === 0;
-      return {
-        resources: { wp: result.newWpCurrent },
-        conditionsCleared: [],
-        messages: [noop ? 'Already at full WP.' : `Recovered ${result.recovered} WP.`],
-        noop,
-      };
-    },
+const classicFantasyRestRules: Record<string, RestDefinition['apply']> = {
+  round: (character, rolls) => {
+    const result = applyRoundRest(character, rolls.wp ?? 0);
+    const noop = result.alreadyFull && result.recovered === 0;
+    return {
+      resources: { wp: result.newWpCurrent },
+      conditionsCleared: [],
+      messages: [noop ? 'Already at full WP.' : `Recovered ${result.recovered} WP.`],
+      noop,
+    };
   },
-  {
-    id: 'stretch',
-    label: 'Stretch Rest',
-    prompt: {
-      text: 'Roll d6 for WP and HP recovery. WP is fully restored. HP is recovered by your roll result.',
-      die: 6,
-      fields: [
-        { id: 'wp', label: 'WP d6 Result' },
-        { id: 'hp', label: 'HP d6 Result' },
+  stretch: (character, rolls, conditionToClear) => {
+    const result = applyStretchRest(character, rolls.wp ?? 0, rolls.hp ?? 0, conditionToClear);
+    const messages: string[] = [
+      result.alreadyFullWp ? 'Already at full WP.' : 'WP restored to max.',
+      result.alreadyFullHp && result.hpRecovered === 0
+        ? 'Already at full HP.'
+        : `Recovered ${result.hpRecovered} HP.`,
+    ];
+    return {
+      resources: { wp: result.newWpCurrent, hp: result.newHpCurrent },
+      conditionsCleared: result.conditionCleared ? [result.conditionCleared] : [],
+      messages,
+    };
+  },
+  // Ends the day: the declared `clearsRestTracker` clears the round/stretch marks.
+  shift: character => {
+    const result = applyShiftRest(character);
+    return {
+      resources: {
+        hp: character.resources['hp']?.max ?? 0,
+        wp: character.resources['wp']?.max ?? 0,
+      },
+      conditionsCleared: result.conditionsCleared,
+      messages: [
+        result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.',
+        result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.',
       ],
-      clearOneCondition: true,
-    },
-    apply: (character, rolls, conditionToClear) => {
-      const result = applyStretchRest(character, rolls.wp ?? 0, rolls.hp ?? 0, conditionToClear);
-      const messages: string[] = [
-        result.alreadyFullWp ? 'Already at full WP.' : 'WP restored to max.',
-        result.alreadyFullHp && result.hpRecovered === 0
-          ? 'Already at full HP.'
-          : `Recovered ${result.hpRecovered} HP.`,
-      ];
-      return {
-        resources: { wp: result.newWpCurrent, hp: result.newHpCurrent },
-        conditionsCleared: result.conditionCleared ? [result.conditionCleared] : [],
-        messages,
-      };
-    },
+    };
   },
-  {
-    id: 'shift',
-    label: 'Shift Rest',
-    // Ends the day: clears the round/stretch "used" marks.
-    clearsRestTracker: true,
-    apply: character => {
-      const result = applyShiftRest(character);
-      return {
-        resources: {
-          hp: character.resources['hp']?.max ?? 0,
-          wp: character.resources['wp']?.max ?? 0,
-        },
-        conditionsCleared: result.conditionsCleared,
-        messages: [
-          result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.',
-          result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.',
-        ],
-      };
-    },
-  },
-];
+};
+
+/** classic-fantasy's `system.json` data, which the engine below spreads. */
+const declared = declaredEngineData(classicFantasySystem);
 
 /**
  * The Dragonbane-like default ruleset, expressed as a {@link SystemEngine}.
@@ -163,18 +143,17 @@ export const classicFantasyEngine: SystemEngine = {
   },
   derivedStats: (character, system) => computeDerivedValues(character, system),
   resourceIds: classicFantasySystem.resources.filter(r => r.role !== 'counter').map(r => r.id),
-  ...declaredEngineData(classicFantasySystem),
+  // Also `damageTrack: null` (Dragonbane damage lands on HP and stops; being at
+  // 0 is handled by the death-roll model, not by a cascading track), `death`
+  // (the death-roll tracks), `derivedFields` and the data halves of `magic` and `advancement`. Derived-field
+  // surfaces reproduce the three layouts that existed before: the sheet shows
+  // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
+  // vitals module already shows), and the print sheet four.
+  ...declared,
   primaryHealthResourceId: 'hp',
-  // Dragonbane damage lands on HP and stops; being at 0 is handled by the
-  // death-roll model below, not by a cascading track.
-  damageTrack: null,
-  // Willpower economy: a power level `n` spell costs `n * 2` WP; a magic trick
-  // (power level 0) costs 1. Was hardcoded in the ability/magic modules. E11.
-  magic: {
-    resourceId: 'wp',
-    powerLevels: [1, 2, 3],
-    costPerLevel: 2,
-    trickCost: 1,
+  // The willpower economy is declared (a power level `n` spell costs `n * 2` WP,
+  // a magic trick costs 1); these are Dragonbane's casting rules beside it. E11.
+  magic: withMagicRules(declared.magic, {
     // INT's base chance caps prepared spells. Was computed by the magic screen
     // for every system, Dragonbane rule and all.
     maxPrepared: computeMaxPreparedSpells,
@@ -182,37 +161,20 @@ export const classicFantasyEngine: SystemEngine = {
     // wrote its own warning, so every magical system inherited the rule.
     castingImpairment: character =>
       isMetalEquipped(character) ? 'Metal armour blocks spellcasting' : null,
-    trickSchools: ['trick', 'magic tricks'],
-  },
+  }),
   encumbrance: {
     limit: computeEncumbranceLimit,
     load: computeCarriedWeight,
   },
-  rest: classicFantasyRests,
-  death: {
-    triggerResourceId: 'hp',
-    triggerAtOrBelow: 0,
-    downLabel: 'Character is DOWN!',
-    deadLabel: 'DEAD',
-    stabilizedLabel: 'Stabilized!',
-    tracks: [
-      // Plural on screen, singular as a printed column heading.
-      { id: 'deathRolls', label: 'Failures', max: 3, tone: 'danger', printLabel: 'Failure' },
-      { id: 'deathSuccesses', label: 'Successes', max: 3, tone: 'success', printLabel: 'Success' },
-    ],
-  },
-  advancement: {
-    sessionEvents: [
-      { id: 'combat', label: '⚔️ Participated in combat' },
-      { id: 'explore', label: '🗺️ Explored a new location' },
-      { id: 'weakness', label: '💔 Role-played a weakness' },
-      { id: 'heroic', label: '✨ Used a heroic ability' },
-    ],
+  rest: withRestRules(declared.rest, classicFantasyRestRules, missingRestThrows(classicFantasySystem.id)),
+  // The session events are declared; this is Dragonbane's advancement roll.
+  advancement: withAdvancementRules(declared.advancement, {
     usesMarks: true,
     maxSkillValue: 18,
     rollPrompt: value => `Roll above ${value} on a d20 to advance`,
-  },
+  }),
   probability: {
+    ...declared.probability,
     chance: (value, state) =>
       state === 'boon' ? calcBoonProb(value) : state === 'bane' ? calcBaneProb(value) : calcNormalProb(value),
   },
@@ -227,16 +189,5 @@ export const classicFantasyEngine: SystemEngine = {
     { id: derivedKey('movement'), label: 'Movement', group: 'Derived' },
     { id: derivedKey('hpMax'), label: 'Max HP', group: 'Derived' },
     { id: derivedKey('wpMax'), label: 'Max WP', group: 'Derived' },
-  ],
-  // Surfaces reproduce today's three distinct layouts exactly: the sheet shows
-  // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
-  // vitals module already shows), and the print sheet four.
-  derivedFields: [
-    { key: 'movement', label: 'Movement', shortLabel: 'Move', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
-    { key: 'hpMax', label: 'HP Max', overridable: true, surfaces: ['sheet'] },
-    { key: 'wpMax', label: 'WP Max', overridable: true, surfaces: ['sheet'] },
-    { key: 'damageBonus', label: 'STR Damage Bonus', shortLabel: 'STR Dmg', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
-    { key: 'aglDamageBonus', label: 'AGL Damage Bonus', shortLabel: 'AGL Dmg', overridable: true, surfaces: ['sheet', 'dashboard', 'print'] },
-    { key: 'encumbranceLimit', label: 'Encumbrance Limit', shortLabel: 'Carry', overridable: true, surfaces: ['dashboard', 'print'] },
   ],
 };
