@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, configure, fireEvent, getConfig, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import TravellerBriefingScreen from '../../screens/TravellerBriefingScreen';
 import TravellerWeatherReportsScreen from '../../screens/TravellerWeatherReportsScreen';
@@ -79,7 +79,26 @@ async function buildReport(expectEnabled = true) {
   await waitFor(() => expect(screen.getByRole('button', { name: 'Save to session log' }).hasAttribute('disabled')).toBe(!expectEnabled));
 }
 
-describe('Traveller briefing session log action', () => {
+// Each case renders the full briefing screen and walks it through several
+// async steps, so under full-suite load a step can take longer than Testing
+// Library's 1 s `findBy` default and the first, cold case longer than Vitest's
+// 5 s test default. That was the flake recorded in roadmap V and U2: 1 to 4
+// cases failing with "Unable to find role=button", different ones each run,
+// and never alone. Reproduced by pinning this file and twelve busy loops to one
+// core (4 failed); with these limits the same run passes. Generous limits cost
+// nothing when the screen is fast, and a real regression still fails, only
+// later.
+const ASYNC_UTIL_TIMEOUT_MS = 10_000;
+let previousAsyncUtilTimeout = 1000;
+beforeAll(() => {
+  previousAsyncUtilTimeout = getConfig().asyncUtilTimeout;
+  configure({ asyncUtilTimeout: ASYNC_UTIL_TIMEOUT_MS });
+});
+afterAll(() => {
+  configure({ asyncUtilTimeout: previousAsyncUtilTimeout });
+});
+
+describe('Traveller briefing session log action', { timeout: 30_000 }, () => {
   afterEach(cleanup);
   beforeEach(() => {
     mocks.session = { id: 'session-1', campaignId: 'campaign-1', title: 'Arrival at Zila', date: '2026-09-26' };
