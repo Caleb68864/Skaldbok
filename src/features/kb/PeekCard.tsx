@@ -52,44 +52,93 @@ export function PeekCard({ nodeId, onClose, onOpen }: PeekCardProps) {
   // note is private costs nothing and closes the last surface where a private
   // note looked like every other one.
   const [isPrivate, setIsPrivate] = useState(false);
+  // Why the card could not show everything. A failed node read used to close
+  // the card (`catch { onClose() }`), so a long press that hit a storage
+  // failure looked like nothing happened; a body that failed `JSON.parse` took
+  // the same exit and hid a node that had loaded.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [bodyError, setBodyError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
+    setNode(null);
+    setSnippet('');
+    setIsPrivate(false);
+    setLoadError(null);
+    setBodyError(null);
 
     async function load() {
+      let kbNode: KBNode | undefined;
       try {
-        const kbNode = await getNodeById(nodeId);
-        if (!mounted) return;
-        if (!kbNode) {
-          onClose();
-          return;
-        }
-        setNode(kbNode);
+        kbNode = await getNodeById(nodeId);
+      } catch (err) {
+        console.error('PeekCard: node read failed', err);
+        if (mounted) setLoadError(err instanceof Error ? err.message : String(err));
+        return;
+      }
+      if (!mounted) return;
+      // A link whose node is simply gone has nothing to preview: closing
+      // quietly is still right for that one.
+      if (!kbNode) {
+        onClose();
+        return;
+      }
+      setNode(kbNode);
 
-        // If it's a note type, load the actual note for a snippet
-        if (kbNode.sourceId) {
-          const note = await getNoteById(kbNode.sourceId);
-          if (mounted && note) {
-            setIsPrivate(note.visibility === 'private');
-            if (note.body) {
-              const body =
-                typeof note.body === 'string'
-                  ? JSON.parse(note.body)
-                  : note.body;
-              setSnippet(extractTextSnippet(body));
-            }
-          }
+      // If it's a note type, load the actual note for a snippet
+      if (!kbNode.sourceId) return;
+      let note;
+      try {
+        note = await getNoteById(kbNode.sourceId);
+      } catch (err) {
+        console.error('PeekCard: note read failed', err);
+        if (mounted) {
+          setBodyError(`Couldn't load this note's text — ${err instanceof Error ? err.message : String(err)}`);
         }
-      } catch {
-        if (mounted) onClose();
+        return;
+      }
+      if (!mounted || !note) return;
+      setIsPrivate(note.visibility === 'private');
+      if (!note.body) return;
+      try {
+        const body = typeof note.body === 'string' ? JSON.parse(note.body) : note.body;
+        setSnippet(extractTextSnippet(body));
+      } catch (err) {
+        console.error('PeekCard: note body did not parse', err);
+        setBodyError("This note's text couldn't be read — it may be damaged.");
       }
     }
 
-    load();
+    void load();
     return () => {
       mounted = false;
     };
   }, [nodeId, onClose]);
+
+  if (loadError) {
+    return (
+      <div className="fixed inset-0 z-[200] flex items-end justify-center" onClick={onClose}>
+        <div className="absolute inset-0 bg-black/30" aria-hidden="true" />
+        <div
+          className="relative w-full max-w-[400px] mx-4 mb-4 p-4 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-xl shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p role="alert" className="text-sm text-[var(--color-danger)]">
+              Couldn't load this preview — {loadError}
+            </p>
+            <button
+              onClick={onClose}
+              className="text-[var(--color-text-muted)] bg-transparent border-none cursor-pointer text-lg"
+              aria-label="Close"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!node) return null;
 
@@ -126,6 +175,12 @@ export function PeekCard({ nodeId, onClose, onOpen }: PeekCardProps) {
             &times;
           </button>
         </div>
+
+        {bodyError && (
+          <p role="alert" className="text-sm text-[var(--color-danger)] mb-3">
+            {bodyError}
+          </p>
+        )}
 
         {snippet && (
           <p className="text-sm text-[var(--color-text-muted)] mb-3">
