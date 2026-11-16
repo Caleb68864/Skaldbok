@@ -1016,7 +1016,7 @@ is a hard delete from the user's point of view.
   (Dexie stores Blobs natively) and keep a ≤ 8 KB thumbnail on the record. Add
   a migration; the `portraitUri` string form stays readable for imports.
 
-### H9. Two full-text indexes over overlapping content — OPEN (V)
+### H9. Two full-text indexes over overlapping content — OPEN, two defects fixed (see ROADMAP-UPDATES-2026-11-16-wave3.md)
 - **Where:** `features/notes/useNoteSearch.ts:18` is a module-global MiniSearch
   rebuilt with `removeAll` + `addAll` (`:61-63`); `features/kb/useKBSearch.ts:34`
   is a per-mount index built with `addAllAsync`. KB nodes are synced from notes
@@ -1126,7 +1126,7 @@ is a hard delete from the user's point of view.
   `useLedger.ts` 3, one each in eleven more files) against 202 `nowISO()` calls.
 - **Fix:** Mechanical replace; `no-restricted-properties` in I1 keeps it fixed.
 
-### I7. Casts that paper over type disagreements — OPEN (V)
+### I7. Casts that paper over type disagreements — DONE except `sanitizeDeep` (afca664, 21e3d95; see ROADMAP-UPDATES-2026-11-16-wave3.md)
 - **Where:** 21 `as unknown as` in non-test source. Six are the same cast of
   `engine.derivedStats()` to `Record<string, …>` (`SheetScreen.tsx:292`,
   `GearScreen.tsx:368`, `PrintableSheet.tsx:191`,
@@ -2253,9 +2253,10 @@ What step 13 deliberately left:
 - **D12:** the dragon/demon mark glyphs, their colours and the marked-count
   badge are still Dragonbane's, written into `SkillsScreen`. That wants
   `skill.marks?: [{ id, label, glyph }]` and a rewrite of the mark cycle.
-  Also still open from D12: `WeaponEditor`'s grip and damage-type lists,
-  `remakeCurrency` bypassing `engine.currency`, the `bennies` card key, and the
-  `StatKey`/`restsUsed` unions in `types/character.ts`.
+  Also still open from D12: `WeaponEditor`'s grip and damage-type lists and
+  the `bennies` card key. (2026-11-16 wave 3: the `StatKey`/`restsUsed` unions
+  are widened, `4885d08`; `remakeCurrency` was found to read and write through
+  `engine.currency` already.)
 
 Seven things a future reader should know before picking up the rest:
 
@@ -2478,7 +2479,9 @@ than acted on. Two are serious.
 - `note.typeData` — where ink strokes live — survives the JSON bundle and is
   dropped by every Markdown/ZIP renderer.
 - Five test-only pure helpers (`entriesForAccount`, `countEarnedMarks`,
-  `hasBlankTemplate`, `removeDebtPayment`, `raiseChance`) and the unreachable
+  `hasBlankTemplate`, `removeDebtPayment`, `raiseChance`) — four moved to
+  `src/test-utils/domainHelpers.ts` in `068a132`, `hasBlankTemplate` left (see
+  the wave 3 file) — and the unreachable
   `notesToTimeline` adapter module. The adapter is left because three doc comments
   name it as the timeline component library's canonical extension point, so
   removing it is a decision about that library's documented architecture rather
