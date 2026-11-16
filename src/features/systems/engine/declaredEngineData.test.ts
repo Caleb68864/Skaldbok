@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { systemDefinitionSchema } from '../../../../schemas/system.schema';
 import { BUNDLED_SYSTEMS } from '../../../systems/registry';
 import { declaredEngineData } from './declaredEngineData';
-import { getEngine } from './index';
+import { classicFantasyEngine, getEngine } from './index';
 import { classicFantasySystem } from '../../../systems/classic-fantasy';
 import type { SystemDefinition } from '../../../types/system';
 import type { CharacterRecord } from '../../../types/character';
@@ -135,5 +135,41 @@ describe('damageTrack declared in system.json (roadmap E1)', () => {
 
   it('refuses a bundled system without it', () => {
     expect(() => declaredEngineData(without(classicFantasySystem, 'damageTrack'))).toThrow(/does not declare/);
+  });
+});
+
+describe('magic declared in system.json (roadmap E1)', () => {
+  it.each(bundled)('%s declares its magic economy, or null, and keeps it through import', (_id, system) => {
+    expect(system.magic, 'no magic in system.json').toBeDefined();
+    expect(systemDefinitionSchema.parse(system).magic).toEqual(system.magic);
+    // The declared data, with the adapter's rule functions alongside it.
+    const engineMagic = getEngine(system).magic;
+    if (system.magic === null) expect(engineMagic).toBeNull();
+    else expect(engineMagic).toMatchObject(system.magic!);
+  });
+
+  it("classic-fantasy keeps Dragonbane's casting rules beside the declared data", () => {
+    expect(classicFantasyEngine.magic?.maxPrepared).toBeTypeOf('function');
+    expect(classicFantasyEngine.magic?.castingImpairment).toBeTypeOf('function');
+  });
+
+  it('an imported system re-prices its spells and keeps the adapter rules', () => {
+    const magic = { ...classicFantasySystem.magic!, costPerLevel: 3, powerLevels: [1, 2] };
+    const engineMagic = getEngine(imported('imported-e1-magic', { magic })).magic;
+    expect(engineMagic).toMatchObject({ costPerLevel: 3, powerLevels: [1, 2] });
+    expect(engineMagic?.castingImpairment).toBeTypeOf('function');
+  });
+
+  it('an imported system can declare that it has no magic', () => {
+    expect(getEngine(imported('imported-e1-no-magic', { magic: null })).magic).toBeNull();
+  });
+
+  it('rejects a magic economy that spends no declared resource', () => {
+    const magic = { ...classicFantasySystem.magic!, resourceId: 'mana' };
+    expect(() => imported('imported-e1-bad-magic', { magic })).toThrow(/magic.*mana/);
+  });
+
+  it('refuses a bundled system without it', () => {
+    expect(() => declaredEngineData(without(classicFantasySystem, 'magic'))).toThrow(/does not declare/);
   });
 });

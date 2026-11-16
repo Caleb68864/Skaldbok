@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 29,
+  "version": 30,
   "name": "traveller",
   "displayName": "Traveller",
   "engine": "2d6-plus",
@@ -1746,5 +1746,6 @@
         "unconscious"
       ]
     }
-  }
+  },
+  "magic": null
 }

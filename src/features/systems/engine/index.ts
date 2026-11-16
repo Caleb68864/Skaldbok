@@ -5,7 +5,7 @@ import { classicFantasyEngine } from './classicFantasyEngine';
 import { travellerEngine } from './travellerEngine';
 import { savageWorldsEngine } from './savageWorldsEngine';
 import type { RulesEngineId, SystemEngine } from './types';
-import { currencyFromDenominations } from './declaredEngineData';
+import { currencyFromDenominations, withMagicRules } from './declaredEngineData';
 import { BUNDLED_SYSTEMS, DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 
 export type { SystemEngine, PanelKey, SystemTerms, SystemLabels, SkillDisplayContext } from './types';
@@ -182,6 +182,8 @@ export function getEngine(
     derivedFields: system.derivedFields ?? base.derivedFields,
     death: declaredOr(system.death, base.death),
     damageTrack: declaredOr(system.damageTrack, base.damageTrack),
+    // Declared data, the adapter's casting rules.
+    magic: system.magic === undefined ? base.magic : withMagicRules(system.magic, base.magic ?? undefined),
     currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);

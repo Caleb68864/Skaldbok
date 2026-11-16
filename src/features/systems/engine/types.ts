@@ -596,6 +596,15 @@ export interface AdvancementModel {
   rollPrompt: (value: number) => string;
 }
 
+/** A live magic economy: {@link SystemEngine.magic} when it is not `null`. */
+export type MagicModel = NonNullable<SystemEngine['magic']>;
+
+/** The rule functions of a {@link MagicModel}, which an adapter supplies. */
+export type MagicRules = Pick<MagicModel, 'maxPrepared' | 'castingImpairment'>;
+
+/** The data half of a {@link MagicModel}, which `system.json` declares. */
+export type MagicDeclaration = Omit<MagicModel, keyof MagicRules>;
+
 /** One selectable difficulty on a system's target ladder. */
 export interface DifficultyOption {
   /** The number the roll must meet or beat. */

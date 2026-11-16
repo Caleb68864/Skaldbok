@@ -262,6 +262,14 @@ export const systemDefinitionSchema = z.object({
       dead: z.array(z.string().min(1)).optional(),
     }).optional(),
   }).nullable().optional().describe('How damage flows across health resources; null when it does not'),
+  // Data only; the casting rules are the adapter's. `null`: no automated magic.
+  magic: z.object({
+    resourceId: z.string().min(1),
+    powerLevels: z.array(z.number().int().positive()).min(1),
+    costPerLevel: z.number().nonnegative(),
+    trickCost: z.number().nonnegative(),
+    trickSchools: z.array(z.string().min(1)).optional(),
+  }).nullable().optional().describe('Spell economy; null when the system automates no magic'),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),
@@ -496,6 +504,11 @@ export const systemDefinitionSchema = z.object({
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: `damageTrack names unknown condition "${id}"` });
       }
     }
+  }
+
+  // A spell economy over a missing resource deducts every cast from nothing.
+  if (def.magic && !resIds.includes(def.magic.resourceId)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: `magic spends unknown resource "${def.magic.resourceId}"` });
   }
 
   for (const a of def.attributes) {

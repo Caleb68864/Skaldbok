@@ -1,13 +1,27 @@
 import type { SystemDefinition } from '../../../types/system';
 import { makeFormatAmount } from '../../../utils/currency';
-import type { CurrencyModel, SystemEngine } from './types';
+import type { CurrencyModel, MagicDeclaration, MagicModel, MagicRules, SystemEngine } from './types';
 
 /** The parts of an engine that are pure data and live in `system.json` (roadmap E1). */
 export type DeclaredEngineData = Pick<
   SystemEngine,
   | 'terms' | 'labels' | 'logActions' | 'outcomes' | 'rollModifiers' | 'timeUnits' | 'panels' | 'currency'
   | 'derivedFields' | 'death' | 'damageTrack'
->;
+> & {
+  /** The data half only; the adapter adds its rules with {@link withMagicRules}. */
+  magic: MagicDeclaration | null;
+};
+
+/**
+ * A declared spell economy with an adapter's rule functions beside it.
+ *
+ * @remarks
+ * `null` stays `null`: a system that declares no magic gets none, whatever the
+ * adapter could compute.
+ */
+export function withMagicRules(declared: MagicDeclaration | null, rules: MagicRules | undefined): MagicModel | null {
+  return declared && { ...declared, maxPrepared: rules?.maxPrepared, castingImpairment: rules?.castingImpairment };
+}
 
 /**
  * Money, built entirely from what a system declares (roadmap E2).
@@ -45,11 +59,11 @@ export function currencyFromDenominations(
  * missing one throws at module load instead of leaving a hole in the engine.
  */
 export function declaredEngineData(system: SystemDefinition): DeclaredEngineData {
-  const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields, death, damageTrack } = system;
+  const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields, death, damageTrack, magic } = system;
   if (
     !terms || !labels || !logActions || !outcomes || !rollModifiers || !timeUnits || !panels || !derivedFields ||
     // Nullable models: `null` declares the mechanic absent, so only `undefined` is missing.
-    death === undefined || damageTrack === undefined ||
+    death === undefined || damageTrack === undefined || magic === undefined ||
     !currency?.label || !currency.baseDenominationId || !currency.denominations
   ) {
     throw new Error(`Bundled system "${system.id}" does not declare all of its engine data in system.json`);
@@ -66,5 +80,6 @@ export function declaredEngineData(system: SystemDefinition): DeclaredEngineData
     derivedFields,
     death,
     damageTrack,
+    magic,
   };
 }

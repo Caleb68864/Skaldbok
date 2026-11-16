@@ -1,6 +1,6 @@
 {
   "id": "classic-fantasy",
-  "version": 7,
+  "version": 8,
   "name": "classic-fantasy",
   "displayName": "Dragonbane",
   "engine": "d20-roll-under",
@@ -605,5 +605,19 @@
       }
     ]
   },
-  "damageTrack": null
+  "damageTrack": null,
+  "magic": {
+    "resourceId": "wp",
+    "powerLevels": [
+      1,
+      2,
+      3
+    ],
+    "costPerLevel": 2,
+    "trickCost": 1,
+    "trickSchools": [
+      "trick",
+      "magic tricks"
+    ]
+  }
 }

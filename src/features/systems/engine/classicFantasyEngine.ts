@@ -12,7 +12,7 @@ import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
 import { attrKey, armorKey, derivedKey } from '../../../utils/statKeys';
 import type { SystemEngine, RestDefinition } from './types';
-import { declaredEngineData } from './declaredEngineData';
+import { declaredEngineData, withMagicRules } from './declaredEngineData';
 import { classicFantasySystem } from '../../../systems/classic-fantasy';
 
 /**
@@ -110,6 +110,9 @@ const classicFantasyRests: RestDefinition[] = [
   },
 ];
 
+/** classic-fantasy's `system.json` data, which the engine below spreads. */
+const declared = declaredEngineData(classicFantasySystem);
+
 /**
  * The Dragonbane-like default ruleset, expressed as a {@link SystemEngine}.
  *
@@ -165,19 +168,15 @@ export const classicFantasyEngine: SystemEngine = {
   resourceIds: classicFantasySystem.resources.filter(r => r.role !== 'counter').map(r => r.id),
   // Also `damageTrack: null` (Dragonbane damage lands on HP and stops; being at
   // 0 is handled by the death-roll model, not by a cascading track), `death`
-  // (the death-roll tracks) and `derivedFields`. Derived-field
+  // (the death-roll tracks), `derivedFields` and the data half of `magic`. Derived-field
   // surfaces reproduce the three layouts that existed before: the sheet shows
   // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
   // vitals module already shows), and the print sheet four.
-  ...declaredEngineData(classicFantasySystem),
+  ...declared,
   primaryHealthResourceId: 'hp',
-  // Willpower economy: a power level `n` spell costs `n * 2` WP; a magic trick
-  // (power level 0) costs 1. Was hardcoded in the ability/magic modules. E11.
-  magic: {
-    resourceId: 'wp',
-    powerLevels: [1, 2, 3],
-    costPerLevel: 2,
-    trickCost: 1,
+  // The willpower economy is declared (a power level `n` spell costs `n * 2` WP,
+  // a magic trick costs 1); these are Dragonbane's casting rules beside it. E11.
+  magic: withMagicRules(declared.magic, {
     // INT's base chance caps prepared spells. Was computed by the magic screen
     // for every system, Dragonbane rule and all.
     maxPrepared: computeMaxPreparedSpells,
@@ -185,8 +184,7 @@ export const classicFantasyEngine: SystemEngine = {
     // wrote its own warning, so every magical system inherited the rule.
     castingImpairment: character =>
       isMetalEquipped(character) ? 'Metal armour blocks spellcasting' : null,
-    trickSchools: ['trick', 'magic tricks'],
-  },
+  }),
   encumbrance: {
     limit: computeEncumbranceLimit,
     load: computeCarriedWeight,

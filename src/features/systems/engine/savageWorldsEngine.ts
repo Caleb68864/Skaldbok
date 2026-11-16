@@ -223,7 +223,8 @@ export const savageWorldsEngine: SystemEngine = {
   },
   derivedStats: character => computeSavageWorldsDerivedValues(character),
   resourceIds: savageWorldsSystem.resources.map(r => r.id),
-  // Also `damageTrack`: Wounds is a 0–3 level counter. A full track
+  // Also `magic: null` (no Arcane Background in the base ruleset; a caster build
+  // adds a PP pool later) and `damageTrack`: Wounds is a 0–3 level counter. A full track
   // incapacitates a Wild Card (Extras drop at 1, handled by status rules later).
   // Damage is applied as wounds, not points.
   ...declaredEngineData(savageWorldsSystem),
@@ -246,8 +247,6 @@ export const savageWorldsEngine: SystemEngine = {
     return { levels, setsConditions: ['shaken'] };
   },
   primaryHealthResourceId: 'wounds',
-  // No Arcane Background in the base ruleset; a caster build adds a PP pool later.
-  magic: null,
   encumbrance: {
     // Load Limit is Strength x5; a d12+1 Strength carries as a 13 would.
     limit: character => {

@@ -387,15 +387,14 @@ export const travellerEngine: SystemEngine = {
   // "Unconscious" means in Mongoose 2e, so `statusConditions` makes the stored
   // flag follow the banner. `wounded` is left to the player: its description
   // overlaps, but a GM may want it ticked before a full depletion.
-  // Also `death: null` (a downed character is handled by the damage track) and
+  // Also `magic: null` (psionics exist but the app does not automate a PP
+  // economy yet), `death: null` (a downed character is handled by the damage track) and
   // `derivedFields`. Skill Levels Spent and Creation Cap are print only:
   // they are creation-time checks, and a permanent sheet tile reading "18 / 51"
   // is noise for the rest of a character's life, but it is exactly what you want
   // on the sheet you build a character against.
   ...declaredEngineData(travellerSystem),
   primaryHealthResourceId: 'end',
-  // Psionics exist but the app does not automate a PP economy yet.
-  magic: null,
   encumbrance: {
     limit: computeTravellerCarryLimit,
     load: computeTravellerLoad,

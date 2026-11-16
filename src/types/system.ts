@@ -1,4 +1,4 @@
-import type { DamageTrackModel, DeathModel, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
+import type { DamageTrackModel, DeathModel, MagicDeclaration, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -610,6 +610,17 @@ export interface SystemDefinition {
    * `order`/`overflowTo` name resources, `statusConditions` name conditions.
    */
   damageTrack?: DamageTrackModel | null;
+  /**
+   * The spell economy (resource, power levels, costs, trick schools), or `null`
+   * when the system has no spellcasting the app automates. Absent keeps the
+   * adapter's, `null` removes it.
+   *
+   * @remarks
+   * Data only. The rule functions (`maxPrepared`, `castingImpairment`) come from
+   * the adapter, so an imported system on the classic-fantasy engine keeps
+   * Dragonbane's prepared-spell cap and metal-armour rule.
+   */
+  magic?: MagicDeclaration | null;
   /**
    * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
    * a table of legs with system-specific fields. Absent = no route planner
