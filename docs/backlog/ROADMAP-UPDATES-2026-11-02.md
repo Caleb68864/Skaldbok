@@ -1,9 +1,9 @@
 # Roadmap status updates, 2026-11-02
 
 Status changes for `docs/backlog/2026-09-04-improvement-roadmap.md`, kept here because
-that file has the owner's uncommitted edit. Nothing below is committed, so "this
-change" means the uncommitted work on `roadmap/2026-11-02`. Replace it with the commit
-when it lands.
+that file had the owner's uncommitted edit at the time. "This change" means commits
+`51d31aa` and `5eb22ff` on `roadmap/2026-11-02`, merged into `main` as PR #4
+(`05a9583`). The owner's roadmap and `.gitignore` edit landed separately as `e3d033a`.
 
 `.gitignore` ignores `docs/`, so this file needs `git add -f`.
 
