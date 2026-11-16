@@ -260,6 +260,7 @@ export const savageWorldsEngine: SystemEngine = {
       (character.helmet?.weight ?? 0),
   },
   rest: null,
+  // No per-session advancement roll; the declared `advancement` is `null`.
   advancement: null,
   probability: {
     // Trait die + Wild Die vs TN 4 (PCs are Wild Cards), with the character's

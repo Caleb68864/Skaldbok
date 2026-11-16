@@ -1,6 +1,9 @@
 import type { SystemDefinition } from '../../../types/system';
 import { makeFormatAmount } from '../../../utils/currency';
-import type { CurrencyModel, MagicDeclaration, MagicModel, MagicRules, SystemEngine } from './types';
+import type {
+  AdvancementDeclaration, AdvancementModel, AdvancementRules,
+  CurrencyModel, MagicDeclaration, MagicModel, MagicRules, SystemEngine,
+} from './types';
 
 /** The parts of an engine that are pure data and live in `system.json` (roadmap E1). */
 export type DeclaredEngineData = Pick<
@@ -10,7 +13,23 @@ export type DeclaredEngineData = Pick<
 > & {
   /** The data half only; the adapter adds its rules with {@link withMagicRules}. */
   magic: MagicDeclaration | null;
+  /** The session events only; the adapter adds the roll with {@link withAdvancementRules}. */
+  advancement: AdvancementDeclaration | null;
 };
+
+/**
+ * Declared session events with an adapter's advancement roll.
+ *
+ * @remarks
+ * `null` if either half is: events with no roll to feed, or a roll with no
+ * events declared, are not an advancement model.
+ */
+export function withAdvancementRules(
+  declared: AdvancementDeclaration | null,
+  rules: AdvancementRules | null | undefined,
+): AdvancementModel | null {
+  return declared && rules ? { ...rules, sessionEvents: declared.sessionEvents } : null;
+}
 
 /**
  * A declared spell economy with an adapter's rule functions beside it.
@@ -59,11 +78,13 @@ export function currencyFromDenominations(
  * missing one throws at module load instead of leaving a hole in the engine.
  */
 export function declaredEngineData(system: SystemDefinition): DeclaredEngineData {
-  const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields, death, damageTrack, magic } = system;
+  const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields, death, damageTrack, magic,
+    advancement } = system;
   if (
     !terms || !labels || !logActions || !outcomes || !rollModifiers || !timeUnits || !panels || !derivedFields ||
     // Nullable models: `null` declares the mechanic absent, so only `undefined` is missing.
     death === undefined || damageTrack === undefined || magic === undefined ||
+    advancement === undefined ||
     !currency?.label || !currency.baseDenominationId || !currency.denominations
   ) {
     throw new Error(`Bundled system "${system.id}" does not declare all of its engine data in system.json`);
@@ -81,5 +102,6 @@ export function declaredEngineData(system: SystemDefinition): DeclaredEngineData
     death,
     damageTrack,
     magic,
+    advancement,
   };
 }

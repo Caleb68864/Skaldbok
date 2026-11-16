@@ -270,6 +270,10 @@ export const systemDefinitionSchema = z.object({
     trickCost: z.number().nonnegative(),
     trickSchools: z.array(z.string().min(1)).optional(),
   }).nullable().optional().describe('Spell economy; null when the system automates no magic'),
+  // Event ids key the stored session checks. `null`: no per-session advancement.
+  advancement: z.object({
+    sessionEvents: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })),
+  }).nullable().optional().describe('End-of-session advancement events; null when the system has none'),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),
@@ -505,6 +509,9 @@ export const systemDefinitionSchema = z.object({
       }
     }
   }
+
+  // Two events with one id would tick and untick together.
+  if (def.advancement) flagDupes(def.advancement.sessionEvents.map(e => e.id), 'session event');
 
   // A spell economy over a missing resource deducts every cast from nothing.
   if (def.magic && !resIds.includes(def.magic.resourceId)) {

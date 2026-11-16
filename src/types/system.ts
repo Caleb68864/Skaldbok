@@ -1,4 +1,4 @@
-import type { DamageTrackModel, DeathModel, MagicDeclaration, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
+import type { AdvancementDeclaration, DamageTrackModel, DeathModel, MagicDeclaration, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -621,6 +621,19 @@ export interface SystemDefinition {
    * Dragonbane's prepared-spell cap and metal-armour rule.
    */
   magic?: MagicDeclaration | null;
+  /**
+   * End-of-session advancement: the events a player ticks off, or `null` when
+   * the system has no per-session advancement. Absent keeps the adapter's, `null`
+   * removes it.
+   *
+   * @remarks
+   * Event ids key `CharacterRecord` session checks, so keep them stable across
+   * renames. The advancement roll itself (`usesMarks`, `maxSkillValue`,
+   * `rollPrompt`) is the adapter's, so on an adapter with no advancement model
+   * (Traveller, Savage Worlds) declared events have nothing to feed and the
+   * model stays `null`.
+   */
+  advancement?: AdvancementDeclaration | null;
   /**
    * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
    * a table of legs with system-specific fields. Absent = no route planner

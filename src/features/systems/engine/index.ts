@@ -5,7 +5,7 @@ import { classicFantasyEngine } from './classicFantasyEngine';
 import { travellerEngine } from './travellerEngine';
 import { savageWorldsEngine } from './savageWorldsEngine';
 import type { RulesEngineId, SystemEngine } from './types';
-import { currencyFromDenominations, withMagicRules } from './declaredEngineData';
+import { currencyFromDenominations, withAdvancementRules, withMagicRules } from './declaredEngineData';
 import { BUNDLED_SYSTEMS, DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 
 export type { SystemEngine, PanelKey, SystemTerms, SystemLabels, SkillDisplayContext } from './types';
@@ -184,6 +184,9 @@ export function getEngine(
     damageTrack: declaredOr(system.damageTrack, base.damageTrack),
     // Declared data, the adapter's casting rules.
     magic: system.magic === undefined ? base.magic : withMagicRules(system.magic, base.magic ?? undefined),
+    advancement: system.advancement === undefined
+      ? base.advancement
+      : withAdvancementRules(system.advancement, base.advancement),
     currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);

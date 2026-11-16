@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 30,
+  "version": 31,
   "name": "traveller",
   "displayName": "Traveller",
   "engine": "2d6-plus",
@@ -1747,5 +1747,6 @@
       ]
     }
   },
-  "magic": null
+  "magic": null,
+  "advancement": null
 }

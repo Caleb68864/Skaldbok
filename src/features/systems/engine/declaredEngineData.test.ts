@@ -173,3 +173,34 @@ describe('magic declared in system.json (roadmap E1)', () => {
     expect(() => declaredEngineData(without(classicFantasySystem, 'magic'))).toThrow(/does not declare/);
   });
 });
+
+describe('advancement.sessionEvents declared in system.json (roadmap E1)', () => {
+  it.each(bundled)('%s declares its session events, or null, and keeps them through import', (_id, system) => {
+    expect(system.advancement, 'no advancement in system.json').toBeDefined();
+    expect(systemDefinitionSchema.parse(system).advancement).toEqual(system.advancement);
+    const engineAdvancement = getEngine(system).advancement;
+    if (system.advancement === null) expect(engineAdvancement).toBeNull();
+    else expect(engineAdvancement?.sessionEvents).toEqual(system.advancement!.sessionEvents);
+  });
+
+  it('an imported system lists its own session events and keeps the adapter rules', () => {
+    const sessionEvents = [{ id: 'survived', label: 'Survived the session' }];
+    const advancement = getEngine(imported('imported-e1-advancement', { advancement: { sessionEvents } })).advancement;
+    expect(advancement?.sessionEvents).toEqual(sessionEvents);
+    expect(advancement?.maxSkillValue).toBe(classicFantasyEngine.advancement?.maxSkillValue);
+    expect(advancement?.rollPrompt(12)).toBe(classicFantasyEngine.advancement?.rollPrompt(12));
+  });
+
+  it('an imported system can declare that it has no advancement', () => {
+    expect(getEngine(imported('imported-e1-no-advancement', { advancement: null })).advancement).toBeNull();
+  });
+
+  it('rejects duplicate session event ids', () => {
+    const sessionEvents = [{ id: 'combat', label: 'A' }, { id: 'combat', label: 'B' }];
+    expect(() => imported('imported-e1-dupe-events', { advancement: { sessionEvents } })).toThrow(/session event.*combat/);
+  });
+
+  it('refuses a bundled system without it', () => {
+    expect(() => declaredEngineData(without(classicFantasySystem, 'advancement'))).toThrow(/does not declare/);
+  });
+});

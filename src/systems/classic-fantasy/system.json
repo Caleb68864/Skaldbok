@@ -1,6 +1,6 @@
 {
   "id": "classic-fantasy",
-  "version": 8,
+  "version": 9,
   "name": "classic-fantasy",
   "displayName": "Dragonbane",
   "engine": "d20-roll-under",
@@ -618,6 +618,26 @@
     "trickSchools": [
       "trick",
       "magic tricks"
+    ]
+  },
+  "advancement": {
+    "sessionEvents": [
+      {
+        "id": "combat",
+        "label": "⚔️ Participated in combat"
+      },
+      {
+        "id": "explore",
+        "label": "🗺️ Explored a new location"
+      },
+      {
+        "id": "weakness",
+        "label": "💔 Role-played a weakness"
+      },
+      {
+        "id": "heroic",
+        "label": "✨ Used a heroic ability"
+      }
     ]
   }
 }

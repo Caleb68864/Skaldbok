@@ -12,7 +12,7 @@ import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
 import { attrKey, armorKey, derivedKey } from '../../../utils/statKeys';
 import type { SystemEngine, RestDefinition } from './types';
-import { declaredEngineData, withMagicRules } from './declaredEngineData';
+import { declaredEngineData, withAdvancementRules, withMagicRules } from './declaredEngineData';
 import { classicFantasySystem } from '../../../systems/classic-fantasy';
 
 /**
@@ -168,7 +168,7 @@ export const classicFantasyEngine: SystemEngine = {
   resourceIds: classicFantasySystem.resources.filter(r => r.role !== 'counter').map(r => r.id),
   // Also `damageTrack: null` (Dragonbane damage lands on HP and stops; being at
   // 0 is handled by the death-roll model, not by a cascading track), `death`
-  // (the death-roll tracks), `derivedFields` and the data half of `magic`. Derived-field
+  // (the death-roll tracks), `derivedFields` and the data halves of `magic` and `advancement`. Derived-field
   // surfaces reproduce the three layouts that existed before: the sheet shows
   // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
   // vitals module already shows), and the print sheet four.
@@ -190,17 +190,12 @@ export const classicFantasyEngine: SystemEngine = {
     load: computeCarriedWeight,
   },
   rest: classicFantasyRests,
-  advancement: {
-    sessionEvents: [
-      { id: 'combat', label: '⚔️ Participated in combat' },
-      { id: 'explore', label: '🗺️ Explored a new location' },
-      { id: 'weakness', label: '💔 Role-played a weakness' },
-      { id: 'heroic', label: '✨ Used a heroic ability' },
-    ],
+  // The session events are declared; this is Dragonbane's advancement roll.
+  advancement: withAdvancementRules(declared.advancement, {
     usesMarks: true,
     maxSkillValue: 18,
     rollPrompt: value => `Roll above ${value} on a d20 to advance`,
-  },
+  }),
   probability: {
     chance: (value, state) =>
       state === 'boon' ? calcBoonProb(value) : state === 'bane' ? calcBaneProb(value) : calcNormalProb(value),

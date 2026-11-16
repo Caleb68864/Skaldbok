@@ -399,10 +399,12 @@ export const travellerEngine: SystemEngine = {
     limit: computeTravellerCarryLimit,
     load: computeTravellerLoad,
   },
+  // Advancement is study/training time, not per-session rolls, so this adapter
+  // has no advancement roll and the declared `advancement: null` is the only
+  // value it can take.
+  advancement: null,
   // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
   rest: null,
-  // Advancement is study/training time, not per-session rolls.
-  advancement: null,
   probability: {
     /**
      * Mongoose's task difficulty ladder. Declared here rather than read from

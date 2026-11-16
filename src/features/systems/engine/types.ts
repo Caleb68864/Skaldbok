@@ -596,6 +596,12 @@ export interface AdvancementModel {
   rollPrompt: (value: number) => string;
 }
 
+/** The data half of an {@link AdvancementModel}, which `system.json` declares. */
+export type AdvancementDeclaration = Pick<AdvancementModel, 'sessionEvents'>;
+
+/** The rest of an {@link AdvancementModel}, which an adapter supplies. */
+export type AdvancementRules = Omit<AdvancementModel, keyof AdvancementDeclaration>;
+
 /** A live magic economy: {@link SystemEngine.magic} when it is not `null`. */
 export type MagicModel = NonNullable<SystemEngine['magic']>;
 
