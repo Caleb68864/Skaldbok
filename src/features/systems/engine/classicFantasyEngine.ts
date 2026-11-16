@@ -163,13 +163,14 @@ export const classicFantasyEngine: SystemEngine = {
   },
   derivedStats: (character, system) => computeDerivedValues(character, system),
   resourceIds: classicFantasySystem.resources.filter(r => r.role !== 'counter').map(r => r.id),
-  // Also `derivedFields`. Their surfaces reproduce the three layouts that existed
-  // before: the sheet shows five rows (no encumbrance), the dashboard four (no
-  // HP/WP maxima, which the vitals module already shows), and the print sheet four.
+  // Also `death` (the death-roll tracks) and `derivedFields`. Derived-field
+  // surfaces reproduce the three layouts that existed before: the sheet shows
+  // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
+  // vitals module already shows), and the print sheet four.
   ...declaredEngineData(classicFantasySystem),
   primaryHealthResourceId: 'hp',
   // Dragonbane damage lands on HP and stops; being at 0 is handled by the
-  // death-roll model below, not by a cascading track.
+  // declared death-roll model, not by a cascading track.
   damageTrack: null,
   // Willpower economy: a power level `n` spell costs `n * 2` WP; a magic trick
   // (power level 0) costs 1. Was hardcoded in the ability/magic modules. E11.
@@ -192,18 +193,6 @@ export const classicFantasyEngine: SystemEngine = {
     load: computeCarriedWeight,
   },
   rest: classicFantasyRests,
-  death: {
-    triggerResourceId: 'hp',
-    triggerAtOrBelow: 0,
-    downLabel: 'Character is DOWN!',
-    deadLabel: 'DEAD',
-    stabilizedLabel: 'Stabilized!',
-    tracks: [
-      // Plural on screen, singular as a printed column heading.
-      { id: 'deathRolls', label: 'Failures', max: 3, tone: 'danger', printLabel: 'Failure' },
-      { id: 'deathSuccesses', label: 'Successes', max: 3, tone: 'success', printLabel: 'Success' },
-    ],
-  },
   advancement: {
     sessionEvents: [
       { id: 'combat', label: '⚔️ Participated in combat' },

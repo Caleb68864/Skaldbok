@@ -231,6 +231,21 @@ export const systemDefinitionSchema = z.object({
     overridable: z.boolean().optional(),
     surfaces: z.array(z.enum(['sheet', 'dashboard', 'print'])).optional(),
   })).optional().describe("Derived stats this system shows; replaces the adapter's list"),
+  // `null` declares that the system has no death model; absent keeps the adapter's.
+  death: z.object({
+    triggerResourceId: z.string().min(1),
+    triggerAtOrBelow: z.number(),
+    downLabel: z.string().min(1),
+    deadLabel: z.string().min(1),
+    stabilizedLabel: z.string().min(1),
+    tracks: z.array(z.object({
+      id: z.string().min(1),
+      label: z.string().min(1),
+      max: z.number().int().positive(),
+      tone: z.enum(['danger', 'success']),
+      printLabel: z.string().min(1).optional(),
+    })),
+  }).nullable().optional().describe('Downed/dying rules; null when the system has none'),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),
@@ -434,6 +449,17 @@ export const systemDefinitionSchema = z.object({
           code: z.ZodIssueCode.custom,
           message: `Creature ${key} names unknown stat "${id}"`,
         });
+      }
+    }
+  }
+
+  // A death model reads its trigger and its tallies from resources, so an id that
+  // names none would read as 0 forever: always down, never dead.
+  if (def.death) {
+    const resSet = new Set(resIds);
+    for (const id of [def.death.triggerResourceId, ...def.death.tracks.map(t => t.id)]) {
+      if (!resSet.has(id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `death names unknown resource "${id}"` });
       }
     }
   }

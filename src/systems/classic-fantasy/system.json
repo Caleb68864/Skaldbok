@@ -1,6 +1,6 @@
 {
   "id": "classic-fantasy",
-  "version": 5,
+  "version": 6,
   "name": "classic-fantasy",
   "displayName": "Dragonbane",
   "engine": "d20-roll-under",
@@ -581,5 +581,28 @@
         "print"
       ]
     }
-  ]
+  ],
+  "death": {
+    "triggerResourceId": "hp",
+    "triggerAtOrBelow": 0,
+    "downLabel": "Character is DOWN!",
+    "deadLabel": "DEAD",
+    "stabilizedLabel": "Stabilized!",
+    "tracks": [
+      {
+        "id": "deathRolls",
+        "label": "Failures",
+        "max": 3,
+        "tone": "danger",
+        "printLabel": "Failure"
+      },
+      {
+        "id": "deathSuccesses",
+        "label": "Successes",
+        "max": 3,
+        "tone": "success",
+        "printLabel": "Success"
+      }
+    ]
+  }
 }

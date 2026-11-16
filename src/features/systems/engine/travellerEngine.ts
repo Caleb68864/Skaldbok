@@ -381,7 +381,8 @@ export const travellerEngine: SystemEngine = {
   },
   derivedStats: (character, system) => computeTravellerDerivedValues(character, system),
   resourceIds: TRAVELLER_DAMAGE_TRACK_IDS,
-  // Also `derivedFields`. Skill Levels Spent and Creation Cap are print only:
+  // Also `death: null` (a downed character is handled by the damage track) and
+  // `derivedFields`. Skill Levels Spent and Creation Cap are print only:
   // they are creation-time checks, and a permanent sheet tile reading "18 / 51"
   // is noise for the rest of a character's life, but it is exactly what you want
   // on the sheet you build a character against.
@@ -415,8 +416,6 @@ export const travellerEngine: SystemEngine = {
   },
   // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
   rest: null,
-  // No death-roll track; a downed character is handled by the damage track.
-  death: null,
   // Advancement is study/training time, not per-session rolls.
   advancement: null,
   probability: {

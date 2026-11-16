@@ -68,3 +68,30 @@ describe('derivedFields declared in system.json (roadmap E1)', () => {
   });
 });
 
+
+describe('death declared in system.json (roadmap E1)', () => {
+  it.each(bundled)('%s declares its death model, or null, and keeps it through import', (_id, system) => {
+    expect(system.death, 'no death in system.json').toBeDefined();
+    expect(systemDefinitionSchema.parse(system).death).toEqual(system.death);
+    expect(getEngine(system).death).toEqual(system.death);
+  });
+
+  it('an imported system rewords its death model', () => {
+    const death = { ...classicFantasySystem.death!, downLabel: 'Bleeding out' };
+    expect(getEngine(imported('imported-e1-death', { death })).death?.downLabel).toBe('Bleeding out');
+  });
+
+  it('an imported system can declare that it has no death model', () => {
+    // `null` is a declaration, not an absence: `??` would bring Dragonbane's back.
+    expect(getEngine(imported('imported-e1-no-death', { death: null })).death).toBeNull();
+  });
+
+  it('rejects a death track that names no resource', () => {
+    const death = { ...classicFantasySystem.death!, triggerResourceId: 'hitPoints' };
+    expect(() => imported('imported-e1-bad-death', { death })).toThrow(/death.*hitPoints/);
+  });
+
+  it('refuses a bundled system without it', () => {
+    expect(() => declaredEngineData(without(classicFantasySystem, 'death'))).toThrow(/does not declare/);
+  });
+});

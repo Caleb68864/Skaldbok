@@ -1,4 +1,4 @@
-import type { DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
+import type { DeathModel, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -595,6 +595,15 @@ export interface SystemDefinition {
    * (`engineContract.test.ts` checks the bundled systems).
    */
   derivedFields?: DerivedFieldDef[];
+  /**
+   * The downed/dying rules (Dragonbane's death rolls), or `null` when this
+   * system has none.
+   *
+   * @remarks
+   * `null` is a declaration, not an absence: absent keeps the adapter's model,
+   * `null` removes it. The trigger and each track name a declared resource.
+   */
+  death?: DeathModel | null;
   /**
    * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
    * a table of legs with system-specific fields. Absent = no route planner

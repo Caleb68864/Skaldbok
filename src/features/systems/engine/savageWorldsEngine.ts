@@ -268,7 +268,6 @@ export const savageWorldsEngine: SystemEngine = {
       (character.helmet?.weight ?? 0),
   },
   rest: null,
-  death: null,
   advancement: null,
   probability: {
     // Trait die + Wild Die vs TN 4 (PCs are Wild Cards), with the character's

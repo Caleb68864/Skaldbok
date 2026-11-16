@@ -37,6 +37,14 @@ export const SYSTEM_ADAPTERS: Record<string, SystemEngine> = Object.fromEntries(
   }),
 );
 
+/**
+ * A nullable model a system may declare: absent keeps the adapter's, `null`
+ * removes it. `??` would treat the `null` as absent and bring the adapter's back.
+ */
+function declaredOr<T>(declared: T | null | undefined, base: T | null): T | null {
+  return declared === undefined ? base : declared;
+}
+
 const hasOwn = (map: object, key: string) => Object.prototype.hasOwnProperty.call(map, key);
 
 /** The adapter a system resolves to, or undefined when it has to fall back. */
@@ -172,6 +180,7 @@ export function getEngine(
     timeUnits: system.timeUnits ?? base.timeUnits,
     panels: system.panels ?? base.panels,
     derivedFields: system.derivedFields ?? base.derivedFields,
+    death: declaredOr(system.death, base.death),
     currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);

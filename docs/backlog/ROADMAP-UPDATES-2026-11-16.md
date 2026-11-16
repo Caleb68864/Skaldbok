@@ -26,3 +26,4 @@ change and failed.
 | Field | JSON path | Status | Test |
 |---|---|---|---|
 | `derivedFields` | `derivedFields[]` | DONE | `derivedFields declared in system.json` |
+| `death` | `death` (object, or `null`) | DONE. `null` removes the model (`getEngine` no longer uses `??` for nullable models). The schema rejects a trigger or track that names no resource. | `death declared in system.json` |
