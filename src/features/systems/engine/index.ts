@@ -181,6 +181,7 @@ export function getEngine(
     panels: system.panels ?? base.panels,
     derivedFields: system.derivedFields ?? base.derivedFields,
     death: declaredOr(system.death, base.death),
+    damageTrack: declaredOr(system.damageTrack, base.damageTrack),
     currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);

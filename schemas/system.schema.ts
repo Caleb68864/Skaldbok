@@ -246,6 +246,22 @@ export const systemDefinitionSchema = z.object({
       printLabel: z.string().min(1).optional(),
     })),
   }).nullable().optional().describe('Downed/dying rules; null when the system has none'),
+  // `null`: damage lands on one pool and stops. Absent keeps the adapter's.
+  damageTrack: z.object({
+    kind: z.enum(['pool', 'accumulating', 'levels']).optional(),
+    levels: z.number().int().positive().optional(),
+    penaltyPerLevel: z.number().optional(),
+    order: z.array(z.string().min(1)).min(1),
+    overflowTo: z.array(z.string().min(1)),
+    downAtDepleted: z.number().int().positive(),
+    deadAtDepleted: z.number().int().positive().nullable(),
+    downLabel: z.string().min(1),
+    deadLabel: z.string().min(1),
+    statusConditions: z.object({
+      down: z.array(z.string().min(1)).optional(),
+      dead: z.array(z.string().min(1)).optional(),
+    }).optional(),
+  }).nullable().optional().describe('How damage flows across health resources; null when it does not'),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),
@@ -460,6 +476,24 @@ export const systemDefinitionSchema = z.object({
     for (const id of [def.death.triggerResourceId, ...def.death.tracks.map(t => t.id)]) {
       if (!resSet.has(id)) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: `death names unknown resource "${id}"` });
+      }
+    }
+  }
+
+  // A track over a resource that does not exist absorbs nothing, and a status
+  // condition that does not exist is never set.
+  if (def.damageTrack) {
+    const resSet = new Set(resIds);
+    for (const id of [...def.damageTrack.order, ...def.damageTrack.overflowTo]) {
+      if (!resSet.has(id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `damageTrack names unknown resource "${id}"` });
+      }
+    }
+    const conditionIds = new Set(def.conditions.map(c => c.id));
+    const { down = [], dead = [] } = def.damageTrack.statusConditions ?? {};
+    for (const id of [...down, ...dead]) {
+      if (!conditionIds.has(id)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `damageTrack names unknown condition "${id}"` });
       }
     }
   }

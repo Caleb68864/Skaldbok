@@ -1,4 +1,4 @@
-import type { DeathModel, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
+import type { DamageTrackModel, DeathModel, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -604,6 +604,12 @@ export interface SystemDefinition {
    * `null` removes it. The trigger and each track name a declared resource.
    */
   death?: DeathModel | null;
+  /**
+   * How damage flows across this system's health resources, or `null` when it
+   * lands on one pool and stops. Absent keeps the adapter's, `null` removes it.
+   * `order`/`overflowTo` name resources, `statusConditions` name conditions.
+   */
+  damageTrack?: DamageTrackModel | null;
   /**
    * Declares a per-system route/travel planner (e.g. Traveller's Jump Route),
    * a table of legs with system-specific fields. Absent = no route planner

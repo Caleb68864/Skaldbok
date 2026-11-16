@@ -163,15 +163,14 @@ export const classicFantasyEngine: SystemEngine = {
   },
   derivedStats: (character, system) => computeDerivedValues(character, system),
   resourceIds: classicFantasySystem.resources.filter(r => r.role !== 'counter').map(r => r.id),
-  // Also `death` (the death-roll tracks) and `derivedFields`. Derived-field
+  // Also `damageTrack: null` (Dragonbane damage lands on HP and stops; being at
+  // 0 is handled by the death-roll model, not by a cascading track), `death`
+  // (the death-roll tracks) and `derivedFields`. Derived-field
   // surfaces reproduce the three layouts that existed before: the sheet shows
   // five rows (no encumbrance), the dashboard four (no HP/WP maxima, which the
   // vitals module already shows), and the print sheet four.
   ...declaredEngineData(classicFantasySystem),
   primaryHealthResourceId: 'hp',
-  // Dragonbane damage lands on HP and stops; being at 0 is handled by the
-  // declared death-roll model, not by a cascading track.
-  damageTrack: null,
   // Willpower economy: a power level `n` spell costs `n * 2` WP; a magic trick
   // (power level 0) costs 1. Was hardcoded in the ability/magic modules. E11.
   magic: {

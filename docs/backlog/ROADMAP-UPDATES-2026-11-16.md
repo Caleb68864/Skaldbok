@@ -27,3 +27,4 @@ change and failed.
 |---|---|---|---|
 | `derivedFields` | `derivedFields[]` | DONE | `derivedFields declared in system.json` |
 | `death` | `death` (object, or `null`) | DONE. `null` removes the model (`getEngine` no longer uses `??` for nullable models). The schema rejects a trigger or track that names no resource. | `death declared in system.json` |
+| `damageTrack` | `damageTrack` (object, or `null`) | DONE. Savage Worlds' trait penalty now reads `levels` and `penaltyPerLevel` from the declared track rather than restating them, so `penaltyPerLevel` has a reader at last and leaves `KNOWN_UNIMPLEMENTED`. The schema rejects a track or status condition that names nothing. | `damageTrack declared in system.json` |

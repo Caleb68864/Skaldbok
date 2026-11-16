@@ -6,7 +6,7 @@ import type { CurrencyModel, SystemEngine } from './types';
 export type DeclaredEngineData = Pick<
   SystemEngine,
   | 'terms' | 'labels' | 'logActions' | 'outcomes' | 'rollModifiers' | 'timeUnits' | 'panels' | 'currency'
-  | 'derivedFields' | 'death'
+  | 'derivedFields' | 'death' | 'damageTrack'
 >;
 
 /**
@@ -45,11 +45,11 @@ export function currencyFromDenominations(
  * missing one throws at module load instead of leaving a hole in the engine.
  */
 export function declaredEngineData(system: SystemDefinition): DeclaredEngineData {
-  const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields, death } = system;
+  const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields, death, damageTrack } = system;
   if (
     !terms || !labels || !logActions || !outcomes || !rollModifiers || !timeUnits || !panels || !derivedFields ||
     // Nullable models: `null` declares the mechanic absent, so only `undefined` is missing.
-    death === undefined ||
+    death === undefined || damageTrack === undefined ||
     !currency?.label || !currency.baseDenominationId || !currency.denominations
   ) {
     throw new Error(`Bundled system "${system.id}" does not declare all of its engine data in system.json`);
@@ -65,5 +65,6 @@ export function declaredEngineData(system: SystemDefinition): DeclaredEngineData
     currency: currencyFromDenominations(currency.label, currency.baseDenominationId, currency.denominations),
     derivedFields,
     death,
+    damageTrack,
   };
 }

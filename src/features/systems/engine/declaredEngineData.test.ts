@@ -5,6 +5,9 @@ import { declaredEngineData } from './declaredEngineData';
 import { getEngine } from './index';
 import { classicFantasySystem } from '../../../systems/classic-fantasy';
 import type { SystemDefinition } from '../../../types/system';
+import type { CharacterRecord } from '../../../types/character';
+import { savageWorldsSystem } from '../../../systems/savage-worlds';
+import { savageTraitPenalty } from './savageWorldsEngine';
 
 const bundled = BUNDLED_SYSTEMS.map(s => [s.id, s] as const);
 
@@ -93,5 +96,44 @@ describe('death declared in system.json (roadmap E1)', () => {
 
   it('refuses a bundled system without it', () => {
     expect(() => declaredEngineData(without(classicFantasySystem, 'death'))).toThrow(/does not declare/);
+  });
+});
+
+describe('damageTrack declared in system.json (roadmap E1)', () => {
+  it.each(bundled)('%s declares its damage track, or null, and keeps it through import', (_id, system) => {
+    expect(system.damageTrack, 'no damageTrack in system.json').toBeDefined();
+    expect(systemDefinitionSchema.parse(system).damageTrack).toEqual(system.damageTrack);
+    expect(getEngine(system).damageTrack).toEqual(system.damageTrack);
+  });
+
+  it('an imported system declares a damage track of its own', () => {
+    const damageTrack = {
+      order: ['hp'], overflowTo: [], downAtDepleted: 1, deadAtDepleted: null,
+      downLabel: 'OUT', deadLabel: 'DEAD',
+    };
+    expect(getEngine(imported('imported-e1-track', { damageTrack })).damageTrack).toEqual(damageTrack);
+  });
+
+  it('rejects a damage track that names no resource or condition', () => {
+    const base = { overflowTo: [], downAtDepleted: 1, deadAtDepleted: null, downLabel: 'OUT', deadLabel: 'DEAD' };
+    expect(() => imported('imported-e1-bad-track', { damageTrack: { ...base, order: ['body'] } }))
+      .toThrow(/damageTrack.*body/);
+    expect(() => imported('imported-e1-bad-status', {
+      damageTrack: { ...base, order: ['hp'], statusConditions: { down: ['ko'] } },
+    })).toThrow(/damageTrack.*ko/);
+  });
+
+  it("Savage Worlds' trait penalty follows the declared levels and penalty", () => {
+    const character = { resources: { wounds: { current: 3, max: 3 } } } as unknown as CharacterRecord;
+    expect(savageTraitPenalty(character, savageWorldsSystem)).toBe(-3);
+    const harsher = {
+      ...savageWorldsSystem,
+      damageTrack: { ...savageWorldsSystem.damageTrack!, levels: 2, penaltyPerLevel: -2 },
+    };
+    expect(savageTraitPenalty(character, harsher)).toBe(-4);
+  });
+
+  it('refuses a bundled system without it', () => {
+    expect(() => declaredEngineData(without(classicFantasySystem, 'damageTrack'))).toThrow(/does not declare/);
   });
 });

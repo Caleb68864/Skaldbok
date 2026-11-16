@@ -381,6 +381,12 @@ export const travellerEngine: SystemEngine = {
   },
   derivedStats: (character, system) => computeTravellerDerivedValues(character, system),
   resourceIds: TRAVELLER_DAMAGE_TRACK_IDS,
+  // Also `damageTrack`: damage fills END first, then spills into whichever
+  // physical characteristic the player chooses. Two empty tracks put a Traveller
+  // out of the fight; all three is fatal. A depleted physical track is what
+  // "Unconscious" means in Mongoose 2e, so `statusConditions` makes the stored
+  // flag follow the banner. `wounded` is left to the player: its description
+  // overlaps, but a GM may want it ticked before a full depletion.
   // Also `death: null` (a downed character is handled by the damage track) and
   // `derivedFields`. Skill Levels Spent and Creation Cap are print only:
   // they are creation-time checks, and a permanent sheet tile reading "18 / 51"
@@ -388,26 +394,6 @@ export const travellerEngine: SystemEngine = {
   // on the sheet you build a character against.
   ...declaredEngineData(travellerSystem),
   primaryHealthResourceId: 'end',
-  // Damage fills END first, then spills into whichever physical characteristic
-  // the player chooses. Two empty tracks put a Traveller out of the fight;
-  // all three is fatal.
-  damageTrack: {
-    order: ['end'],
-    overflowTo: ['str', 'dex'],
-    downAtDepleted: 2,
-    deadAtDepleted: 3,
-    downLabel: 'UNCONSCIOUS',
-    deadLabel: 'DEAD',
-    // A depleted physical track is what "Unconscious" means in Mongoose 2e, so
-    // the stored flag follows the banner instead of the two disagreeing.
-    // `wounded` is left to the player: its description ("Physical damage track
-    // is depleted") overlaps, but a GM may want it ticked before a full
-    // depletion, and auto-owning it would fight them.
-    statusConditions: {
-      down: ['unconscious'],
-      dead: ['unconscious'],
-    },
-  },
   // Psionics exist but the app does not automate a PP economy yet.
   magic: null,
   encumbrance: {

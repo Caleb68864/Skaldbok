@@ -1,6 +1,6 @@
 {
   "id": "savage-worlds",
-  "version": 10,
+  "version": 11,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
   "engine": "trait-die-vs-tn",
@@ -708,5 +708,18 @@
       ]
     }
   ],
-  "death": null
+  "death": null,
+  "damageTrack": {
+    "kind": "levels",
+    "levels": 3,
+    "penaltyPerLevel": -1,
+    "order": [
+      "wounds"
+    ],
+    "overflowTo": [],
+    "downAtDepleted": 1,
+    "deadAtDepleted": null,
+    "downLabel": "INCAPACITATED",
+    "deadLabel": "DEAD"
+  }
 }

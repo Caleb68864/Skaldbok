@@ -1,6 +1,6 @@
 {
   "id": "traveller",
-  "version": 28,
+  "version": 29,
   "name": "traveller",
   "displayName": "Traveller",
   "engine": "2d6-plus",
@@ -1725,5 +1725,26 @@
       ]
     }
   ],
-  "death": null
+  "death": null,
+  "damageTrack": {
+    "order": [
+      "end"
+    ],
+    "overflowTo": [
+      "str",
+      "dex"
+    ],
+    "downAtDepleted": 2,
+    "deadAtDepleted": 3,
+    "downLabel": "UNCONSCIOUS",
+    "deadLabel": "DEAD",
+    "statusConditions": {
+      "down": [
+        "unconscious"
+      ],
+      "dead": [
+        "unconscious"
+      ]
+    }
+  }
 }

@@ -1,6 +1,6 @@
 {
   "id": "classic-fantasy",
-  "version": 6,
+  "version": 7,
   "name": "classic-fantasy",
   "displayName": "Dragonbane",
   "engine": "d20-roll-under",
@@ -604,5 +604,6 @@
         "printLabel": "Success"
       }
     ]
-  }
+  },
+  "damageTrack": null
 }
