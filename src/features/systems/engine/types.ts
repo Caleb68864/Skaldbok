@@ -596,6 +596,12 @@ export interface AdvancementModel {
   rollPrompt: (value: number) => string;
 }
 
+/**
+ * A rest as `system.json` declares it: its label, prompt and tracker flag. The
+ * adapter supplies `apply`, matched by `id`.
+ */
+export type RestDeclaration = Omit<RestDefinition, 'apply'>;
+
 /** The data half of an {@link AdvancementModel}, which `system.json` declares. */
 export type AdvancementDeclaration = Pick<AdvancementModel, 'sessionEvents'>;
 

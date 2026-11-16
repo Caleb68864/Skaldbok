@@ -5,7 +5,7 @@ import { classicFantasyEngine } from './classicFantasyEngine';
 import { travellerEngine } from './travellerEngine';
 import { savageWorldsEngine } from './savageWorldsEngine';
 import type { RulesEngineId, SystemEngine } from './types';
-import { currencyFromDenominations, withAdvancementRules, withMagicRules } from './declaredEngineData';
+import { currencyFromDenominations, withAdvancementRules, withMagicRules, withRestRules } from './declaredEngineData';
 import { BUNDLED_SYSTEMS, DEFAULT_SYSTEM_ID } from '../../../systems/registry';
 
 export type { SystemEngine, PanelKey, SystemTerms, SystemLabels, SkillDisplayContext } from './types';
@@ -207,6 +207,16 @@ export function getEngine(
       ? base.advancement
       : withAdvancementRules(system.advancement, base.advancement),
     probability: mergeProbability(base.probability, system.probability),
+    // Declared labels and prompts, the adapter's `apply` for each id.
+    rest: system.rest === undefined
+      ? base.rest
+      : withRestRules(
+        system.rest,
+        Object.fromEntries((base.rest ?? []).map(r => [r.id, r.apply])),
+        restId => console.warn(
+          `getEngine: system "${system.id}" declares rest "${restId}", which its rules adapter cannot run. Left out.`,
+        ),
+      ),
     currency: mergeCurrency(base.currency, system.currency),
   };
   engineCache.set(key, merged);

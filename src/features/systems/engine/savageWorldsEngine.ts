@@ -5,7 +5,7 @@ import { attrKey, resKey } from '../../../utils/statKeys';
 import { conditionPenalty } from '../../../utils/conditionEffects';
 import type { SystemDefinition } from '../../../types/system';
 import type { SystemEngine } from './types';
-import { declaredEngineData } from './declaredEngineData';
+import { declaredEngineData, missingRestThrows, withRestRules } from './declaredEngineData';
 import { savageWorldsSystem } from '../../../systems/savage-worlds';
 
 /** savage-worlds' `system.json` data, which the engine spreads. */
@@ -262,7 +262,8 @@ export const savageWorldsEngine: SystemEngine = {
       (character.armor?.weight ?? 0) +
       (character.helmet?.weight ?? 0),
   },
-  rest: null,
+  // SWADE recovery is trait rolls: this adapter runs no rests, and declares none.
+  rest: withRestRules(declared.rest, {}, missingRestThrows(savageWorldsSystem.id)),
   // No per-session advancement roll; the declared `advancement` is `null`.
   advancement: null,
   probability: {

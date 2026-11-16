@@ -12,7 +12,9 @@ import type { BoonBaneState } from '../../../utils/boonBane';
 import { applyRoundRest, applyStretchRest, applyShiftRest } from '../../../utils/restActions';
 import { attrKey, armorKey, derivedKey } from '../../../utils/statKeys';
 import type { SystemEngine, RestDefinition } from './types';
-import { declaredEngineData, withAdvancementRules, withMagicRules } from './declaredEngineData';
+import {
+  declaredEngineData, missingRestThrows, withAdvancementRules, withMagicRules, withRestRules,
+} from './declaredEngineData';
 import { classicFantasySystem } from '../../../systems/classic-fantasy';
 
 /**
@@ -35,80 +37,55 @@ export function formatSkillProbability(value: number, state: BoonBaneState): str
 }
 
 /**
- * Dragonbane's three rests, expressed as data.
+ * What Dragonbane's three rests do, keyed by the rest ids `system.json` declares.
  *
  * @remarks
- * Each `apply` delegates to the existing pure helpers in `utils/restActions`
- * rather than restating the rules, so behaviour is unchanged.
+ * The labels and prompts are declared data. Each function delegates to the
+ * existing pure helpers in `utils/restActions` rather than restating the rules,
+ * so behaviour is unchanged. Rolls arrive keyed by the declared prompt field ids
+ * (`wp`, `hp`).
  */
-const classicFantasyRests: RestDefinition[] = [
-  {
-    id: 'round',
-    label: 'Round Rest',
-    prompt: {
-      text: 'Roll a d6 for WP recovery.',
-      die: 6,
-      fields: [{ id: 'wp', label: 'd6 Result' }],
-    },
-    apply: (character, rolls) => {
-      const result = applyRoundRest(character, rolls.wp ?? 0);
-      const noop = result.alreadyFull && result.recovered === 0;
-      return {
-        resources: { wp: result.newWpCurrent },
-        conditionsCleared: [],
-        messages: [noop ? 'Already at full WP.' : `Recovered ${result.recovered} WP.`],
-        noop,
-      };
-    },
+const classicFantasyRestRules: Record<string, RestDefinition['apply']> = {
+  round: (character, rolls) => {
+    const result = applyRoundRest(character, rolls.wp ?? 0);
+    const noop = result.alreadyFull && result.recovered === 0;
+    return {
+      resources: { wp: result.newWpCurrent },
+      conditionsCleared: [],
+      messages: [noop ? 'Already at full WP.' : `Recovered ${result.recovered} WP.`],
+      noop,
+    };
   },
-  {
-    id: 'stretch',
-    label: 'Stretch Rest',
-    prompt: {
-      text: 'Roll d6 for WP and HP recovery. WP is fully restored. HP is recovered by your roll result.',
-      die: 6,
-      fields: [
-        { id: 'wp', label: 'WP d6 Result' },
-        { id: 'hp', label: 'HP d6 Result' },
+  stretch: (character, rolls, conditionToClear) => {
+    const result = applyStretchRest(character, rolls.wp ?? 0, rolls.hp ?? 0, conditionToClear);
+    const messages: string[] = [
+      result.alreadyFullWp ? 'Already at full WP.' : 'WP restored to max.',
+      result.alreadyFullHp && result.hpRecovered === 0
+        ? 'Already at full HP.'
+        : `Recovered ${result.hpRecovered} HP.`,
+    ];
+    return {
+      resources: { wp: result.newWpCurrent, hp: result.newHpCurrent },
+      conditionsCleared: result.conditionCleared ? [result.conditionCleared] : [],
+      messages,
+    };
+  },
+  // Ends the day: the declared `clearsRestTracker` clears the round/stretch marks.
+  shift: character => {
+    const result = applyShiftRest(character);
+    return {
+      resources: {
+        hp: character.resources['hp']?.max ?? 0,
+        wp: character.resources['wp']?.max ?? 0,
+      },
+      conditionsCleared: result.conditionsCleared,
+      messages: [
+        result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.',
+        result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.',
       ],
-      clearOneCondition: true,
-    },
-    apply: (character, rolls, conditionToClear) => {
-      const result = applyStretchRest(character, rolls.wp ?? 0, rolls.hp ?? 0, conditionToClear);
-      const messages: string[] = [
-        result.alreadyFullWp ? 'Already at full WP.' : 'WP restored to max.',
-        result.alreadyFullHp && result.hpRecovered === 0
-          ? 'Already at full HP.'
-          : `Recovered ${result.hpRecovered} HP.`,
-      ];
-      return {
-        resources: { wp: result.newWpCurrent, hp: result.newHpCurrent },
-        conditionsCleared: result.conditionCleared ? [result.conditionCleared] : [],
-        messages,
-      };
-    },
+    };
   },
-  {
-    id: 'shift',
-    label: 'Shift Rest',
-    // Ends the day: clears the round/stretch "used" marks.
-    clearsRestTracker: true,
-    apply: character => {
-      const result = applyShiftRest(character);
-      return {
-        resources: {
-          hp: character.resources['hp']?.max ?? 0,
-          wp: character.resources['wp']?.max ?? 0,
-        },
-        conditionsCleared: result.conditionsCleared,
-        messages: [
-          result.hpRestored > 0 ? `Restored ${result.hpRestored} HP.` : 'HP already full.',
-          result.wpRestored > 0 ? `Restored ${result.wpRestored} WP.` : 'WP already full.',
-        ],
-      };
-    },
-  },
-];
+};
 
 /** classic-fantasy's `system.json` data, which the engine below spreads. */
 const declared = declaredEngineData(classicFantasySystem);
@@ -189,7 +166,7 @@ export const classicFantasyEngine: SystemEngine = {
     limit: computeEncumbranceLimit,
     load: computeCarriedWeight,
   },
-  rest: classicFantasyRests,
+  rest: withRestRules(declared.rest, classicFantasyRestRules, missingRestThrows(classicFantasySystem.id)),
   // The session events are declared; this is Dragonbane's advancement roll.
   advancement: withAdvancementRules(declared.advancement, {
     usesMarks: true,

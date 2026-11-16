@@ -1,4 +1,7 @@
-import type { AdvancementDeclaration, DamageTrackModel, DeathModel, DifficultyModel, MagicDeclaration, DerivedFieldDef, RulesEngineId, SystemLabels, SystemTerms, TimeUnit } from '../features/systems/engine/types';
+import type {
+  AdvancementDeclaration, DamageTrackModel, DeathModel, DerivedFieldDef, DifficultyModel, MagicDeclaration,
+  RestDeclaration, RulesEngineId, SystemLabels, SystemTerms, TimeUnit,
+} from '../features/systems/engine/types';
 export interface AttributeDefinition {
   id: string;
   name: string;
@@ -638,6 +641,18 @@ export interface SystemDefinition {
    * Data for this system's resolution mechanic. The odds themselves are the
    * adapter's `probability.chance`.
    */
+  /**
+   * The rests this system offers, in button order, or `null` when it has no
+   * fixed rest procedure. Absent keeps the adapter's, `null` removes them.
+   *
+   * @remarks
+   * Labels, prompts and the tracker flag only. What a rest *does* is the
+   * adapter's `apply` for the same `id`, so a declared rest the adapter has no
+   * rules for is dropped with a warning (and refused for a bundled system). The
+   * `apply` reads its rolls by prompt field id (`wp`, `hp`), so keep those.
+   * `timeUnits[].expiresOn.rest` must name one of these ids.
+   */
+  rest?: RestDeclaration[] | null;
   probability?: {
     /**
      * The task difficulty ladder a player picks a target from, or `null` for a

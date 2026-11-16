@@ -282,6 +282,18 @@ export const systemDefinitionSchema = z.object({
       options: z.array(z.object({ value: z.number(), label: z.string().min(1) })).min(1),
     }).nullable().optional(),
   }).optional().describe('Resolution data: the difficulty ladder, or null when the roll needs none'),
+  // Labels and prompts; what each rest does is the adapter's `apply` for its id.
+  rest: z.array(z.object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    prompt: z.object({
+      text: z.string().min(1),
+      die: z.number().int().positive(),
+      fields: z.array(z.object({ id: z.string().min(1), label: z.string().min(1) })).min(1),
+      clearOneCondition: z.boolean().optional(),
+    }).optional(),
+    clearsRestTracker: z.boolean().optional(),
+  })).nullable().optional().describe('Rests in button order; null when the system has no rest procedure'),
   calendar: z
     .object({
       kind: z.literal('day-of-year'),
@@ -526,6 +538,19 @@ export const systemDefinitionSchema = z.object({
       code: z.ZodIssueCode.custom,
       message: `probability.difficulty default ${difficulty.defaultValue} is not one of its options`,
     });
+  }
+
+  // A modifier timed to a rest that does not exist never expires. Only checkable
+  // when the rests are declared; absent ones are the adapter's.
+  if (def.rest !== undefined) {
+    const restIds = (def.rest ?? []).map(r => r.id);
+    flagDupes(restIds, 'rest');
+    for (const unit of def.timeUnits ?? []) {
+      const restId = unit.expiresOn?.rest;
+      if (restId && !restIds.includes(restId)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: `timeUnit "${unit.id}" expires on undeclared rest "${restId}"` });
+      }
+    }
   }
 
   // Two events with one id would tick and untick together.

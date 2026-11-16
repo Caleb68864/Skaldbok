@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { systemDefinitionSchema } from '../../../../schemas/system.schema';
 import { BUNDLED_SYSTEMS } from '../../../systems/registry';
-import { declaredEngineData } from './declaredEngineData';
+import { declaredEngineData, missingRestThrows, withRestRules } from './declaredEngineData';
+import type { RestDefinition } from './types';
 import { classicFantasyEngine, getEngine } from './index';
 import { classicFantasySystem } from '../../../systems/classic-fantasy';
 import type { SystemDefinition } from '../../../types/system';
@@ -239,5 +240,54 @@ describe('probability.difficulty declared in system.json (roadmap E1)', () => {
 
   it('refuses a bundled system without it', () => {
     expect(() => declaredEngineData(without(travellerSystem, 'probability'))).toThrow(/does not declare/);
+  });
+});
+
+describe('rest[] declared in system.json (roadmap E1)', () => {
+  /** A rest as system.json declares it: everything but the adapter's `apply`. */
+  const dataOf = (rests: RestDefinition[] | null) => rests && rests.map(({ apply: _apply, ...data }) => data);
+
+  it.each(bundled)('%s declares its rests, or null, and keeps them through import', (_id, system) => {
+    expect(system.rest, 'no rest in system.json').toBeDefined();
+    expect(systemDefinitionSchema.parse(system).rest).toEqual(system.rest);
+    const rests = getEngine(system).rest;
+    expect(dataOf(rests)).toEqual(system.rest);
+    for (const rest of rests ?? []) expect(rest.apply, `${rest.id} has no apply`).toBeTypeOf('function');
+  });
+
+  it('an imported system relabels a rest and keeps its rules', () => {
+    const rest = classicFantasySystem.rest!.map(r => (r.id === 'shift' ? { ...r, label: 'Night Watch' } : r));
+    const shift = getEngine(imported('imported-e1-rest', { rest })).rest?.find(r => r.id === 'shift');
+    expect(shift?.label).toBe('Night Watch');
+    expect(shift?.apply).toBe(classicFantasyEngine.rest?.find(r => r.id === 'shift')?.apply);
+  });
+
+  it('an imported system can declare that it has no rests', () => {
+    // Its time units can no longer expire on a rest, or the schema refuses it.
+    const timeUnits = classicFantasySystem.timeUnits!.filter(u => !u.expiresOn?.rest);
+    expect(getEngine(imported('imported-e1-no-rest', { rest: null, timeUnits })).rest).toBeNull();
+  });
+
+  it('drops, and reports, an imported rest its adapter has no rules for', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const rest = [...classicFantasySystem.rest!, { id: 'meditate', label: 'Meditate' }];
+    const rests = getEngine(imported('imported-e1-unknown-rest', { rest })).rest;
+    expect(rests?.map(r => r.id)).toEqual(['round', 'stretch', 'shift']);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('meditate'));
+    warn.mockRestore();
+  });
+
+  it('a bundled adapter refuses a declared rest it has no rules for', () => {
+    expect(() => withRestRules([{ id: 'meditate', label: 'Meditate' }], {}, missingRestThrows('classic-fantasy')))
+      .toThrow(/meditate/);
+  });
+
+  it('rejects a time unit that expires on an undeclared rest', () => {
+    const rest = classicFantasySystem.rest!.filter(r => r.id !== 'shift');
+    expect(() => imported('imported-e1-orphan-unit', { rest })).toThrow(/timeUnit.*shift/);
+  });
+
+  it('refuses a bundled system without it', () => {
+    expect(() => declaredEngineData(without(classicFantasySystem, 'rest'))).toThrow(/does not declare/);
   });
 });

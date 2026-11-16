@@ -1,6 +1,6 @@
 {
   "id": "classic-fantasy",
-  "version": 10,
+  "version": 11,
   "name": "classic-fantasy",
   "displayName": "Dragonbane",
   "engine": "d20-roll-under",
@@ -642,5 +642,45 @@
   },
   "probability": {
     "difficulty": null
-  }
+  },
+  "rest": [
+    {
+      "id": "round",
+      "label": "Round Rest",
+      "prompt": {
+        "text": "Roll a d6 for WP recovery.",
+        "die": 6,
+        "fields": [
+          {
+            "id": "wp",
+            "label": "d6 Result"
+          }
+        ]
+      }
+    },
+    {
+      "id": "stretch",
+      "label": "Stretch Rest",
+      "prompt": {
+        "text": "Roll d6 for WP and HP recovery. WP is fully restored. HP is recovered by your roll result.",
+        "die": 6,
+        "fields": [
+          {
+            "id": "wp",
+            "label": "WP d6 Result"
+          },
+          {
+            "id": "hp",
+            "label": "HP d6 Result"
+          }
+        ],
+        "clearOneCondition": true
+      }
+    },
+    {
+      "id": "shift",
+      "label": "Shift Rest",
+      "clearsRestTracker": true
+    }
+  ]
 }

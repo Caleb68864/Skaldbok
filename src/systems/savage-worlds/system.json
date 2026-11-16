@@ -1,6 +1,6 @@
 {
   "id": "savage-worlds",
-  "version": 14,
+  "version": 15,
   "name": "savage-worlds",
   "displayName": "Savage Worlds",
   "engine": "trait-die-vs-tn",
@@ -726,5 +726,6 @@
   "advancement": null,
   "probability": {
     "difficulty": null
-  }
+  },
+  "rest": null
 }

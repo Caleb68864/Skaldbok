@@ -2,7 +2,8 @@ import type { SystemDefinition } from '../../../types/system';
 import { makeFormatAmount } from '../../../utils/currency';
 import type {
   AdvancementDeclaration, AdvancementModel, AdvancementRules,
-  CurrencyModel, MagicDeclaration, MagicModel, MagicRules, ProbabilityModel, SystemEngine,
+  CurrencyModel, MagicDeclaration, MagicModel, MagicRules, ProbabilityModel, RestDeclaration, RestDefinition,
+  SystemEngine,
 } from './types';
 
 /** The parts of an engine that are pure data and live in `system.json` (roadmap E1). */
@@ -17,7 +18,45 @@ export type DeclaredEngineData = Pick<
   advancement: AdvancementDeclaration | null;
   /** The difficulty ladder only; the adapter adds `chance`. */
   probability: Omit<ProbabilityModel, 'chance'>;
+  /** Labels and prompts only; the adapter adds each `apply` with {@link withRestRules}. */
+  rest: RestDeclaration[] | null;
 };
+
+/**
+ * Declared rests, each joined to the adapter's `apply` for its id.
+ *
+ * @remarks
+ * A declared rest with no `apply` cannot do anything, so it is passed to
+ * `onMissing` and left out rather than shown as a button that does nothing. A
+ * declaration that leaves no rest at all is `null`, the "no such mechanic" value.
+ *
+ * @param applyById - The adapter's rules, keyed by rest id.
+ * @param onMissing - Told each declared id that has no rules.
+ */
+export function withRestRules(
+  declared: RestDeclaration[] | null,
+  applyById: Record<string, RestDefinition['apply'] | undefined>,
+  onMissing: (restId: string) => void,
+): RestDefinition[] | null {
+  if (!declared) return null;
+  const rests = declared.flatMap(rest => {
+    // Own-property lookup: the id comes from a file, and `"constructor"` would resolve.
+    const apply = Object.prototype.hasOwnProperty.call(applyById, rest.id) ? applyById[rest.id] : undefined;
+    if (!apply) {
+      onMissing(rest.id);
+      return [];
+    }
+    return [{ ...rest, apply }];
+  });
+  return rests.length > 0 ? rests : null;
+}
+
+/** `onMissing` for a bundled system, whose data and adapter ship together. */
+export function missingRestThrows(systemId: string): (restId: string) => never {
+  return restId => {
+    throw new Error(`Bundled system "${systemId}" declares rest "${restId}", which its adapter has no rules for`);
+  };
+}
 
 /**
  * Declared session events with an adapter's advancement roll.
@@ -81,12 +120,13 @@ export function currencyFromDenominations(
  */
 export function declaredEngineData(system: SystemDefinition): DeclaredEngineData {
   const { terms, labels, logActions, outcomes, rollModifiers, timeUnits, panels, currency, derivedFields, death, damageTrack, magic,
-    advancement, probability } = system;
+    advancement, probability, rest } = system;
   if (
     !terms || !labels || !logActions || !outcomes || !rollModifiers || !timeUnits || !panels || !derivedFields ||
     // Nullable models: `null` declares the mechanic absent, so only `undefined` is missing.
     death === undefined || damageTrack === undefined || magic === undefined ||
     advancement === undefined || probability?.difficulty === undefined ||
+    rest === undefined ||
     !currency?.label || !currency.baseDenominationId || !currency.denominations
   ) {
     throw new Error(`Bundled system "${system.id}" does not declare all of its engine data in system.json`);
@@ -106,5 +146,6 @@ export function declaredEngineData(system: SystemDefinition): DeclaredEngineData
     magic,
     advancement,
     probability: probability.difficulty ? { difficulty: probability.difficulty } : {},
+    rest,
   };
 }

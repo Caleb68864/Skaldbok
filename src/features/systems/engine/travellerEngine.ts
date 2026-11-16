@@ -11,7 +11,7 @@ import type { SystemDefinition } from '../../../types/system';
 import { DEFAULT_TRAVELLER_JUMP_RANGE, DEFAULT_TRAVELLER_MILIEU } from '../../../config/defaults/travellerBriefing';
 import { planTravellerMapRoute } from '../../route/travellerMapRoute';
 import { TRAVELLER_GEAR_CATEGORIES, inferTravellerGearCategory, reviewTravellerGear } from '../../travellerBriefing/gearRestrictions';
-import { declaredEngineData } from './declaredEngineData';
+import { declaredEngineData, missingRestThrows, withRestRules } from './declaredEngineData';
 import { travellerSystem } from '../../../systems/traveller';
 
 /** traveller's `system.json` data, which the engine spreads. */
@@ -415,8 +415,9 @@ export const travellerEngine: SystemEngine = {
   // has no advancement roll and the declared `advancement: null` is the only
   // value it can take.
   advancement: null,
-  // Traveller recovery is Medic checks and downtime, not a fixed rest ladder.
-  rest: null,
+  // Traveller recovery is Medic checks and downtime, not a fixed rest ladder, so
+  // this adapter runs no rests and the declared `rest` is `null`.
+  rest: withRestRules(declared.rest, {}, missingRestThrows(travellerSystem.id)),
   probability: {
     // Mongoose's task difficulty ladder, declared in system.json rather than
     // read from the Quick Reference card of the same name: that card is display
