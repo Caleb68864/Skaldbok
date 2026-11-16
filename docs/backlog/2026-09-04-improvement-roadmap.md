@@ -69,6 +69,13 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > campaign or ask") was checked against the code on this date: the *create* half
 > landed as `O1` (`f3f193d`) and the *ask* half had not — see `U1`.
 
+> **Reconciled 2026-11-16.** E1 closed in PR #5 (`ROADMAP-UPDATES-2026-11-16.md`).
+> A second pass audited every open item and closed five recorded ones (PeekCard
+> and NoteReader error states, the unknown-ruleset import warning, ink in the
+> Markdown export, the TravellerBriefing flake): see
+> `ROADMAP-UPDATES-2026-11-16-wave2.md`, which also lists what is still open and
+> why. Headings below other than E1 were not changed.
+
 Status values: **OPEN** · **DONE** (record the commit) · **BLOCKED** (needs a
 product decision) · **WONTFIX** (record why).
 
