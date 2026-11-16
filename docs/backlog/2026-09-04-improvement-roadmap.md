@@ -69,6 +69,13 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > campaign or ask") was checked against the code on this date: the *create* half
 > landed as `O1` (`f3f193d`) and the *ask* half had not — see `U1`.
 
+> **Reconciled 2026-11-16.** E1 closed in PR #5 (`ROADMAP-UPDATES-2026-11-16.md`).
+> A second pass audited every open item and closed five recorded ones (PeekCard
+> and NoteReader error states, the unknown-ruleset import warning, ink in the
+> Markdown export, the TravellerBriefing flake): see
+> `ROADMAP-UPDATES-2026-11-16-wave2.md`, which also lists what is still open and
+> why. Headings below other than E1 were not changed.
+
 Status values: **OPEN** · **DONE** (record the commit) · **BLOCKED** (needs a
 product decision) · **WONTFIX** (record why).
 
@@ -630,7 +637,12 @@ hasMagic`). `skill.advancementMax` duplicates `advancement.maxSkillValue`.
 Nothing here is a bug. It is the structural work that makes the next system
 cheap and makes a user-authored system possible.
 
-### E1. Move adapter data into `system.json` — OPEN (V)
+### E1. Move adapter data into `system.json` — DONE (PR #5, merged as e92ed0c)
+**Closed 2026-11-16.** The first eight fields landed in PR #4 (`51d31aa`); the
+remaining seven (`derivedFields`, `death`, `damageTrack`, `magic`,
+`advancement.sessionEvents`, `probability.difficulty`, `rest[]`) in PR #5
+(`de2d3dd`..`a6721b8`). Detail in `ROADMAP-UPDATES-2026-11-16.md`.
+
 `getEngine` (`engine/index.ts:95-106`) already merges `terms`, `labels`,
 `logActions`, `outcomes`, `rollModifiers`, `timeUnits`, `panels` and
 `currency` from JSON. Only Traveller declares `panels` and `currency`; none
@@ -2711,7 +2723,6 @@ a test that fails against the code before it, or says plainly why it cannot.
   which cases fail changes from run to run. Reproduced on an untouched `main`
   checkout (4 failed / 2492 passed), so it is not caused by this pass. The
   likely fix is an explicit `findBy…` timeout or less work per case.
-||||||| 05a9583
 
 
 ## Workstream U — 2026-11-09

@@ -2,7 +2,7 @@ import type { Session } from '../../types/session';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
 import { generateFilename } from './generateFilename';
-import { renderNoteToMarkdown } from './renderNote';
+import { renderNoteToMarkdown, inkNotice } from './renderNote';
 import { docToText } from '../../features/notes/textToDoc';
 import { yamlValue } from './yamlValue';
 
@@ -46,7 +46,9 @@ function renderSessionLogSection(logEntries: Note[]): string {
   const entryLines = sorted.map(entry => {
     const timestamp = formatEntryTime(entry.createdAt);
     const text = docToText(entry.body);
-    return `**${timestamp}** — ${text}`;
+    const ink = inkNotice(entry);
+    const content = [text, ink].filter((part) => part.trim() !== '').join(' ');
+    return `**${timestamp}** — ${content}`;
   });
   return `\n\n## Session Log\n\n${entryLines.join('\n\n')}\n`;
 }

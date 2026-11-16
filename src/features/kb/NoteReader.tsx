@@ -59,6 +59,12 @@ export function NoteReader({ noteId }: NoteReaderProps) {
   /** A storage failure while loading — never shown as "not found". */
   const [loadError, setLoadError] = useState<string | null>(null);
   const [attachmentsError, setAttachmentsError] = useState<string | null>(null);
+  /**
+   * The body would not parse. Shown beside the empty editor so a damaged note
+   * does not read as a blank one; nothing is written back, so the stored body
+   * is left exactly as it is.
+   */
+  const [bodyError, setBodyError] = useState<string | null>(null);
   const [peekNodeId, setPeekNodeId] = useState<string | null>(null);
   const { deleteNote } = useNoteActions();
   const { showToast } = useToast();
@@ -177,8 +183,12 @@ export function NoteReader({ noteId }: NoteReaderProps) {
         const body =
           typeof note.body === 'string' ? JSON.parse(note.body) : note.body;
         editor.commands.setContent(body);
-      } catch {
-        // If body can't be parsed, leave editor empty
+        setBodyError(null);
+      } catch (err) {
+        // The editor stays empty, but say so: a bare catch here rendered a
+        // damaged note exactly like a blank one.
+        console.error('NoteReader: note body did not parse', err);
+        setBodyError("This note's text couldn't be read — it may be damaged.");
       }
     }
   }, [editor, note]);
@@ -338,6 +348,12 @@ export function NoteReader({ noteId }: NoteReaderProps) {
         onChange={(visibility) => setNote((current) => (current ? { ...current, visibility } : current))}
         className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3"
       />
+
+      {bodyError && (
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
+          {bodyError}
+        </p>
+      )}
 
       {/* Read-only Tiptap content */}
       <div className="prose max-w-none">

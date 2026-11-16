@@ -11,6 +11,9 @@ import { getCampaignById } from '../../storage/repositories/campaignRepository';
 import { resolveImportCampaignTarget } from '../../utils/import/importCampaignTarget';
 import { db } from '../../storage/db/client';
 import { BUNDLE_TABLE_BY_KEY } from '../../types/bundleTables';
+import * as systemRepository from '../../storage/repositories/systemRepository';
+import { BUNDLED_SYSTEMS } from '../../systems/registry';
+import { unknownSystemWarnings } from '../../utils/import/unknownSystems';
 
 /**
  * Maps bundle entity type keys to their Dexie table names.
@@ -110,6 +113,24 @@ export function useImportActions() {
       console.error('[useImportActions] startImport failed', err);
       showToast('Import failed: the file could not be read.');
       return;
+    }
+    if (result.success) {
+      // A ruleset the bundle names but nothing here can resolve. Checked here
+      // rather than in the parser because "stored on this device" needs the
+      // database. A failed read only costs the warning, never the import.
+      let storedIds: string[] = [];
+      try {
+        storedIds = (await systemRepository.getAll()).map((s) => s.id);
+      } catch (err) {
+        console.error('[useImportActions] could not list stored systems', err);
+      }
+      const systemWarnings = unknownSystemWarnings(result.bundle, [
+        ...BUNDLED_SYSTEMS.map((s) => s.id),
+        ...storedIds,
+      ]);
+      if (systemWarnings.length > 0) {
+        result = { ...result, warnings: [...result.warnings, ...systemWarnings] };
+      }
     }
     setParsedResult(result);
 

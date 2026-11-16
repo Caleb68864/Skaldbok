@@ -11,6 +11,25 @@
  * decoding step.
  */
 
+/** The `note.typeData` key a {@link StrokePage} is stored under. */
+export const INK_TYPE_DATA_KEY = 'ink';
+
+/**
+ * How many strokes a note's `typeData` carries, without decoding them.
+ *
+ * @remarks
+ * Structural, like `hasInkPage` in the note repository: a malformed strokes
+ * array still counts, because the callers (the Markdown renderers) only need
+ * to say that handwriting exists and was not exported.
+ */
+export function inkStrokeCount(typeData: unknown): number {
+  if (typeData === null || typeof typeData !== 'object') return 0;
+  const payload = (typeData as Record<string, unknown>)[INK_TYPE_DATA_KEY];
+  if (payload === null || typeof payload !== 'object') return 0;
+  const strokes = (payload as { strokes?: unknown }).strokes;
+  return Array.isArray(strokes) ? strokes.length : 0;
+}
+
 /** A single sampled point along a stroke: `[x, y, pressure]`. */
 export type StrokePoint = [x: number, y: number, pressure: number];
 
