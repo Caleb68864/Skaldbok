@@ -32,3 +32,23 @@ change and failed.
 | `advancement.sessionEvents` | `advancement.sessionEvents[]` (or `advancement: null`) | DONE. Only the events move; `usesMarks`, `maxSkillValue` and `rollPrompt` stay in the adapter, joined by `withAdvancementRules`. Traveller and Savage Worlds have no advancement roll, so their adapters still set `advancement: null`, and their JSON declares `null`. On those adapters declared events have nothing to feed and the model stays `null` (documented on the type). The schema rejects duplicate event ids. | `advancement.sessionEvents declared in system.json` |
 | `probability.difficulty` | `probability.difficulty` (object, or `null`) | DONE. `chance` stays in the adapter. `TRAVELLER_DEFAULT_TARGET` is now read from the declared `defaultValue` rather than restated. The schema rejects a default that is not one of the options. `fallbackAdapter.test.ts` compared `probability` by identity to prove which adapter ran; it now compares `probability.chance`, because the merge builds a new object. | `probability.difficulty declared in system.json` |
 | `rest[]` | `rest[]` (`id`, `label`, `prompt`, `clearsRestTracker`; or `null`) | DONE. Each rest's `apply` stays in the adapter, keyed by id, and `withRestRules` joins them. A bundled system that declares a rest its adapter cannot run throws at load. An imported one has the rest dropped with a warning. The schema rejects duplicate rest ids and a `timeUnits[].expiresOn.rest` that names an undeclared rest. | `rest[] declared in system.json` |
+
+With these seven, E1 is DONE: every field the entry listed now has a JSON path in
+all three bundled systems. CLAUDE.md and AGENTS.md list the new required fields
+and the `null`-versus-absent rule.
+
+## Found along the way
+
+- `damageTrack.penaltyPerLevel` had no reader (listed in `KNOWN_UNIMPLEMENTED`).
+  It has one now, and the entry is gone.
+- Left as is: `TRAVELLER_DAMAGE_TRACK_IDS` (`['str','dex','end']`) restates the
+  declared track's `order` + `overflowTo`, and Savage Worlds' Fatigue cap (2)
+  stays in code because Fatigue is not on the damage track. Neither is in E1's list.
+- Not touched, per the brief: E5, G6, S25.
+
+## Checks at the end
+
+`tsc -b` exit 0; `vitest run` 186 files, 2586 passed (2535 before this branch);
+`eslint .` 0 errors, 32 warnings (unchanged); `vite build` passed. `knip
+--dependencies` cannot run here (`knip: command not found`), on `main` too. Not
+run in a browser.
