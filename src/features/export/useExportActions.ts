@@ -26,6 +26,7 @@ import { renderRouteToMarkdown } from '../../utils/export/renderRoute';
 import { collectCharacterBundle, collectSessionBundle, collectCampaignBundle } from '../../utils/export/collectors';
 import { excludePrivateNotes, PrivacyLeakError } from '../../utils/export/privacyFilter';
 import { redactNotesForShare } from '../../utils/export/redactPrivateLinks';
+import { inkPageToSvg } from '../../utils/export/inkSvg';
 import { serializeBundle, deliverBundle } from '../../utils/export/bundleSerializer';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
@@ -139,14 +140,18 @@ export function useExportActions() {
       const attachmentFilenames = attachments.map(a => safeAttachmentFilename(a.filename));
       // S25: links to private notes never leave in a shared file.
       const [shared] = redactNotesForShare([note], campaignNotes);
-      const markdown = renderNoteToMarkdown(shared!, links, allNotes, attachmentFilenames);
+      // Handwriting goes beside the note as an SVG, which means a ZIP.
+      const inkSvg = inkPageToSvg(note.typeData);
+      const inkFilename = inkSvg ? generateFilename(note).replace(/\.md$/, '.ink.svg') : undefined;
+      const markdown = renderNoteToMarkdown(shared!, links, allNotes, attachmentFilenames, inkFilename);
 
-      if (attachments.length === 0) {
+      if (attachments.length === 0 && !inkSvg) {
         const blob = new Blob([markdown], { type: 'text/markdown' });
         await shareFile(blob, generateFilename(note));
       } else {
         const filesMap = new Map<string, string | Blob>();
         filesMap.set(generateFilename(note), markdown);
+        if (inkSvg && inkFilename) filesMap.set(inkFilename, new Blob([inkSvg], { type: 'image/svg+xml' }));
         for (const [path, contents] of await buildAttachmentFiles([note], async () => attachments, 'attachments')) {
           filesMap.set(path, contents);
         }
@@ -381,9 +386,12 @@ export function useExportActions() {
         // Must match the ZIP entry names, which are sanitised — see
       // safeAttachmentFilename — or the wiki-links point at files that are not there.
       const attachmentFilenames = attachments.map(a => safeAttachmentFilename(a.filename));
-        const markdown = renderNoteToMarkdown(note, links, allNotes, attachmentFilenames);
         const filename = generateFilename(note);
+        const inkSvg = inkPageToSvg(note.typeData);
+        const inkFilename = inkSvg ? filename.replace(/\.md$/, '.ink.svg') : undefined;
+        const markdown = renderNoteToMarkdown(note, links, allNotes, attachmentFilenames, inkFilename);
         filesMap.set(filename, markdown);
+        if (inkSvg && inkFilename) filesMap.set(inkFilename, new Blob([inkSvg], { type: 'image/svg+xml' }));
 
         const folder = note.sessionId
           ? `attachments/${note.sessionId.slice(0, 8)}`
