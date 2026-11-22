@@ -56,6 +56,28 @@ export async function getPartyByCampaign(
 }
 
 /**
+ * A party row by id, tombstoned or not; `undefined` when there is none.
+ *
+ * @remarks
+ * For the import's party fold, which asks only whether this device already
+ * has the bundle's party.
+ */
+export async function getPartyById(id: string): Promise<Party | undefined> {
+  try {
+    const row = await db.parties.get(id);
+    if (!row) return undefined;
+    const parsed = partySchema.safeParse(row);
+    if (!parsed.success) {
+      console.warn('partyRepository.getPartyById: validation failed', parsed.error);
+      return undefined;
+    }
+    return parsed.data;
+  } catch (e) {
+    throw new Error(`partyRepository.getPartyById failed: ${e}`, { cause: e });
+  }
+}
+
+/**
  * Every live party in a campaign.
  *
  * @remarks

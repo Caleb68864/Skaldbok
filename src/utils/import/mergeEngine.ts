@@ -2,6 +2,8 @@ import { db } from '../../storage/db/client';
 import type { BundleEnvelope, BundleContents } from '../../types/bundle';
 import { getById as getCreatureTemplateById } from '../../storage/repositories/creatureTemplateRepository';
 import { getSessionById } from '../../storage/repositories/sessionRepository';
+import { getCampaignById } from '../../storage/repositories/campaignRepository';
+import { getPartyByCampaign, getPartyById, getPartyMembers } from '../../storage/repositories/partyRepository';
 import { importablePortraitUri } from './portraitUri';
 import { BUNDLE_PROCESSING_ORDER, BUNDLE_TABLE_BY_KEY } from '../../types/bundleTables';
 
@@ -125,6 +127,9 @@ export async function mergeBundle(
     const sessionsPresent = options.targetCampaignId
       ? await sessionsAfterImport(bundle.contents, options)
       : new Set<string>();
+    const partyFold = options.targetCampaignId
+      ? await partyFoldFor(bundle.contents, options.targetCampaignId)
+      : null;
 
     // One transaction over every table the merge writes: a catastrophic mid-loop
     // failure (quota exceeded, tab closed, DB error) now rolls the WHOLE import
@@ -148,7 +153,7 @@ export async function mergeBundle(
 
           for (const entity of entities) {
             try {
-              await mergeEntity(entity, entityType, options, report, encountersToCheck, sessionsPresent);
+              await mergeEntity(entity, entityType, options, report, encountersToCheck, sessionsPresent, partyFold);
             } catch (err) {
               if (isFatalMergeError(err)) throw err; // abort + roll back the whole import
               report.errors.push({
@@ -270,11 +275,33 @@ async function mergeEntity(
   report: MergeReport,
   encountersToCheck: Record<string, unknown>[],
   sessionsPresent: Set<string>,
+  partyFold: PartyFold | null,
 ): Promise<void> {
   const id = entity.id as string;
   if (!id) {
     report.errors.push({ entityType, entityId: 'no-id', message: 'Entity missing id field' });
     return;
+  }
+
+  // A bundle's party is folded into the campaign's own party rather than
+  // inserted beside it. See `partyFoldFor`.
+  if (partyFold && entityType === 'parties' && partyFold.remap.has(id)) {
+    report.skipped++;
+    return;
+  }
+  if (partyFold && entityType === 'partyMembers') {
+    const from = entity.partyId;
+    if (typeof from === 'string' && partyFold.remap.has(from)) {
+      const linked = entity.linkedCharacterId;
+      if (typeof linked === 'string' && partyFold.seatedCharacters.has(linked)) {
+        // Already seated in the campaign's party: a second seat would list the
+        // character twice. Nothing local is changed.
+        report.skipped++;
+        return;
+      }
+      entity = { ...entity, partyId: partyFold.remap.get(from) };
+      if (typeof linked === 'string') partyFold.seatedCharacters.add(linked);
+    }
   }
 
   // Apply re-parenting, then force the row LIVE. Exports ship live data only
@@ -485,6 +512,55 @@ function applyReparenting(
   }
 
   return result;
+}
+
+/** How an import into a chosen campaign folds the bundle's party into the campaign's. */
+interface PartyFold {
+  /** Bundle party id → the target campaign's party id. */
+  remap: Map<string, string>;
+  /** Characters already seated in the target party (grows as members are folded in). */
+  seatedCharacters: Set<string>;
+}
+
+/**
+ * Works out how the bundle's parties fold into the target campaign's party.
+ *
+ * @remarks
+ * **Decided by agent 2026-11-21 (owner may revisit).** A session or notes
+ * bundle imported into an existing campaign, or into one just created in the
+ * import dialog (which makes its own party), carried its own `parties` row
+ * with a different id. That was inserted as a second live party; its members
+ * kept pointing at it, and `CampaignContext` only ever shows the campaign's
+ * active party, so the import reported the members inserted and the party
+ * drawer showed none of them.
+ *
+ * Now, when the target campaign already has a party, a bundle party that is
+ * not already on this device is not inserted: its members join the
+ * campaign's party (preferring `activePartyId`), and a member whose character
+ * already has a seat there is skipped. Non-destructive: nothing local is
+ * changed or removed, and a bundle party already on the device (a re-import of
+ * the same backup) is merged as before. A campaign with no party keeps the old
+ * behaviour, so the bundle's party becomes its party.
+ */
+async function partyFoldFor(contents: BundleContents, targetCampaignId: string): Promise<PartyFold | null> {
+  const bundleParties = (contents.parties ?? []) as Array<{ id?: unknown }>;
+  if (bundleParties.length === 0) return null;
+  const campaign = await getCampaignById(targetCampaignId);
+  const target = await getPartyByCampaign(targetCampaignId, { preferPartyId: campaign?.activePartyId });
+  if (!target) return null;
+  const remap = new Map<string, string>();
+  for (const party of bundleParties) {
+    if (typeof party.id !== 'string' || party.id === target.id) continue;
+    if (await getPartyById(party.id)) continue; // already here: merge as before
+    remap.set(party.id, target.id);
+  }
+  if (remap.size === 0) return null;
+  const seated = new Set(
+    (await getPartyMembers(target.id))
+      .map((m) => m.linkedCharacterId)
+      .filter((cid): cid is string => typeof cid === 'string'),
+  );
+  return { remap, seatedCharacters: seated };
 }
 
 /**
