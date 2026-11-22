@@ -20,7 +20,7 @@ The one failure predates this work (see the end of this file).
 | E2 | DONE | `read`, `write` and `formatAmount` are built from the denominations. **Bug fixed:** declared coins read back as nothing. | `currencyAndPanelMerge.test.ts` |
 | E3 | DONE | Traveller DMs follow the declared attributes. `resourceIds` is derived, using the new `ResourceDefinition.role`. The restated maxima are pinned by test, not removed. | `declaredIds.test.ts` |
 | E4 | DONE | `system.json` declares `engine`. `SYSTEM_ADAPTERS` is derived from the registry, so the lockstep is gone. It remains as a lookup for older copies of a bundled system. | `fallbackAdapter.test.ts` |
-| E5 | PARTLY DONE | System `index.ts` files no longer re-export maths, and the duplicate `getSkillBaseChance` is gone. **Still open, needs a decision:** moving the helpers conflicts with CLAUDE.md. | `bundledShape.test.ts` |
+| E5 | DONE as far as it goes; the move is **declined, decided by agent 2026-11-21 (owner may revisit)**, see `ROADMAP-UPDATES-2026-11-21-wave6.md` | System `index.ts` files no longer re-export maths, and the duplicate `getSkillBaseChance` is gone. **Still open, needs a decision:** moving the helpers conflicts with CLAUDE.md. | `bundledShape.test.ts` |
 | E6 | DONE for what was listed | `terms`, `labels` and `timeUnits` share the engine types. Blank templates carry schema 6 and `deathSuccesses`. Checklist added to CLAUDE.md and AGENTS.md. Optional per-ruleset blocks stay per-ruleset. | `bundledShape.test.ts` |
 | A8 | DONE | The wake lock now honours a saved preference that loads after mount. | `useWakeLock.test.tsx` |
 | A9 | DONE for what remained | `danglingLinkEndpoint` treats a tombstone as missing. | `importVersionAndEndpoints.test.ts` |
@@ -28,7 +28,7 @@ The one failure predates this work (see the end of this file).
 | G1 | DONE | `config/defaults/timelineTracks.ts`, a settings key, `useTimelineTrackCatalog()`. | `timelineTrackConfig.test.tsx` |
 | G2 | DONE | The note editor reads `selectable` from config, and buttons now show labels rather than ids. Bestiary categories are one configured list. | `noteEditorNavigation.test.tsx` (editor); bestiary has no test |
 | G3 | DONE | A repeat promotion no longer duplicates the edge. | `promotionAndRouteGuards.test.ts` |
-| G6 | PARTLY DONE | `useIsPlayMode()` replaces the ad hoc checks. **Still open, needs a decision:** gear in play mode. | none: refactor, covered by existing tests |
+| G6 | DONE | `useIsPlayMode()` replaces the ad hoc checks. Gear in play mode: **Decided by agent 2026-11-21 (owner may revisit)**, see `ROADMAP-UPDATES-2026-11-21-wave6.md`. | none: refactor, covered by existing tests |
 | G7 | DONE | `deleteLinksForNote` is now `softDeleteLinksForNote`; `removePartyMember` is now `hardDeletePartyMember`. | existing guards |
 | G8 | DONE | `routeRepository.restore` ignores a live stop. | `promotionAndRouteGuards.test.ts` |
 | G9 | PARTLY DONE | `/notes` and the library no longer use dead or legacy paths. Boolean indexes left: dropping them needs a `version(21)` for no user-visible gain. | none |
@@ -74,7 +74,7 @@ revert).
 | Item | Why |
 |---|---|
 | T1 and its spec | The spec's status is "Proposed" and it lists three unanswered rules decisions. Not started. |
-| S25, private-note control | Excluded by the brief. |
+| S25, private-note control | **Decided by agent 2026-11-21 (owner may revisit)**, see `ROADMAP-UPDATES-2026-11-21-wave6.md`. |
 | H8 | Not started. `attachments` requires a `noteId` and is filtered by note privacy, so where portraits live is a design choice, and the migration moves user data. |
 | C3 | The entry offers two designs. Needs a decision. |
 | H9 | The two indexes hold different documents (notes, KB nodes) and no defect is shown. Not started. |

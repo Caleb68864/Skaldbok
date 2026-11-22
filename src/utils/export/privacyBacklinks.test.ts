@@ -4,7 +4,8 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../../storage/db/client';
 import { collectCampaignBundle } from './collectors';
 import { serializeBundle } from './bundleSerializer';
-import { PrivacyLeakError, excludePrivateNotes } from './privacyFilter';
+import { excludePrivateNotes } from './privacyFilter';
+import { PRIVATE_LINK_TEXT, redactNotesForShare } from './redactPrivateLinks';
 import { renderNoteToMarkdown } from './renderNote';
 import { BUNDLED_SYSTEMS } from '../../systems/registry';
 import type { Note } from '../../types/note';
@@ -24,36 +25,18 @@ import type { Note } from '../../types/note';
  * note that mentions a private one carries that note's id and title inside its
  * own body, several levels down a ProseMirror document.
  *
- * The two export paths then do opposite things with the same chip, and both
- * outcomes are recorded here rather than endorsed:
+ * The two export paths used to do opposite things with the same chip: the
+ * JSON bundle found the private id in the public note's body and refused to
+ * write at all (`PrivacyLeakError`), so one link could block the whole
+ * shareable backup, while the Markdown path wrote the private note's title as
+ * `[[Its Title]]`. That was roadmap S25, left for the owner.
  *
- * - **The JSON bundle refuses.** `applyPrivacyFilter` correctly keeps the public
- *   note — the private id is nested inside `body`, not a top-level field, and
- *   dropping a whole public note because of one word in it would be the
- *   over-filtering mistake. `privateResidueIn` then finds that id in the
- *   serialized text and `serializeBundle` throws `PrivacyLeakError`. The export
- *   fails closed and nothing is written, which is safe — and it means marking
- *   one linked-to note private can block the whole campaign backup until it is
- *   un-marked.
- * - **The Markdown path ships the title.** `resolveWikiLinks` renders a
- *   `wikiLink` node as `[[label]]` without consulting `allNotes` at all, so
- *   passing it a privacy-filtered corpus changes nothing for wikilinks (it does
- *   work for `mention` nodes, which is what that corpus was added for). The
- *   private note's title leaves the device in a public note's prose, with no
- *   refusal and no warning.
- *
- * Neither is a bug this file fixes, because the choice between them is a policy
- * question the repository has already answered once, in the other direction:
- * `privateResidueIn` deliberately matches **ids only**, on the grounds that a
- * private note's title can legitimately appear in a public note's body and
- * refusing that export would be over-filtering. Under that rule the Markdown
- * behaviour is consistent and the JSON refusal is the odd one out — the same
- * rule at two exits, disagreeing, which is the shape this repository keeps
- * finding. Deciding between them means deciding whether an export may rewrite
- * prose the user wrote, and that is the owner's call, not a test's.
- *
- * What this file does is make both behaviours executable, so the decision is
- * made against what the code does rather than against what it is assumed to do.
+ * **Decided by agent 2026-11-21 (owner may revisit):** a shared export never
+ * carries a private note's id or title. The link node is replaced by
+ * `[private note]` on the exported copy (`redactPrivateLinks`); the rest of the
+ * prose, and the stored note, are untouched. The two "blocks" and "ships the
+ * title" cases below were rewritten to this rule, and both fail on the code
+ * before it.
  */
 
 const CAMPAIGN_ID = 'camp-backlink';
@@ -114,26 +97,33 @@ describe('a public note whose body wiki-links a private note', () => {
     expect(json).toContain(SECRET_ID);
   });
 
-  it('blocks the whole JSON bundle once the target is marked private', async () => {
+  it('exports the JSON bundle with the link redacted once the target is private', async () => {
     await seed('private');
-    await expect(campaignJson()).rejects.toBeInstanceOf(PrivacyLeakError);
-    // The refusal names the note, which is the only thing that makes it
-    // actionable: the fix is to un-mark that note or to remove the link.
-    await expect(campaignJson()).rejects.toThrow(SECRET_ID);
+    const json = await campaignJson();
+    expect(json).not.toContain(SECRET_ID);
+    expect(json).not.toContain(SECRET_TITLE);
+    expect(json).toContain(PRIVATE_LINK_TEXT);
+    // The prose around the link is the author's and survives.
+    expect(json).toContain('We should ask ');
+    expect(json).toContain('The Toll House');
   });
 
-  it('ships the private title in the Markdown path, with no refusal', async () => {
-    // Recorded, not endorsed — see this file's remarks. The corpus handed to the
-    // renderer is privacy-filtered exactly as `useExportActions` filters it, and
-    // it makes no difference, because `resolveWikiLinks` renders a `wikiLink`
-    // from its stored `label` and never looks at the corpus.
+  it('leaves the stored note as it was', async () => {
     await seed('private');
-    const linking = await db.notes.get(PUBLIC_ID) as Note;
-    const corpus = excludePrivateNotes(await db.notes.toArray() as Note[]);
+    await campaignJson();
+    const stored = await db.notes.get(PUBLIC_ID) as Note;
+    expect(JSON.stringify(stored.body)).toContain(SECRET_ID);
+  });
 
-    expect(corpus.map(n => n.id)).not.toContain(SECRET_ID);
+  it('redacts the link in the Markdown path too', async () => {
+    await seed('private');
+    const all = await db.notes.toArray() as Note[];
+    const linking = all.find(n => n.id === PUBLIC_ID)!;
+    const corpus = excludePrivateNotes(all);
+    const [shared] = redactNotesForShare([linking], all);
 
-    const markdown = renderNoteToMarkdown(linking, [], corpus);
-    expect(markdown).toContain(SECRET_TITLE);
+    const markdown = renderNoteToMarkdown(shared!, [], corpus);
+    expect(markdown).not.toContain(SECRET_TITLE);
+    expect(markdown).toContain(`We should ask ${PRIVATE_LINK_TEXT} about the toll.`);
   });
 });

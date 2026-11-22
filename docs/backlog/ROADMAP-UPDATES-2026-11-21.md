@@ -6,8 +6,8 @@ Not pushed.
 
 `.gitignore` ignores `docs/backlog/`, so this file needs `git add -f`.
 
-Out of scope by the brief: E5, G6, S25. Left for the owner: whether the sheet
-should read `labels.derivedPanel` / `labels.storyBankPanel`.
+Out of scope by the brief: E5, G6, S25. The `labels.derivedPanel` question was
+settled in wave 6 (`ROADMAP-UPDATES-2026-11-21-wave6.md`).
 
 ## Done in this wave
 

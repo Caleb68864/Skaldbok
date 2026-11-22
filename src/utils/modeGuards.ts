@@ -16,9 +16,12 @@ import { useAppState } from '../context/AppStateContext';
  * against the engine rule. Removing them is behaviour-neutral by definition: an
  * entry nothing queries cannot change an outcome.
  *
- * The live surfaces (current HP, conditions, weapons) are not gated through this
- * guard at all — they are always editable, which is what play mode wants. If a
- * surface ever *should* be gated, add the path here **and** the
+ * The live surfaces (current HP, conditions, equipping a weapon, a consumable's
+ * count, coins) are not gated through this guard at all — they are always
+ * editable, which is what play mode wants. Adding, editing and removing gear is
+ * a build change and is gated by {@link FIELD_PATHS.gear}. (This comment used
+ * to say weapons were always editable, which was true only of the Equip
+ * button.) If a surface ever *should* be gated, add the path here **and** the
  * `useFieldEditable` call that asks about it; the entry alone does nothing.
  *
  * Every path the app asks about is declared in {@link FIELD_PATHS}. Ask with one
@@ -71,6 +74,18 @@ export const FIELD_PATHS = {
   helmetEquipped: 'helmet.equipped',
   /** The end-of-session advancement checklist — editable during play. */
   advancementChecks: 'advancementChecks',
+  /**
+   * Adding, editing or removing weapons, inventory, tiny items and the memento.
+   *
+   * @remarks
+   * Roadmap G6. **Decided by agent 2026-11-21 (owner may revisit):** locked in
+   * play mode, as it already was through `useIsEditMode`. Play mode keeps what a
+   * session needs (Equip, a consumable's count, coins); changing what the
+   * character owns is a build change. Kept because it is the existing
+   * behaviour; to open gear up during play, add `'gear'` to
+   * `PLAY_MODE_EDITABLE_PREFIXES`.
+   */
+  gear: 'gear',
 } as const;
 
 /** Every declared field path, for tests and exhaustiveness checks. */

@@ -25,6 +25,7 @@ import { renderLedgerToMarkdown } from '../../utils/export/renderLedger';
 import { renderRouteToMarkdown } from '../../utils/export/renderRoute';
 import { collectCharacterBundle, collectSessionBundle, collectCampaignBundle } from '../../utils/export/collectors';
 import { excludePrivateNotes, PrivacyLeakError } from '../../utils/export/privacyFilter';
+import { redactNotesForShare } from '../../utils/export/redactPrivateLinks';
 import { serializeBundle, deliverBundle } from '../../utils/export/bundleSerializer';
 import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
@@ -130,12 +131,15 @@ export function useExportActions() {
       // `[[Its Real Title]]` here and degraded to plain text there — the same
       // rule at two exits, disagreeing. Unresolved is the correct outcome: the
       // target is not in the export.
-      const allNotes = excludePrivateNotes(await getNotesByCampaign(activeCampaign.id));
+      const campaignNotes = await getNotesByCampaign(activeCampaign.id);
+      const allNotes = excludePrivateNotes(campaignNotes);
       const attachments = await getAttachmentsByNote(noteId);
       // Must match the ZIP entry names, which are sanitised — see
       // safeAttachmentFilename — or the wiki-links point at files that are not there.
       const attachmentFilenames = attachments.map(a => safeAttachmentFilename(a.filename));
-      const markdown = renderNoteToMarkdown(note, links, allNotes, attachmentFilenames);
+      // S25: links to private notes never leave in a shared file.
+      const [shared] = redactNotesForShare([note], campaignNotes);
+      const markdown = renderNoteToMarkdown(shared!, links, allNotes, attachmentFilenames);
 
       if (attachments.length === 0) {
         const blob = new Blob([markdown], { type: 'text/markdown' });
@@ -192,7 +196,11 @@ export function useExportActions() {
       // gather links only for what survives, so a private note leaves no trace
       // in the front matter either. The JSON bundle paths already do this via
       // applyPrivacyFilter; these Markdown paths had no filtering at all.
-      const shareableNotes = excludePrivateNotes(linkedNotes);
+      // S25: and links from them to any private note in the campaign are redacted.
+      const shareableNotes = redactNotesForShare(
+        excludePrivateNotes(linkedNotes),
+        await getNotesByCampaign(activeCampaign.id),
+      );
 
       const allEntityLinks: EntityLink[] = [];
       for (const note of shareableNotes) {
@@ -258,7 +266,11 @@ export function useExportActions() {
       // gather links only for what survives, so a private note leaves no trace
       // in the front matter either. The JSON bundle paths already do this via
       // applyPrivacyFilter; these Markdown paths had no filtering at all.
-      const shareableNotes = excludePrivateNotes(linkedNotes);
+      // S25: and links from them to any private note in the campaign are redacted.
+      const shareableNotes = redactNotesForShare(
+        excludePrivateNotes(linkedNotes),
+        await getNotesByCampaign(activeCampaign.id),
+      );
 
       const allEntityLinks: EntityLink[] = [];
       for (const note of shareableNotes) {
@@ -318,9 +330,11 @@ export function useExportActions() {
         ...(await getLinksFrom(noteId, 'contains')),
       ] as EntityLink[];
       // Privacy-filtered corpus, for the same reason as `exportNote` above.
-      const allNotes = excludePrivateNotes(await getNotesByCampaign(activeCampaign.id));
+      const campaignNotes = await getNotesByCampaign(activeCampaign.id);
+      const allNotes = excludePrivateNotes(campaignNotes);
 
-      const markdown = renderNoteToMarkdown(note, links, allNotes);
+      const [shared] = redactNotesForShare([note], campaignNotes);
+      const markdown = renderNoteToMarkdown(shared!, links, allNotes);
       await copyToClipboard(markdown);
       showToast('Copied to clipboard');
     } catch (e) {
@@ -350,7 +364,8 @@ export function useExportActions() {
       // Private notes are excluded: this writes a shareable ZIP, and the JSON
        // bundle paths below already filter. Without this the two export routes
        // disagreed about what "private" means.
-      const allNotes = excludePrivateNotes(await getNotesByCampaign(activeCampaign.id));
+      const campaignNotes = await getNotesByCampaign(activeCampaign.id);
+      const allNotes = redactNotesForShare(excludePrivateNotes(campaignNotes), campaignNotes);
       if (allNotes.length === 0) {
         showToast('No notes to export');
         return;
