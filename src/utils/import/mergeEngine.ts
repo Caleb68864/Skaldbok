@@ -1,6 +1,7 @@
 import { db } from '../../storage/db/client';
 import type { BundleEnvelope, BundleContents } from '../../types/bundle';
 import { getById as getCreatureTemplateById } from '../../storage/repositories/creatureTemplateRepository';
+import { getSessionById } from '../../storage/repositories/sessionRepository';
 import { importablePortraitUri } from './portraitUri';
 import { BUNDLE_PROCESSING_ORDER, BUNDLE_TABLE_BY_KEY } from '../../types/bundleTables';
 
@@ -117,8 +118,14 @@ export async function mergeBundle(
   // Encounters whose participant creature-links to verify AFTER the transaction
   // commits — done outside the tx so no repository read runs inside it.
   const encountersToCheck: Record<string, unknown>[] = [];
-
   try {
+    // Read before the transaction, through the repository: which sessions the
+    // imported notes may keep pointing at. Inside the `try` so a failed read is
+    // reported like any other, keeping the never-throws contract.
+    const sessionsPresent = options.targetCampaignId
+      ? await sessionsAfterImport(bundle.contents, options)
+      : new Set<string>();
+
     // One transaction over every table the merge writes: a catastrophic mid-loop
     // failure (quota exceeded, tab closed, DB error) now rolls the WHOLE import
     // back instead of leaving entities without their relationship edges. Bad
@@ -141,7 +148,7 @@ export async function mergeBundle(
 
           for (const entity of entities) {
             try {
-              await mergeEntity(entity, entityType, options, bundle.contents, report, encountersToCheck);
+              await mergeEntity(entity, entityType, options, report, encountersToCheck, sessionsPresent);
             } catch (err) {
               if (isFatalMergeError(err)) throw err; // abort + roll back the whole import
               report.errors.push({
@@ -260,9 +267,9 @@ async function mergeEntity(
   entity: Record<string, unknown>,
   entityType: keyof BundleContents,
   options: MergeOptions,
-  bundleContents: BundleContents,
   report: MergeReport,
-  encountersToCheck: Record<string, unknown>[]
+  encountersToCheck: Record<string, unknown>[],
+  sessionsPresent: Set<string>,
 ): Promise<void> {
   const id = entity.id as string;
   if (!id) {
@@ -275,7 +282,7 @@ async function mergeEntity(
   // imported row is spurious — a hand-edited or hostile bundle carrying a
   // tombstone must not overwrite a live local row (it would vanish from the UI)
   // nor import as an invisible tombstone that still claims the id.
-  const reparented = { ...applyReparenting(entity, options.targetCampaignId, bundleContents) } as Record<string, unknown>;
+  const reparented = { ...applyReparenting(entity, entityType, options.targetCampaignId, sessionsPresent) } as Record<string, unknown>;
   delete reparented.deletedAt;
   delete reparented.softDeletedBy;
   if (entityType === 'characters' && 'portraitUri' in reparented) {
@@ -452,8 +459,9 @@ async function mergeEntity(
  */
 function applyReparenting(
   entity: Record<string, unknown>,
+  entityType: keyof BundleContents,
   targetCampaignId: string | undefined,
-  bundleContents: BundleContents
+  sessionsPresent: Set<string>,
 ): Record<string, unknown> {
   if (!targetCampaignId) return entity;
 
@@ -464,17 +472,43 @@ function applyReparenting(
     result.campaignId = targetCampaignId;
   }
 
-  // Clear sessionId when the session is NOT in the bundle
-  if ('sessionId' in result && result.sessionId) {
-    const sessionInBundle = (bundleContents.sessions ?? []).some(
-      (s) => s.id === result.sessionId
-    );
-    if (!sessionInBundle) {
+  // Clear a note's sessionId when that session will not exist after the
+  // import. This used to ask only whether the session was in the *bundle*, so
+  // with Sessions unticked the notes kept pointing at a session that was never
+  // written and every session-scoped read missed them. An encounter keeps its
+  // id: `encounterSchema` requires one, and clearing it made the row fail
+  // validation on every read; it stays reachable from the campaign.
+  if ('sessionId' in result && result.sessionId && entityType !== 'encounters') {
+    if (!sessionsPresent.has(result.sessionId as string)) {
       result.sessionId = undefined;
     }
   }
 
   return result;
+}
+
+/**
+ * The session ids imported rows may point at once this import is done.
+ *
+ * @remarks
+ * A session counts when it is in the bundle **and** Sessions is selected, or
+ * when it is already live on the device.
+ */
+async function sessionsAfterImport(contents: BundleContents, options: MergeOptions): Promise<Set<string>> {
+  const present = new Set<string>();
+  if (options.selectedEntityTypes.has('sessions')) {
+    for (const s of contents.sessions ?? []) present.add(s.id);
+  }
+  const referenced = new Set<string>();
+  for (const key of ['notes', 'encounters'] as const) {
+    for (const row of (contents[key] ?? []) as Array<{ sessionId?: unknown }>) {
+      if (typeof row.sessionId === 'string' && !present.has(row.sessionId)) referenced.add(row.sessionId);
+    }
+  }
+  for (const id of referenced) {
+    if (await getSessionById(id)) present.add(id);
+  }
+  return present;
 }
 
 /**
