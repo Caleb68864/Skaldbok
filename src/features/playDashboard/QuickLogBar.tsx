@@ -3,6 +3,7 @@ import { cn } from '../../lib/utils';
 import { ShellDock } from '../../components/shell/ShellDock';
 import { useSessionLog } from '../session/useSessionLog';
 import { useCampaignContext } from '../campaign/CampaignContext';
+import { useToast } from '../../context/ToastContext';
 
 /**
  * A note composer docked to the bottom of the Play screen.
@@ -38,6 +39,7 @@ export function QuickLogBar() {
   const [saving, setSaving] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { showToast } = useToast();
 
   if (!activeSession) return null;
 
@@ -62,6 +64,12 @@ export function QuickLogBar() {
       setJustSaved(true);
       window.setTimeout(() => setJustSaved(false), 1500);
       inputRef.current?.focus();
+    } catch (e) {
+      // Was try/finally with no catch: an unhandled rejection, and the text
+      // simply stayed in the box with nothing said. The text is still kept, so
+      // the note can be sent again.
+      console.error('QuickLogBar: save failed', e);
+      showToast(`Couldn't save that note — ${e instanceof Error ? e.message : String(e)}`, 'error');
     } finally {
       setSaving(false);
     }
