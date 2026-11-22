@@ -13,9 +13,11 @@ import { inkStrokeCount } from '../../features/notes/ink/strokeModel';
  * ink log entry as a bare timestamp, so nothing said content had been left
  * behind.
  */
-export function inkNotice(note: Pick<Note, 'typeData'>): string {
+export function inkNotice(note: Pick<Note, 'typeData'>, inkFilename?: string): string {
   const strokes = inkStrokeCount(note.typeData);
   if (strokes === 0) return '';
+  // Exports that ship the drawing as an SVG beside the note embed it instead.
+  if (inkFilename) return `![[${inkFilename}]]`;
   return `_[Handwritten page (${strokes} stroke${strokes === 1 ? '' : 's'}). Handwriting is not exported to Markdown; it is kept in a Skaldbok JSON export.]_`;
 }
 
@@ -34,12 +36,15 @@ export function inkNotice(note: Pick<Note, 'typeData'>): string {
  * @param entityLinks - Links touching this note, surfaced as `related` targets.
  * @param allNotes - Id/title pairs used to resolve wiki-link targets.
  * @param attachmentFilenames - Filenames to embed under an Attachments heading.
+ * @param inkFilename - The note's handwriting, written beside it as an SVG by
+ *   the caller; embedded in place of the "not exported" notice.
  */
 export function renderNoteToMarkdown(
   note: Note,
   entityLinks: EntityLink[],
   allNotes: Array<{ id: string; title: string }>,
-  attachmentFilenames?: string[]
+  attachmentFilenames?: string[],
+  inkFilename?: string,
 ): string {
   // Build YAML front matter
   const frontMatterFields: Record<string, unknown> = {
@@ -68,7 +73,7 @@ export function renderNoteToMarkdown(
 
   let result = frontMatter + '\n\n' + body;
 
-  const ink = inkNotice(note);
+  const ink = inkNotice(note, inkFilename);
   if (ink) result += (body.trim() === '' ? '' : '\n\n') + ink + '\n';
 
   if (attachmentFilenames && attachmentFilenames.length > 0) {
