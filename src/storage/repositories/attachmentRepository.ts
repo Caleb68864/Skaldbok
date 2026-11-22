@@ -24,6 +24,7 @@ export async function createAttachment(
   try {
     const blob = await resizeAndCompress(file, 1920, 0.8);
     const filename = `${noteId.slice(0, 8)}-${Date.now()}.jpg`;
+    const now = nowISO();
     const record: Attachment = {
       id: generateId(),
       noteId,
@@ -32,7 +33,8 @@ export async function createAttachment(
       mimeType: 'image/jpeg',
       sizeBytes: blob.size,
       blob,
-      createdAt: nowISO(),
+      createdAt: now,
+      updatedAt: now,
     };
     await db.attachments.add(record);
     return record;
@@ -113,7 +115,7 @@ export async function softDeleteAttachmentsByNote(noteId: string, txId: string):
     if (rows.length === 0) return;
     const now = nowISO();
     await db.attachments.bulkUpdate(
-      rows.map(row => ({ key: row.id, changes: { deletedAt: now, softDeletedBy: txId } })),
+      rows.map(row => ({ key: row.id, changes: { deletedAt: now, softDeletedBy: txId, updatedAt: now } })),
     );
   } catch (e) {
     throw new Error(`attachmentRepository.softDeleteAttachmentsByNote failed: ${e}`, { cause: e });
@@ -126,7 +128,7 @@ export async function restoreAttachmentsForTxId(txId: string): Promise<void> {
     const rows = await db.attachments.where('softDeletedBy').equals(txId).toArray();
     if (rows.length === 0) return;
     await db.attachments.bulkUpdate(
-      rows.map(row => ({ key: row.id, changes: { deletedAt: undefined, softDeletedBy: undefined } })),
+      rows.map(row => ({ key: row.id, changes: { deletedAt: undefined, softDeletedBy: undefined, updatedAt: nowISO() } })),
     );
   } catch (e) {
     throw new Error(`attachmentRepository.restoreAttachmentsForTxId failed: ${e}`, { cause: e });
@@ -151,7 +153,8 @@ export async function softDeleteAttachment(id: string): Promise<void> {
     const row = await db.attachments.get(id);
     if (!row) return;
     if (row.deletedAt) return;
-    await db.attachments.update(id, { deletedAt: nowISO(), softDeletedBy: generateSoftDeleteTxId() });
+    const now = nowISO();
+    await db.attachments.update(id, { deletedAt: now, softDeletedBy: generateSoftDeleteTxId(), updatedAt: now });
   } catch (e) {
     throw new Error(`attachmentRepository.softDeleteAttachment failed: ${e}`, { cause: e });
   }
@@ -169,7 +172,7 @@ export async function restoreAttachment(id: string): Promise<void> {
     const row = await db.attachments.get(id);
     if (!row) return;
     if (!row.deletedAt) return;
-    await db.attachments.update(id, { deletedAt: undefined, softDeletedBy: undefined });
+    await db.attachments.update(id, { deletedAt: undefined, softDeletedBy: undefined, updatedAt: nowISO() });
   } catch (e) {
     throw new Error(`attachmentRepository.restoreAttachment failed: ${e}`, { cause: e });
   }
@@ -233,7 +236,7 @@ export async function deleteAttachmentsByNote(noteId: string): Promise<void> {
 /** Updates just the caption on an attachment. */
 export async function updateAttachmentCaption(id: string, caption: string): Promise<void> {
   try {
-    await db.attachments.update(id, { caption });
+    await db.attachments.update(id, { caption, updatedAt: nowISO() });
   } catch (e) {
     throw new Error(`attachmentRepository.updateAttachmentCaption failed: ${e}`, { cause: e });
   }

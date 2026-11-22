@@ -11,6 +11,16 @@ export const attachmentSchema = z.object({
   caption: z.string().optional(),
   createdAt: z.string(),
   /**
+   * When the row last changed (a caption edit, a delete or restore).
+   *
+   * @remarks
+   * Absent on rows written before 2026-11-21. Attachments were treated as
+   * write-once and had no `updatedAt`, so a re-import always kept the local
+   * copy and a caption edited on another device never arrived. The merge
+   * reads a missing value as `createdAt`.
+   */
+  updatedAt: z.string().optional(),
+  /**
    * ISO timestamp set when soft-deleted.
    *
    * @remarks

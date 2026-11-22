@@ -61,6 +61,24 @@ describe('re-importing rows that have no updatedAt (roadmap R, recorded)', () =>
     expect(report.skipped).toBe(1);
   });
 
+  it('carries a caption edited after the photo was added', async () => {
+    // Attachments had no updatedAt, so any local copy won and a caption edited
+    // on another device never arrived. Fails on that merge: it was a skip.
+    const created = '2026-01-01T00:00:00.000Z';
+    const row = { id: 'a2', noteId: 'n', campaignId: 'c', filename: 'a.png', mimeType: 'image/png', sizeBytes: 1, createdAt: created };
+    await db.notes.put({ id: 'n', campaignId: 'c', title: 'N', body: null, type: 'generic', status: 'active', pinned: false, schemaVersion: 1, createdAt: created, updatedAt: created } as never);
+    await db.attachments.put({ ...row, caption: 'old', blob: new Blob(['x']) } as never);
+
+    const report = await mergeBundle({
+      type: 'campaign', version: 1, exportedAt: created,
+      contents: { attachments: [{ ...row, caption: 'Map of the crypt', updatedAt: '2026-02-01T00:00:00.000Z', data: 'eA==', encoding: 'base64' }] },
+    } as unknown as BundleEnvelope, { selectedEntityTypes: new Set(['attachments']) } as never);
+
+    expect(report.errors).toEqual([]);
+    expect(report.updated).toBe(1);
+    expect((await db.attachments.get('a2'))?.caption).toBe('Map of the crypt');
+  });
+
   it('still reports a local row that does have updatedAt when the bundle lacks one', async () => {
     const now = '2026-01-01T00:00:00.000Z';
     await db.characters.put({ id: 'c1', name: 'Real', createdAt: now, updatedAt: now } as never);
