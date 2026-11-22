@@ -148,8 +148,13 @@ export default function NoteEditorScreen() {
         if (mounted && created) {
           navigate(`/note/${created.id}/edit`, { replace: true });
         }
-      }).catch(() => {
-        if (mounted) navigate('/session');
+      }).catch((e: unknown) => {
+        // Was a silent bounce to /session: the user tapped "new note", landed
+        // back where they started, and was told nothing.
+        console.error('NoteEditorScreen: create failed', e);
+        if (!mounted) return;
+        showToast(`Couldn't create the note — ${e instanceof Error ? e.message : String(e)}`, 'error');
+        navigate('/session');
       });
       return;
     }
@@ -172,10 +177,13 @@ export default function NoteEditorScreen() {
       setNoteType((loaded.type as NoteType) ?? 'generic');
       setVisibility(loaded.visibility);
       setLoading(false);
-    }).catch(() => {
-      if (mounted) {
-        navigate('/session');
-      }
+    }).catch((e: unknown) => {
+      // A failed read is not "not found" and was not even that: it left
+      // silently. Say why before leaving, since the note may well exist.
+      console.error('NoteEditorScreen: load failed', e);
+      if (!mounted) return;
+      showToast(`Couldn't open this note — ${e instanceof Error ? e.message : String(e)}`, 'error');
+      navigate('/session');
     });
     return () => { mounted = false; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
