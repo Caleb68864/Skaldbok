@@ -179,8 +179,10 @@ export function useNoteActions() {
    * whose whole promise is that the deletion can be taken back.
    *
    * @param id - ID of the note to delete.
+   * @returns Whether the note was deleted. The failure is already toasted, so
+   *   a caller only needs this to avoid reporting a success that did not happen.
    */
-  const deleteNote = useCallback(async (id: string): Promise<void> => {
+  const deleteNote = useCallback(async (id: string): Promise<boolean> => {
     try {
       const txId = generateSoftDeleteTxId();
       // Note, edges and attachments together, in one transaction. The previous
@@ -189,9 +191,11 @@ export function useNoteActions() {
       // `restore` cannot repair, because it no-ops on a note that was never
       // deleted.
       await noteRepository.softDeleteWithLinks(id, txId);
+      return true;
     } catch (e) {
       showToast('Failed to delete note');
       console.error('useNoteActions.deleteNote failed:', e);
+      return false;
     }
   }, [showToast]);
 

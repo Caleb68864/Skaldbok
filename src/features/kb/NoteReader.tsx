@@ -100,7 +100,10 @@ export function NoteReader({ noteId }: NoteReaderProps) {
     if (!note) return;
     const deletedId = note.id;
     const title = note.title?.trim() || 'Note';
-    await deleteNote(deletedId);
+    // A failed delete is toasted by `deleteNote`. Leaving and saying
+    // "deleted" with an Undo after it would contradict that toast and leave
+    // the user believing a live note was gone.
+    if (!(await deleteNote(deletedId))) return;
     navigate(-1);
     showToast(`${title} deleted`, 'info', {
       // Longer than the 3s default: this is the undo for a destructive action,
