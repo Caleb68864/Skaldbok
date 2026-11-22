@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto';
-import { describe, expect, it, beforeEach } from 'vitest';
+import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { db } from '../db/client';
 import { create, getById, update, updateParticipant, addRepresentedParticipants } from './encounterRepository';
@@ -130,4 +130,25 @@ describe('useEncounter field editors go through this repository', () => {
       expect(body).not.toContain('db.encounters.update');
     },
   );
+});
+
+/**
+ * Encounter reads answered a failed read as "none": `getById` returned
+ * `undefined` and both listings `[]`. The exports then reported success
+ * without the encounters. Fails on the old repository.
+ */
+describe('a failed encounter read', () => {
+  it('rejects instead of answering "none"', async () => {
+    const { getById, listBySession, listByCampaign } = await import('./encounterRepository');
+    const get = vi.spyOn(db.encounters, 'get').mockImplementation(() => { throw new Error('read failed'); });
+    const where = vi.spyOn(db.encounters, 'where').mockImplementation(() => { throw new Error('read failed'); });
+    try {
+      await expect(getById('e1')).rejects.toThrow('read failed');
+      await expect(listBySession('s1')).rejects.toThrow('read failed');
+      await expect(listByCampaign('c1')).rejects.toThrow('read failed');
+    } finally {
+      get.mockRestore();
+      where.mockRestore();
+    }
+  });
 });

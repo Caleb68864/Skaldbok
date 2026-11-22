@@ -600,6 +600,12 @@ const DIRECT_DEXIE_ACCESS: Record<string, Record<string, string>> = {
     '<dynamic>:ref':
       'The transaction scope, built as `BUNDLE_PROCESSING_ORDER.map(key => db.table(…))` so '
       + 'the tables it locks are the tables the registry says a bundle contains.',
+
+    'notes:read':
+      'An imported photo is kept only if its note is on the device, and takes that note\'s '
+      + 'campaign. It is the same existence check `danglingLinkEndpoint` makes for edges in '
+      + 'this file, run inside the restore transaction so it sees notes the merge has just '
+      + 'written; it reads the raw row, tombstone included, rather than a validated one.',
   },
   'test-utils/resetDatabase.ts': {
     'db:tables':

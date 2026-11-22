@@ -125,9 +125,16 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   }, [participants, templateCache]);
 
   const refresh = useCallback(async () => {
-    const updated = await encounterRepository.getById(encounter.id);
-    if (updated) setEncounter(updated);
-  }, [encounter.id]);
+    try {
+      const updated = await encounterRepository.getById(encounter.id);
+      if (updated) setEncounter(updated);
+    } catch (e) {
+      // The write before it landed; only the re-read failed. Say so rather
+      // than leave an unhandled rejection.
+      console.error('CombatEncounterView: reload failed', e);
+      showToast('Saved, but could not reload the encounter', 'error');
+    }
+  }, [encounter.id, showToast]);
 
   /**
    * Runs one combat write and says when it did not land.

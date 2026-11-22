@@ -61,8 +61,10 @@ export async function getById(id: string, options?: { includeDeleted?: boolean }
     if (!options?.includeDeleted && result.data.deletedAt) return undefined;
     return result.data;
   } catch (e) {
-    console.warn('encounterRepository.getById: error', id, e);
-    return undefined;
+    // Rethrown: a failed read answered as "none" made the campaign and session
+    // exports report success without the encounters, and the encounter screen
+    // say the encounter no longer existed.
+    throw new Error(`encounterRepository.getById failed: ${e}`, { cause: e });
   }
 }
 
@@ -85,8 +87,10 @@ export async function listBySession(sessionId: string, options?: { includeDelete
     });
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    console.warn('encounterRepository.listBySession: error', sessionId, e);
-    return [];
+    // Rethrown: a failed read answered as "none" made the campaign and session
+    // exports report success without the encounters, and the encounter screen
+    // say the encounter no longer existed.
+    throw new Error(`encounterRepository.listBySession failed: ${e}`, { cause: e });
   }
 }
 
@@ -109,8 +113,10 @@ export async function listByCampaign(campaignId: string, options?: { includeDele
     });
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    console.warn('encounterRepository.listByCampaign: error', campaignId, e);
-    return [];
+    // Rethrown: a failed read answered as "none" made the campaign and session
+    // exports report success without the encounters, and the encounter screen
+    // say the encounter no longer existed.
+    throw new Error(`encounterRepository.listByCampaign failed: ${e}`, { cause: e });
   }
 }
 
