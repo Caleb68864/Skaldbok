@@ -1,3 +1,4 @@
+import { usePortraitSrc, useSetPortrait } from '../features/characters/usePortrait';
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
@@ -64,6 +65,8 @@ async function compressImage(file: File): Promise<string> {
 export default function ProfileScreen() {
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
+  const portraitSrc = usePortraitSrc(character);
+  const setPortrait = useSetPortrait();
   const isEditMode = useIsEditMode();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { showToast } = useToast();
@@ -98,9 +101,11 @@ export default function ProfileScreen() {
 
     try {
       const dataUrl = await compressImage(file);
-      updateCharacter({ portraitUri: dataUrl, updatedAt: nowISO() });
-    } catch {
-      showToast('Failed to process image', 'error');
+      await setPortrait(dataUrl);
+    } catch (e) {
+      // A storage failure is not an image problem; say which it was.
+      const full = e instanceof Error && e.name === 'QuotaExceededError';
+      showToast(full ? 'Storage is full — the portrait was not saved.' : 'Failed to process image', 'error');
     }
   }
 
@@ -142,10 +147,10 @@ export default function ProfileScreen() {
       </div>
       {/* Hero portrait area — ~40vh */}
       <div className="profile-hero">
-        {character.portraitUri ? (
+        {portraitSrc ? (
           <>
             <img
-              src={character.portraitUri}
+              src={portraitSrc}
               alt={`${character.name} portrait`}
               className="profile-hero__img"
             />

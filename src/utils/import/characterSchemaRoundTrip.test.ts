@@ -198,6 +198,7 @@ function richCharacter(): Record<string, unknown> {
     }],
     uiState: { pinnedSkills: ['axes'], restsUsed: { round: true } },
     portraitUri: 'data:image/png;base64,AAAA',
+    portraitId: 'portrait-1',
     advancementChecks: { combat: true },
     deletedAt: '2026-02-01T00:00:00.000Z',
     softDeletedBy: 'tx-1',

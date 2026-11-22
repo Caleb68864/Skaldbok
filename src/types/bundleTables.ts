@@ -34,6 +34,7 @@ export const BUNDLE_TABLE_ENTRIES: ReadonlyArray<readonly [keyof BundleContents,
   ['parties', 'parties'],
   ['partyMembers', 'partyMembers'],
   ['characters', 'characters'],
+  ['portraits', 'portraits'],
   ['creatureTemplates', 'creatureTemplates'],
   ['encounters', 'encounters'],
   ['inventoryContainers', 'inventoryContainers'],
@@ -154,4 +155,5 @@ export const BUNDLE_ENTITY_LABELS: Record<string, string> = {
   kbEdges: 'Knowledge Base Links',
   entityLinks: 'Entity Links',
   attachments: 'Attachments',
+  portraits: 'Portraits',
 };

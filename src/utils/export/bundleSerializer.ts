@@ -66,8 +66,8 @@ export async function serializeBundle(
     : privateNoteIdsIn(contents);
   const permitted = applyPrivacyFilter(contents, options.includePrivate);
 
-  // Step 1: Convert attachment Blobs to base64
-  const processedContents = await convertAttachmentsToBase64(permitted);
+  // Step 1: Convert attachment and portrait Blobs to base64
+  const processedContents = await convertPortraitsToBase64(await convertAttachmentsToBase64(permitted));
 
   // Step 2: Compute content hash
   const contentsJson = JSON.stringify(processedContents);
@@ -148,6 +148,19 @@ async function convertAttachmentsToBase64(contents: BundleContents): Promise<Bun
   );
 
   return { ...contents, attachments: processedAttachments };
+}
+
+/** The same, for character portraits (H8): the Blob becomes base64 `data`. */
+async function convertPortraitsToBase64(contents: BundleContents): Promise<BundleContents> {
+  if (!contents.portraits || contents.portraits.length === 0) return contents;
+  const portraits = await Promise.all(
+    contents.portraits.map(async (portrait) => {
+      const { blob, ...rest } = portrait as Record<string, unknown>;
+      if (blob instanceof Blob) return { ...rest, data: await blobToBase64(blob), encoding: 'base64' as const };
+      return portrait;
+    }),
+  );
+  return { ...contents, portraits } as BundleContents;
 }
 
 /**

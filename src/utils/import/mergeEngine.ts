@@ -347,6 +347,16 @@ async function mergeEntity(
     reparented.campaignId = note.campaignId;
   }
 
+  // H8: a portrait belongs to its character, and is reached only through it.
+  if (entityType === 'portraits') {
+    const characterId = reparented.characterId;
+    const character = typeof characterId === 'string' ? await db.characters.get(characterId) : undefined;
+    if (!character || character.deletedAt) {
+      report.errors.push({ entityType, entityId: id, message: `Portrait belongs to character "${String(characterId)}", which is not on this device; skipped` });
+      return;
+    }
+  }
+
   // Look up existing entity in IndexedDB
   const tableName = TABLE_NAMES[entityType];
   if (!tableName) {
@@ -358,7 +368,7 @@ async function mergeEntity(
 
   if (!existing) {
     // For attachments: restore base64 data back to Blob before inserting.
-    const toInsert = entityType === 'attachments' ? restoreAttachmentBlob(reparented) : reparented;
+    const toInsert = entityType === 'attachments' || entityType === 'portraits' ? restoreAttachmentBlob(reparented) : reparented;
     if (!toInsert) {
       report.errors.push({ entityType, entityId: id, message: 'Attachment has no restorable image payload (missing, oversized, or not an image); skipped' });
       return;
@@ -469,7 +479,7 @@ async function mergeEntity(
 
   if (bundleTime > localTime) {
     // Bundle is newer — update local
-    const toUpdate = entityType === 'attachments' ? restoreAttachmentBlob(reparented) : reparented;
+    const toUpdate = entityType === 'attachments' || entityType === 'portraits' ? restoreAttachmentBlob(reparented) : reparented;
     if (!toUpdate) {
       report.errors.push({ entityType, entityId: id, message: 'Attachment has no restorable base64 data; skipped' });
       return;

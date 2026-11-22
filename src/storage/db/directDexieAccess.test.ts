@@ -606,6 +606,9 @@ const DIRECT_DEXIE_ACCESS: Record<string, Record<string, string>> = {
       + 'campaign. It is the same existence check `danglingLinkEndpoint` makes for edges in '
       + 'this file, run inside the restore transaction so it sees notes the merge has just '
       + 'written; it reads the raw row, tombstone included, rather than a validated one.',
+    'characters:read':
+      'The same check for an imported portrait (H8): kept only if its character is on the '
+      + 'device, read inside the restore transaction so it sees characters just written.',
   },
   'test-utils/resetDatabase.ts': {
     'db:tables':

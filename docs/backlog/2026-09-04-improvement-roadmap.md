@@ -76,6 +76,12 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > `ROADMAP-UPDATES-2026-11-16-wave2.md`, which also lists what is still open and
 > why. Headings below other than E1 were not changed.
 
+> **Reconciled 2026-11-21 (headings).** Every heading below now carries its
+> current status, folded in from the update files beside this one
+> (`ROADMAP-UPDATES-2026-11-02.md` through `…-2026-11-21-wave9.md`). Nothing is
+> left OPEN: what is not DONE is BLOCKED (C3, T1: rules text) or recorded as
+> decided by agent, for the owner to revisit.
+
 > **Reconciled 2026-11-21.** Wave 3 (H9's two defects, I7, D12 types) merged as
 > PR #7 (`529b94e`). The per-photo attachment delete on `R`'s recorded list is
 > done on `work/attachment-per-photo-delete`; see the struck line under
@@ -172,7 +178,7 @@ writes the stale record back.
   snapping to `skill.ladder` when present. Default to the definition's default,
   not a literal.
 
-### A5. Attachments hard-deleted before the note is soft-deleted — OPEN (R)
+### A5. Attachments hard-deleted before the note is soft-deleted — DONE (e092476, K3; found done in ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** `src/features/notes/useNoteActions.ts:187`
   (`deleteAttachmentsByNote` then `softDeleteWithLinks`); Undo toast at
   `NoteReader.tsx:83`, `SessionLog.tsx:544`. `Attachment` has no `deletedAt`.
@@ -200,7 +206,7 @@ writes the stale record back.
   touch rows where the field is missing). Leave v7 as is; editing it again
   changes nothing for existing users.
 
-### A8. Settings and maintenance actions that silently do nothing — OPEN (V)
+### A8. Settings and maintenance actions that silently do nothing — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Bottom-nav toggles:** `src/screens/SettingsScreen.tsx:248-280` write
   `settings.bottomNavTabs`; no reader exists outside Settings and
   `useAppSettings`. Copy promises a "☰ menu" that does not exist; list includes a
@@ -367,7 +373,7 @@ is on the **import** path, where data is untrusted.
 - **Fix:** Reject on `file.size` above a cap before `text()`; gate images as
   `CharacterPortrait.tsx:14-15` already does.
 
-### B10. Reference import and editor bodies are unvalidated JSON — MOSTLY DONE (4d6d9e7); editor bodies remain
+### B10. Reference import and editor bodies are unvalidated JSON — DONE (4d6d9e7; editor bodies in PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - `src/screens/ReferenceScreen.tsx:328` `JSON.parse(...) as ReferenceImportBundle`
   → `referenceSectionRepository.importBundle` (`:160-200`) stores
   `columns/rows/items/paragraphs` as-is; `parseEditorBody` (`:60,:64`) casts.
@@ -412,7 +418,7 @@ when no derived number changes.
 - **Fix:** Read attributes through `getEffectiveValue(attrKey(id), character)`
   in every `compute*` helper and in `traitDie`. Then fix the test (see F3).
 
-### C2. Declarative card tiles ignore every resolver — OPEN (V)
+### C2. Declarative card tiles ignore every resolver — DONE (found done, see ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** `src/features/systems/cards/primitives/TileCard.tsx:41,47,53`
   `resolveDataPath` returns `character.attributes[id]`,
   `resources[id]?.current`, `derivedStats()[id]` raw.
@@ -423,7 +429,7 @@ when no derived number changes.
 - **Fix:** `getEffectiveValue(attrKey(id))`, `getEffectiveValue(resKey(id))`,
   `resolveDerivedField(character, derived, field)`.
 
-### C3. Two competing maxima for Dragonbane HP/WP — OPEN (R)
+### C3. Two competing maxima for Dragonbane HP/WP — BLOCKED (needs a rules answer; see ROADMAP-UPDATES-2026-11-21-wave8.md)
 - **Where:** `src/utils/resourceMaxima.ts:30-41` writes `resources.hp.max =
   attributes.con` raw; `derived.hpMax/wpMax` are `overridable` and modifier
   targets (`classicFantasyEngine.ts:250-259`); `restActions.ts:53,92` restore to
@@ -523,7 +529,7 @@ every adapter declare it, make the screen read it.
   Make `damageTrack.kind` and `attributeReadout` required rather than
   duck-typed.
 
-### D6. `systemId ===` branches in disguise — MOSTLY DONE (c45865e); skill marks remain
+### D6. `systemId ===` branches in disguise — DONE except skill marks, which are kept (decided by agent 2026-11-21, see ROADMAP-UPDATES-2026-11-21-wave8.md)
 - `SkillModule.tsx:38` `engine.resolution === 'd20-roll-under'` decides layout.
 - `SkillsScreen.tsx:187-219` `!engine.skill.supportsMarks` as "not d20";
   `supportsMarks && value === 1` for auto-success; imports
@@ -582,7 +588,7 @@ every adapter declare it, make the screen read it.
 - **Fix:** Derive everything from `resolveCreatureStatFields(system)`; delete
   the three `labels.creature*` keys.
 
-### D10. Session log vocabulary — MOSTLY DONE (7fb7d3f); "Death Roll #n" remains
+### D10. Session log vocabulary — DONE except "Death Roll #n", kept (decided by agent 2026-11-21, see ROADMAP-UPDATES-2026-11-21-wave8.md)
 - `useSessionLog.ts:278-290,306` `'success'|'failure'|'dragon'|'demon'`,
   `tags.push('Boon'|'Bane'|'Pushed')` (dead but exported; `formatSkillCheckTitle.ts`
   already uses `engine.outcomes`); `:387` `resourceId = 'hp'`; `:108-112`
@@ -590,7 +596,7 @@ every adapter declare it, make the screen read it.
   damage"); `:426-428` "Death Roll #n" ignoring `death.tracks[].label`; `:471`
   "Coins" ignoring `currency.label`.
 
-### D11. The health resource is named six ways — PARTLY DONE (74bd175); health consolidation declined
+### D11. The health resource is named six ways — DONE as far as it goes (74bd175); health consolidation WONTFIX (see the Progress note)
 `primaryHealthResourceId`, `damageTrack.order[0]`, `death.triggerResourceId`,
 `terms.healthResource`, `labels.participantHealth`, `creatures.healthStatId`;
 `downLabel`/`deadLabel` exist on both `DamageTrackModel` and `DeathModel`.
@@ -600,7 +606,7 @@ hasMagic`). `skill.advancementMax` duplicates `advancement.maxSkillValue`.
 - **Fix:** `engine.health { resourceId, label, downLabel, deadLabel }`; derive
   `hasMagic` from `magic !== null`; drop `advancementMax`.
 
-### D12. Smaller leaks — MOSTLY DONE (1411b67); see the Progress note
+### D12. Smaller leaks — DONE except what wave 8 records as kept (1411b67, 4885d08, 326fea7; see ROADMAP-UPDATES-2026-11-21-wave8.md)
 - `AttributeField.tsx:36` defaults `min = 3, max = 18`; `SheetScreen.tsx:801-808`
   passes `attr?.min` so an undeclared attribute silently gets 3..18. Make
   required.
@@ -658,7 +664,7 @@ only functions. Candidates that are pure data but have no JSON path yet:
 `derivedFields` (labels, surfaces; the computation stays in code),
 `rest[].prompt` and `rest[].label`. Bump each `system.json` `version`.
 
-### E2. Generic currency read/write — OPEN (V)
+### E2. Generic currency read/write — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 All three adapters' `currency.read`/`write` are the identical
 `character.wealth?.[id] ?? 0` / `{ wealth: {...character.wealth, ...amounts} }`.
 Traveller's whole adapter `currency` block (`travellerEngine.ts:314-329`) is
@@ -669,7 +675,7 @@ hand-roll `formatAmount` with a hardcoded `'en-US'` locale.
   `mergeCurrency`; a `formatAmount` that handles single-denomination systems
   with a `prefix` option; adapters stop declaring currency at all.
 
-### E3. Derive `attributeIds`/`resourceIds` from JSON — OPEN (V)
+### E3. Derive `attributeIds`/`resourceIds` from JSON — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 `attributeIds` is hardcoded in all three adapters and overwritten by
 `getEngine`, but `travellerEngine.ts:125` iterates `TRAVELLER_ATTRIBUTE_IDS`
 for DMs, so a characteristic added in JSON gets a badge and no DM row.
@@ -679,7 +685,7 @@ counters; declare that on the resource (`ResourceDefinition.role: 'track' |
 restate `defaultMax`/`scale.ladder`; `scale.allowsPlus` and
 `damageTrack.penaltyPerLevel` are unread.
 
-### E4. Base adapter by declaration, not by id — PARTLY DONE (518238d); selection by declaration remains
+### E4. Base adapter by declaration, not by id — DONE (518238d; selection by declaration in PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 `baseEngineFor` (`engine/index.ts:16-27`) maps by `system.id`, so a
 user-imported system silently gets Dragonbane formulas (d20 roll-under, HP/WP
 rests, death rolls). Let `system.json` declare `engine: 'd20-roll-under' |
@@ -702,7 +708,7 @@ registered without an adapter now fails CI instead of shipping as Dragonbane.
 rather than from the id, which is what would remove the lockstep rather than
 merely guard it.
 
-### E5. Classic-fantasy helpers into `systems/classic-fantasy/classicMath.ts` — OPEN (R)
+### E5. Classic-fantasy helpers into `systems/classic-fantasy/classicMath.ts` — DONE as far as it goes; the move is declined (decided by agent 2026-11-21, see ROADMAP-UPDATES-2026-11-21-wave6.md)
 Mirror `travellerMath.ts` and `savageMath.ts`: the `compute*` family in
 `derivedValues.ts` (only `classicFantasyEngine` and the leaks in D1/D3 import
 them; `computeBaseChance`/`getSkillBaseChance` are byte-identical;
@@ -714,7 +720,7 @@ generic), `abilities.ts`, `spells.ts`. Conversely `systems/traveller/index.ts:18
 and `systems/savage-worlds/index.ts:15` `export * from './…Math'` off the data
 module; drop so system folders are data-only.
 
-### E6. `system.json` structural drift — OPEN (V)
+### E6. `system.json` structural drift — DONE for what was listed (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 Only Traveller declares `panels`, `currency`, `creatures`, `vehicles`,
 `financeFields`, `itemFields`, `skillGroups`, `routePlanner`, `calendar`; only
 Savage `scale`, `conditions[].effect/duration/recovery`, `refresh`; only classic
@@ -751,12 +757,12 @@ drop that line, or assert per target that at least one of `derived`, `badges`,
 `declaredCapabilities.test.ts:103-104`. They hide D4. Also align the staleness
 self-check (`:144-146`) with the main check's three read patterns.
 
-### F5. Cover the import path — OPEN
+### F5. Cover the import path — DONE (found done, see ROADMAP-UPDATES-2026-11-02.md)
 Tests for B1 (legacy JSON with `skills: null` is rejected), B2 (attachment
 with `../` filename is renamed), B3 (private note attachments absent from the
 session ZIP), B4 (same-id, no-`createdAt` import mints a new id).
 
-### F6. Round-trip soft delete for every entity — OPEN
+### F6. Round-trip soft delete for every entity — DONE (`softDeleteRoundTrip.test.ts`, PR #4)
 For each repository with `softDelete`: delete → not in default reads → restore
 → back with cascaded rows. A6 would have failed on day one.
 
@@ -960,7 +966,7 @@ is a hard delete from the user's point of view.
   export that omits data. A "full backup" path with no options, separate from the
   shareable export, would collapse both problems.
 
-### H5. Browser-native `confirm`/`prompt` dialogs — OPEN (V)
+### H5. Browser-native `confirm`/`prompt` dialogs — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** `TiptapNoteEditor.tsx:595` `window.prompt('URL')` for links;
   `SkillCheckEditDrawer.tsx:106`, `PartyInventoryTab.tsx:526,655`,
   `BestiaryScreen.tsx:174`, `NoteReader.tsx:190` use `confirm()` for deletes.
@@ -981,7 +987,7 @@ is a hard delete from the user's point of view.
   is a line that gets re-added by reflex, as the standard cure for iOS
   focus-zoom on inputs (the actual cure being a 16px input font size).
 
-### H7. One error boundary for the whole app — PARTLY DONE (835d16d); the extra boundary remains
+### H7. One error boundary for the whole app — DONE (835d16d; shell boundary in PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** `src/app/App.tsx:20` wraps the routes in the only `ErrorBoundary`
   (`app/ErrorBoundary.tsx`); the only other boundary is per-card inside
   `CardRenderer.tsx:17`.
@@ -1009,7 +1015,7 @@ is a hard delete from the user's point of view.
 - **Still open:** the boundary inside `ShellLayout` so the nav survives a panel
   throw, and the route in the error report.
 
-### H8. Portraits live inline on the character record — OPEN (V)
+### H8. Portraits live inline on the character record — DONE for new portraits, non-destructively (2026-11-21, see ROADMAP-UPDATES-2026-11-21-wave9.md)
 - **Where:** `types/character.ts:490-491` `portraitUri` is a base64 data URL;
   `utils/imageResize.ts:18-19` caps it at 1920 px JPEG q0.8, so roughly
   200–600 KB per character.
@@ -1021,7 +1027,7 @@ is a hard delete from the user's point of view.
   (Dexie stores Blobs natively) and keep a ≤ 8 KB thumbnail on the record. Add
   a migration; the `portraitUri` string form stays readable for imports.
 
-### H9. Two full-text indexes over overlapping content — OPEN, two defects fixed (see ROADMAP-UPDATES-2026-11-16-wave3.md)
+### H9. Two full-text indexes over overlapping content — two defects fixed (8623d08); the merge is kept separate (decided by agent 2026-11-21, see ROADMAP-UPDATES-2026-11-21-wave8.md)
 - **Where:** `features/notes/useNoteSearch.ts:18` is a module-global MiniSearch
   rebuilt with `removeAll` + `addAll` (`:61-63`); `features/kb/useKBSearch.ts:34`
   is a per-mount index built with `addAllAsync`. KB nodes are synced from notes
@@ -1075,7 +1081,7 @@ is a hard delete from the user's point of view.
   turns on in `recommended` (`purity`, `immutability`, `set-state-in-effect`,
   `refs`, …). Those are refactors, not configuration.
 
-### I2. No code splitting; every screen is in the first chunk — OPEN (V)
+### I2. No code splitting; every screen is in the first chunk — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** `src/routes/index.tsx:3-22` imports all 21 screens statically.
   The only dynamic imports in `src` are `linkSyncEngine` (three sites). Tiptap
   + ProseMirror, `d3-force`/`d3-selection`/`d3-zoom`, `jszip` and `minisearch`
@@ -1088,7 +1094,7 @@ is a hard delete from the user's point of view.
   note editor and the import/export modals; `build.rollupOptions.output.manualChunks`
   for the vendor groups; `build.chunkSizeWarningLimit` so regressions warn.
 
-### I3. Unused and unaudited dependencies — OPEN (V)
+### I3. Unused and unaudited dependencies — DONE (PR #4; knip installed and passing 2026-11-21)
 - **Where:** `@radix-ui/react-collapsible` and `@radix-ui/react-toast` are in
   `dependencies` but imported nowhere in `src` (the other four Radix packages
   are used in 2–3 files each). `class-variance-authority`, `clsx` and
@@ -1096,7 +1102,7 @@ is a hard delete from the user's point of view.
 - **Fix:** Remove the two; add `knip` (or `depcheck`) to the lint step so the
   list cannot regrow. No lockfile audit runs today either.
 
-### I4. Theme tokens bypassed by raw colours and inline styles — OPEN (V)
+### I4. Theme tokens bypassed by raw colours and inline styles — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** 51 six-digit hex literals in `.tsx` (`RouteScreen.tsx` 8,
   `SessionLog.tsx` 6, `SheetScreen.tsx` 4, `LedgerImportModal.tsx` 3, and
   others) and 36 `style={{` blocks.
@@ -1105,7 +1111,7 @@ is a hard delete from the user's point of view.
 - **Fix:** Move to tokens; guard with an ESLint `no-restricted-syntax` regex on
   `#[0-9a-f]{6}` in JSX.
 
-### I5. Test infrastructure is implicit — PARTLY DONE (3e1d307); shared setup and coverage remain
+### I5. Test infrastructure is implicit — DONE (3e1d307; coverage in PR #4); a shared setupFiles is declined
 - **Where:** No `vitest.config.ts` (defaults: node environment, no
   `setupFiles`, no coverage), so each of the repository tests wires
   `fake-indexeddb` itself. 71 test files exist.
@@ -1121,7 +1127,7 @@ is a hard delete from the user's point of view.
   coverage with a threshold. Note that a global `setupFiles` would run for every
   file including the pure ones, which is the trade-off that kept this per-file.
 
-### I6. Bypassed shared helpers — OPEN (V)
+### I6. Bypassed shared helpers — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Ids:** `crypto.randomUUID()` called directly at `ToastContext.tsx:53`,
   `PartyInventoryTab.tsx:349`, `SessionLog.tsx:129`, `MagicScreen.tsx:272`,
   `SheetScreen.tsx:465` instead of `generateId`. The inventory-split id at
@@ -1142,7 +1148,7 @@ is a hard delete from the user's point of view.
   accessor) as part of C2; make the bundle types share the domain types rather
   than restating them as `Record<string, unknown>`.
 
-### I8. Redundant, hard-coded system seeding at startup — OPEN (V)
+### I8. Redundant, hard-coded system seeding at startup — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** `context/AppStateContext.tsx:64-66` seeds `'classic-fantasy'` by
   literal id. `features/systems/useSystemDefinition.ts:3,45-50` already seeds
   any bundled system from `BUNDLED_SYSTEMS` on demand, with the version gate.
@@ -1150,7 +1156,7 @@ is a hard delete from the user's point of view.
   path for the same row that ignores the version gate.
 - **Fix:** Delete the effect.
 
-### I9. Diagnostics go only to the console — OPEN (V)
+### I9. Diagnostics go only to the console — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** 160 `console.*` calls in non-test source; several are the only
   signal of a failure (`AppStateContext.tsx:66-68`, `ErrorBoundary.tsx:20`).
 - **What:** The target device is a tablet with no devtools.
@@ -1169,7 +1175,7 @@ is a hard delete from the user's point of view.
   wired in — see I11, it does not run unattended in its current shape. Add
   `lint` here once I1 lands.
 
-### I11. The E2E suite is a stale Python script with a committed report — OPEN (V)
+### I11. The E2E suite is a stale Python script with a committed report — DONE, manual route (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - **Where:** `tests/e2e_full_test.py` (last touched 2026-07-30) still describes
   the app as "Skaldmark Dragonbane"; `tests/test_report.txt` is a committed run
   artefact; `tests/ss12_integration_check.py` and `__pycache__/` sit beside
@@ -1181,7 +1187,7 @@ is a hard delete from the user's point of view.
 
 ## Workstream J — Documentation drift (second pass)
 
-### J1. CLAUDE.md / AGENTS.md contradict the code — OPEN (V)
+### J1. CLAUDE.md / AGENTS.md contradict the code — DONE (PR #4, see ROADMAP-UPDATES-2026-11-02.md)
 - "Two adapters ship today: `classicFantasyEngine` and `travellerEngine`" —
   `savageWorldsEngine.ts` exists and `systems/registry.ts:1-3` lists three.
 - "`npm test` covers pure logic only — schema migrations, stat-key resolution,
@@ -1195,7 +1201,7 @@ is a hard delete from the user's point of view.
   `App.tsx:8`).
 - The Entity Linking table is missing `migrated_from` (already G4).
 
-### J2. README and repository hygiene — OPEN (V)
+### J2. README and repository hygiene — DONE (5328df8; `.gitignore` by the owner in e3d033a)
 - `README.md` (last touched 2026-05-07) describes one bundled system and no
   engine, ledger, route planner, ships, bestiary, encounters or knowledge base.
 - `.gitignore:8` ignores all of `docs/`, presumably for the TypeDoc output in
@@ -2632,7 +2638,7 @@ demonstrated directly.
 
 ## Workstream T — Skill training
 
-### T1. Track training progress and completion — OPEN (V)
+### T1. Track training progress and completion — BLOCKED (needs rulebook study times; see ROADMAP-UPDATES-2026-11-21-wave8.md)
 
 - **Build spec:** [`docs/specs/2026-09-26-traveller-skill-training-tracker.md`](../specs/2026-09-26-traveller-skill-training-tracker.md)
 

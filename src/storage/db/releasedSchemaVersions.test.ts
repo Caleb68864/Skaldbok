@@ -133,6 +133,7 @@ const RELEASED_BLOCK_FINGERPRINTS: Record<number, string> = {
   18: '7eb47cdf5113bd9c',
   19: 'ab1013fd0c758f97',
   20: '7927278fc58b6a9d',
+  21: '9d9364cac9575a76',
 };
 
 /** The body of `SkaldbokDatabase`'s constructor, where every version block lives. */
