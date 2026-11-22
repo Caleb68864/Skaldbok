@@ -2,6 +2,7 @@ import * as characterRepository from '../../storage/repositories/characterReposi
 import * as creatureTemplateRepository from '../../storage/repositories/creatureTemplateRepository';
 import * as sessionRepository from '../../storage/repositories/sessionRepository';
 import * as noteRepository from '../../storage/repositories/noteRepository';
+import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
 import * as shipRepository from '../../storage/repositories/shipRepository';
 import * as inventoryContainerRepository from '../../storage/repositories/inventoryContainerRepository';
 import * as ledgerRepository from '../../storage/repositories/ledgerRepository';
@@ -73,11 +74,6 @@ export interface TrashEntityType {
  * writes: per table, not per module, and by the write rather than by the name.
  */
 export const RESTORE_WITHOUT_LISTING: Record<string, string> = {
-  attachments:
-    'A cascade child, never deleted on its own. Attachments are soft-deleted with '
-    + 'their note and come back through `restoreAttachmentsForTxId`, matching the '
-    + "note's `softDeletedBy`. A standalone listing would offer the user an "
-    + 'attachment whose note is still in the trash.',
   entityLinks:
     'The same, for edges. Links are soft-deleted as part of whatever cascade owns '
     + 'their endpoints and restored by that cascade\'s txId. An edge listed on its '
@@ -174,6 +170,28 @@ export const TRASH_ENTITY_TYPES: TrashEntityType[] = [
         deletedAt: n.deletedAt,
         restore: () => noteRepository.restore(n.id),
       })),
+  },
+  {
+    // Only photos removed on their own. One that went down with its note is a
+    // cascade child and comes back when the note is restored, so the listing
+    // leaves it out (see `attachmentRepository.getDeleted`).
+    key: 'attachments',
+    heading: 'Photos',
+    scope: 'campaign',
+    load: async (campaignId) => {
+      const rows = await attachmentRepository.getDeleted(campaignId!);
+      const notes = await Promise.all(
+        [...new Set(rows.map((a) => a.noteId))].map((id) => noteRepository.getNoteById(id)),
+      );
+      const titles = new Map(notes.filter((n): n is Note => !!n).map((n) => [n.id, noteTitle(n)]));
+      return rows.map((a) => ({
+        id: a.id,
+        title: a.caption?.trim() || a.filename,
+        detail: `Photo on ${titles.get(a.noteId) ?? 'a note'}`,
+        deletedAt: a.deletedAt,
+        restore: () => attachmentRepository.restoreAttachment(a.id),
+      }));
+    },
   },
   {
     key: 'creatures',

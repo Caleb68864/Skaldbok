@@ -54,6 +54,15 @@ const inList = async <T extends { id: string }>(rows: Promise<T[]>, id: string) 
 
 const ROUND_TRIPS: RoundTrip[] = [
   {
+    // One photo removed on its own, from a live note. The cascade with the
+    // note is covered below.
+    table: 'attachments',
+    seed: { id: 'x', noteId: 'n1', campaignId: CAMPAIGN, createdAt: NOW, filename: 'a.jpg', mimeType: 'image/jpeg', sizeBytes: 1, blob: new Blob(['x']) },
+    softDelete: id => attachmentRepository.softDeleteAttachment(id),
+    restore: id => attachmentRepository.restoreAttachment(id),
+    read: id => inList(attachmentRepository.getAttachmentsByNote('n1'), id),
+  },
+  {
     table: 'campaigns',
     seed: { ...stamp, id: 'x', name: 'C', status: 'active', systemId: 'classic-fantasy' },
     softDelete: id => campaignRepository.softDelete(id),
@@ -210,8 +219,10 @@ const ROUND_TRIPS: RoundTrip[] = [
 /**
  * Soft-deletable, and reached only as a cascade child rather than by a
  * single-row delete. The round trip for each is in the cascade block below.
+ * Empty since `attachments` gained a per-photo delete; kept so the next
+ * cascade-only table has somewhere to go.
  */
-const COVERED_BY_CASCADE = ['attachments'];
+const COVERED_BY_CASCADE: string[] = [];
 
 beforeEach(async () => {
   await resetDatabase();

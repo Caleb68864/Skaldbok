@@ -14,6 +14,8 @@ import * as recurringBillRepository from '../../storage/repositories/recurringBi
 import * as routeRepository from '../../storage/repositories/routeRepository';
 import * as referenceSectionRepository from '../../storage/repositories/referenceSectionRepository';
 import * as partyRepository from '../../storage/repositories/partyRepository';
+import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
+import { db } from '../../storage/db/client';
 
 /**
  * The Trash used to be a hand-written list of four entity types inside
@@ -213,6 +215,46 @@ async function expectRoundTrip(
 }
 
 describe('delete → trash → restore, per entity type', () => {
+  it('photos removed on their own', async () => {
+    // Attachments had no listing, so a per-photo remove had nowhere to go.
+    await db.notes.put({
+      id: 'note-1', campaignId: CAMPAIGN, title: 'Field sketch', body: null, type: 'generic',
+      status: 'active', pinned: false, scope: 'campaign', schemaVersion: 1,
+      createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
+    } as never);
+    await expectRoundTrip(
+      'attachments',
+      async () => {
+        await db.attachments.put({
+          id: 'att-1', noteId: 'note-1', campaignId: CAMPAIGN, filename: 'sketch.jpg',
+          mimeType: 'image/jpeg', sizeBytes: 1, blob: new Blob(['x']), createdAt: '2026-09-09T00:00:00.000Z',
+        } as never);
+        return 'att-1';
+      },
+      attachmentRepository.softDeleteAttachment,
+      async (id) => (await attachmentRepository.getAttachmentsByNote('note-1')).some((a) => a.id === id),
+    );
+    const row = (await TRASH_ENTITY_TYPES.find((e) => e.key === 'attachments')!.load(CAMPAIGN));
+    expect(row).toEqual([]);
+  });
+
+  it('names the note a removed photo belongs to', async () => {
+    await db.notes.put({
+      id: 'note-1', campaignId: CAMPAIGN, title: 'Field sketch', body: null, type: 'generic',
+      status: 'active', pinned: false, scope: 'campaign', schemaVersion: 1,
+      createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
+    } as never);
+    await db.attachments.put({
+      id: 'att-1', noteId: 'note-1', campaignId: CAMPAIGN, filename: 'sketch.jpg', caption: 'The tower',
+      mimeType: 'image/jpeg', sizeBytes: 1, blob: new Blob(['x']), createdAt: '2026-09-09T00:00:00.000Z',
+    } as never);
+    await attachmentRepository.softDeleteAttachment('att-1');
+
+    const [row] = await TRASH_ENTITY_TYPES.find((e) => e.key === 'attachments')!.load(CAMPAIGN);
+    expect(row!.title).toBe('The tower');
+    expect(row!.detail).toBe('Photo on Field sketch');
+  });
+
   it('ships', async () => {
     await expectRoundTrip(
       'ships',

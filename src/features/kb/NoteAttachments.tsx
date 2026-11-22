@@ -19,20 +19,24 @@
  * path that could produce a row (importing a bundle from a device that also
  * could not create one) displayed a photo as a hex string.
  *
- * ### What is deliberately not here
+ * ### Removing a photo
  *
- * **There is no per-photo remove control.** `trashRegistry.RESTORE_WITHOUT_LISTING`
- * exempts the `attachments` table from having a Trash listing on the recorded
- * grounds that an attachment is *"a cascade child, never deleted on its own"*.
- * A remove button here would either be a permanent delete on user content —
- * which `hardDeleteReachability.test.ts` forbids outside `src/storage` — or a
- * soft delete into a place the Trash cannot show, which is the exact bug that
- * exemption exists to prevent. Photos go when their note goes, and come back
- * with it. Adding the control means adding the listing first.
+ * Each tile has a Remove control. It is a soft delete with a transaction id
+ * of its own (`attachmentRepository.softDeleteAttachment`), and the Trash lists
+ * it under Photos, so the photo can be restored without restoring anything
+ * else. It used to be absent on purpose: the `attachments` table had no Trash
+ * listing, and a remove button would have been either a permanent delete on
+ * user content or a soft delete into a place nobody could see. The listing
+ * came first, then the button.
  */
 
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { createAttachment, updateAttachmentCaption } from '../../storage/repositories/attachmentRepository';
+import {
+  createAttachment,
+  softDeleteAttachment,
+  updateAttachmentCaption,
+} from '../../storage/repositories/attachmentRepository';
+import { useConfirm } from '../../components/primitives/ConfirmDialog';
 import { useToast } from '../../context/ToastContext';
 import type { Attachment } from '../../types/attachment';
 
@@ -41,7 +45,7 @@ export interface NoteAttachmentsProps {
   noteId: string;
   campaignId: string;
   attachments: Attachment[];
-  /** Called after a successful add or caption edit so the parent can re-read. */
+  /** Called after a successful add, caption edit or remove so the parent can re-read. */
   onChanged: () => void;
 }
 
@@ -64,7 +68,9 @@ export function formatBytes(bytes: number): string {
 function AttachmentTile({ attachment, onChanged }: { attachment: Attachment; onChanged: () => void }) {
   const [src, setSrc] = useState<string | null>(null);
   const [caption, setCaption] = useState(attachment.caption ?? '');
+  const [removing, setRemoving] = useState(false);
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
 
   useEffect(() => {
     const url = URL.createObjectURL(attachment.blob);
@@ -88,6 +94,19 @@ function AttachmentTile({ attachment, onChanged }: { attachment: Attachment; onC
       showToast(e instanceof Error ? e.message : 'Could not save the caption', 'error');
     }
   }, [caption, attachment.caption, attachment.id, onChanged, showToast]);
+
+  const remove = useCallback(async () => {
+    if (!(await confirm('Remove this photo? It can be restored from Trash.'))) return;
+    setRemoving(true);
+    try {
+      await softDeleteAttachment(attachment.id);
+      onChanged();
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'Could not remove the photo', 'error');
+    } finally {
+      setRemoving(false);
+    }
+  }, [confirm, attachment.id, onChanged, showToast]);
 
   return (
     <figure className="m-0 w-40 shrink-0">
@@ -113,8 +132,17 @@ function AttachmentTile({ attachment, onChanged }: { attachment: Attachment; onC
           placeholder="Add a caption"
           className="w-full bg-transparent text-xs text-[var(--color-text)] border-b border-[var(--color-border)] focus:border-[var(--color-accent)] outline-none"
         />
-        <span className="block text-[10px] text-[var(--color-text-muted)] mt-0.5">
-          {formatBytes(attachment.sizeBytes)}
+        <span className="flex items-center justify-between text-[10px] text-[var(--color-text-muted)] mt-0.5">
+          <span>{formatBytes(attachment.sizeBytes)}</span>
+          <button
+            type="button"
+            onClick={() => void remove()}
+            disabled={removing}
+            aria-label={`Remove ${caption || attachment.filename}`}
+            className="text-xs min-h-8 px-2 rounded border border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-accent)] disabled:opacity-50"
+          >
+            {removing ? 'Removing…' : 'Remove'}
+          </button>
         </span>
       </figcaption>
     </figure>
