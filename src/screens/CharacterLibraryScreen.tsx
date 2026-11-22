@@ -141,10 +141,13 @@ export default function CharacterLibraryScreen() {
       await addToActiveParty(newChar.id, trimmed);
       if (!hadActiveCharacter) {
         // First character: auto-activate (AC3.1)
-        await setCharacter(newChar.id);
-        await updateSettings({ mode: 'edit' });
-        showToast('Character created and set as active', 'success');
-        navigate('/character/sheet');
+        if (await setCharacter(newChar.id)) {
+          await updateSettings({ mode: 'edit' });
+          showToast('Character created and set as active', 'success');
+          navigate('/character/sheet');
+        } else {
+          showToast(`Created ${trimmed}, but could not make them the active character`, 'error');
+        }
       } else {
         // Subsequent character: offer Set Active? via inline banner (AC3.2)
         setPendingSetActiveId(newChar.id);
@@ -158,7 +161,11 @@ export default function CharacterLibraryScreen() {
 
   async function handlePendingSetActive() {
     if (!pendingSetActiveId) return;
-    await setCharacter(pendingSetActiveId);
+    // Only claim it when it happened: `setCharacter` used to resolve either way.
+    if (!(await setCharacter(pendingSetActiveId))) {
+      showToast(`Could not make ${pendingSetActiveName || 'that character'} the active character`, 'error');
+      return;
+    }
     await updateSettings({ mode: 'edit' });
     setPendingSetActiveId(null);
     setPendingSetActiveName('');
@@ -199,7 +206,10 @@ export default function CharacterLibraryScreen() {
   }
 
   async function handleSetActive(id: string) {
-    await setCharacter(id);
+    if (!(await setCharacter(id))) {
+      showToast('Could not make that character active', 'error');
+      return;
+    }
     navigate('/character/sheet');
   }
 

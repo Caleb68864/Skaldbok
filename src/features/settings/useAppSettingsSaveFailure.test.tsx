@@ -39,8 +39,10 @@ describe('useAppSettings when a save fails', () => {
     const { result } = await loadedHook();
     repo.save.mockRejectedValueOnce(new Error('QuotaExceededError'));
 
-    await act(async () => { await result.current.updateSettings({ theme: 'dark' as never }); });
+    let saved: boolean | undefined;
+    await act(async () => { saved = await result.current.updateSettings({ theme: 'dark' as never }); });
 
+    expect(saved, 'callers need to know, not only the toast').toBe(false);
     expect(result.current.settings.theme).toBe('light');
     expect(result.current.error).toContain('QuotaExceededError');
   });

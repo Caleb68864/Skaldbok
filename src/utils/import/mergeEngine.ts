@@ -433,12 +433,15 @@ async function mergeEntity(
   }
 
   // Dedup rules based on updatedAt
-  const bundleUpdatedAt = entity.updatedAt as string | undefined;
-  const localUpdatedAt = existing.updatedAt as string | undefined;
+  // Attachments gained `updatedAt` on 2026-11-21 (a caption edit is a change);
+  // a row written before that has only `createdAt`, which is when it last
+  // changed. Without this, an edited caption never crossed an import.
+  const fallback = entityType === 'attachments' ? 'createdAt' : null;
+  const bundleUpdatedAt = (entity.updatedAt ?? (fallback ? entity[fallback] : undefined)) as string | undefined;
+  const localUpdatedAt = (existing.updatedAt ?? (fallback ? existing[fallback] : undefined)) as string | undefined;
 
-  // Attachments have no `updatedAt` because they never change. With the same id and
-  // the same `createdAt` this is the same row, so re-importing a backup is a skip,
-  // not one error per photo.
+  // Neither side carries a timestamp: the same id with nothing to compare. Kept
+  // as a skip rather than one error per row.
   if (!bundleUpdatedAt && !localUpdatedAt) {
     report.skipped++;
     return;
