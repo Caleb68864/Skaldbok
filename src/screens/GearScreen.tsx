@@ -19,7 +19,7 @@ import { generateId } from '../utils/ids';
 import { nowISO } from '../utils/dates';
 import { remakeCurrency } from '../utils/currency';
 import { resolveDerivedField, resolveArmorRating } from '../utils/derivedValues';
-import { useIsEditMode, useFieldEditable, FIELD_PATHS } from '../utils/modeGuards';
+import { useFieldEditable, FIELD_PATHS } from '../utils/modeGuards';
 import { useSessionLog } from '../features/session/useSessionLog';
 import { PartyInventoryTab } from '../features/party/PartyInventoryTab';
 import { useSystemEngine } from '../features/systems/engine';
@@ -125,7 +125,8 @@ export default function GearScreen() {
   const { character, updateCharacter, isLoading } = useActiveCharacter();
   const engine = useSystemEngine();
   const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
-  const isEditMode = useIsEditMode();
+  // Asked as a field path, not as "is this edit mode" (G6). Same answer today.
+  const isEditMode = useFieldEditable(FIELD_PATHS.gear);
   const armorEquipEditable = useFieldEditable(FIELD_PATHS.armorEquipped);
   const helmetEquipEditable = useFieldEditable(FIELD_PATHS.helmetEquipped);
   const derivedEditable = useFieldEditable(FIELD_PATHS.derivedOverrides);

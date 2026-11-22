@@ -28,7 +28,7 @@ The one failure predates this work (see the end of this file).
 | G1 | DONE | `config/defaults/timelineTracks.ts`, a settings key, `useTimelineTrackCatalog()`. | `timelineTrackConfig.test.tsx` |
 | G2 | DONE | The note editor reads `selectable` from config, and buttons now show labels rather than ids. Bestiary categories are one configured list. | `noteEditorNavigation.test.tsx` (editor); bestiary has no test |
 | G3 | DONE | A repeat promotion no longer duplicates the edge. | `promotionAndRouteGuards.test.ts` |
-| G6 | PARTLY DONE | `useIsPlayMode()` replaces the ad hoc checks. **Still open, needs a decision:** gear in play mode. | none: refactor, covered by existing tests |
+| G6 | DONE | `useIsPlayMode()` replaces the ad hoc checks. Gear in play mode: **Decided by agent 2026-11-21 (owner may revisit)**, see `ROADMAP-UPDATES-2026-11-21-wave6.md`. | none: refactor, covered by existing tests |
 | G7 | DONE | `deleteLinksForNote` is now `softDeleteLinksForNote`; `removePartyMember` is now `hardDeletePartyMember`. | existing guards |
 | G8 | DONE | `routeRepository.restore` ignores a live stop. | `promotionAndRouteGuards.test.ts` |
 | G9 | PARTLY DONE | `/notes` and the library no longer use dead or legacy paths. Boolean indexes left: dropping them needs a `version(21)` for no user-visible gain. | none |

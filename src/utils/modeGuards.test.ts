@@ -18,6 +18,8 @@ describe('isFieldEditableInPlayMode', () => {
       FIELD_PATHS.resourceMax,
       FIELD_PATHS.derivedOverrides,
       FIELD_PATHS.skills,
+      // G6, decided 2026-11-21: changing what a character owns is a build change.
+      FIELD_PATHS.gear,
     ];
     for (const path of locked) {
       expect(isFieldEditableInPlayMode(path), `${path} should lock in play mode`).toBe(false);
