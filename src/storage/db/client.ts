@@ -682,15 +682,72 @@ function clearPreEncounterReworkBackups(): void {
 /** The process-wide database singleton every repository reads and writes through. */
 export const db = new SkaldbokDatabase();
 
-// Another tab opened a newer schema (the app updated there). Dexie's default
-// is to close this connection, after which every repository call throws
-// DatabaseClosedError with no way for the user to know why. Reload instead:
-// the new build's migrations have already run, so the reload just picks up
-// the version that can open the database.
+/** How long a version change waits for pending autosaves before it reloads anyway. */
+export const VERSION_CHANGE_FLUSH_TIMEOUT_MS = 2000;
+
+/** Set from `main.tsx` to the autosave registry's `flushAll`; storage does not import features. */
+let flushBeforeVersionChange: (() => Promise<unknown>) | null = null;
+
+/**
+ * Names the work a version change must finish before this tab lets go.
+ *
+ * @param flush - Writes every pending debounced save; `null` to clear.
+ */
+export function setVersionChangeFlush(flush: (() => Promise<unknown>) | null): void {
+  flushBeforeVersionChange = flush;
+}
+
+/**
+ * Another tab opened a newer schema: flush, then close and reload.
+ *
+ * @remarks
+ * Dexie's default is to close this connection, after which every repository
+ * call throws `DatabaseClosedError` with no way for the user to know why, so
+ * the tab reloads instead and picks up the version that can open the database.
+ *
+ * It used to close and reload at once. `close()` turns off Dexie's auto-reopen,
+ * so the pending debounced autosaves (a second for a character, 800ms for a
+ * note) and the `pagehide` flush all hit a closed database, and an edit made
+ * just before the other tab updated was lost. The connection stays usable until
+ * this tab closes it, so the flush runs first, bounded by
+ * {@link VERSION_CHANGE_FLUSH_TIMEOUT_MS} so a stuck write cannot hold the other
+ * tab's upgrade forever. A failed flush still reloads.
+ *
+ * Parameters exist so the test can drive it without a browser.
+ */
+export async function handleVersionChange(deps: {
+  flush: (() => Promise<unknown>) | null;
+  close: () => void;
+  reload: () => void;
+  timeoutMs?: number;
+}): Promise<void> {
+  const { flush, close, reload, timeoutMs = VERSION_CHANGE_FLUSH_TIMEOUT_MS } = deps;
+  try {
+    if (flush) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<void>((resolve) => { timer = setTimeout(resolve, timeoutMs); });
+      try {
+        await Promise.race([flush(), timeout]);
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+  } catch (e) {
+    console.error('[db] flush before version change failed', e);
+  } finally {
+    close();
+    reload();
+  }
+}
+
 if (typeof window !== 'undefined') {
   db.on('versionchange', () => {
-    db.close();
-    window.location.reload();
+    void handleVersionChange({
+      flush: flushBeforeVersionChange,
+      close: () => db.close(),
+      reload: () => window.location.reload(),
+    });
+    // Keeps Dexie from closing the connection itself before the flush runs.
     return false;
   });
 }
