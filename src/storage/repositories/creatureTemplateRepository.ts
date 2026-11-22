@@ -61,8 +61,10 @@ export async function getById(id: string, options?: { includeDeleted?: boolean }
     if (!options?.includeDeleted && result.data.deletedAt) return undefined;
     return result.data;
   } catch (e) {
-    console.warn('creatureTemplateRepository.getById: error', id, e);
-    return undefined;
+    // Rethrown, not answered with `undefined`: "no such creature" and "the
+    // database failed" are different answers, and the session export took the
+    // first for the second and shipped a backup without the creature.
+    throw new Error(`creatureTemplateRepository.getById failed: ${e}`, { cause: e });
   }
 }
 
@@ -85,8 +87,10 @@ export async function listByCampaign(campaignId: string, options?: { includeDele
     });
     return options?.includeDeleted ? parsed : excludeDeleted(parsed);
   } catch (e) {
-    console.warn('creatureTemplateRepository.listByCampaign: error', campaignId, e);
-    return [];
+    // This returned `[]`, so a failed read was indistinguishable from an empty
+    // bestiary: the campaign export wrote a backup with no creatures in it and
+    // reported success, and the bestiary and encounter picker said "No matches".
+    throw new Error(`creatureTemplateRepository.listByCampaign failed: ${e}`, { cause: e });
   }
 }
 

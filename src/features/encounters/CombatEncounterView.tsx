@@ -108,7 +108,8 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
 
       const needed = [...new Set(Object.values(nextMap))].filter((id) => !templateCache[id]);
       if (needed.length === 0) return;
-      const templates = await Promise.all(needed.map((id) => getCreatureTemplateById(id)));
+      // Display only (HP maxima); a failed read leaves the cache as it was.
+      const templates = await Promise.all(needed.map((id) => getCreatureTemplateById(id).catch(() => undefined)));
       if (cancelled) return;
       setTemplateCache((prev) => {
         const next = { ...prev };
@@ -266,12 +267,12 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
   }, []);
 
   const handleQuickCreate = async (name: string, entered: Record<string, number>) => {
-    // Check if a creature template with this name already exists
-    const existing = (await creatureTemplateRepository.listByCampaign(encounter.campaignId)).find(
-      (t) => t.name.toLowerCase() === name.toLowerCase(),
-    );
     let template;
     try {
+      // Reuse a creature template with this name if one exists.
+      const existing = (await creatureTemplateRepository.listByCampaign(encounter.campaignId)).find(
+        (t) => t.name.toLowerCase() === name.toLowerCase(),
+      );
       template = existing ?? await creatureTemplateRepository.create({
         campaignId: encounter.campaignId,
         name,

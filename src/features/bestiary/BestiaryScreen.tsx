@@ -66,6 +66,7 @@ export function BestiaryScreen({ campaignId, campaignName, systemId, activeEncou
     create,
     update,
     softDelete,
+    loadError,
   } = useBestiary(campaignId);
   const navigate = useNavigate();
   const { system } = useSystemDefinition(systemId);
@@ -273,7 +274,11 @@ export function BestiaryScreen({ campaignId, campaignName, systemId, activeEncou
 
       {/* Template list */}
       <div className="flex flex-col gap-2">
-        {templates.length === 0 ? (
+        {loadError ? (
+          <p role="alert" className="text-[var(--color-danger)] text-sm text-center py-8">
+            Couldn't load the bestiary — {loadError}
+          </p>
+        ) : templates.length === 0 ? (
           <p className="text-[var(--color-text-muted)] text-sm text-center py-8">
             {search || categoryFilter !== 'all'
               ? 'No creatures match your filters.'

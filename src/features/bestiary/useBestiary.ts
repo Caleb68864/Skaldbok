@@ -18,14 +18,24 @@ export function useBestiary(campaignId: string) {
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
 
+  /** A failed read of the bestiary, or `null`. */
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   const loadTemplates = useCallback(async () => {
-    // listByCampaign already filters deletedAt via excludeDeleted.
-    const all = await creatureTemplateRepository.listByCampaign(campaignId);
-    setTemplates(all);
+    // listByCampaign already filters deletedAt via excludeDeleted. It used to
+    // answer a failed read with `[]`, which this showed as "No creatures yet".
+    try {
+      const all = await creatureTemplateRepository.listByCampaign(campaignId);
+      setTemplates(all);
+      setLoadError(null);
+    } catch (e) {
+      console.error('useBestiary: load failed', e);
+      setLoadError(e instanceof Error ? e.message : String(e));
+    }
   }, [campaignId]);
 
   useEffect(() => {
-    loadTemplates();
+    void loadTemplates();
   }, [loadTemplates]);
 
   const filtered = templates.filter((t) => {
@@ -67,6 +77,7 @@ export function useBestiary(campaignId: string) {
   return {
     templates: filtered,
     allTemplates: templates,
+    loadError,
     search,
     setSearch,
     categoryFilter,

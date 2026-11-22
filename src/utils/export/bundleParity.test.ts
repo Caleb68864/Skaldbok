@@ -1,7 +1,7 @@
 // Must run before the Dexie `db` singleton is imported so it opens against the
 // in-memory fake IndexedDB.
 import 'fake-indexeddb/auto';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db } from '../../storage/db/client';
 import {
   BUNDLE_ENTITY_LABELS,
@@ -422,5 +422,29 @@ describe('campaign export completeness', () => {
     expect(await db.ledgerSplits.count()).toBe(0);
     expect(await db.routePlans.count()).toBe(0);
     expect(await db.ledgerAccounts.count()).toBe(0);
+  });
+});
+
+describe('campaign export when the bestiary cannot be read', () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+  });
+
+  it('fails rather than shipping a backup without the bestiary', async () => {
+    // `creatureTemplateRepository.listByCampaign` answered a failed read with
+    // `[]`, so the export succeeded with no creatures in it. Fails on that code.
+    await seedOneRowPerTable();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const spy = vi.spyOn(db.creatureTemplates, 'where').mockImplementation(() => {
+      throw new Error('IndexedDB read failed');
+    });
+    try {
+      const result = await collectCampaignBundle(CAMPAIGN_ID);
+      expect(result.success).toBe(false);
+    } finally {
+      spy.mockRestore();
+      vi.restoreAllMocks();
+    }
   });
 });

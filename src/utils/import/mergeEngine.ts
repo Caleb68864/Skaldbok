@@ -173,7 +173,9 @@ export async function mergeBundle(
   // Post-commit, non-transactional: warn about participants whose linked
   // creature template didn't come through.
   for (const enc of encountersToCheck) {
-    await warnUnresolvableCreatureLinks(enc);
+    // Advisory only, and run after the import committed: a failed read here
+    // must not turn a finished import into a reported failure.
+    await warnUnresolvableCreatureLinks(enc).catch((e) => console.warn('[mergeEngine] creature link check failed', e));
   }
 
   return report;

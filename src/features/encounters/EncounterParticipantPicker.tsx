@@ -42,6 +42,8 @@ export function EncounterParticipantPicker({
   const [newDescription, setNewDescription] = useState('');
   /** A failed write, shown in the form rather than swallowed. */
   const [error, setError] = useState<string | null>(null);
+  /** A failed search read, shown in place of "No matches". */
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,6 +77,15 @@ export function EncounterParticipantPicker({
           });
         setResults(filtered);
         setPartyResults(filteredParty);
+        setSearchError(null);
+      } catch (e) {
+        // Was try/finally with no catch: an unhandled rejection, then
+        // "No matches" for a bestiary that was never read.
+        if (cancelled) return;
+        console.error('EncounterParticipantPicker: search failed', e);
+        setResults([]);
+        setPartyResults([]);
+        setSearchError(e instanceof Error ? e.message : String(e));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -88,9 +99,15 @@ export function EncounterParticipantPicker({
   const handleSelectExisting = useCallback(
     async (template: CreatureTemplate | CharacterRecord) => {
       setSubmitting(true);
+      setError(null);
       try {
         await onSelect(template);
         onClose?.();
+      } catch (e) {
+        // A failed add (a write error, or the encounter deleted elsewhere) was
+        // an unhandled rejection with the dialog left open and nothing said.
+        console.error('EncounterParticipantPicker: add failed', e);
+        setError(`Could not add ${template.name} — ${e instanceof Error ? e.message : String(e)}`);
       } finally {
         setSubmitting(false);
       }
@@ -209,6 +226,12 @@ export function EncounterParticipantPicker({
         placeholder="Search bestiary…"
         className="px-2 py-1 border border-neutral-300 rounded"
       />
+      {error && (
+        <p role="alert" className="m-0 text-sm text-[var(--color-danger)]">{error}</p>
+      )}
+      {searchError && (
+        <p role="alert" className="m-0 text-sm text-[var(--color-danger)]">Couldn't search — {searchError}</p>
+      )}
       {loading ? (
         <div className="text-sm text-neutral-500 py-2">Searching…</div>
       ) : (
@@ -253,7 +276,7 @@ export function EncounterParticipantPicker({
               ))}
             </>
           )}
-          {partyResults.length === 0 && results.length === 0 && !loading && (
+          {partyResults.length === 0 && results.length === 0 && !loading && !searchError && (
             <li className="text-xs text-neutral-500 px-2 py-1">No matches</li>
           )}
         </ul>
