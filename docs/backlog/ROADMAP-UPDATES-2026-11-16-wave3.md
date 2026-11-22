@@ -66,3 +66,30 @@ errors, 32 warnings (unchanged). `vite build` passed. `knip --dependencies`
 exit 0. A full `knip` lists 82 unused exports and 236 unused exported types;
 CI does not gate on that and it was not compared with the base. Nothing was
 run in a browser.
+
+## Wave 4 (2026-11-21)
+
+Branch `work/attachment-per-photo-delete`, cut from `main` `529b94e` (PR #7
+merged). Not pushed.
+
+| Item | What changed | Test |
+|---|---|---|
+| R (recorded): per-photo attachment delete, "needs the Trash listing first" | Listing first: `attachmentRepository.getDeleted(campaignId)` lists photos removed on their own whose note is live. A photo that went down with its note is left out (it comes back with the note); one removed on its own before its note was deleted is listed again once the note is restored. Then the writes: `softDeleteAttachment` (own txId; refuses a re-delete so a note's cascade id is never overwritten) and `restoreAttachment`. The Trash lists them under Photos, titled by caption or filename, "Photo on <note>". `NoteAttachments` has a Remove button per photo behind a confirm. `attachments` is removed from `RESTORE_WITHOUT_LISTING`; `COVERED_BY_CASCADE` in `softDeleteRoundTrip.test.ts` is now empty. The README gap is closed. | `attachmentRepository.test.ts` +5, `trashRegistry.test.ts` +2, `softDeleteRoundTrip.test.ts` +1, `NoteAttachments.test.tsx` +3. All 11 fail with the three source files reverted. Mutations: dropping the live-note filter fails 2; dropping the re-delete guard fails 1. |
+
+Checks: `tsc -b` exit 0; `vitest run` 190 files, 2618 passed (2607 at
+`529b94e`, measured); `eslint .` 0 errors, 32 warnings (unchanged); `vite build`
+passed. `knip` is not installed in this checkout (`npm run lint:deps`: "knip:
+command not found", the same on `main`), so the dependency check was not run.
+Nothing was run in a browser.
+
+Open and decision-free, found during the audit for this wave:
+
+- **D12, two `'classic-fantasy'` literals left** where `DEFAULT_SYSTEM_ID`
+  exists: `utils/import/bundleParser.ts:188` and
+  `utils/export/bundleSerializer.ts:89` (`types/campaign.ts:9`'s Zod default too).
+  Same value today, so a refactor with a guard, not a fix.
+- **Not decision-free:** `labels.derivedPanel` / `labels.storyBankPanel` are read
+  by the play-dashboard modules but not by `SheetScreen` (hard-coded "Derived
+  Values" / "Story Bank"). Their type doc calls them dashboard card titles, and
+  Traveller's `derivedPanel: "Stats"` was written for the dashboard, so whether
+  the sheet should follow is the owner's call.

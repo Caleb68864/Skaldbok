@@ -211,11 +211,6 @@ both have drifted from the current UI.
 
 Recorded here rather than discovered later:
 
-- **A photo can be added to a note but not removed on its own.** It goes when
-  the note goes, and comes back when the note is restored.
-  `trashRegistry.RESTORE_WITHOUT_LISTING` records why there is no per-photo
-  delete: attachments have no Trash listing, so a standalone delete would be
-  either permanent or invisible. The listing comes first, then the button.
 - The printed sheet is fixed to one letter page. It now marks content it had to
   cut rather than dropping it silently, but it does not paginate.
 - A campaign export is the only backup, and only the Settings screen says so.
@@ -237,6 +232,10 @@ created.** `createAttachment` had no caller, so the feature list's "attachments"
 was a false statement rather than an incomplete one. The note reader now offers
 "Add photo", renders the image rather than its UUID, and lets you caption it;
 `NoteAttachments.test.tsx` fails if any of the three is unwired again.
+
+A fifth: **a photo could be added to a note but not removed on its own.** Each
+photo now has a Remove control. It moves the photo to the Trash, under Photos,
+and it is restored from there without touching the note.
 
 `docs/backlog/2026-09-04-improvement-roadmap.md` is the full list, with evidence
 and status per item.

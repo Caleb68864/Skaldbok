@@ -66,7 +66,7 @@ overstated it.
 | A throwing migration leaves only Reload | roadmap Q, recorded | Open, **needs decision** | Needs a recovery surface designed |
 | No purge | roadmap Q, recorded | Declined | |
 | Five test-only helpers, `notesToTimeline` | roadmap R, recorded | Open, low value | All five still only referenced by their own module and tests; the adapter is documented as an extension point |
-| Per-photo attachment delete | roadmap R, recorded | Open | Needs the Trash listing first |
+| Per-photo attachment delete | roadmap R, recorded | **DONE 2026-11-21** | Listing, then button: `work/attachment-per-photo-delete`, see the wave 3 file's "Wave 4" |
 | `CharacterRecord.campaignId` | roadmap R, recorded | Open, **needs decision** | |
 | S25 private-note control | 2026-11-02 | Excluded by brief | |
 | `TRAVELLER_DAMAGE_TRACK_IDS` restates the track | 2026-11-16 | Open, low value | Only a fallback: `getEngine` derives `resourceIds` from the declared resources (`engine/index.ts:189`) |

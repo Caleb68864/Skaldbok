@@ -17,17 +17,24 @@ import type { Attachment } from '../../types/attachment';
  * add one, no `<img>`, no way to set the caption whose absence made the chip
  * show a raw UUID.
  *
- * `deleteAttachment` is deliberately still unreachable — see the component's
- * remarks and `trashRegistry.RESTORE_WITHOUT_LISTING.attachments`.
+ * `deleteAttachment` (the permanent delete) is still unreachable from here.
+ * The Remove control soft-deletes, and the Trash lists the result under Photos.
  */
 
 const createAttachment = vi.fn();
 const updateAttachmentCaption = vi.fn();
+const softDeleteAttachment = vi.fn();
 const showToast = vi.fn();
+const confirm = vi.fn();
 
 vi.mock('../../storage/repositories/attachmentRepository', () => ({
   createAttachment: (...args: unknown[]) => createAttachment(...args),
   updateAttachmentCaption: (...args: unknown[]) => updateAttachmentCaption(...args),
+  softDeleteAttachment: (...args: unknown[]) => softDeleteAttachment(...args),
+}));
+
+vi.mock('../../components/primitives/ConfirmDialog', () => ({
+  useConfirm: () => ({ confirm }),
 }));
 
 vi.mock('../../context/ToastContext', () => ({
@@ -43,6 +50,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   createAttachment.mockResolvedValue(undefined);
   updateAttachmentCaption.mockResolvedValue(undefined);
+  softDeleteAttachment.mockResolvedValue(undefined);
+  confirm.mockResolvedValue(true);
   URL.createObjectURL = vi.fn((): string => {
     const url = `blob:test/${created.length}`;
     created.push(url);
@@ -155,6 +164,36 @@ describe('NoteAttachments', () => {
     // read by nothing anywhere in the app.
     renderGallery([attachment({ sizeBytes: 2048 })]);
     expect(screen.getByText('2 KB')).toBeDefined();
+  });
+
+  it('removes one photo into the Trash after asking', async () => {
+    // There was no per-photo remove at all: a photo went only when its note did.
+    const onChanged = renderGallery([attachment({ caption: 'The ruined tower' })]);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove The ruined tower' }));
+
+    await waitFor(() => expect(softDeleteAttachment).toHaveBeenCalledWith('att-1'));
+    expect(confirm.mock.calls[0][0]).toContain('restored from Trash');
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
+  it('keeps the photo when the user cancels', async () => {
+    confirm.mockResolvedValueOnce(false);
+    const onChanged = renderGallery([attachment()]);
+    fireEvent.click(screen.getByRole('button', { name: /^Remove / }));
+
+    await waitFor(() => expect(confirm).toHaveBeenCalled());
+    expect(softDeleteAttachment).not.toHaveBeenCalled();
+    expect(onChanged).not.toHaveBeenCalled();
+  });
+
+  it('says so when the remove fails', async () => {
+    softDeleteAttachment.mockRejectedValueOnce(new Error('attachmentRepository.softDeleteAttachment failed: boom'));
+    const onChanged = renderGallery([attachment()]);
+    fireEvent.click(screen.getByRole('button', { name: /^Remove / }));
+
+    await waitFor(() => expect(showToast).toHaveBeenCalled());
+    expect(showToast.mock.calls[0][1]).toBe('error');
+    expect(onChanged).not.toHaveBeenCalled();
   });
 });
 

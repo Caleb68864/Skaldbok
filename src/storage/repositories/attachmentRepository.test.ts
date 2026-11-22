@@ -3,7 +3,12 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../db/client';
-import { getAttachmentsByNote } from './attachmentRepository';
+import {
+  getAttachmentsByNote,
+  getDeleted,
+  restoreAttachment,
+  softDeleteAttachment,
+} from './attachmentRepository';
 import { softDeleteWithLinks, restore } from './noteRepository';
 import { nowISO } from '../../utils/dates';
 
@@ -114,5 +119,79 @@ describe('note deletion and its attachments', () => {
 
     const visible = await getAttachmentsByNote('note-1');
     expect(visible.map((a) => a.id)).toEqual(['att-1']);
+  });
+});
+
+/**
+ * A photo could be added to a note but not removed on its own.
+ *
+ * @remarks
+ * The repository had a cascade delete (with the note) and a permanent
+ * `deleteAttachment` nothing may call, and no way to list a removed photo, so
+ * there was nothing a per-photo Remove control could safely do. These pin the
+ * soft delete, the Trash listing and the restore.
+ */
+describe('removing one photo', () => {
+  beforeEach(async () => {
+    await db.delete();
+    await db.open();
+  });
+
+  it('hides it from the note and lists it for the Trash', async () => {
+    await seedNoteWithAttachment('note-1', 'att-1');
+
+    await softDeleteAttachment('att-1');
+
+    expect(await getAttachmentsByNote('note-1')).toHaveLength(0);
+    const row = await db.attachments.get('att-1');
+    expect(row?.blob, 'the photo itself must survive a soft delete').toBeInstanceOf(Blob);
+    expect(row?.softDeletedBy).toBeTruthy();
+    expect((await getDeleted('camp-1')).map((a) => a.id)).toEqual(['att-1']);
+    expect(await getDeleted('other-campaign')).toEqual([]);
+  });
+
+  it('comes back on restore, and leaves the listing', async () => {
+    await seedNoteWithAttachment('note-1', 'att-1');
+    await softDeleteAttachment('att-1');
+
+    await restoreAttachment('att-1');
+
+    expect((await getAttachmentsByNote('note-1')).map((a) => a.id)).toEqual(['att-1']);
+    const row = await db.attachments.get('att-1');
+    expect(row?.deletedAt).toBeUndefined();
+    expect(row?.softDeletedBy).toBeUndefined();
+    expect(await getDeleted('camp-1')).toEqual([]);
+  });
+
+  it('does not list a photo that went down with its note', async () => {
+    // That one comes back with the note. Offering it on its own would restore
+    // a photo onto a note that is still in the Trash.
+    await seedNoteWithAttachment('note-1', 'att-1');
+    await softDeleteWithLinks('note-1', 'tx-1');
+
+    expect(await getDeleted('camp-1')).toEqual([]);
+  });
+
+  it('is not brought back by restoring its note, and is listed again once the note is back', async () => {
+    await seedNoteWithAttachment('note-1', 'att-1');
+    await softDeleteAttachment('att-1');
+    await softDeleteWithLinks('note-1', 'tx-1');
+    expect(await getDeleted('camp-1'), 'hidden while its note is in the Trash').toEqual([]);
+
+    await restore('note-1');
+
+    expect(await getAttachmentsByNote('note-1')).toEqual([]);
+    expect((await getDeleted('camp-1')).map((a) => a.id)).toEqual(['att-1']);
+  });
+
+  it('keeps the cascade id when removed again after its note was deleted', async () => {
+    // A second tombstone would replace `tx-1`, and restoring the note would
+    // then leave the photo behind.
+    await seedNoteWithAttachment('note-1', 'att-1');
+    await softDeleteWithLinks('note-1', 'tx-1');
+
+    await softDeleteAttachment('att-1');
+
+    expect((await db.attachments.get('att-1'))?.softDeletedBy).toBe('tx-1');
   });
 });

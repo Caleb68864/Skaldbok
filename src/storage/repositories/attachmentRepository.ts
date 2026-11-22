@@ -4,7 +4,7 @@ import type { Attachment } from '../../types/attachment';
 import { generateId } from '../../utils/ids';
 import { nowISO } from '../../utils/dates';
 import { resizeAndCompress } from '../../utils/imageResize';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, generateSoftDeleteTxId, onlyDeleted } from '../../utils/softDelete';
 
 /**
  * Resizes an image and stores it as an attachment on a note.
@@ -82,22 +82,9 @@ export async function getAttachmentsByNote(
  * lists it among the domain hard deletes that `src/storage` may reach and
  * nothing else may.
  *
- * This comment used to describe it as *"the per-photo remove control, an
- * explicit 'get rid of this image'"*. No such control existed, and under two of
- * this project's own rules none could: a permanent delete on user content may
- * not be called from outside `src/storage`, and
- * `trashRegistry.RESTORE_WITHOUT_LISTING` exempts the `attachments` table from
- * having a Trash listing precisely on the grounds that an attachment is *"a
- * cascade child, never deleted on its own"*. So the doc authorised a caller
- * that the registry's exemption depends on not existing — two records of one
- * decision, disagreeing.
- *
- * A per-photo remove is a real thing to want. It needs the Trash listing first,
- * and then it is a soft delete, not this.
- *
- * The *cascade* is the reachable act and is soft — see
- * {@link softDeleteAttachmentsByNote}. Deleting a note is reversible from
- * Trash, so what goes down with it has to come back.
+ * The per-photo remove control is {@link softDeleteAttachment}, not this: a
+ * photo removed on its own goes to the Trash (listed by {@link getDeleted}) and
+ * comes back from there.
  */
 export async function deleteAttachment(id: string): Promise<void> {
   try {
@@ -143,6 +130,86 @@ export async function restoreAttachmentsForTxId(txId: string): Promise<void> {
     );
   } catch (e) {
     throw new Error(`attachmentRepository.restoreAttachmentsForTxId failed: ${e}`, { cause: e });
+  }
+}
+
+/**
+ * Moves one photo to the Trash, on its own.
+ *
+ * @remarks
+ * The per-photo remove. It mints a transaction id for this row alone, so the
+ * row's `softDeletedBy` never matches a note's cascade: restoring the note
+ * later does not bring back a photo the user removed separately, and
+ * {@link getDeleted} can tell the two kinds of tombstone apart. A row that is
+ * missing or already deleted is left alone, so a re-delete cannot overwrite
+ * the cascade id a note delete stamped on it.
+ *
+ * @param id - The attachment to remove.
+ */
+export async function softDeleteAttachment(id: string): Promise<void> {
+  try {
+    const row = await db.attachments.get(id);
+    if (!row) return;
+    if (row.deletedAt) return;
+    await db.attachments.update(id, { deletedAt: nowISO(), softDeletedBy: generateSoftDeleteTxId() });
+  } catch (e) {
+    throw new Error(`attachmentRepository.softDeleteAttachment failed: ${e}`, { cause: e });
+  }
+}
+
+/**
+ * Brings back one photo removed with {@link softDeleteAttachment}.
+ *
+ * @remarks
+ * Clears this row only. A photo that went down with its note comes back with
+ * the note instead, through {@link restoreAttachmentsForTxId}.
+ */
+export async function restoreAttachment(id: string): Promise<void> {
+  try {
+    const row = await db.attachments.get(id);
+    if (!row) return;
+    if (!row.deletedAt) return;
+    await db.attachments.update(id, { deletedAt: undefined, softDeletedBy: undefined });
+  } catch (e) {
+    throw new Error(`attachmentRepository.restoreAttachment failed: ${e}`, { cause: e });
+  }
+}
+
+/**
+ * Photos removed on their own from a campaign's live notes, newest first.
+ *
+ * @remarks
+ * Feeds the Trash. A tombstoned photo whose note is also deleted (or gone) is
+ * left out: either it went down with the note and comes back with it, or the
+ * note must be restored first, since restoring the photo alone would put it on
+ * a note nobody can open. Once the note is restored, a photo removed on its own
+ * before the note was deleted shows up here again. Invalid rows are dropped
+ * with a warning, as in {@link getAttachmentsByNote}.
+ *
+ * @param campaignId - The campaign whose Trash is being shown.
+ */
+export async function getDeleted(campaignId: string): Promise<Attachment[]> {
+  try {
+    const deleted = onlyDeleted(await db.attachments.where('campaignId').equals(campaignId).toArray());
+    if (deleted.length === 0) return [];
+    const noteIds = [...new Set(deleted.map(row => row.noteId))];
+    const notes = await db.notes.bulkGet(noteIds);
+    const liveNotes = new Set(
+      notes.filter((n): n is NonNullable<typeof n> => !!n && !n.deletedAt).map(n => n.id),
+    );
+    return deleted
+      .filter(row => liveNotes.has(row.noteId))
+      .map(row => {
+        const parsed = attachmentSchema.safeParse(row);
+        if (!parsed.success) {
+          console.warn('attachmentRepository.getDeleted: validation failed', parsed.error);
+          return undefined;
+        }
+        return parsed.data;
+      })
+      .filter((a): a is Attachment => a !== undefined);
+  } catch (e) {
+    throw new Error(`attachmentRepository.getDeleted failed: ${e}`, { cause: e });
   }
 }
 

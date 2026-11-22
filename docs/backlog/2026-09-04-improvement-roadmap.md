@@ -76,6 +76,11 @@ instead of the `SystemEngine`), and **functionality / storage conventions**
 > `ROADMAP-UPDATES-2026-11-16-wave2.md`, which also lists what is still open and
 > why. Headings below other than E1 were not changed.
 
+> **Reconciled 2026-11-21.** Wave 3 (H9's two defects, I7, D12 types) merged as
+> PR #7 (`529b94e`). The per-photo attachment delete on `R`'s recorded list is
+> done on `work/attachment-per-photo-delete`; see the struck line under
+> Workstream R.
+
 Status values: **OPEN** · **DONE** (record the commit) · **BLOCKED** (needs a
 product decision) · **WONTFIX** (record why).
 
@@ -2486,8 +2491,18 @@ than acted on. Two are serious.
   name it as the timeline component library's canonical extension point, so
   removing it is a decision about that library's documented architecture rather
   than a wiring fix.
-- A per-photo delete for attachments needs the Trash listing first — see the
-  README's Known gaps and `RESTORE_WITHOUT_LISTING.attachments`.
+- ~~A per-photo delete for attachments needs the Trash listing first — see the
+  README's Known gaps and `RESTORE_WITHOUT_LISTING.attachments`.~~ **DONE
+  2026-11-21** (branch `work/attachment-per-photo-delete`): the listing came
+  first, then the button. `attachmentRepository.getDeleted` lists photos removed
+  on their own from live notes (a photo that went down with its note is left
+  out; it comes back with the note), `softDeleteAttachment` /
+  `restoreAttachment` mint and clear a per-photo txId, the Trash shows them
+  under Photos, and `NoteAttachments` has a Remove control behind a confirm.
+  The `attachments` exemption is gone from `RESTORE_WITHOUT_LISTING`. Tests:
+  `attachmentRepository.test.ts` +5, `trashRegistry.test.ts` +2,
+  `softDeleteRoundTrip.test.ts` +1, `NoteAttachments.test.tsx` +3; all 11 fail
+  on the code before it. See `ROADMAP-UPDATES-2026-11-16-wave3.md`, "Wave 4".
 - Whether a `CharacterRecord` should carry a `campaignId` — the question `R11`
   leaves open.
 
