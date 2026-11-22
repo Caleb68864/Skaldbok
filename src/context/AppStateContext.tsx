@@ -10,6 +10,8 @@ export interface AppStateContextValue {
   updateSettings: (partial: Partial<AppSettings>) => Promise<void>;
   isLoading: boolean;
   settingsError: string | null;
+  /** Failed settings saves so far; changes on every failure, even a repeat. */
+  settingsErrorCount: number;
   /** Non-null when IndexedDB could not be opened at all; the app must not pretend to save. */
   storageError: string | null;
   /** Flips between play and edit mode. */
@@ -49,7 +51,7 @@ export interface AppStateProviderProps {
  * and seeding the bundled classic-fantasy system into IndexedDB on first run.
  */
 export function AppStateProvider({ children }: AppStateProviderProps) {
-  const { settings, updateSettings, isLoading, error: settingsError, storageError } = useAppSettings();
+  const { settings, updateSettings, isLoading, error: settingsError, errorCount: settingsErrorCount, storageError } = useAppSettings();
   const { setTheme } = useTheme();
   const [sessionState, setSessionState] = useState<SessionState>(INITIAL_SESSION_STATE);
 
@@ -112,6 +114,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       updateSettings,
       isLoading,
       settingsError,
+      settingsErrorCount,
       storageError,
       toggleMode,
       sessionState,
@@ -125,6 +128,7 @@ export function AppStateProvider({ children }: AppStateProviderProps) {
       updateSettings,
       isLoading,
       settingsError,
+      settingsErrorCount,
       storageError,
       toggleMode,
       sessionState,

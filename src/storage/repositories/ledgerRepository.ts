@@ -1,9 +1,9 @@
 import { db } from '../db/client';
 import type { LedgerEntry, LedgerLeg, SplitSnapshot } from '../../types/ledger';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
-import { createDeletedListing, createHardDelete, createSoftDeleteOps } from './createRepository';
+import { createHardDelete, createSoftDeleteOps } from './createRepository';
 
 /**
  * Repository for {@link LedgerEntry} rows — a campaign's shared cashbook.
@@ -175,12 +175,43 @@ export const restore = lifecycle.restore;
  * Feeds the Trash screen, which is the only way a user gets one of these back.
  * A deleted entry still has its legs and split snapshot on the row, so a
  * restore puts the running balance back where it was.
+ *
+ * An entry on an account that is itself deleted is left out until the account
+ * is restored. `ledgerAccountRepository.softDelete` refuses to delete an
+ * account with live entries because the money would drop out of every total
+ * while the entry stayed listed; restoring the entry on its own would build
+ * exactly that state.
  */
-export const getDeleted = createDeletedListing<LedgerEntry>({
-  repository: 'ledgerRepository',
-  table: 'ledgerEntries',
-  scopeIndex: 'campaignId',
-});
+export async function getDeleted(campaignId: string): Promise<LedgerEntry[]> {
+  try {
+    const deleted = onlyDeleted(await db.ledgerEntries.where('campaignId').equals(campaignId).toArray());
+    if (deleted.length === 0) return deleted;
+    const deadAccounts = await deletedAccountIds(campaignId);
+    return deleted.filter(e => !onDeadAccount(e, deadAccounts));
+  } catch (e) {
+    throw new Error(`ledgerRepository.getDeleted failed: ${e}`, { cause: e });
+  }
+}
+
+/**
+ * Ids of a campaign's soft-deleted ledger accounts.
+ *
+ * @remarks
+ * Shared with `recurringBillRepository.getDeleted`, which has the same hole.
+ */
+export async function deletedAccountIds(campaignId: string): Promise<Set<string>> {
+  const accounts = await db.ledgerAccounts.where('campaignId').equals(campaignId).toArray();
+  return new Set(accounts.filter(a => a.deletedAt).map(a => a.id));
+}
+
+/** Whether a row moves money on an account in `dead`. An absent id is the primary, which cannot be deleted. */
+export function onDeadAccount(
+  row: { accountId?: string; counterAccountId?: string },
+  dead: Set<string>,
+): boolean {
+  return (!!row.accountId && dead.has(row.accountId))
+    || (!!row.counterAccountId && dead.has(row.counterAccountId));
+}
 
 /** Permanently removes an entry. Internal — never call from UI. */
 export const hardDelete = createHardDelete({

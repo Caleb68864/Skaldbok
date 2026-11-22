@@ -3,7 +3,7 @@
 import 'fake-indexeddb/auto';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { db } from '../db/client';
-import { create, getDeleted, softDelete } from './creatureTemplateRepository';
+import { create, getById, getDeleted, listByCampaign, softDelete } from './creatureTemplateRepository';
 
 /**
  * The bestiary is per-campaign everywhere except, until now, its trash.
@@ -113,5 +113,31 @@ describe('creatureTemplateRepository.create', () => {
     const created = await create(data);
     expect(created.name).toBe('Wolf');
     expect(await db.creatureTemplates.get(created.id)).toBeDefined();
+  });
+});
+
+/**
+ * A failed read was answered as "nothing there": `listByCampaign` returned
+ * `[]` and `getById` returned `undefined`. The export then wrote backups
+ * without creatures, and the bestiary said "No creatures yet". Both fail on
+ * the old repository.
+ */
+describe('a failed read', () => {
+  it('rejects from listByCampaign instead of returning an empty bestiary', async () => {
+    const spy = vi.spyOn(db.creatureTemplates, 'where').mockImplementation(() => { throw new Error('read failed'); });
+    try {
+      await expect(listByCampaign('camp-a')).rejects.toThrow('read failed');
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it('rejects from getById instead of saying the creature does not exist', async () => {
+    const spy = vi.spyOn(db.creatureTemplates, 'get').mockImplementation(() => { throw new Error('read failed'); });
+    try {
+      await expect(getById('c1')).rejects.toThrow('read failed');
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

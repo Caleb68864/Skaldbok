@@ -18,8 +18,7 @@ export const BUNDLED_SYSTEMS: SystemDefinition[] = [
   savageWorldsSystem,
 ];
 
-/** The system used when none is specified (e.g. legacy characters). */
-export const DEFAULT_SYSTEM_ID = 'classic-fantasy';
+export { DEFAULT_SYSTEM_ID } from './defaultSystemId';
 
 /** `{ id, displayName }` pairs for populating a system selector. */
 export function getSelectableSystems(): Array<{ id: string; displayName: string }> {

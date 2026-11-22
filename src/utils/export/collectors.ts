@@ -12,7 +12,7 @@ import { getSessionById, getSessionsByCampaign } from '../../storage/repositorie
 import { getNoteById, getNotesBySession, getNotesByCampaign } from '../../storage/repositories/noteRepository';
 import { getAllLinks, getAllLinksFrom, getAllLinksTo } from '../../storage/repositories/entityLinkRepository';
 import type { EntityLink } from '../../types/entityLink';
-import { getPartyByCampaign, getPartyMembers } from '../../storage/repositories/partyRepository';
+import { getPartyByCampaign, getPartyMembers, listPartiesByCampaign } from '../../storage/repositories/partyRepository';
 import { getAttachmentsByNote } from '../../storage/repositories/attachmentRepository';
 import { getById as getCreatureTemplateById, listByCampaign as listCreatureTemplatesByCampaign } from '../../storage/repositories/creatureTemplateRepository';
 import { listBySession as listEncountersBySession, listByCampaign as listEncountersByCampaign } from '../../storage/repositories/encounterRepository';
@@ -352,8 +352,11 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
       await Promise.all([...creatureIds].map((id) => getCreatureTemplateById(id)))
     ).filter((t): t is CreatureTemplate => t !== undefined);
 
-    // 5. Load party for campaign (no listBySession — use getPartyByCampaign)
-    const party = await getPartyByCampaign(session.campaignId);
+    // 5. The party the campaign is playing. `activePartyId` picks it when a
+    //    campaign holds more than one; without it this was whichever party
+    //    sorted first by id.
+    const sessionCampaign = await getCampaignById(session.campaignId);
+    const party = await getPartyByCampaign(session.campaignId, { preferPartyId: sessionCampaign?.activePartyId });
     const parties = party ? [party] : [];
     const partyMembers = party ? await getPartyMembers(party.id) : [];
 
@@ -414,8 +417,7 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
     // 10. The rulesets those rows name — derived, not enumerated — plus the
     //     session's own campaign ruleset, which no row in a session bundle
     //     names. See `loadBundleSystems`.
-    const campaign = await getCampaignById(session.campaignId);
-    const assembled = { ...rows, systems: await loadBundleSystems(rows, [campaign?.system]) };
+    const assembled = { ...rows, systems: await loadBundleSystems(rows, [sessionCampaign?.system]) };
     const closed = closeBundleReferences(assembled);
     if (closed.droppedLinks > 0) {
       console.warn(
@@ -467,10 +469,12 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
     // 5. All encounters
     const encounters = await listEncountersByCampaign(campaignId);
 
-    // 6. All parties + party members
-    const party = await getPartyByCampaign(campaignId);
-    const parties = party ? [party] : [];
-    const partyMembers = party ? await getPartyMembers(party.id) : [];
+    // 6. All parties + party members. This carried only the first party by id,
+    //    so a campaign with two dropped one, its members, and any character
+    //    reachable only through them, and `campaign.activePartyId` could name a
+    //    party the backup did not contain.
+    const parties = await listPartiesByCampaign(campaignId);
+    const partyMembers = (await Promise.all(parties.map((p) => getPartyMembers(p.id)))).flat();
 
     // 7. All characters linked to party members
     const characterIds = new Set(

@@ -10,6 +10,7 @@ vi.mock('./SessionSubNav', () => ({ SessionSubNav: () => null, SESSION_SECTION_P
 vi.mock('./BottomNav', () => ({ BottomNav: () => <nav>bottom nav</nav> }));
 vi.mock('./GlobalFAB', () => ({ GlobalFAB: () => null }));
 vi.mock('./BackupReminderBanner', () => ({ BackupReminderBanner: () => null }));
+vi.mock('./SettingsSaveErrorToast', () => ({ SettingsSaveErrorToast: () => null }));
 vi.mock('../../features/campaign/CampaignCreateModal', () => ({ CampaignCreateModal: () => null }));
 vi.mock('../../features/campaign/ManagePartyDrawer', () => ({ ManagePartyDrawer: () => null }));
 vi.mock('../../features/campaign/CampaignContext', () => ({ useCampaignContext: () => ({ activeCampaign: null }) }));

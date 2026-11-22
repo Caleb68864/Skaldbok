@@ -410,7 +410,17 @@ async function syncNoteUnsafe(noteId: string): Promise<void> {
 }
 
 /**
- * Removes a note's KBNode and all associated edges (both incoming and outgoing).
+ * Removes a note's KBNode and its outgoing edges, and parks its incoming links.
+ *
+ * @remarks
+ * Incoming `[[wikilink]]` and `@mention` edges are other notes' text, which
+ * still names this note. They used to be deleted with it, so restoring the note
+ * from Trash (or Undo) rebuilt only its own outgoing edges: its backlinks were
+ * gone and the graph had no edge from a note whose body still linked it, until
+ * that note was edited again. They are now repointed at an unresolved
+ * placeholder carrying this note's label, which is what a link to a missing
+ * note is, and `syncNote`'s {@link absorbPlaceholder} folds them back into the
+ * node when the note returns.
  */
 export async function deleteNoteNode(noteId: string): Promise<void> {
   try {
@@ -418,6 +428,28 @@ export async function deleteNoteNode(noteId: string): Promise<void> {
     const existing = await db.kb_nodes.get(noteNodeId).catch(() => null);
     if (existing) {
       await deleteEdgesFromNode(existing.id);
+      const label = existing.label?.trim();
+      const campaignId = existing.campaignId;
+      const inbound = label && campaignId
+        ? (await getEdgesToNode(existing.id)).filter(e => e.type === 'wikilink' || e.type === 'mention')
+        : [];
+      if (inbound.length > 0 && label && campaignId) {
+        const stubId = placeholderNodeId(campaignId, label);
+        const now = nowISO();
+        await upsertNode({
+          id: stubId,
+          type: 'unresolved',
+          label,
+          scope: 'campaign',
+          campaignId,
+          createdAt: now,
+          updatedAt: now,
+        });
+        for (const edge of inbound) {
+          await deleteEdge(edge.id);
+          await upsertEdge({ ...edge, id: edgeIdFor(edge.fromId, edge.type, stubId), toId: stubId });
+        }
+      }
       await deleteEdgesToNode(existing.id);
       await deleteNode(existing.id);
     }

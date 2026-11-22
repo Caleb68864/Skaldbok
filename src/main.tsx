@@ -4,7 +4,8 @@ import { AppProviders } from './app/AppProviders';
 import { App } from './app/App';
 import { ErrorBoundary } from './app/ErrorBoundary';
 import { ensurePersistentStorage } from './storage/persistence';
-import { flushWhenPageHides } from './features/persistence/autosaveFlush';
+import { flushAll, flushWhenPageHides } from './features/persistence/autosaveFlush';
+import { setVersionChangeFlush } from './storage/db/client';
 import { installDiagnosticsCapture } from './utils/diagnostics';
 import './styles/tailwind.css';
 import './styles/fonts.css';
@@ -23,6 +24,8 @@ void ensurePersistentStorage();
 // before the tab can be suspended. See `flushWhenPageHides` for what it does
 // not cover (a hard reload inside the debounce window).
 flushWhenPageHides();
+// And before a schema change in another tab makes this one reload.
+setVersionChangeFlush(flushAll);
 
 // Screens are code-split (see routes/index.tsx). After a deploy the hashed
 // chunk a still-open page asks for may no longer exist on the server or in the

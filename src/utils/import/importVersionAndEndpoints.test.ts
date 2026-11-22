@@ -49,6 +49,8 @@ describe('re-importing rows that have no updatedAt (roadmap R, recorded)', () =>
   it('skips an unchanged attachment instead of reporting an error per row', async () => {
     const now = '2026-01-01T00:00:00.000Z';
     const row = { id: 'a1', noteId: 'n', campaignId: 'c', filename: 'a.png', mimeType: 'image/png', sizeBytes: 1, createdAt: now };
+    // Its note is on the device: a photo without one is skipped as an orphan.
+    await db.notes.put({ id: 'n', campaignId: 'c', title: 'N', body: null, type: 'generic', status: 'active', pinned: false, schemaVersion: 1, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' } as never);
     await db.attachments.put({ ...row, blob: new Blob(['x']) } as never);
 
     const report = await mergeBundle({

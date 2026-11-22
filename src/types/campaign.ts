@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { DEFAULT_SYSTEM_ID } from '../systems/defaultSystemId';
 
 export type CampaignStatus = 'active' | 'archived';
 
@@ -6,7 +7,7 @@ export const campaignSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().optional(),
-  system: z.string().default('classic-fantasy'),
+  system: z.string().default(DEFAULT_SYSTEM_ID),
   status: z.enum(['active', 'archived']),
   /**
    * The party this campaign is playing, when it has more than one live party to

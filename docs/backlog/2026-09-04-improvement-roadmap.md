@@ -2261,7 +2261,9 @@ What step 13 deliberately left:
   Also still open from D12: `WeaponEditor`'s grip and damage-type lists and
   the `bennies` card key. (2026-11-16 wave 3: the `StatKey`/`restsUsed` unions
   are widened, `4885d08`; `remakeCurrency` was found to read and write through
-  `engine.currency` already.)
+  `engine.currency` already. 2026-11-21 wave 5: the last three `'classic-fantasy'`
+  fallbacks use `DEFAULT_SYSTEM_ID`, guarded by `defaultSystemId.test.ts`; see
+  `ROADMAP-UPDATES-2026-11-21.md`.)
 
 Seven things a future reader should know before picking up the rest:
 

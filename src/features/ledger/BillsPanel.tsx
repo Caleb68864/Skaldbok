@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nextDue, remainingOccurrences } from '../../utils/ledger/accrual';
@@ -68,8 +68,35 @@ export function BillsPanel({
 }: BillsPanelProps) {
   const [draft, setDraft] = useState<typeof EMPTY | null>(null);
 
+  // A write that fails here used to be `void`ed: the form closed and lost
+  // everything typed, and nothing was said. `run` keeps the form open on
+  // failure and says why. Suspend, resume and remove report the same way.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const run = async (write: () => Promise<unknown>, onDone?: () => void) => {
+    setActionError(null);
+    try {
+      await write();
+      onDone?.();
+    } catch (e) {
+      console.error('BillsPanel write failed', e);
+      setActionError(e instanceof Error ? e.message : 'Could not save that change.');
+    }
+  };
+
+  // The date is edited locally and saved on blur or Enter. Bound straight to
+  // the stored value, every keystroke wrote the campaign and reloaded it
+  // (campaign, session, party and active-character reads) before the field
+  // could show the key: the cursor jumped to the end, fast typing dropped
+  // characters, and each keystroke could post bills against a half-typed date.
+  const [dateDraft, setDateDraft] = useState(campaignDate);
+  useEffect(() => { setDateDraft(campaignDate); }, [campaignDate]);
+  const commitDate = () => {
+    if (dateDraft === campaignDate) return;
+    void run(() => onSetCampaignDate(dateDraft));
+  };
+
   const dateHint = calendar?.example ?? 'day number';
-  const dateOk = isRouteDateValid(campaignDate, calendar);
+  const dateOk = isRouteDateValid(dateDraft, calendar);
   const accountName = (id?: string) =>
     id ? (accounts.find(a => a.id === id)?.name ?? 'unknown') : 'default';
 
@@ -94,16 +121,23 @@ export function BillsPanel({
       defaultOpen
     >
       <div className="flex flex-col gap-[var(--space-sm)]">
+        {actionError && (
+          <p role="alert" className="m-0 text-sm text-[var(--color-danger)]">
+            {actionError}
+          </p>
+        )}
         <label className="flex flex-col gap-1 max-w-[14rem]">
           <span className="text-sm text-[var(--color-text-muted)]">
             Campaign date
           </span>
           <input
             className={inputClass}
-            value={campaignDate}
+            value={dateDraft}
             placeholder={dateHint}
             aria-label="Campaign date"
-            onChange={e => void onSetCampaignDate(e.target.value)}
+            onChange={e => setDateDraft(e.target.value)}
+            onBlur={commitDate}
+            onKeyDown={e => { if (e.key === 'Enter') commitDate(); }}
             style={dateOk ? undefined : { borderColor: 'var(--color-danger, #b3261e)' }}
           />
         </label>
@@ -144,7 +178,7 @@ export function BillsPanel({
               </span>
               <button
                 type="button"
-                onClick={() => void onToggle(bill.id, !bill.active)}
+                onClick={() => void run(() => onToggle(bill.id, !bill.active))}
                 aria-label={`${bill.active ? 'Suspend' : 'Resume'} ${bill.name}`}
                 className="shrink-0 min-h-[44px] px-[var(--space-sm)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-transparent text-[var(--color-text)] text-xs font-semibold cursor-pointer"
               >
@@ -152,7 +186,7 @@ export function BillsPanel({
               </button>
               <button
                 type="button"
-                onClick={() => void onRemove(bill.id)}
+                onClick={() => void run(() => onRemove(bill.id))}
                 aria-label={`Remove ${bill.name}`}
                 className="shrink-0 min-w-[44px] min-h-[44px] bg-transparent border-none cursor-pointer text-[var(--color-text-muted)]"
               >
@@ -259,7 +293,7 @@ export function BillsPanel({
                 disabled={!canAdd}
                 onClick={() => {
                   const limit = Number(draft.occurrenceLimit);
-                  void onAdd({
+                  void run(() => onAdd({
                     name: draft.name.trim(),
                     amount,
                     everyDays: Number(draft.everyDays) || DEFAULT_BILL_INTERVAL_DAYS,
@@ -270,8 +304,7 @@ export function BillsPanel({
                       draft.occurrenceLimit.trim() !== '' && Number.isFinite(limit) && limit > 0
                         ? limit
                         : undefined,
-                  });
-                  setDraft(null);
+                  }), () => setDraft(null));
                 }}
               >
                 Create

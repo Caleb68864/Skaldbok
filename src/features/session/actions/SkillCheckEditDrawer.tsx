@@ -2,7 +2,7 @@ import { useConfirm } from '../../../components/primitives/ConfirmDialog';
 import { useEffect, useState } from 'react';
 import { Drawer } from '../../../components/primitives/Drawer';
 import { Button } from '../../../components/primitives/Button';
-import { updateNote, softDelete as softDeleteNote } from '../../../storage/repositories/noteRepository';
+import { updateNote, softDeleteWithLinks } from '../../../storage/repositories/noteRepository';
 import { useToast } from '../../../context/ToastContext';
 import { cn } from '../../../lib/utils';
 import type { Note } from '../../../types/note';
@@ -107,7 +107,10 @@ export function SkillCheckEditDrawer({ open, onClose, note, onSaved }: SkillChec
     if (!note) return;
     if (!(await confirm('Delete this entry?'))) return;
     try {
-      await softDeleteNote(note.id);
+      // With its edges and photos, under one txId, so Trash restores the entry
+      // back into its session and encounter. The note-only delete left the
+      // session→note and encounter→note `contains` edges live.
+      await softDeleteWithLinks(note.id);
       showToast('Entry deleted', 'success', 2000);
       onSaved();
       onClose();
