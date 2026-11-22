@@ -35,6 +35,9 @@ export default function TrashScreen() {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [sections, setSections] = useState<TrashSection[]>([]);
+  // Headings whose listing threw. Kept on screen, not only toasted: with them
+  // gone the empty state would say "Nothing deleted" about rows it never read.
+  const [failedHeadings, setFailedHeadings] = useState<string[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -65,11 +68,14 @@ export default function TrashScreen() {
       });
 
       setSections(next.filter((section) => section.rows.length > 0));
+      setFailedHeadings(failed);
       if (failed.length > 0) {
         showToast(`Could not load: ${failed.join(', ')}`, 'error');
       }
     } catch (e) {
       console.error('TrashScreen.refresh failed:', e);
+      setSections([]);
+      setFailedHeadings(['the trash']);
       showToast('Could not load the trash', 'error');
     } finally {
       setLoading(false);
@@ -117,6 +123,21 @@ export default function TrashScreen() {
     );
   }
 
+  const loadFailure = failedHeadings.length > 0 && (
+    <p role="alert" className="mt-4 mb-4 text-[var(--color-danger)] text-sm">
+      Couldn't load {failedHeadings.join(', ')}. Those deleted items may still be here; try again later.
+    </p>
+  );
+
+  if (sections.length === 0 && loadFailure) {
+    return (
+      <div className="p-4">
+        {header}
+        {loadFailure}
+      </div>
+    );
+  }
+
   if (sections.length === 0) {
     return (
       <div className="p-4">
@@ -132,6 +153,7 @@ export default function TrashScreen() {
   return (
     <div className="p-4">
       {header}
+      {loadFailure}
       {sections.map((section) => (
         <section key={section.id} className="mb-6" aria-labelledby={`trash-${section.id}`}>
           <h2 id={`trash-${section.id}`} className="text-[var(--color-text-muted)] text-xs uppercase tracking-wide mb-2">
