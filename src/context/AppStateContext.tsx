@@ -7,7 +7,8 @@ import type { AppSettings, ModeName, BoonBaneState, SessionState } from '../type
 /** App-wide settings plus the in-memory, per-run session state (boon/bane selections). */
 export interface AppStateContextValue {
   settings: AppSettings;
-  updateSettings: (partial: Partial<AppSettings>) => Promise<void>;
+  /** Resolves `true` once saved; `false` when the save failed (already reported and reverted). */
+  updateSettings: (partial: Partial<AppSettings>) => Promise<boolean>;
   isLoading: boolean;
   settingsError: string | null;
   /** Failed settings saves so far; changes on every failure, even a repeat. */

@@ -14,7 +14,8 @@ export interface ActiveCharacterContextValue {
   /** The character currently open on the sheet, or `null` when none is selected. */
   character: CharacterRecord | null;
   /** Selects a character by id and persists the choice to settings. */
-  setCharacter: (id: string) => Promise<void>;
+  /** Resolves `true` when the character is now active; `false` if it is missing or the choice could not be saved. */
+  setCharacter: (id: string) => Promise<boolean>;
   /** Merges a partial (or reducer-style) update into the in-memory character; autosave persists it. */
   updateCharacter: (partialOrFn: CharacterUpdater) => void;
   /** Deselects the active character, flushing any pending autosave first. */
@@ -94,11 +95,14 @@ export function ActiveCharacterProvider({ children }: ActiveCharacterProviderPro
     // calls setCharacter in place while the sheet stays mounted.
     await flushAll();
     const char = await characterRepository.getById(id);
-    if (char) {
-      const system = await systemRepository.getById(char.systemId).catch(() => null);
-      setCharacterState(normalizeCharacter(char, { system }));
-      await updateSettings({ activeCharacterId: id });
-    }
+    if (!char) return false;
+    const system = await systemRepository.getById(char.systemId).catch(() => null);
+    // Saved first, then shown. The other way round, a failed save left this
+    // character on screen while the stored choice (and the next launch) was the
+    // old one, and the library said "Active character updated" regardless.
+    if (!(await updateSettings({ activeCharacterId: id }))) return false;
+    setCharacterState(normalizeCharacter(char, { system }));
+    return true;
   }, [updateSettings]);
 
   const updateCharacter = useCallback((partialOrFn: CharacterUpdater) => {

@@ -30,7 +30,7 @@ const store = new Map<string, CharacterRecord>();
 const calls: string[] = [];
 /** Flush registrations to tear down, so a failed assertion cannot leak one. */
 const registrations: { unregister: () => void }[] = [];
-const updateSettings = vi.fn(async () => {});
+const updateSettings = vi.fn(async (_partial?: unknown): Promise<boolean> => true);
 let settings: AppSettings;
 
 vi.mock('./AppStateContext', () => ({
@@ -118,6 +118,33 @@ describe('setCharacter', () => {
     // character that does not exist.
     expect(result.current.character?.id).toBe('c1');
     expect(updateSettings).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a selection that could not be saved, and does not show it', async () => {
+    // setCharacter resolved either way and installed the character before the
+    // save, so the library said "Active character updated" while the stored
+    // choice stayed the old one. Fails on that code.
+    store.set('c1', characterNamed('c1', 'Hilda'));
+    store.set('c2', characterNamed('c2', 'Bjorn'));
+    const { result } = renderHook(() => useActiveCharacter(), { wrapper });
+    await act(async () => { await result.current.setCharacter('c1'); });
+
+    updateSettings.mockResolvedValueOnce(false);
+    let ok: boolean | undefined;
+    await act(async () => { ok = await result.current.setCharacter('c2'); });
+
+    expect(ok).toBe(false);
+    expect(result.current.character?.id).toBe('c1');
+  });
+
+  it('says true when the character is now active, and false for a missing one', async () => {
+    store.set('c1', characterNamed('c1', 'Hilda'));
+    const { result } = renderHook(() => useActiveCharacter(), { wrapper });
+    let ok: boolean | undefined;
+    await act(async () => { ok = await result.current.setCharacter('c1'); });
+    expect(ok).toBe(true);
+    await act(async () => { ok = await result.current.setCharacter('missing'); });
+    expect(ok).toBe(false);
   });
 
   it('still flushes when the row it is switching to does not exist', async () => {

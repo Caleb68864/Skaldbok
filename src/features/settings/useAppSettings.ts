@@ -97,12 +97,13 @@ export function useAppSettings() {
     };
   }, [applySettings]);
 
-  const updateSettings = useCallback(async (partial: Partial<AppSettings>) => {
+  const updateSettings = useCallback(async (partial: Partial<AppSettings>): Promise<boolean> => {
     // After a failed load `latestSettings` holds defaults, not what is on disk, so
     // saving would replace the user's stored settings with them.
     if (loadFailed.current) {
       setError('Failed to save settings: stored settings could not be read.');
-      return;
+      setErrorCount(n => n + 1);
+      return false;
     }
     const previous = latestSettings.current;
     const updated = { ...previous, ...partial };
@@ -110,6 +111,7 @@ export function useAppSettings() {
     try {
       await settingsRepository.save(updated);
       setError(null);
+      return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError('Failed to save settings: ' + message);
@@ -118,6 +120,7 @@ export function useAppSettings() {
       // saved until the next reload put the old one back. A later update that
       // already replaced it is left alone.
       if (latestSettings.current === updated) applySettings(previous);
+      return false;
     }
   }, [applySettings]);
 
