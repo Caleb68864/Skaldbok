@@ -20,7 +20,7 @@ The one failure predates this work (see the end of this file).
 | E2 | DONE | `read`, `write` and `formatAmount` are built from the denominations. **Bug fixed:** declared coins read back as nothing. | `currencyAndPanelMerge.test.ts` |
 | E3 | DONE | Traveller DMs follow the declared attributes. `resourceIds` is derived, using the new `ResourceDefinition.role`. The restated maxima are pinned by test, not removed. | `declaredIds.test.ts` |
 | E4 | DONE | `system.json` declares `engine`. `SYSTEM_ADAPTERS` is derived from the registry, so the lockstep is gone. It remains as a lookup for older copies of a bundled system. | `fallbackAdapter.test.ts` |
-| E5 | PARTLY DONE | System `index.ts` files no longer re-export maths, and the duplicate `getSkillBaseChance` is gone. **Still open, needs a decision:** moving the helpers conflicts with CLAUDE.md. | `bundledShape.test.ts` |
+| E5 | DONE as far as it goes; the move is **declined, decided by agent 2026-11-21 (owner may revisit)**, see `ROADMAP-UPDATES-2026-11-21-wave6.md` | System `index.ts` files no longer re-export maths, and the duplicate `getSkillBaseChance` is gone. **Still open, needs a decision:** moving the helpers conflicts with CLAUDE.md. | `bundledShape.test.ts` |
 | E6 | DONE for what was listed | `terms`, `labels` and `timeUnits` share the engine types. Blank templates carry schema 6 and `deathSuccesses`. Checklist added to CLAUDE.md and AGENTS.md. Optional per-ruleset blocks stay per-ruleset. | `bundledShape.test.ts` |
 | A8 | DONE | The wake lock now honours a saved preference that loads after mount. | `useWakeLock.test.tsx` |
 | A9 | DONE for what remained | `danglingLinkEndpoint` treats a tombstone as missing. | `importVersionAndEndpoints.test.ts` |
