@@ -74,7 +74,7 @@ revert).
 | Item | Why |
 |---|---|
 | T1 and its spec | The spec's status is "Proposed" and it lists three unanswered rules decisions. Not started. |
-| S25, private-note control | Excluded by the brief. |
+| S25, private-note control | **Decided by agent 2026-11-21 (owner may revisit)**, see `ROADMAP-UPDATES-2026-11-21-wave6.md`. |
 | H8 | Not started. `attachments` requires a `noteId` and is filtered by note privacy, so where portraits live is a design choice, and the migration moves user data. |
 | C3 | The entry offers two designs. Needs a decision. |
 | H9 | The two indexes hold different documents (notes, KB nodes) and no defect is shown. Not started. |

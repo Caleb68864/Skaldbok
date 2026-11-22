@@ -1,4 +1,5 @@
 import type { BundleContents } from '../../types/bundle';
+import { privateLinkTargets, redactPrivateLinks } from './redactPrivateLinks';
 
 /**
  * The entity type string an `entityLinks` row uses for a note endpoint.
@@ -105,8 +106,6 @@ export function applyPrivacyFilter(
     }
   }
 
-  if (dropped.size === 0) return contents;
-
   const result = { ...contents } as Record<string, unknown>;
   for (const [key, rows, original] of collections) {
     if (!rows.some((row) => dropped.has(row))) continue;
@@ -114,6 +113,27 @@ export function applyPrivacyFilter(
     // not a row this filter can reason about, and must not be removed by one.
     result[key] = original.filter((row) => !dropped.has(row as object));
   }
+
+  // S25: a kept note whose body links a private note. Without this the
+  // residue check found the private id in that body and blocked the whole
+  // export. See `redactPrivateLinks` for the decision.
+  const allNotes = (contents.notes ?? []) as Array<{ id: string; title?: string; body?: unknown }>;
+  const keptNotes = (result.notes ?? []) as Array<{ id: string; title?: string; body?: unknown }>;
+  const privateIds = privateNoteIdsIn(contents);
+  const targets = privateLinkTargets(
+    allNotes.filter((n) => privateIds.has(n.id)),
+    keptNotes,
+  );
+  let redactedAny = false;
+  const redacted = keptNotes.map((note) => {
+    const body = redactPrivateLinks(note.body, targets);
+    if (body === note.body) return note;
+    redactedAny = true;
+    return { ...note, body };
+  });
+  if (redactedAny) result.notes = redacted;
+
+  if (dropped.size === 0 && !redactedAny) return contents;
   return result as BundleContents;
 }
 
