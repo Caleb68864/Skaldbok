@@ -1,6 +1,7 @@
 import { nowISO } from '../dates';
 import type { BundleContents, BundleEnvelope } from '../../types/bundle';
 import { shareFile, type DeliveryOutcome } from './delivery';
+import { DEFAULT_SYSTEM_ID } from '../../systems/defaultSystemId';
 import {
   applyPrivacyFilter,
   privateNoteIdsIn,
@@ -86,7 +87,7 @@ export async function serializeBundle(
   const system =
     processedContents.campaign?.system ??
     (processedContents.characters?.[0] as { systemId?: string } | undefined)?.systemId ??
-    'classic-fantasy';
+    DEFAULT_SYSTEM_ID;
   const envelope: BundleEnvelope = {
     version: 1,
     type,

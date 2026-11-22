@@ -24,6 +24,7 @@ import { kbNodeSchema, kbEdgeSchema } from '../../types/knowledgeBase';
 import { systemDefinitionSchema } from '../../../schemas/system.schema';
 import { migrateCharacter } from '../migrations';
 import type { CharacterRecord } from '../../types/character';
+import { DEFAULT_SYSTEM_ID } from '../../systems/defaultSystemId';
 
 /**
  * A single per-entity validation warning produced during bundle parsing.
@@ -185,7 +186,7 @@ function handleLegacySkaldbok(obj: Record<string, unknown>): ParsedBundleResult 
     exportedAt: nowISO(),
     // Derive from the record's own systemId, not a hardcoded default — a bare
     // Traveller/Savage Worlds character export must not be mislabelled Dragonbane.
-    system: typeof obj.systemId === 'string' ? obj.systemId : 'classic-fantasy',
+    system: typeof obj.systemId === 'string' ? obj.systemId : DEFAULT_SYSTEM_ID,
     contents: {
       characters: [obj],
     },
