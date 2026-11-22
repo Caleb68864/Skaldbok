@@ -1,5 +1,6 @@
 import { localDateOnlyISO } from '../utils/dates';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { useSerialRunOnChange } from '../hooks/useSerialRunOnChange';
 import { NoCampaignPrompt } from '../components/shell/NoCampaignPrompt';
 import { useCampaignContext } from '../features/campaign/CampaignContext';
 import { SectionPanel } from '../components/primitives/SectionPanel';
@@ -55,16 +56,12 @@ export default function LedgerScreen() {
   const [counterAccountId, setCounterAccountId] = useState<string>('');
 
   // Post anything the campaign date has made due. Runs on open and whenever the
-  // date moves; `accrueBills` is idempotent, so a repeat finds nothing.
-  //
-  // The ref guards against React's double-invoked effects in development, which
-  // would otherwise race two posting runs against the same watermark and write
-  // every charge twice.
-  const postingRef = useRef(false);
-  useEffect(() => {
-    if (ledger.isLoading || postingRef.current) return;
-    postingRef.current = true;
-    void ledger
+  // date moves; `accrueBills` is idempotent, so a repeat finds nothing. One run
+  // at a time (two would race the same watermark and post every charge twice),
+  // and a date change that lands mid-run is posted after it rather than
+  // dropped. See `useSerialRunOnChange`.
+  useSerialRunOnChange(ledger.campaignDate, !ledger.isLoading, () =>
+    ledger
       .postDueBills()
       .then(result => {
         if (result.count === 0) return;
@@ -85,14 +82,8 @@ export default function LedgerScreen() {
       .catch(e => {
         console.error('LedgerScreen: posting recurring charges failed', e);
         showToast('Could not post recurring charges. Nothing was posted; reopen to try again.', 'error');
-      })
-      .finally(() => {
-        postingRef.current = false;
-      });
-    // Deliberately keyed on the campaign date and load state alone: re-running
-    // whenever `ledger` changes identity would fire on every entry written.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ledger.campaignDate, ledger.isLoading]);
+      }),
+  );
 
   if (!activeCampaign) return <NoCampaignPrompt />;
 
