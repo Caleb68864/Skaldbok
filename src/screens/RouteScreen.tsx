@@ -178,7 +178,13 @@ export default function RouteScreen() {
           <Button onClick={() => void handleAdd()} disabled={!newName.trim()}>
             Add
           </Button>
-          <Button variant="secondary" onClick={() => setIsImporting(true)}>
+          <Button
+            variant="secondary"
+            // Replace-on-import counts the stops it would replace; with the
+            // route unread that count is 0, which is not true.
+            disabled={route.loadError !== null}
+            onClick={() => setIsImporting(true)}
+          >
             Import…
           </Button>
           {stops.length > 0 && (
@@ -322,7 +328,13 @@ export default function RouteScreen() {
         </div>
       </SectionPanel>
 
-      {stops.length === 0 && (
+      {route.loadError !== null && (
+        <p role="alert" className="text-sm text-[var(--color-danger)]">
+          Couldn't load this route — {route.loadError}
+        </p>
+      )}
+
+      {stops.length === 0 && route.loadError === null && (
         <SectionPanel title="No stops yet">
           <p className="text-[var(--color-text-muted)]">
             Add the first place on the route above.

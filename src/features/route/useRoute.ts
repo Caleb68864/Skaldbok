@@ -32,6 +32,10 @@ export function useRoute() {
   const [stops, setStops] = useState<RouteStop[]>([]);
   const [plan, setPlan] = useState<RoutePlan | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  // A failed read used to be logged and dropped, leaving `stops` at `[]`, so the
+  // screen said "No stops yet" about a route it had not read, and the import's
+  // replace path counted a populated route as empty.
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const campaignId = activeCampaign?.id;
   const planner = system?.routePlanner;
@@ -43,13 +47,20 @@ export function useRoute() {
       setIsLoading(false);
       return;
     }
-    setStops(await routeRepository.listByCampaign(campaignId));
-    setPlan(await routePlanRepository.getOrCreateForCampaign(campaignId));
-    setIsLoading(false);
+    try {
+      setStops(await routeRepository.listByCampaign(campaignId));
+      setPlan(await routePlanRepository.getOrCreateForCampaign(campaignId));
+      setLoadError(null);
+    } catch (e) {
+      console.error('useRoute.reload failed', e);
+      setLoadError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setIsLoading(false);
+    }
   }, [campaignId]);
 
   useEffect(() => {
-    reload().catch(console.error);
+    void reload();
   }, [reload]);
 
   /** Declared fields other than `name`, which is a real column on the record. */
@@ -198,6 +209,8 @@ export function useRoute() {
   return {
     stops,
     isLoading,
+    /** The message from a failed read of the route, or `null`. */
+    loadError,
     planner,
     routeMap,
     /**
