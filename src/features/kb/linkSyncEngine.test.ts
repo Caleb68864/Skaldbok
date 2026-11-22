@@ -176,6 +176,28 @@ describe('unresolved placeholders', () => {
     expect(await db.kb_nodes.filter(n => n.type === 'unresolved').count()).toBe(0);
   });
 
+  it('gives a deleted note its backlinks back when it is restored', async () => {
+    // Deleting a note deleted every edge pointing at it. Restoring it rebuilt
+    // only its own outgoing edges, so the note linking it lost the backlink
+    // until someone edited that note. Fails on the old deleteNoteNode.
+    const { syncNote, deleteNoteNode } = await import('./linkSyncEngine');
+    const { db } = await import('../../storage/db/client');
+    noteOverrides.set('n-src', { body: linkTo('Ostrand') });
+    noteOverrides.set('n-target', { title: 'Ostrand', body: { type: 'doc', content: [] } });
+    await syncNote('n-target');
+    await syncNote('n-src');
+
+    await deleteNoteNode('n-target');
+    const parked = await db.kb_edges.toArray();
+    expect(parked.map(e => e.fromId)).toEqual(['note-n-src']);
+    expect(parked[0].toId.startsWith('unresolved:')).toBe(true);
+
+    await syncNote('n-target');
+    const edges = await db.kb_edges.toArray();
+    expect(edges.map(e => `${e.fromId}->${e.toId}`)).toEqual(['note-n-src->note-n-target']);
+    expect(await db.kb_nodes.filter(n => n.type === 'unresolved').count()).toBe(0);
+  });
+
   it('does not duplicate an edge when absorbing', async () => {
     const { syncNote } = await import('./linkSyncEngine');
     const { db } = await import('../../storage/db/client');
