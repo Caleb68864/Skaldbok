@@ -8,6 +8,7 @@ import { SessionSubNav, SESSION_SECTION_PREFIXES } from './SessionSubNav';
 import { BottomNav } from './BottomNav';
 import { GlobalFAB } from './GlobalFAB';
 import { BackupReminderBanner } from './BackupReminderBanner';
+import { SettingsSaveErrorToast } from './SettingsSaveErrorToast';
 import { CampaignCreateModal } from '../../features/campaign/CampaignCreateModal';
 import { ManagePartyDrawer } from '../../features/campaign/ManagePartyDrawer';
 import { SessionRefreshProvider } from '../../features/session/SessionRefreshContext';
@@ -75,6 +76,7 @@ export function ShellLayout() {
         {isCharacterTab && <CharacterSubNav />}
         {isSessionTab && <SessionSubNav />}
         <BackupReminderBanner />
+        <SettingsSaveErrorToast />
         {/* The shell puts a header, up to two tab rows and sometimes a banner
             ahead of the content on every route, so a keyboard or switch user
             tabbed through all of it on each navigation. There was no skip link

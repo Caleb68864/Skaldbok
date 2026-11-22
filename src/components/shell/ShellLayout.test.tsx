@@ -33,6 +33,7 @@ vi.mock('./SessionSubNav', () => ({
 }));
 vi.mock('./BottomNav', () => ({ BottomNav: () => null }));
 vi.mock('./BackupReminderBanner', () => ({ BackupReminderBanner: () => null }));
+vi.mock('./SettingsSaveErrorToast', () => ({ SettingsSaveErrorToast: () => null }));
 vi.mock('../../features/campaign/CampaignCreateModal', () => ({ CampaignCreateModal: () => null }));
 vi.mock('../../features/campaign/ManagePartyDrawer', () => ({ ManagePartyDrawer: () => null }));
 vi.mock('../../features/session/SessionRefreshContext', () => ({

@@ -28,6 +28,9 @@ export function useAppSettings() {
   const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Counts failed saves, so a second failure with the same message is still a
+  // change a reader can see. `SettingsSaveErrorToast` keys on it.
+  const [errorCount, setErrorCount] = useState(0);
   /** Set when the settings record could not be read at all — IndexedDB refused to open. */
   const [storageError, setStorageError] = useState<string | null>(null);
 
@@ -101,7 +104,8 @@ export function useAppSettings() {
       setError('Failed to save settings: stored settings could not be read.');
       return;
     }
-    const updated = { ...latestSettings.current, ...partial };
+    const previous = latestSettings.current;
+    const updated = { ...previous, ...partial };
     applySettings(updated);
     try {
       await settingsRepository.save(updated);
@@ -109,8 +113,13 @@ export function useAppSettings() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError('Failed to save settings: ' + message);
+      setErrorCount(n => n + 1);
+      // The UI took the new value before the write. Left there, it looked
+      // saved until the next reload put the old one back. A later update that
+      // already replaced it is left alone.
+      if (latestSettings.current === updated) applySettings(previous);
     }
   }, [applySettings]);
 
-  return { settings, updateSettings, isLoading, error, storageError };
+  return { settings, updateSettings, isLoading, error, errorCount, storageError };
 }
