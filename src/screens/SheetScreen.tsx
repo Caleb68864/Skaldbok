@@ -1,3 +1,4 @@
+import { usePortraitSrc, useSetPortrait } from '../features/characters/usePortrait';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useActiveCharacter } from '../context/ActiveCharacterContext';
@@ -126,6 +127,9 @@ export default function SheetScreen() {
   const isPlayMode = useIsPlayMode();
   const navigate = useNavigate();
   const { character, updateCharacter, isLoading } = useActiveCharacter();
+  // H8: a portrait id, or the pre-v21 inline image.
+  const portraitSrc = usePortraitSrc(character);
+  const setPortrait = useSetPortrait();
   const { settings, updateSettings, isLoading: settingsLoading } = useAppState();
   const { system } = useSystemDefinition(character?.systemId ?? DEFAULT_SYSTEM_ID);
   const { template, error: templateError } = useSheetTemplate(character?.systemId ?? DEFAULT_SYSTEM_ID);
@@ -610,10 +614,10 @@ export default function SheetScreen() {
     <SectionPanel title="Identity" icon={<GameIcon name="person" size={18} />} collapsible defaultOpen>
       <div className="flex gap-[var(--space-md)] items-start">
         <CharacterPortrait
-          portraitUri={character.portraitUri}
+          portraitUri={portraitSrc}
           characterName={character.name}
           isEditMode={isEditMode}
-          onPortraitChange={(dataUrl) => updateCharacter({ portraitUri: dataUrl, updatedAt: nowISO() })}
+          onPortraitChange={setPortrait}
         />
         <div className="flex flex-col gap-3 flex-1 min-w-0">
           <div>

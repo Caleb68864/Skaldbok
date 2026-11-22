@@ -1,3 +1,4 @@
+import { getPortraitsForCharacters } from '../../storage/repositories/portraitRepository';
 import type { BundleContents } from '../../types/bundle';
 import type { CharacterRecord } from '../../types/character';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
@@ -286,6 +287,8 @@ export async function collectCharacterBundle(characterId: string): Promise<Colle
 
     const rows = {
         characters: [character],
+        // H8: a portrait set since version 21 lives in its own table.
+        portraits: await getPortraitsForCharacters([character.id]),
         notes,
         entityLinks: allLinks,
         attachments: attachments.map(toBundleAttachment),
@@ -412,6 +415,8 @@ export async function collectSessionBundle(sessionId: string): Promise<Collector
     const rows = {
         ...collected,
         characters: allCharacters,
+        // H8: the portraits of every character the bundle carries.
+        portraits: await getPortraitsForCharacters(allCharacters.map((c) => c.id)),
         entityLinks,
       };
     // 10. The rulesets those rows name — derived, not enumerated — plus the
@@ -579,6 +584,8 @@ export async function collectCampaignBundle(campaignId: string): Promise<Collect
     const rows = {
         ...collected,
         characters: allCharacters,
+        // H8: the portraits of every character the bundle carries.
+        portraits: await getPortraitsForCharacters(allCharacters.map((c) => c.id)),
         entityLinks,
       };
     // 13. Every ruleset the assembled rows name — the campaign's own, and any

@@ -74,6 +74,11 @@ export interface TrashEntityType {
  * writes: per table, not per module, and by the write rather than by the name.
  */
 export const RESTORE_WITHOUT_LISTING: Record<string, string> = {
+  portraits:
+    'A cascade child of its character (H8). A portrait is soft-deleted only when its '
+    + 'character is, under the character\'s cascade id, and comes back when the character '
+    + 'is restored from the Trash. Replacing a portrait updates the row in place, so there '
+    + 'is no standalone deletion to list.',
   entityLinks:
     'The same, for edges. Links are soft-deleted as part of whatever cascade owns '
     + 'their endpoints and restored by that cascade\'s txId. An edge listed on its '

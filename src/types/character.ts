@@ -480,8 +480,17 @@ export interface CharacterRecord extends Versioned, Timestamped {
   tempModifiers?: TempModifier[];
   /** Persisted UI preferences for this character. */
   uiState: CharacterUiState;
-  /** Base64 data-URL or remote URI for the character portrait image. */
+  /**
+   * Base64 data-URL or remote URI for the character portrait image.
+   *
+   * @remarks
+   * The pre-H8 form, still read. A portrait set since 2026-11-21 is stored in
+   * the `portraits` table and named by {@link portraitId}, which wins when both
+   * are present; setting one clears this.
+   */
   portraitUri?: string;
+  /** Id of this character's row in the `portraits` table (H8). */
+  portraitId?: string;
   /**
    * Advancement check flags — each becomes `true` once the trigger condition
    * for that track has been met during a session.

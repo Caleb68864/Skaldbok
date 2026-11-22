@@ -65,8 +65,12 @@ async function seedOneRowPerTable(): Promise<void> {
 
   await db.parties.add({ id: 'party-1', campaignId: CAMPAIGN_ID, name: 'The Crew', ...stamp } as never);
 
-  const character = { ...createBlankCharacter(BUNDLED_SYSTEMS[0].id), id: 'char-1', name: 'Astrid' };
+  const character = { ...createBlankCharacter(BUNDLED_SYSTEMS[0].id), id: 'char-1', name: 'Astrid', portraitId: 'portrait-1' };
   await db.characters.add(character as never);
+  await db.portraits.add({
+    id: 'portrait-1', characterId: 'char-1', mimeType: 'image/jpeg', sizeBytes: 4,
+    blob: new Blob([new Uint8Array([0xff, 0xd8, 0xff, 0xe0])], { type: 'image/jpeg' }), ...stamp,
+  } as never);
 
   await db.partyMembers.add({
     id: 'member-1',

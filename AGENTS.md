@@ -262,7 +262,7 @@ boolean. `softDeletedBy` is a transaction-scoped UUID shared by every row
 deleted together as part of a single cascade — it's how `restore` knows which
 rows to bring back atomically.
 
-**21 of the 26 tables carry these fields** — effectively everything the user can
+**22 of the 27 tables carry these fields** — effectively everything the user can
 delete, edges included. Yes, even edges: that is what keeps an
 encounter-deletion cascade reversible without losing the original edge
 identities.

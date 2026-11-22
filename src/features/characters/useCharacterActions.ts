@@ -1,3 +1,4 @@
+import * as portraitRepository from '../../storage/repositories/portraitRepository';
 import * as characterRepository from '../../storage/repositories/characterRepository';
 import { createBlankCharacter } from './characterMappers';
 import { DEFAULT_SYSTEM_ID } from '../../systems/registry';
@@ -41,6 +42,11 @@ export function useCharacterActions() {
       createdAt: nowISO(),
       updatedAt: nowISO(),
     };
+    // A portrait row belongs to one character (it is deleted with it), so the
+    // copy gets its own rather than sharing the original's.
+    if (source.portraitId) {
+      copy.portraitId = await portraitRepository.copyPortrait(source.portraitId, copy.id);
+    }
     await characterRepository.save(copy);
     return copy;
   }

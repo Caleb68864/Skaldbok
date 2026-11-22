@@ -9,6 +9,7 @@ import type { Note } from '../../types/note';
 import type { EntityLink } from '../../types/entityLink';
 import type { Party, PartyMember } from '../../types/party';
 import type { Ship } from '../../types/ship';
+import type { Portrait } from '../../types/portrait';
 import type { Attachment } from '../../types/attachment';
 import type { CreatureTemplate } from '../../types/creatureTemplate';
 import type { Encounter } from '../../types/encounter';
@@ -129,6 +130,7 @@ export class SkaldbokDatabase extends Dexie {
   parties!: Table<Party, string>;
   partyMembers!: Table<PartyMember, string>;
   attachments!: Table<Attachment, string>;
+  portraits!: Table<Portrait, string>;
   creatureTemplates!: Table<CreatureTemplate, string>;
   encounters!: Table<Encounter, string>;
   kb_nodes!: Table<KBNode, string>;
@@ -625,6 +627,12 @@ export class SkaldbokDatabase extends Dexie {
     // it by cascade id, exactly as entity links are restored.
     this.version(20).stores({
       attachments: 'id, noteId, campaignId, createdAt, deletedAt, softDeletedBy',
+    });
+    // H8: portraits move out of the character record into their own table, for
+    // portraits set from now on. Additive only: no upgrade function, nothing
+    // existing is moved, and `CharacterRecord.portraitUri` is still read.
+    this.version(21).stores({
+      portraits: 'id, characterId, deletedAt, softDeletedBy',
     });
   }
 }

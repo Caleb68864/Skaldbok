@@ -1,3 +1,4 @@
+import { restorePortraitsForTxId, softDeletePortraitsForCharacter } from './portraitRepository';
 import { db } from '../db/client';
 import type { CharacterRecord } from '../../types/character';
 import { excludeDeleted, generateSoftDeleteTxId } from '../../utils/softDelete';
@@ -179,7 +180,7 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
     if (row.deletedAt) return;
     const finalTxId = txId ?? generateSoftDeleteTxId();
     const now = nowISO();
-    await db.transaction('rw', [db.characters, db.partyMembers, db.entityLinks], async () => {
+    await db.transaction('rw', [db.characters, db.partyMembers, db.entityLinks, db.portraits], async () => {
       await db.characters.update(id, {
         deletedAt: now,
         softDeletedBy: finalTxId,
@@ -196,6 +197,8 @@ export async function softDelete(id: string, txId?: string): Promise<void> {
         );
       }
       await softDeleteLinksForEntity(id, finalTxId, now);
+      // H8: the portrait goes down with its character and comes back with it.
+      await softDeletePortraitsForCharacter(id, finalTxId, now);
     });
   } catch (e) {
     throw new Error(`characterRepository.softDelete failed: ${e}`, { cause: e });
@@ -215,7 +218,7 @@ export async function restore(id: string): Promise<void> {
     if (!row.deletedAt) return;
     const txId = row.softDeletedBy;
     const now = nowISO();
-    await db.transaction('rw', [db.characters, db.partyMembers, db.entityLinks], async () => {
+    await db.transaction('rw', [db.characters, db.partyMembers, db.entityLinks, db.portraits], async () => {
       await db.characters.update(id, {
         deletedAt: undefined,
         softDeletedBy: undefined,
@@ -233,6 +236,7 @@ export async function restore(id: string): Promise<void> {
         );
       }
       await restoreLinksForTxId(txId);
+      await restorePortraitsForTxId(txId, now);
     });
   } catch (e) {
     throw new Error(`characterRepository.restore failed: ${e}`, { cause: e });

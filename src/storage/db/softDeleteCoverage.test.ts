@@ -92,11 +92,12 @@ describe('the soft-delete exemption list', () => {
     }
   });
 
-  it('leaves twenty-one tables soft-deletable', () => {
+  it('leaves twenty-two tables soft-deletable', () => {
     // Pinned so that adding a table and forgetting to decide shows up as a
     // number moving, not as silence. It read 20 until `referenceNotes` — which
-    // has always been soft-deletable — came off the exemption list.
-    expect(SOFT_DELETE_TABLES).toHaveLength(21);
+    // has always been soft-deletable — came off the exemption list, and 21
+    // until `portraits` (H8, version 21) joined.
+    expect(SOFT_DELETE_TABLES).toHaveLength(22);
   });
 
   it('exempts only tables that really have no soft delete', () => {

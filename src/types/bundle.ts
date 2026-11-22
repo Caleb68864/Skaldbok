@@ -1,3 +1,4 @@
+import { portraitBundleSchema } from './portrait';
 import { z } from 'zod';
 import { campaignSchema } from './campaign';
 import { sessionSchema } from './session';
@@ -79,6 +80,8 @@ export const bundleContentsSchema = z.object({
   notes: z.array(baseNoteSchema).optional(),
   entityLinks: z.array(entityLinkSchema).optional(),
   attachments: z.array(attachmentBundleSchema).optional(),
+  /** Character portraits (H8), Blobs as base64 like attachments. */
+  portraits: z.array(portraitBundleSchema).optional(),
   inventoryContainers: z.array(inventoryContainerSchema).optional(),
   ships: z.array(shipSchema).optional(),
   ledgerAccounts: z.array(ledgerAccountSchema).optional(),

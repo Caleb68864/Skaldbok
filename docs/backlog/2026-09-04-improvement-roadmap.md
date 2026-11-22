@@ -1009,7 +1009,7 @@ is a hard delete from the user's point of view.
 - **Still open:** the boundary inside `ShellLayout` so the nav survives a panel
   throw, and the route in the error report.
 
-### H8. Portraits live inline on the character record — OPEN (V)
+### H8. Portraits live inline on the character record — DONE for new portraits, non-destructively (2026-11-21, see ROADMAP-UPDATES-2026-11-21-wave9.md)
 - **Where:** `types/character.ts:490-491` `portraitUri` is a base64 data URL;
   `utils/imageResize.ts:18-19` caps it at 1920 px JPEG q0.8, so roughly
   200–600 KB per character.

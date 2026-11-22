@@ -8,7 +8,7 @@ export interface CharacterPortraitProps {
   portraitUri?: string;
   characterName: string;
   isEditMode: boolean;
-  onPortraitChange: (dataUrl: string) => void;
+  onPortraitChange: (dataUrl: string) => void | Promise<void>;
 }
 
 const VALID_MIME_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
@@ -61,9 +61,9 @@ async function compressImage(file: File): Promise<string> {
  *
  * @remarks
  * Uploads run through `compressImage`, which iteratively drops JPEG quality then
- * dimensions until the result fits under `MAX_SIZE_BYTES` — the image is stored
- * inline on the character record as a data URI, so keeping it small matters for
- * IndexedDB size. Falls back to the character's initial when no portrait is set.
+ * dimensions until the result fits under `MAX_SIZE_BYTES`. The caller stores the
+ * result (since H8, as a Blob in the `portraits` table) and passes back what to
+ * draw as `portraitUri`. Falls back to the character's initial when no portrait is set.
  */
 export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPortraitChange }: CharacterPortraitProps) {
   const [modalOpen, setModalOpen] = useState(false);
@@ -106,9 +106,10 @@ export function CharacterPortrait({ portraitUri, characterName, isEditMode, onPo
 
     try {
       const dataUrl = await compressImage(file);
-      onPortraitChange(dataUrl);
-    } catch {
-      showToast('Failed to process image', 'error');
+      await onPortraitChange(dataUrl);
+    } catch (e) {
+      const full = e instanceof Error && e.name === 'QuotaExceededError';
+      showToast(full ? 'Storage is full — the portrait was not saved.' : 'Failed to process image', 'error');
     }
   }
 

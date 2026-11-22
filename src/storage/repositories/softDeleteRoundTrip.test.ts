@@ -4,6 +4,7 @@ import { db } from '../db/client';
 import { resetDatabase } from '../../test-utils/resetDatabase';
 import { TABLES_WITHOUT_SOFT_DELETE } from '../../types/bundleTables';
 import * as attachmentRepository from './attachmentRepository';
+import * as portraitRepository from './portraitRepository';
 import * as campaignRepository from './campaignRepository';
 import * as characterRepository from './characterRepository';
 import * as creatureTemplateRepository from './creatureTemplateRepository';
@@ -222,7 +223,7 @@ const ROUND_TRIPS: RoundTrip[] = [
  * Empty since `attachments` gained a per-photo delete; kept so the next
  * cascade-only table has somewhere to go.
  */
-const COVERED_BY_CASCADE: string[] = [];
+const COVERED_BY_CASCADE: string[] = ['portraits'];
 
 beforeEach(async () => {
   await resetDatabase();
@@ -255,6 +256,21 @@ describe('soft delete round trip', () => {
 });
 
 describe('soft delete round trip: cascaded rows', () => {
+  it('a character brings back its portrait (H8)', async () => {
+    await db.characters.put({
+      ...stamp, id: 'ch1', name: 'Hero', systemId: 'classic-fantasy', attributes: {}, skills: {}, resources: {},
+      weapons: [], armor: {}, inventory: [], conditions: {}, portraitId: 'p1',
+    } as never);
+    await db.portraits.put({ id: 'p1', characterId: 'ch1', mimeType: 'image/jpeg', sizeBytes: 1, blob: new Blob(['x']), createdAt: NOW, updatedAt: NOW } as never);
+
+    await characterRepository.softDelete('ch1');
+    expect(await portraitRepository.getPortrait('p1')).toBeUndefined();
+    expect((await db.portraits.get('p1'))?.blob, 'the image survives the delete').toBeInstanceOf(Blob);
+
+    await characterRepository.restore('ch1');
+    expect((await portraitRepository.getPortrait('p1'))?.characterId).toBe('ch1');
+  });
+
   it('a note brings back its edges and attachments, and only those', async () => {
     await db.notes.put({
       ...stamp, id: 'n1', campaignId: CAMPAIGN, title: 'N', type: 'generic', body: null, status: 'active', pinned: false,
