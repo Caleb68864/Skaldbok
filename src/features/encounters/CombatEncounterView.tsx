@@ -128,15 +128,44 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
     if (updated) setEncounter(updated);
   }, [encounter.id]);
 
-  const handleNextRound = async () => {
-    const newRound = currentRound + 1;
-    await encounterRepository.update(encounter.id, {
-      combatData: { ...encounter.combatData!, currentRound: newRound, events },
-    });
-    await refresh();
+  /**
+   * Runs one combat write and says when it did not land.
+   *
+   * @remarks
+   * These handlers awaited the repository with no `catch`, from `onClick`, so a
+   * failed write was an unhandled rejection and the screen simply did not
+   * change: Next Round did nothing, an added event vanished, an HP edit stayed
+   * on screen as if saved. `update` also returns `undefined` for an encounter
+   * deleted elsewhere, which was ignored.
+   *
+   * @returns Whether the write landed.
+   */
+  const saveCombat = async (what: string, write: () => Promise<unknown>): Promise<boolean> => {
+    try {
+      const result = await write();
+      if (result === undefined) {
+        showToast('That encounter is no longer available', 'error');
+        return false;
+      }
+      await refresh();
+      return true;
+    } catch (e) {
+      console.error(`CombatEncounterView: ${what} failed`, e);
+      showToast(`Could not ${what} — ${e instanceof Error ? e.message : String(e)}`, 'error');
+      // Put the screen back on what is stored, so nothing unsaved looks saved.
+      await refresh().catch(() => {});
+      return false;
+    }
   };
 
-  const handleAddEvent = async (eventData: { type: string; description: string }) => {
+  const handleNextRound = async () => {
+    const newRound = currentRound + 1;
+    await saveCombat('advance the round', () => encounterRepository.update(encounter.id, {
+      combatData: { ...encounter.combatData!, currentRound: newRound, events },
+    }));
+  };
+
+  const handleAddEvent = async (eventData: { type: string; description: string }): Promise<boolean> => {
     const newEvent = {
       id: generateId(),
       round: currentRound,
@@ -144,10 +173,9 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       timestamp: nowISO(),
     };
     const updatedEvents = [...events, newEvent];
-    await encounterRepository.update(encounter.id, {
+    return saveCombat('add that event', () => encounterRepository.update(encounter.id, {
       combatData: { currentRound, events: updatedEvents },
-    });
-    await refresh();
+    }));
   };
 
   // Tracks the latest in-flight participant update so flushAll() can wait for
@@ -170,8 +198,9 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       .then(() => {
         inFlightParticipantUpdateRef.current = null;
       });
-    await updatePromise;
-    await refresh();
+    // A failed write is reported and the screen re-read, and nothing is
+    // logged to the session for a change that is not stored.
+    if (!(await saveCombat('save that change', () => updatePromise))) return;
 
     // Record HP / condition changes as session notes attached to this
     // encounter so they surface in the timeline and Session Notes panel. HP
@@ -269,12 +298,18 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
     // db.entityLinks], …)` that read the encounter without checking
     // `deletedAt`. Participant and `represents` edge still land atomically —
     // that part was right — but the refusal now comes with them.
-    const added = await encounterRepository.addRepresentedParticipants(encounter.id, [{
-      name: template.name,
-      type: 'monster',
-      instanceState: { currentHp: readCreatureStat(template, healthStatId) },
-      represents: { id: template.id, type: 'creature' },
-    }]);
+    let added: unknown[];
+    try {
+      added = await encounterRepository.addRepresentedParticipants(encounter.id, [{
+        name: template.name,
+        type: 'monster',
+        instanceState: { currentHp: readCreatureStat(template, healthStatId) },
+        represents: { id: template.id, type: 'creature' },
+      }]);
+    } catch (err) {
+      showToast(`Could not add ${name} — ${err instanceof Error ? err.message : String(err)}`, 'error', 8000);
+      return;
+    }
     if (added.length === 0) {
       showToast('That encounter is no longer available', 'error');
       return;
@@ -288,7 +323,13 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
       showToast('No linked party characters to add');
       return;
     }
-    const addedCount = await addPartyCharactersToEncounter(encounter.id, partyCharacterIds);
+    let addedCount: number;
+    try {
+      addedCount = await addPartyCharactersToEncounter(encounter.id, partyCharacterIds);
+    } catch (err) {
+      showToast(`Could not add the party — ${err instanceof Error ? err.message : String(err)}`, 'error');
+      return;
+    }
 
     if (addedCount > 0) {
       await refresh();
@@ -463,7 +504,7 @@ export function CombatEncounterView({ encounter: initialEncounter, onClose }: Co
 /**
  * Simplified inline event adder for combat encounters.
  */
-function QuickEventAdd({ onAdd }: { onAdd: (data: { type: string; description: string }) => Promise<void> }) {
+function QuickEventAdd({ onAdd }: { onAdd: (data: { type: string; description: string }) => Promise<boolean> }) {
   const { activeCampaign } = useCampaignContext();
   const engine = useSystemEngineFor(activeCampaign?.system);
   const [type, setType] = useState('attack');
@@ -471,14 +512,15 @@ function QuickEventAdd({ onAdd }: { onAdd: (data: { type: string; description: s
 
   const handleSubmit = async () => {
     if (!description.trim()) return;
-    await onAdd({ type, description: description.trim() });
-    setDescription('');
+    // Kept when the write failed, so the description is not typed twice.
+    if (await onAdd({ type, description: description.trim() })) setDescription('');
   };
 
   return (
     <div className="flex gap-2">
       <select
         value={type}
+        aria-label="Event type"
         onChange={(e) => setType(e.target.value)}
         className="min-h-11 px-2 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-xs"
       >
@@ -491,6 +533,7 @@ function QuickEventAdd({ onAdd }: { onAdd: (data: { type: string; description: s
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="Event description..."
+        aria-label="Event description"
         className="flex-1 px-3 py-2 min-h-11 bg-[var(--color-surface-raised)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] text-sm box-border"
         onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
       />
