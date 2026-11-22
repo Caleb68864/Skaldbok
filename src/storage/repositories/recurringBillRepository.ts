@@ -1,9 +1,10 @@
 import { db } from '../db/client';
 import type { RecurringBill } from '../../types/recurringBill';
-import { excludeDeleted } from '../../utils/softDelete';
+import { excludeDeleted, onlyDeleted } from '../../utils/softDelete';
+import { deletedAccountIds, onDeadAccount } from './ledgerRepository';
 import { nowISO } from '../../utils/dates';
 import { generateId } from '../../utils/ids';
-import { createDeletedListing, createHardDelete, createSoftDeleteOps } from './createRepository';
+import { createHardDelete, createSoftDeleteOps } from './createRepository';
 
 /**
  * Repository for {@link RecurringBill} rows — the costs that come round again.
@@ -105,12 +106,21 @@ export const restore = lifecycle.restore;
  * Feeds the Trash screen, which is the only way a user gets one of these back.
  * A restored bill keeps its schedule and its last-posted marker, so it does
  * not re-post everything it missed.
+ *
+ * A bill on a deleted account is left out until the account is restored, for
+ * the reason `ledgerRepository.getDeleted` gives: its next charge would land on
+ * a dead account and leave the totals.
  */
-export const getDeleted = createDeletedListing<RecurringBill>({
-  repository: 'recurringBillRepository',
-  table: 'recurringBills',
-  scopeIndex: 'campaignId',
-});
+export async function getDeleted(campaignId: string): Promise<RecurringBill[]> {
+  try {
+    const deleted = onlyDeleted(await db.recurringBills.where('campaignId').equals(campaignId).toArray());
+    if (deleted.length === 0) return deleted;
+    const deadAccounts = await deletedAccountIds(campaignId);
+    return deleted.filter(b => !onDeadAccount(b, deadAccounts));
+  } catch (e) {
+    throw new Error(`recurringBillRepository.getDeleted failed: ${e}`, { cause: e });
+  }
+}
 
 /** Permanently removes a bill. Internal — never call from UI. */
 export const hardDelete = createHardDelete({

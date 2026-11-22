@@ -206,8 +206,20 @@ export async function getDeletedMembers(campaignId: string): Promise<PartyMember
   try {
     const party = await getPartyByCampaign(campaignId, { includeDeleted: true });
     if (!party) return [];
-    const rows = await db.partyMembers.where('partyId').equals(party.id).toArray();
-    return onlyDeleted(rows as PartyMember[]);
+    const rows = onlyDeleted(
+      (await db.partyMembers.where('partyId').equals(party.id).toArray()) as PartyMember[],
+    );
+    // A seat whose character is in the Trash went down with that character
+    // (characterRepository.softDelete cascades to its seats) and comes back
+    // with it. Restored on its own it would be a live seat for a deleted
+    // character: listed in the party, offered as a payee and a link target.
+    const linked = [...new Set(rows.map(m => m.linkedCharacterId).filter((id): id is string => !!id))];
+    if (linked.length === 0) return rows;
+    const characters = await db.characters.bulkGet(linked);
+    const deletedCharacters = new Set(
+      characters.filter((c): c is NonNullable<typeof c> => !!c && !!c.deletedAt).map(c => c.id),
+    );
+    return rows.filter(m => !m.linkedCharacterId || !deletedCharacters.has(m.linkedCharacterId));
   } catch (e) {
     throw new Error(`partyRepository.getDeletedMembers failed: ${e}`, { cause: e });
   }

@@ -14,6 +14,7 @@ import * as recurringBillRepository from '../../storage/repositories/recurringBi
 import * as routeRepository from '../../storage/repositories/routeRepository';
 import * as referenceSectionRepository from '../../storage/repositories/referenceSectionRepository';
 import * as partyRepository from '../../storage/repositories/partyRepository';
+import * as characterRepository from '../../storage/repositories/characterRepository';
 import * as attachmentRepository from '../../storage/repositories/attachmentRepository';
 import { db } from '../../storage/db/client';
 
@@ -368,5 +369,99 @@ describe('delete → trash → restore, per entity type', () => {
       (await referenceSectionRepository.getAll()).map((s) => s.id),
       'restoring the card left its sections in the trash',
     ).toContain('sec-1');
+  });
+});
+
+/**
+ * A cascade child whose parent is still in the Trash is not offered alone.
+ *
+ * @remarks
+ * Each listing used to return every tombstoned row. Restoring one of these on
+ * its own produced a live row hanging off a deleted parent: a party seat for a
+ * character still in the Trash, a reference section drawn under no card (and
+ * a duplicate empty card made for it), a ledger entry or bill on a deleted
+ * account whose money left every total. Each case fails on the old listing;
+ * each also checks the row is offered again once its parent is back.
+ */
+describe('a child whose parent is still deleted', () => {
+  const loadKeys = async (key: string, campaign?: string) =>
+    (await TRASH_ENTITY_TYPES.find((e) => e.key === key)!.load(campaign ?? CAMPAIGN)).map((r) => r.id);
+
+  it('party seats: hidden while their character is in the Trash', async () => {
+    await db.characters.put({
+      id: 'char-1', name: 'Hilda', systemId: 'classic-fantasy', attributes: {}, skills: {}, resources: {},
+      weapons: [], armor: {}, inventory: [], conditions: {}, schemaVersion: 1,
+      createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
+    } as never);
+    const party = await partyRepository.createParty({ campaignId: CAMPAIGN, name: 'The Company' });
+    const seat = await partyRepository.addPartyMember({ partyId: party.id, linkedCharacterId: 'char-1' });
+    const loose = await partyRepository.addPartyMember({ partyId: party.id, name: 'Hireling' });
+    await partyRepository.softDeletePartyMember(loose.id);
+
+    await characterRepository.softDelete('char-1');
+    expect(await loadKeys('partyMembers')).toEqual([loose.id]);
+
+    await characterRepository.restore('char-1');
+    // The seat came back with its character, so nothing of it is left to list.
+    expect((await partyRepository.getPartyMembers(party.id)).map((m) => m.id)).toContain(seat.id);
+    expect(await loadKeys('partyMembers')).toEqual([loose.id]);
+  });
+
+  it('reference sections: hidden while their card is in the Trash', async () => {
+    await referenceSectionRepository.saveGroup({
+      id: 'grp-1', title: 'Combat', order: 0,
+      createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
+    });
+    await referenceSectionRepository.save({
+      id: 'sec-1', title: 'Parry', category: 'Combat', groupId: 'grp-1', order: 0,
+      type: 'rules_text', paragraphs: ['Roll under.'],
+      createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
+    });
+    await referenceSectionRepository.save({
+      id: 'sec-alone', title: 'Falling', category: 'Hazards', order: 1,
+      type: 'rules_text', paragraphs: ['1d6.'],
+      createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
+    });
+    await referenceSectionRepository.remove('sec-alone');
+
+    await referenceSectionRepository.removeGroup('grp-1');
+    expect(await loadKeys('referenceSections', undefined)).toEqual(['sec-alone']);
+  });
+
+  it('a second delete of a section keeps its card\'s cascade id', async () => {
+    await referenceSectionRepository.saveGroup({
+      id: 'grp-1', title: 'Combat', order: 0,
+      createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
+    });
+    await referenceSectionRepository.save({
+      id: 'sec-1', title: 'Parry', category: 'Combat', groupId: 'grp-1', order: 0,
+      type: 'rules_text', paragraphs: ['Roll under.'],
+      createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
+    });
+    await referenceSectionRepository.removeGroup('grp-1');
+    await referenceSectionRepository.remove('sec-1');
+    await referenceSectionRepository.restoreGroup('grp-1');
+
+    expect((await referenceSectionRepository.getAll()).map((s) => s.id)).toContain('sec-1');
+  });
+
+  it('ledger entries and bills: hidden while their account is in the Trash', async () => {
+    const account = await ledgerAccountRepository.create({ campaignId: CAMPAIGN, name: 'Bank' });
+    const entry = await ledgerRepository.create({
+      campaignId: CAMPAIGN, date: '2026-09-09', memo: 'Deposit', amount: 100, accountId: account.id,
+    });
+    const bill = await recurringBillRepository.create({
+      campaignId: CAMPAIGN, name: 'Fees', amount: -5, startDate: '2026-09-01', everyDays: 30, accountId: account.id,
+    });
+    await ledgerRepository.softDelete(entry.id);
+    await recurringBillRepository.softDelete(bill.id);
+    expect(await ledgerAccountRepository.softDelete(account.id)).toBeNull();
+
+    expect(await loadKeys('ledgerEntries')).toEqual([]);
+    expect(await loadKeys('recurringBills')).toEqual([]);
+
+    await ledgerAccountRepository.restore(account.id);
+    expect(await loadKeys('ledgerEntries')).toEqual([entry.id]);
+    expect(await loadKeys('recurringBills')).toEqual([bill.id]);
   });
 });

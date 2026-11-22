@@ -132,6 +132,10 @@ export async function save(section: ReferenceSection): Promise<void> {
 /** Soft-deletes a reference section by id. */
 export async function remove(id: string): Promise<void> {
   try {
+    // A second delete would replace the card's cascade id, and restoring the
+    // card would then leave this section behind.
+    const row = await db.referenceSections.get(id);
+    if (!row || row.deletedAt) return;
     await db.referenceSections.update(id, { deletedAt: nowISO(), softDeletedBy: generateId() });
   } catch (err) {
     throw new Error(`Failed to delete reference section: ${String(err)}`, { cause: err });
@@ -155,14 +159,23 @@ export async function restore(id: string): Promise<void> {
  * rules, shared across every campaign — so this listing is global, like
  * `characterRepository.getDeleted`, rather than campaign-scoped.
  *
- * A section deleted on its own is restored on its own. A section that went down
- * with its card is restored by {@link restoreGroup}, which matches on the
- * cascade id; restoring one of those individually is still correct, it just
- * brings back one section rather than the set.
+ * A section deleted on its own is restored on its own. A section whose card is
+ * deleted is left out: it comes back with the card through {@link restoreGroup}.
+ * Restoring one on its own used to be offered and was not correct. The section
+ * kept its `groupId` on the deleted card, so it matched no live card and was
+ * drawn nowhere, while `ensureGroupsForSections` made a second, empty card
+ * with its category's title.
  */
 export async function getDeleted(): Promise<ReferenceSection[]> {
   try {
-    return onlyDeleted(await db.referenceSections.toArray());
+    const deleted = onlyDeleted(await db.referenceSections.toArray());
+    const groupIds = [...new Set(deleted.map(s => s.groupId).filter((id): id is string => !!id))];
+    if (groupIds.length === 0) return deleted;
+    const groups = await db.referenceGroups.bulkGet(groupIds);
+    const deadGroups = new Set(
+      groups.filter((g): g is NonNullable<typeof g> => !!g && !!g.deletedAt).map(g => g.id),
+    );
+    return deleted.filter(s => !s.groupId || !deadGroups.has(s.groupId));
   } catch (err) {
     throw new Error(`Failed to list deleted reference sections: ${String(err)}`, { cause: err });
   }
