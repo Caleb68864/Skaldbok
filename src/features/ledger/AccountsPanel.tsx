@@ -72,6 +72,21 @@ export function AccountsPanel({
     | null
   >(null);
 
+  // A write that fails here used to be `void`ed: the form closed and lost
+  // everything typed, and nothing was said. `run` keeps the form open on
+  // failure and says why. Suspend, resume and remove report the same way.
+  const [actionError, setActionError] = useState<string | null>(null);
+  const run = async (write: () => Promise<unknown>, onDone?: () => void) => {
+    setActionError(null);
+    try {
+      await write();
+      onDone?.();
+    } catch (e) {
+      console.error('AccountsPanel write failed', e);
+      setActionError(e instanceof Error ? e.message : 'Could not save that change.');
+    }
+  };
+
   const isEditing = draft?.id !== undefined;
 
   const hasDebt = summary.totalOwed !== 0 || summary.totalAtRisk !== 0;
@@ -92,6 +107,11 @@ export function AccountsPanel({
       defaultOpen
     >
       <div className="flex flex-col gap-[var(--space-sm)]">
+        {actionError && (
+          <p role="alert" className="m-0 text-sm text-[var(--color-danger)]">
+            {actionError}
+          </p>
+        )}
         {summary.balances.map(({ account, balance, entryCount }) => (
           <div
             key={account.id}
@@ -156,7 +176,7 @@ export function AccountsPanel({
                     ? `${entryCount} entries reference this account`
                     : 'Remove this account'
                 }
-                onClick={() => void onRemove(account.id)}
+                onClick={() => void run(() => onRemove(account.id))}
                 className="shrink-0 min-w-[44px] min-h-[44px] bg-transparent border-none cursor-pointer text-[var(--color-text-muted)]"
               >
                 ✕
@@ -267,27 +287,28 @@ export function AccountsPanel({
                   // conversion belongs here rather than in the hook so the two
                   // callers (this form and the JSON import) agree on it.
                   const opening = kind === 'liability' ? -magnitude : magnitude;
+                  const close = () => setDraft(null);
                   if (draft.id !== undefined) {
                     // `kind` is deliberately not editable: it decides the sign
                     // of every entry already booked against the account, so
                     // flipping asset to liability would silently invert history.
                     // Delete and recreate is the honest way to change it.
-                    void onEdit(draft.id, {
+                    const id = draft.id;
+                    void run(() => onEdit(id, {
                       name: draft.name.trim(),
                       note: draft.note.trim(),
                       contingent,
                       opening,
-                    });
+                    }), close);
                   } else {
-                    void onAdd({
+                    void run(() => onAdd({
                       name: draft.name.trim(),
                       kind,
                       contingent,
                       opening,
                       note: draft.note.trim(),
-                    });
+                    }), close);
                   }
-                  setDraft(null);
                 }}
               >
                 {isEditing ? 'Save' : 'Create'}
