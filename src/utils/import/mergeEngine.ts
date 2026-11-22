@@ -295,6 +295,22 @@ async function mergeEntity(
     }
   }
 
+  // The same for a photo whose note is not here: an attachment is reached only
+  // through `getAttachmentsByNote`, so one without a live note can never be
+  // shown, restored or removed, and only takes up space. This happens when
+  // Notes is unticked and Attachments is not, or when the note was dropped as
+  // schema-invalid. A photo that is kept takes its note's campaign, which is
+  // where the Trash looks for it.
+  if (entityType === 'attachments') {
+    const noteId = reparented.noteId;
+    const note = typeof noteId === 'string' ? await db.notes.get(noteId) : undefined;
+    if (!note || note.deletedAt) {
+      report.errors.push({ entityType, entityId: id, message: `Photo belongs to note "${String(noteId)}", which is not on this device; skipped` });
+      return;
+    }
+    reparented.campaignId = note.campaignId;
+  }
+
   // Look up existing entity in IndexedDB
   const tableName = TABLE_NAMES[entityType];
   if (!tableName) {

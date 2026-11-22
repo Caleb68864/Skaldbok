@@ -73,6 +73,7 @@ describe('mergeBundle', () => {
       blob: new Blob([bytes], { type: 'image/jpeg' }),
       createdAt: '2026-01-02T00:00:00.000Z', updatedAt: '2026-01-02T00:00:00.000Z',
     };
+    await db.notes.put({ id: 'n1', campaignId: 'camp', title: 'N', body: null, type: 'generic', status: 'active', pinned: false, schemaVersion: 1, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' } as never);
     const json = await serializeBundle('character', { attachments: [attachment] } as unknown as BundleContents, { includePrivate: false });
     const parsed = parseBundle(json);
     expect(parsed.success).toBe(true);
@@ -85,6 +86,32 @@ describe('mergeBundle', () => {
     expect(row?.blob).toBeInstanceOf(Blob);
     expect(new Uint8Array(await row!.blob.arrayBuffer())).toEqual(bytes);
     expect(row?.sizeBytes).toBe(bytes.length);
+  });
+
+  it('skips a photo whose note is not on this device', async () => {
+    // Notes unticked and Attachments not, or the note dropped as invalid: the
+    // photo was written anyway and could never be shown, restored or removed.
+    const report = await mergeBundle(
+      makeBundle({ attachments: [{
+        id: 'a-orphan', noteId: 'missing-note', campaignId: 'camp', filename: 'x.jpg',
+        mimeType: 'image/jpeg', sizeBytes: 4, data: '/9j/4A==', encoding: 'base64', createdAt: '2026-01-02T00:00:00.000Z',
+      }] }),
+      opts,
+    );
+    expect(await db.attachments.get('a-orphan')).toBeUndefined();
+    expect(report.errors.map((e) => e.message).join()).toMatch(/not on this device/);
+  });
+
+  it("files a photo under its note's campaign, not the import target's", async () => {
+    await db.notes.put({ id: 'n-home', campaignId: 'home-campaign', title: 'N', body: null, type: 'generic', status: 'active', pinned: false, schemaVersion: 1, createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-01-01T00:00:00.000Z' } as never);
+    await mergeBundle(
+      makeBundle({ attachments: [{
+        id: 'a-home', noteId: 'n-home', campaignId: 'elsewhere', filename: 'x.jpg',
+        mimeType: 'image/jpeg', sizeBytes: 4, data: '/9j/4A==', encoding: 'base64', createdAt: '2026-01-02T00:00:00.000Z',
+      }] }),
+      { ...opts, targetCampaignId: 'import-target' },
+    );
+    expect((await db.attachments.get('a-home'))?.campaignId).toBe('home-campaign');
   });
 
   it('drops a remote portraitUri and keeps an inline one', async () => {

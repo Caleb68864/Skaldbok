@@ -305,7 +305,10 @@ function validateContentsEntities(
     validated.characters = kept;
   }
 
-  // attachments — validated via bundleContentsSchema already (omit re-validation)
+  // attachments — not schema-checked here (this comment used to say they were
+  // validated by `bundleContentsSchema`; the parse uses the envelope schema,
+  // whose `contents` is untyped). The merge checks each one instead: the image
+  // payload (`restoreAttachmentBlob`) and that its note is on the device.
 
   return validated;
 }
