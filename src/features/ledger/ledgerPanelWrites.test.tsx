@@ -20,14 +20,14 @@ afterEach(() => {
 
 const money = (n: number) => `${n} Cr`;
 
-function bills(onAdd = vi.fn(), onToggle = vi.fn(), list: RecurringBill[] = []) {
+function bills(onAdd = vi.fn(), onToggle = vi.fn(), list: RecurringBill[] = [], onSetCampaignDate = vi.fn()) {
   render(
     <BillsPanel
       bills={list}
       accounts={[]}
       campaignDate="001-1105"
       formatMoney={money}
-      onSetCampaignDate={vi.fn()}
+      onSetCampaignDate={onSetCampaignDate}
       onAdd={onAdd}
       onToggle={onToggle}
       onRemove={vi.fn()}
@@ -92,5 +92,37 @@ describe('AccountsPanel', () => {
 
     expect((await screen.findByRole('alert')).textContent).toContain('Storage full');
     expect((screen.getByLabelText('Account name') as HTMLInputElement).value).toBe('Ship Fund');
+  });
+});
+
+/**
+ * The campaign date wrote and reloaded the campaign on every keystroke, and
+ * showed only what was stored, so the field lagged the keyboard. Fails on the
+ * old panel: the typed value never appears (the stored one does not change
+ * here) and the write fires per keystroke.
+ */
+describe('BillsPanel campaign date', () => {
+  it('shows what is typed and saves it once, on blur', async () => {
+    const onSetCampaignDate = vi.fn().mockResolvedValue(undefined);
+    bills(vi.fn(), vi.fn(), [], onSetCampaignDate);
+    const input = screen.getByLabelText('Campaign date') as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: '001-110' } });
+    fireEvent.change(input, { target: { value: '001-1106' } });
+    expect(input.value).toBe('001-1106');
+    expect(onSetCampaignDate).not.toHaveBeenCalled();
+
+    fireEvent.blur(input);
+    await waitFor(() => expect(onSetCampaignDate).toHaveBeenCalledTimes(1));
+    expect(onSetCampaignDate).toHaveBeenCalledWith('001-1106');
+  });
+
+  it('saves on Enter too', async () => {
+    const onSetCampaignDate = vi.fn().mockResolvedValue(undefined);
+    bills(vi.fn(), vi.fn(), [], onSetCampaignDate);
+    const input = screen.getByLabelText('Campaign date');
+    fireEvent.change(input, { target: { value: '002-1105' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    await waitFor(() => expect(onSetCampaignDate).toHaveBeenCalledWith('002-1105'));
   });
 });

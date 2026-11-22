@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { SectionPanel } from '../../components/primitives/SectionPanel';
 import { Button } from '../../components/primitives/Button';
 import { nextDue, remainingOccurrences } from '../../utils/ledger/accrual';
@@ -83,8 +83,20 @@ export function BillsPanel({
     }
   };
 
+  // The date is edited locally and saved on blur or Enter. Bound straight to
+  // the stored value, every keystroke wrote the campaign and reloaded it
+  // (campaign, session, party and active-character reads) before the field
+  // could show the key: the cursor jumped to the end, fast typing dropped
+  // characters, and each keystroke could post bills against a half-typed date.
+  const [dateDraft, setDateDraft] = useState(campaignDate);
+  useEffect(() => { setDateDraft(campaignDate); }, [campaignDate]);
+  const commitDate = () => {
+    if (dateDraft === campaignDate) return;
+    void run(() => onSetCampaignDate(dateDraft));
+  };
+
   const dateHint = calendar?.example ?? 'day number';
-  const dateOk = isRouteDateValid(campaignDate, calendar);
+  const dateOk = isRouteDateValid(dateDraft, calendar);
   const accountName = (id?: string) =>
     id ? (accounts.find(a => a.id === id)?.name ?? 'unknown') : 'default';
 
@@ -120,10 +132,12 @@ export function BillsPanel({
           </span>
           <input
             className={inputClass}
-            value={campaignDate}
+            value={dateDraft}
             placeholder={dateHint}
             aria-label="Campaign date"
-            onChange={e => void onSetCampaignDate(e.target.value)}
+            onChange={e => setDateDraft(e.target.value)}
+            onBlur={commitDate}
+            onKeyDown={e => { if (e.key === 'Enter') commitDate(); }}
             style={dateOk ? undefined : { borderColor: 'var(--color-danger, #b3261e)' }}
           />
         </label>
