@@ -55,6 +55,34 @@ export async function getPartyByCampaign(
   }
 }
 
+/**
+ * Every live party in a campaign.
+ *
+ * @remarks
+ * For the campaign backup. {@link getPartyByCampaign} answers "which party is
+ * this campaign playing" and returns one; a campaign can hold more than one
+ * (an import into an existing campaign adds its own, and Trash can restore an
+ * old one), and a backup that carried only the first by id dropped the others
+ * with their members.
+ */
+export async function listPartiesByCampaign(campaignId: string): Promise<Party[]> {
+  try {
+    const records = await db.parties.where('campaignId').equals(campaignId).toArray();
+    const usable: Party[] = [];
+    for (const record of records) {
+      const parsed = partySchema.safeParse(record);
+      if (!parsed.success) {
+        console.warn('partyRepository.listPartiesByCampaign: validation failed', parsed.error);
+        continue;
+      }
+      if (!parsed.data.deletedAt) usable.push(parsed.data);
+    }
+    return usable;
+  } catch (e) {
+    throw new Error(`partyRepository.listPartiesByCampaign failed: ${e}`, { cause: e });
+  }
+}
+
 /** Creates a party, generating its id, timestamps, and schema version. */
 export async function createParty(data: Omit<Party, 'id' | 'createdAt' | 'updatedAt' | 'schemaVersion'>): Promise<Party> {
   try {
